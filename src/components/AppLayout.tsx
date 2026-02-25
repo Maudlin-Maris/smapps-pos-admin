@@ -41,9 +41,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       >
         <div className="flex h-16 items-center justify-between border-b border-pos-sidebar-border px-5">
-          <h1 className="font-heading text-lg font-bold text-pos-sidebar-fg-active tracking-tight">
-            RetailPOS
-          </h1>
+          <div className="flex items-center gap-2.5">
+          <img src="/favicon.png" alt="Smapps" className="h-7 w-7" />
+          <span className="font-heading text-lg font-bold text-pos-sidebar-fg-active tracking-tight">
+            Smapps
+          </span>
+          </div>
           <button
             onClick={() => setSidebarOpen(false)}
             className="text-pos-sidebar-fg lg:hidden"
