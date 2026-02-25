@@ -1,0 +1,114 @@
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Plus, MapPin, Phone, Clock, MoreVertical } from "lucide-react";
+
+const outlets = [
+  {
+    id: 1,
+    name: "Downtown Flagship",
+    address: "123 Main Street, Downtown",
+    phone: "+1 (555) 123-4567",
+    hours: "7:00 AM - 10:00 PM",
+    status: "open",
+    todaySales: "$3,420",
+    staff: 8,
+  },
+  {
+    id: 2,
+    name: "Mall Branch",
+    address: "456 Shopping Center Blvd, Level 2",
+    phone: "+1 (555) 234-5678",
+    hours: "10:00 AM - 9:00 PM",
+    status: "open",
+    todaySales: "$2,180",
+    staff: 5,
+  },
+  {
+    id: 3,
+    name: "Airport Kiosk",
+    address: "Terminal 3, Gate B12",
+    phone: "+1 (555) 345-6789",
+    hours: "5:00 AM - 11:00 PM",
+    status: "open",
+    todaySales: "$1,850",
+    staff: 3,
+  },
+  {
+    id: 4,
+    name: "Suburban Store",
+    address: "789 Oak Avenue, Westside",
+    phone: "+1 (555) 456-7890",
+    hours: "8:00 AM - 8:00 PM",
+    status: "closed",
+    todaySales: "$0",
+    staff: 4,
+  },
+];
+
+export default function OutletManagement() {
+  return (
+    <div className="space-y-6 pb-20 lg:pb-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">Outlets</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage your business locations</p>
+        </div>
+        <Button size="sm" className="w-fit">
+          <Plus className="h-4 w-4 mr-1" /> Add Outlet
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {outlets.map((outlet) => (
+          <Card key={outlet.id} className="p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="font-heading font-semibold">{outlet.name}</h3>
+                <Badge
+                  variant="secondary"
+                  className={`mt-1 text-xs capitalize ${
+                    outlet.status === "open"
+                      ? "bg-success/10 text-success"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {outlet.status}
+                </Badge>
+              </div>
+              <button className="p-1 rounded-md hover:bg-muted text-muted-foreground">
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{outlet.address}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Phone className="h-3.5 w-3.5 shrink-0" />
+                <span>{outlet.phone}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                <span>{outlet.hours}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Today's Sales</p>
+                <p className="text-lg font-heading font-bold">{outlet.todaySales}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Staff</p>
+                <p className="text-lg font-heading font-bold">{outlet.staff}</p>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
