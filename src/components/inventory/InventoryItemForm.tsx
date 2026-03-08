@@ -235,16 +235,22 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                   </div>
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{item.name}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
                       {category && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{category.name}</Badge>}
-                      {item.conversions?.length > 0 && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
-                          <ArrowRightLeft className="h-2.5 w-2.5" />
-                          {item.conversions.length}
-                        </Badge>
-                      )}
                     </div>
+                    {item.conversions?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {item.conversions.map((conv) => {
+                          const fromUnit = getUnit(item.unitId);
+                          const toUnit = getUnit(conv.toUnitId);
+                          return (
+                            <span key={conv.id} className="text-[10px] text-muted-foreground bg-muted rounded px-1.5 py-0.5">
+                              {conv.fromQuantity} {fromUnit?.abbreviation || "?"} = {conv.toQuantity} {toUnit?.abbreviation || "?"}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
 
