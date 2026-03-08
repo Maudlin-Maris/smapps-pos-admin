@@ -45,18 +45,11 @@ export interface InventoryItem {
   conversions: ItemConversion[];
 }
 
-export interface MenuItemOption {
-  id: string;
-  name: string;
-  variants: { id: string; name: string }[];
-}
-
 interface Props {
   items: InventoryItem[];
   setItems: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   categories: InventoryCategory[];
   units: MeasuringUnit[];
-  menuItems: MenuItemOption[];
   onAdjustStock?: (item: InventoryItem) => void;
 }
 
@@ -81,7 +74,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 // No longer need MenuItemCombobox - conversions are now unit-to-unit
 
-export default function InventoryItemForm({ items, setItems, categories, units, menuItems, onAdjustStock }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm());
