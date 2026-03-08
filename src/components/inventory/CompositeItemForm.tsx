@@ -193,8 +193,11 @@ export default function CompositeItemForm({ composites, setComposites, inventory
             <ul className="space-y-1.5">
               {item.components.map((comp, i) => (
                 <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+                  <div className={cn("h-1.5 w-1.5 rounded-full", comp.role === "primary" ? "bg-primary" : "bg-muted-foreground/40")} />
                   {getItemName(comp.inventoryItemId)} — {comp.quantity} {getItemUnit(comp.inventoryItemId)}
+                  <Badge variant={comp.role === "primary" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 h-4 ml-auto">
+                    {comp.role}
+                  </Badge>
                 </li>
               ))}
             </ul>
@@ -287,5 +290,52 @@ export default function CompositeItemForm({ composites, setComposites, inventory
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function ItemCombobox({
+  inventoryItems,
+  value,
+  onSelect,
+}: {
+  inventoryItems: InventoryItem[];
+  value: string;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedName = inventoryItems.find((i) => i.id === value)?.name;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open} className="flex-1 justify-between font-normal h-9 text-sm">
+          <span className="truncate">{selectedName || "Select item..."}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[250px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search items..." />
+          <CommandList>
+            <CommandEmpty>No items found.</CommandEmpty>
+            <CommandGroup>
+              {inventoryItems.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  value={item.name}
+                  onSelect={() => {
+                    onSelect(item.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 h-3.5 w-3.5", value === item.id ? "opacity-100" : "opacity-0")} />
+                  {item.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
