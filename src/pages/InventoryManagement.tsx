@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -84,6 +85,7 @@ export default function InventoryManagement() {
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
+  const [showLowStock, setShowLowStock] = useState(false);
 
   const isAllOutlets = selectedOutletId === "all";
 
@@ -178,12 +180,26 @@ export default function InventoryManagement() {
 
       {lowStockCount > 0 && (
         <Card className="p-4 border-warning/30 bg-warning/5">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
-            <div>
-              <p className="text-sm font-medium">{lowStockCount} items need restocking</p>
-              <p className="text-xs text-muted-foreground">Items below minimum threshold</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+              <div>
+                <p className="text-sm font-medium">{lowStockCount} items need restocking</p>
+                <p className="text-xs text-muted-foreground">Items below minimum threshold</p>
+              </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
+              onClick={() => {
+                setTab("stock");
+                setShowLowStock((prev) => !prev);
+              }}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              {showLowStock ? "Show All" : "View Items"}
+            </Button>
           </div>
         </Card>
       )}
@@ -212,6 +228,7 @@ export default function InventoryManagement() {
           onAdjustStock={isAllOutlets ? undefined : openAdjust}
           readOnly={isAllOutlets}
           selectedOutletId={selectedOutletId}
+          filterLowStock={showLowStock}
         />
       )}
       {tab === "adjustments" && (

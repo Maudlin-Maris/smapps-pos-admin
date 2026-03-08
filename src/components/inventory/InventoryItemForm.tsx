@@ -54,6 +54,7 @@ interface Props {
   onAdjustStock?: (item: InventoryItem) => void;
   readOnly?: boolean;
   selectedOutletId?: string;
+  filterLowStock?: boolean;
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
@@ -78,7 +79,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 // No longer need MenuItemCombobox - conversions are now unit-to-unit
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
@@ -182,7 +183,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
   const filtered = items
     .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
-    .filter((i) => filterCategory === "all" || i.categoryId === filterCategory);
+    .filter((i) => filterCategory === "all" || i.categoryId === filterCategory)
+    .filter((i) => !filterLowStock || i.status === "low" || i.status === "critical");
 
   const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
 
