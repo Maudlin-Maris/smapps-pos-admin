@@ -64,6 +64,7 @@ export default function MenuManagement() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [formMode, setFormMode] = useState<"add" | "edit" | "clone">("add");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -82,6 +83,7 @@ export default function MenuManagement() {
 
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
+    setFormMode("edit");
     setFormOpen(true);
   };
 
@@ -94,6 +96,7 @@ export default function MenuManagement() {
       variants: item.variants.map((v) => ({ ...v, id: crypto.randomUUID(), sku: "" })),
     };
     setEditingItem(cloned);
+    setFormMode("clone");
     setFormOpen(true);
   };
 
@@ -112,7 +115,7 @@ export default function MenuManagement() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Menu Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage items, categories and pricing</p>
         </div>
-        <Button size="sm" className="w-fit" onClick={() => { setEditingItem(null); setFormOpen(true); }}>
+        <Button size="sm" className="w-fit" onClick={() => { setEditingItem(null); setFormMode("add"); setFormOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Add Item
         </Button>
       </div>
@@ -137,10 +140,11 @@ export default function MenuManagement() {
 
       <MenuItemForm
         open={formOpen}
-        onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingItem(null); }}
+        onOpenChange={(open) => { setFormOpen(open); if (!open) { setEditingItem(null); setFormMode("add"); } }}
         categories={categories}
         item={editingItem}
         onSave={handleSave}
+        mode={formMode}
       />
 
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

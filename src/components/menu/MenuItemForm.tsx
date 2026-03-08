@@ -63,6 +63,7 @@ interface MenuItemFormProps {
   categories: Category[];
   item?: MenuItem | null;
   onSave: (item: MenuItem) => void;
+  mode?: "add" | "edit" | "clone";
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
@@ -154,7 +155,7 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add" }: MenuItemFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -294,16 +295,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     onOpenChange(false);
   };
 
-  const isEditing = !!item;
+  const formTitle = mode === "clone" ? "Clone Menu Item" : mode === "edit" ? "Edit Menu Item" : "Add Menu Item";
+  const formDescription = mode === "clone"
+    ? "You're creating a new item based on an existing one. Review and adjust the details before saving."
+    : mode === "edit"
+    ? "Update the details of this menu item."
+    : "Fill in the details to create a new menu item.";
+  const submitLabel = mode === "clone" ? "Create Clone" : mode === "edit" ? "Update Item" : "Add Item";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
-          <DialogDescription>
-            {isEditing ? "Update the details of this menu item." : "Fill in the details to create a new menu item."}
-          </DialogDescription>
+          <DialogTitle>{formTitle}</DialogTitle>
+          <DialogDescription>{formDescription}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
@@ -450,7 +455,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || (variants.length > 0 && variants.some((v) => !v.name.trim()))}>
-            {isEditing ? "Update Item" : "Add Item"}
+            {submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
