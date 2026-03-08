@@ -312,42 +312,8 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* Recent Transactions */}
-      <Card className="p-4 lg:p-5">
-        <h3 className="font-heading font-semibold mb-4">Recent Transactions</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="pb-3 font-medium text-muted-foreground">ID</th>
-                <th className="pb-3 font-medium text-muted-foreground hidden sm:table-cell">Customer</th>
-                <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground hidden md:table-cell">Method</th>
-                <th className="pb-3 font-medium text-muted-foreground hidden lg:table-cell">Time</th>
-                <th className="pb-3 font-medium text-muted-foreground">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.recentTxns.map((txn) => (
-                <tr key={txn.id} className="border-b border-border/50 last:border-0">
-                  <td className="py-3 font-mono text-xs">{txn.id}</td>
-                  <td className="py-3 hidden sm:table-cell">{txn.customer}</td>
-                  <td className="py-3 font-semibold">{txn.amount}</td>
-                  <td className="py-3 hidden md:table-cell">{txn.method}</td>
-                  <td className="py-3 text-muted-foreground hidden lg:table-cell">{txn.time}</td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      txn.status === "Completed" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
-                    }`}>
-                      {txn.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* Transactions */}
+      <TransactionsTable transactions={data.transactions} />
     </div>
   );
 }
