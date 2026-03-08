@@ -52,6 +52,7 @@ const App = () => (
                 <Reports />
               </AppLayout>
             }
+          />
           <Route
             path="/outlets"
             element={
