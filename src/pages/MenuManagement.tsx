@@ -7,12 +7,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Copy } from "lucide-react";
+import { Plus, Copy, Upload } from "lucide-react";
 import { toast } from "sonner";
 import CategoryManager, { type Category } from "@/components/menu/CategoryManager";
 import MenuItemForm, { type MenuItem } from "@/components/menu/MenuItemForm";
 import MenuList from "@/components/menu/MenuList";
 import CopyMenuDialog from "@/components/menu/CopyMenuDialog";
+import ImportMenuDialog from "@/components/menu/ImportMenuDialog";
 import {
   Dialog,
   DialogContent,
@@ -78,6 +79,7 @@ export default function MenuManagement() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const isAllOutlets = selectedOutletId === "all";
   const currentOutlet = outlets.find((o) => o.id === selectedOutletId);
