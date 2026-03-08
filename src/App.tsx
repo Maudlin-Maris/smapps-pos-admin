@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
 import InventoryManagement from "@/pages/InventoryManagement";
 import Reports from "@/pages/Reports";
+import ExpenseManagement from "@/pages/ExpenseManagement";
 import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
 import NotFound from "./pages/NotFound";
@@ -50,6 +51,14 @@ const App = () => (
             element={
               <AppLayout>
                 <Reports />
+              </AppLayout>
+            }
+          />
+          <Route
+            path="/expenses"
+            element={
+              <AppLayout>
+                <ExpenseManagement />
               </AppLayout>
             }
           />

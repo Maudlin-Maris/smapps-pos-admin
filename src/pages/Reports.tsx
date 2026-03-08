@@ -17,113 +17,14 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, Download } from "lucide-react";
+import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { outlets } from "@/data/outlets";
-
-// Sample P&L data per outlet
-interface PnLData {
-  revenue: {
-    sales: number;
-    otherIncome: number;
-  };
-  costOfGoods: {
-    inventory: number;
-    directLabor: number;
-  };
-  expenses: {
-    rent: number;
-    utilities: number;
-    salaries: number;
-    marketing: number;
-    maintenance: number;
-    other: number;
-  };
-}
-
-const outletPnLData: Record<string, PnLData> = {
-  "outlet-1": {
-    revenue: { sales: 42500, otherIncome: 1200 },
-    costOfGoods: { inventory: 14800, directLabor: 4200 },
-    expenses: { rent: 3500, utilities: 850, salaries: 8200, marketing: 1200, maintenance: 600, other: 450 },
-  },
-  "outlet-2": {
-    revenue: { sales: 38200, otherIncome: 800 },
-    costOfGoods: { inventory: 13500, directLabor: 3800 },
-    expenses: { rent: 4200, utilities: 720, salaries: 7500, marketing: 950, maintenance: 400, other: 380 },
-  },
-  "outlet-3": {
-    revenue: { sales: 28900, otherIncome: 500 },
-    costOfGoods: { inventory: 5200, directLabor: 6800 },
-    expenses: { rent: 2800, utilities: 550, salaries: 6200, marketing: 800, maintenance: 350, other: 300 },
-  },
-  "outlet-4": {
-    revenue: { sales: 15600, otherIncome: 300 },
-    costOfGoods: { inventory: 5800, directLabor: 2100 },
-    expenses: { rent: 1800, utilities: 380, salaries: 3200, marketing: 500, maintenance: 200, other: 180 },
-  },
-};
-
-function aggregatePnL(outletIds: string[]): PnLData {
-  const result: PnLData = {
-    revenue: { sales: 0, otherIncome: 0 },
-    costOfGoods: { inventory: 0, directLabor: 0 },
-    expenses: { rent: 0, utilities: 0, salaries: 0, marketing: 0, maintenance: 0, other: 0 },
-  };
-  for (const id of outletIds) {
-    const d = outletPnLData[id];
-    if (!d) continue;
-    result.revenue.sales += d.revenue.sales;
-    result.revenue.otherIncome += d.revenue.otherIncome;
-    result.costOfGoods.inventory += d.costOfGoods.inventory;
-    result.costOfGoods.directLabor += d.costOfGoods.directLabor;
-    result.expenses.rent += d.expenses.rent;
-    result.expenses.utilities += d.expenses.utilities;
-    result.expenses.salaries += d.expenses.salaries;
-    result.expenses.marketing += d.expenses.marketing;
-    result.expenses.maintenance += d.expenses.maintenance;
-    result.expenses.other += d.expenses.other;
-  }
-  return result;
-}
+import { useExpenses, useSales, buildPnL, type PnLData } from "@/hooks/use-financial-data";
+import PnLStatement from "@/components/reports/PnLStatement";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-}
-
-function pct(part: number, total: number) {
-  if (total === 0) return "0%";
-  return `${((part / total) * 100).toFixed(1)}%`;
-}
-
-interface LineRowProps {
-  label: string;
-  amount: number;
-  total?: number;
-  bold?: boolean;
-  positive?: boolean;
-  indent?: boolean;
-}
-
-function LineRow({ label, amount, total, bold, positive, indent }: LineRowProps) {
-  return (
-    <div className={cn("flex items-center justify-between py-2 px-3", bold && "font-semibold", indent && "pl-8")}>
-      <span className={cn("text-sm", indent && "text-muted-foreground")}>{label}</span>
-      <div className="flex items-center gap-4">
-        {total !== undefined && (
-          <span className="text-xs text-muted-foreground w-14 text-right">{pct(amount, total)}</span>
-        )}
-        <span className={cn(
-          "text-sm font-mono w-24 text-right",
-          bold && "font-bold",
-          positive === true && "text-success",
-          positive === false && "text-destructive"
-        )}>
-          {fmt(amount)}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 export default function Reports() {
@@ -131,12 +32,21 @@ export default function Reports() {
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
 
+  const { getExpensesByOutletAndPeriod } = useExpenses();
+  const { getSalesByOutletAndPeriod } = useSales();
+
   const isAllOutlets = selectedOutletId === "all";
+  const outletIds = isAllOutlets ? outlets.map((o) => o.id) : [selectedOutletId];
 
   const data = useMemo(() => {
-    const ids = isAllOutlets ? Object.keys(outletPnLData) : [selectedOutletId];
-    return aggregatePnL(ids);
-  }, [selectedOutletId, isAllOutlets]);
+    const filteredExpenses = getExpensesByOutletAndPeriod(outletIds, dateFrom, dateTo);
+    const filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
+    // COGS: In a real system this would come from inventory consumption. Using estimate for now.
+    const totalSales = filteredSales.reduce((s, r) => s + r.totalSales, 0);
+    const cogsInventory = Math.round(totalSales * 0.35); // ~35% of sales
+    const cogsLabor = Math.round(totalSales * 0.10); // ~10% of sales
+    return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
+  }, [selectedOutletId, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod]);
 
   const totalRevenue = data.revenue.sales + data.revenue.otherIncome;
   const totalCOGS = data.costOfGoods.inventory + data.costOfGoods.directLabor;
@@ -146,7 +56,6 @@ export default function Reports() {
   const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
   const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
-  // Chart data
   const breakdownData = [
     { name: "COGS", value: totalCOGS, color: "hsl(var(--chart-5))" },
     { name: "Expenses", value: totalExpenses, color: "hsl(var(--chart-3))" },
@@ -162,18 +71,17 @@ export default function Reports() {
     { name: "Other", value: data.expenses.other },
   ];
 
-  // Outlet comparison data (only when "all" selected)
   const outletComparison = useMemo(() => {
     if (!isAllOutlets) return [];
     return outlets.map((o) => {
-      const d = outletPnLData[o.id];
-      if (!d) return null;
-      const rev = d.revenue.sales + d.revenue.otherIncome;
-      const cogs = d.costOfGoods.inventory + d.costOfGoods.directLabor;
-      const exp = Object.values(d.expenses).reduce((a, b) => a + b, 0);
-      return { name: o.name.split(" ")[0], revenue: rev, profit: rev - cogs - exp };
-    }).filter(Boolean);
-  }, [isAllOutlets]);
+      const oExpenses = getExpensesByOutletAndPeriod([o.id], dateFrom, dateTo);
+      const oSales = getSalesByOutletAndPeriod([o.id], dateFrom, dateTo);
+      const rev = oSales.reduce((s, r) => s + r.totalSales + r.otherIncome, 0);
+      const cogsEst = Math.round(rev * 0.45);
+      const exp = oExpenses.reduce((s, e) => s + e.amount, 0);
+      return { name: o.name.split(" ")[0], revenue: rev, profit: rev - cogsEst - exp };
+    });
+  }, [isAllOutlets, dateFrom, dateTo, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod]);
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -181,7 +89,7 @@ export default function Reports() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold tracking-tight">Profit & Loss</h1>
-          <p className="text-sm text-muted-foreground mt-1">Financial performance summary</p>
+          <p className="text-sm text-muted-foreground mt-1">Financial performance from recorded data</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
@@ -206,21 +114,11 @@ export default function Reports() {
               <div className="flex flex-col sm:flex-row">
                 <div className="p-3 border-b sm:border-b-0 sm:border-r">
                   <p className="text-xs font-medium text-muted-foreground mb-2">From</p>
-                  <Calendar
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={(d) => d && setDateFrom(d)}
-                    className={cn("p-0 pointer-events-auto")}
-                  />
+                  <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)} className={cn("p-0 pointer-events-auto")} />
                 </div>
                 <div className="p-3">
                   <p className="text-xs font-medium text-muted-foreground mb-2">To</p>
-                  <Calendar
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={(d) => d && setDateTo(d)}
-                    className={cn("p-0 pointer-events-auto")}
-                  />
+                  <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)} className={cn("p-0 pointer-events-auto")} />
                 </div>
               </div>
               <div className="flex gap-1.5 p-3 border-t">
@@ -285,80 +183,15 @@ export default function Reports() {
 
       {/* P&L Statement + Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Statement */}
-        <Card className="lg:col-span-2 p-0 overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="font-heading font-semibold text-sm">Income Statement</h2>
-            <Badge variant="secondary" className="text-xs">
-              {format(dateFrom, "MMM d")} – {format(dateTo, "MMM d, yyyy")}
-            </Badge>
-          </div>
-          <div className="divide-y">
-            {/* Revenue */}
-            <div>
-              <div className="px-3 pt-3 pb-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Revenue</p>
-              </div>
-              <LineRow label="Sales Revenue" amount={data.revenue.sales} total={totalRevenue} indent />
-              <LineRow label="Other Income" amount={data.revenue.otherIncome} total={totalRevenue} indent />
-              <div className="border-t border-dashed mx-3" />
-              <LineRow label="Total Revenue" amount={totalRevenue} bold />
-            </div>
+        <PnLStatement data={data} dateFrom={dateFrom} dateTo={dateTo} />
 
-            {/* COGS */}
-            <div>
-              <div className="px-3 pt-3 pb-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cost of Goods Sold</p>
-              </div>
-              <LineRow label="Inventory Costs" amount={data.costOfGoods.inventory} total={totalRevenue} indent />
-              <LineRow label="Direct Labor" amount={data.costOfGoods.directLabor} total={totalRevenue} indent />
-              <div className="border-t border-dashed mx-3" />
-              <LineRow label="Total COGS" amount={totalCOGS} bold />
-            </div>
-
-            {/* Gross Profit */}
-            <div className="bg-success/5">
-              <LineRow label="Gross Profit" amount={grossProfit} total={totalRevenue} bold positive={grossProfit >= 0} />
-            </div>
-
-            {/* Expenses */}
-            <div>
-              <div className="px-3 pt-3 pb-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Operating Expenses</p>
-              </div>
-              <LineRow label="Rent" amount={data.expenses.rent} total={totalRevenue} indent />
-              <LineRow label="Utilities" amount={data.expenses.utilities} total={totalRevenue} indent />
-              <LineRow label="Salaries & Wages" amount={data.expenses.salaries} total={totalRevenue} indent />
-              <LineRow label="Marketing" amount={data.expenses.marketing} total={totalRevenue} indent />
-              <LineRow label="Maintenance" amount={data.expenses.maintenance} total={totalRevenue} indent />
-              <LineRow label="Other Expenses" amount={data.expenses.other} total={totalRevenue} indent />
-              <div className="border-t border-dashed mx-3" />
-              <LineRow label="Total Expenses" amount={totalExpenses} bold />
-            </div>
-
-            {/* Net Profit */}
-            <div className={cn(netProfit >= 0 ? "bg-success/5" : "bg-destructive/5")}>
-              <LineRow label="Net Profit / (Loss)" amount={netProfit} total={totalRevenue} bold positive={netProfit >= 0} />
-            </div>
-          </div>
-        </Card>
-
-        {/* Revenue Breakdown Pie */}
         <div className="space-y-4">
           <Card className="p-4">
             <h3 className="text-sm font-heading font-semibold mb-4">Revenue Breakdown</h3>
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={breakdownData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    dataKey="value"
-                    paddingAngle={2}
-                  >
+                  <Pie data={breakdownData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={2}>
                     {breakdownData.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
                     ))}
@@ -387,7 +220,7 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Outlet Comparison (only when "All Outlets") */}
+      {/* Outlet Comparison */}
       {isAllOutlets && outletComparison.length > 0 && (
         <Card className="p-4">
           <h3 className="text-sm font-heading font-semibold mb-4">Outlet Comparison</h3>
