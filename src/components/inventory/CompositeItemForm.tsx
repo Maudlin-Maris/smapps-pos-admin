@@ -42,6 +42,8 @@ export interface CompositeComponent {
 export interface CompositeItem {
   id: string;
   name: string;
+  menuItemId?: string;
+  menuVariantId?: string;
   description: string;
   components: CompositeComponent[];
 }
@@ -51,10 +53,13 @@ interface Props {
   setComposites: React.Dispatch<React.SetStateAction<CompositeItem[]>>;
   inventoryItems: InventoryItem[];
   units: MeasuringUnit[];
+  menuItems: { id: string; name: string; variants: { id: string; name: string }[] }[];
 }
 
 const emptyForm = () => ({
   name: "",
+  menuItemId: "" as string,
+  menuVariantId: "" as string,
   description: "",
   components: [] as CompositeComponent[],
 });
