@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import InventoryCategoryManager, {
   defaultCategories,
   type InventoryCategory,
@@ -16,6 +17,11 @@ import InventoryItemForm, {
 import CompositeItemForm, {
   type CompositeItem,
 } from "@/components/inventory/CompositeItemForm";
+import StockAdjustmentHistory, {
+  StockAdjustDialog,
+  type StockAdjustment,
+  type AdjustmentType,
+} from "@/components/inventory/StockAdjustmentHistory";
 
 const defaultItems: InventoryItem[] = [
   { id: "i1", name: "Coffee Beans (Arabica)", sku: "CB-001", categoryId: "1", unitId: "1", stock: 45, minStock: 20, maxStock: 100, costPrice: 12.5, status: "good" },
@@ -36,7 +42,13 @@ const defaultComposites: CompositeItem[] = [
   { id: "c3", name: "Hair Coloring Service", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1 }, { inventoryItemId: "i8", quantity: 1 }, { inventoryItemId: "i6", quantity: 0.03 }] },
 ];
 
-type Tab = "stock" | "categories" | "units" | "composite";
+function computeStatus(stock: number, min: number): InventoryItem["status"] {
+  if (stock <= min * 0.3) return "critical";
+  if (stock <= min) return "low";
+  return "good";
+}
+
+type Tab = "stock" | "categories" | "units" | "composite" | "adjustments";
 
 export default function InventoryManagement() {
   const [tab, setTab] = useState<Tab>("stock");
@@ -44,11 +56,58 @@ export default function InventoryManagement() {
   const [units, setUnits] = useState<MeasuringUnit[]>(defaultUnits);
   const [items, setItems] = useState<InventoryItem[]>(defaultItems);
   const [composites, setComposites] = useState<CompositeItem[]>(defaultComposites);
+  const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
+  const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
+  const [adjustOpen, setAdjustOpen] = useState(false);
 
   const lowStockCount = items.filter((i) => i.status === "low" || i.status === "critical").length;
 
+  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string) => {
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const previousStock = item.stock;
+    let newStock: number;
+    if (type === "set") {
+      newStock = quantity;
+    } else if (type === "add" || type === "returned") {
+      newStock = previousStock + quantity;
+    } else {
+      newStock = Math.max(0, previousStock - quantity);
+    }
+
+    const quantityChange = type === "set" ? Math.abs(newStock - previousStock) : quantity;
+
+    const adjustment: StockAdjustment = {
+      id: crypto.randomUUID(),
+      inventoryItemId: itemId,
+      type,
+      quantityChange,
+      previousStock,
+      newStock,
+      reason,
+      timestamp: new Date(),
+    };
+
+    setAdjustments((prev) => [adjustment, ...prev]);
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === itemId
+          ? { ...i, stock: newStock, status: computeStatus(newStock, i.minStock) }
+          : i
+      )
+    );
+    toast.success(`Stock adjusted: ${previousStock} → ${newStock}`);
+  };
+
+  const openAdjust = (item: InventoryItem) => {
+    setAdjustItem(item);
+    setAdjustOpen(true);
+  };
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "stock", label: "Stock Items" },
+    { key: "adjustments", label: `Adjustments${adjustments.length > 0 ? ` (${adjustments.length})` : ""}` },
     { key: "categories", label: "Categories" },
     { key: "units", label: "Units" },
     { key: "composite", label: "Composite Items" },
@@ -73,7 +132,6 @@ export default function InventoryManagement() {
         </Card>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit overflow-x-auto">
         {tabs.map((t) => (
           <button
@@ -90,7 +148,10 @@ export default function InventoryManagement() {
       </div>
 
       {tab === "stock" && (
-        <InventoryItemForm items={items} setItems={setItems} categories={categories} units={units} />
+        <InventoryItemForm items={items} setItems={setItems} categories={categories} units={units} onAdjustStock={openAdjust} />
+      )}
+      {tab === "adjustments" && (
+        <StockAdjustmentHistory adjustments={adjustments} inventoryItems={items} units={units} />
       )}
       {tab === "categories" && (
         <InventoryCategoryManager categories={categories} setCategories={setCategories} />
@@ -101,6 +162,13 @@ export default function InventoryManagement() {
       {tab === "composite" && (
         <CompositeItemForm composites={composites} setComposites={setComposites} inventoryItems={items} units={units} />
       )}
+
+      <StockAdjustDialog
+        open={adjustOpen}
+        onOpenChange={setAdjustOpen}
+        item={adjustItem}
+        onAdjust={handleAdjustStock}
+      />
     </div>
   );
 }
