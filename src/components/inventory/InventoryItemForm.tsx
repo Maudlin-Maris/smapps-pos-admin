@@ -92,82 +92,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
   return "good";
 }
 
-// Sub-component: searchable menu item picker for conversions
-function MenuItemCombobox({
-  menuItems,
-  value,
-  variantValue,
-  onChange,
-}: {
-  menuItems: MenuItemOption[];
-  value: string;
-  variantValue?: string;
-  onChange: (menuItemId: string, menuVariantId?: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-
-  // Flatten menu items + variants
-  type FlatOption = { id: string; menuItemId: string; menuVariantId?: string; label: string };
-  const options: FlatOption[] = menuItems.flatMap((mi) => {
-    if (mi.variants.length === 0) {
-      return [{ id: mi.id, menuItemId: mi.id, label: mi.name }];
-    }
-    return [
-      { id: mi.id, menuItemId: mi.id, label: mi.name },
-      ...mi.variants.map((v) => ({
-        id: `${mi.id}__${v.id}`,
-        menuItemId: mi.id,
-        menuVariantId: v.id,
-        label: `${mi.name} — ${v.name}`,
-      })),
-    ];
-  });
-
-  const selectedLabel = (() => {
-    if (!value) return "Select menu item...";
-    const mi = menuItems.find((m) => m.id === value);
-    if (!mi) return "Select menu item...";
-    if (variantValue) {
-      const v = mi.variants.find((vr) => vr.id === variantValue);
-      return v ? `${mi.name} — ${v.name}` : mi.name;
-    }
-    return mi.name;
-  })();
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between text-sm h-9 font-normal">
-          <span className="truncate">{selectedLabel}</span>
-          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search menu items..." className="h-9" />
-          <CommandList>
-            <CommandEmpty>No menu items found.</CommandEmpty>
-            <CommandGroup>
-              {options.map((opt) => (
-                <CommandItem
-                  key={opt.id}
-                  value={opt.label}
-                  onSelect={() => {
-                    onChange(opt.menuItemId, opt.menuVariantId);
-                    setOpen(false);
-                  }}
-                >
-                  <Check className={cn("mr-2 h-3.5 w-3.5", value === opt.menuItemId && variantValue === opt.menuVariantId ? "opacity-100" : "opacity-0")} />
-                  <span className={opt.menuVariantId ? "pl-2 text-muted-foreground" : "font-medium"}>{opt.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
+// No longer need MenuItemCombobox - conversions are now unit-to-unit
 
 export default function InventoryItemForm({ items, setItems, categories, units, menuItems, onAdjustStock }: Props) {
   const [open, setOpen] = useState(false);
@@ -240,7 +165,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const addConversion = () => {
     setForm((prev) => ({
       ...prev,
-      conversions: [...prev.conversions, { id: crypto.randomUUID(), menuItemId: "", conversionRate: 1, conversionUnit: "" }],
+      conversions: [...prev.conversions, { id: crypto.randomUUID(), fromQuantity: 1, toQuantity: 1, toUnitId: "" }],
     }));
   };
 
@@ -437,8 +362,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <label className="text-sm font-medium">Menu Item Conversions</label>
-                  <p className="text-xs text-muted-foreground">How this item converts to menu items or recipes</p>
+                  <label className="text-sm font-medium">Unit Conversions</label>
+                  <p className="text-xs text-muted-foreground">How this item's unit converts to other measuring units</p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={addConversion} className="h-7 text-xs">
                   <Plus className="h-3 w-3 mr-1" /> Add
@@ -451,46 +376,69 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 </p>
               )}
 
-              {form.conversions.map((conv, idx) => (
-                <Card key={conv.id} className="p-3 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">Menu Item / Variant</label>
-                      <MenuItemCombobox
-                        menuItems={menuItems}
-                        value={conv.menuItemId}
-                        variantValue={conv.menuVariantId}
-                        onChange={(menuItemId, menuVariantId) => updateConversion(idx, { menuItemId, menuVariantId })}
-                      />
+              {form.conversions.map((conv, idx) => {
+                const itemUnit = getUnit(form.unitId);
+                const toUnit = getUnit(conv.toUnitId);
+                return (
+                  <Card key={conv.id} className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground">Conversion {idx + 1}</p>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeConversion(idx)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0 mt-5" onClick={() => removeConversion(idx)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Rate (per unit)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={conv.conversionRate}
-                        onChange={(e) => updateConversion(idx, { conversionRate: Number(e.target.value) })}
-                        className="h-8 text-sm"
-                        placeholder="e.g. 50"
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={conv.fromQuantity}
+                          onChange={(e) => updateConversion(idx, { fromQuantity: Number(e.target.value) })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
+                        <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                          {itemUnit ? `${itemUnit.name} (${itemUnit.abbreviation})` : "Select item unit first"}
+                        </div>
+                      </div>
+                      <span className="text-sm font-medium text-muted-foreground pt-4">=</span>
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={conv.toQuantity}
+                          onChange={(e) => updateConversion(idx, { toQuantity: Number(e.target.value) })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
+                        <Select value={conv.toUnitId} onValueChange={(v) => updateConversion(idx, { toUnitId: v })}>
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {units.filter(u => u.id !== form.unitId).map((u) => (
+                              <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Description</label>
-                      <Input
-                        value={conv.conversionUnit}
-                        onChange={(e) => updateConversion(idx, { conversionUnit: e.target.value })}
-                        className="h-8 text-sm"
-                        placeholder="e.g. 1 kg = 50 cups"
-                      />
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                    {itemUnit && toUnit && (
+                      <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+                        {conv.fromQuantity} {itemUnit.abbreviation} = {conv.toQuantity} {toUnit.abbreviation}
+                      </p>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           </div>
           <DialogFooter>
