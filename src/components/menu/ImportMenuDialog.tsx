@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import type { MenuItem, MenuVariant } from "./MenuItemForm";
 import {
