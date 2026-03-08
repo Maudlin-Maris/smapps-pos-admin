@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "./PaginationControls";
 import {
   Dialog,
   DialogContent,
@@ -160,8 +162,18 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
         </Button>
       </div>
 
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        perPage={perPage}
+        totalItems={totalItems}
+        pageSizeOptions={pageSizeOptions}
+        onPageChange={setPage}
+        onPerPageChange={setPerPage}
+      />
+
       <div className="grid gap-3">
-        {filtered.map((item) => {
+        {paginatedItems.map((item) => {
           const percentage = item.maxStock > 0 ? Math.round((item.stock / item.maxStock) * 100) : 0;
           const unit = getUnit(item.unitId);
           const category = getCategory(item.categoryId);

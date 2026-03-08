@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "./PaginationControls";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -172,6 +174,8 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
     .filter((a) => filterItem === "all" || a.inventoryItemId === filterItem)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
+
   const isPositive = (type: AdjustmentType) => type === "add" || type === "returned";
 
   return (
@@ -215,8 +219,17 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
           <p className="text-xs text-muted-foreground mt-1">Stock changes will appear here</p>
         </div>
       ) : (
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          perPage={perPage}
+          totalItems={totalItems}
+          pageSizeOptions={pageSizeOptions}
+          onPageChange={setPage}
+          onPerPageChange={setPerPage}
+        />
         <div className="grid gap-2">
-          {filtered.map((adj) => (
+          {paginatedItems.map((adj) => (
             <Card key={adj.id} className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">

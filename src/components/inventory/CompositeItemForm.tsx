@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "./PaginationControls";
 import {
   Dialog,
   DialogContent,
@@ -132,6 +134,8 @@ export default function CompositeItemForm({ composites, setComposites, inventory
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
@@ -143,8 +147,18 @@ export default function CompositeItemForm({ composites, setComposites, inventory
         </Button>
       </div>
 
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        perPage={perPage}
+        totalItems={totalItems}
+        pageSizeOptions={pageSizeOptions}
+        onPageChange={setPage}
+        onPerPageChange={setPerPage}
+      />
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((item) => (
+        {paginatedItems.map((item) => (
           <Card key={item.id} className="p-4">
             <div className="flex items-start justify-between gap-2 mb-3">
               <div className="flex items-center gap-3 min-w-0">
