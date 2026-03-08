@@ -161,9 +161,11 @@ export default function CompositeItemForm({ composites, setComposites, inventory
         <div className="relative flex-1 max-w-sm">
           <Input placeholder="Search composites..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Button size="sm" onClick={openNew} className="w-fit">
-          <Plus className="h-4 w-4 mr-1" /> Add Composite Item
-        </Button>
+        {!readOnly && (
+          <Button size="sm" onClick={openNew} className="w-fit">
+            <Plus className="h-4 w-4 mr-1" /> Add Composite Item
+          </Button>
+        )}
       </div>
 
       <PaginationControls
@@ -189,14 +191,16 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                   {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
                 </div>
               </div>
-              <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              {!readOnly && (
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
             <ul className="space-y-1.5">
               {item.components.map((comp, i) => (
