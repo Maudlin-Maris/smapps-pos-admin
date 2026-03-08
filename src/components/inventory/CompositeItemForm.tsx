@@ -42,6 +42,8 @@ export interface CompositeComponent {
 export interface CompositeItem {
   id: string;
   name: string;
+  menuItemId?: string;
+  menuVariantId?: string;
   description: string;
   components: CompositeComponent[];
 }
@@ -51,15 +53,18 @@ interface Props {
   setComposites: React.Dispatch<React.SetStateAction<CompositeItem[]>>;
   inventoryItems: InventoryItem[];
   units: MeasuringUnit[];
+  menuItems: { id: string; name: string; variants: { id: string; name: string }[] }[];
 }
 
 const emptyForm = () => ({
   name: "",
+  menuItemId: "" as string,
+  menuVariantId: "" as string,
   description: "",
   components: [] as CompositeComponent[],
 });
 
-export default function CompositeItemForm({ composites, setComposites, inventoryItems, units }: Props) {
+export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
@@ -73,7 +78,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
   const openEdit = (item: CompositeItem) => {
     setEditing(item);
-    setForm({ name: item.name, description: item.description, components: [...item.components] });
+    setForm({ name: item.name, menuItemId: item.menuItemId || "", menuVariantId: item.menuVariantId || "", description: item.description, components: [...item.components] });
     setOpen(true);
   };
 
@@ -116,13 +121,13 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
     if (editing) {
       setComposites((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, description: form.description, components: validComponents } : c))
+        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents } : c))
       );
       toast.success("Composite item updated");
     } else {
       setComposites((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: form.name, description: form.description, components: validComponents },
+        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents },
       ]);
       toast.success("Composite item created");
     }
@@ -215,8 +220,18 @@ export default function CompositeItemForm({ composites, setComposites, inventory
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Name *</label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Cappuccino" />
+              <label className="text-sm font-medium">Menu Item *</label>
+              <MenuItemCombobox
+                menuItems={menuItems}
+                menuItemId={form.menuItemId}
+                menuVariantId={form.menuVariantId}
+                onSelect={(itemId, variantId, displayName) => {
+                  setForm((f) => ({ ...f, menuItemId: itemId, menuVariantId: variantId, name: displayName }));
+                }}
+              />
+              {form.name && (
+                <p className="text-xs text-muted-foreground">Selected: <span className="font-medium text-foreground">{form.name}</span></p>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Description</label>
@@ -290,6 +305,73 @@ export default function CompositeItemForm({ composites, setComposites, inventory
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function MenuItemCombobox({
+  menuItems,
+  menuItemId,
+  menuVariantId,
+  onSelect,
+}: {
+  menuItems: { id: string; name: string; variants: { id: string; name: string }[] }[];
+  menuItemId: string;
+  menuVariantId: string;
+  onSelect: (itemId: string, variantId: string, displayName: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Build flat list: menu items + their variants
+  const options = useMemo(() => {
+    const list: { key: string; itemId: string; variantId: string; label: string; isVariant: boolean }[] = [];
+    for (const mi of menuItems) {
+      if (mi.variants.length === 0) {
+        list.push({ key: mi.id, itemId: mi.id, variantId: "", label: mi.name, isVariant: false });
+      } else {
+        for (const v of mi.variants) {
+          list.push({ key: `${mi.id}-${v.id}`, itemId: mi.id, variantId: v.id, label: `${mi.name} — ${v.name}`, isVariant: true });
+        }
+      }
+    }
+    return list;
+  }, [menuItems]);
+
+  const selectedLabel = options.find(
+    (o) => o.itemId === menuItemId && o.variantId === menuVariantId
+  )?.label;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal h-9 text-sm">
+          <span className="truncate">{selectedLabel || "Search menu items..."}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search menu items..." />
+          <CommandList>
+            <CommandEmpty>No menu items found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.key}
+                  value={opt.label}
+                  onSelect={() => {
+                    onSelect(opt.itemId, opt.variantId, opt.label);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 h-3.5 w-3.5", menuItemId === opt.itemId && menuVariantId === opt.variantId ? "opacity-100" : "opacity-0")} />
+                  <span className={opt.isVariant ? "ml-1" : "font-medium"}>{opt.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
