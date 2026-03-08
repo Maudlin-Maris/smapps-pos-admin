@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AlertTriangle, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
