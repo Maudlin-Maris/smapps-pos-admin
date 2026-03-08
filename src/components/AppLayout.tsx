@@ -1,4 +1,5 @@
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import logoLight from "@/assets/logo-light.png";
 import {
   LayoutDashboard,
   UtensilsCrossed,
