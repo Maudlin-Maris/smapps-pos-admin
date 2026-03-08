@@ -224,15 +224,27 @@ export default function CopyMenuDialog({
 
           {/* Items list */}
           <div className="border border-border rounded-lg overflow-hidden flex-1 flex flex-col min-h-0">
-            <div className="flex items-center gap-3 px-3 py-2 bg-muted/50 border-b border-border shrink-0">
-              <Checkbox
-                checked={allFilteredSelected}
-                onCheckedChange={toggleAll}
-                aria-label="Select all"
-              />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Select items ({selectedIds.size}/{items.length})
-              </span>
+            <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border shrink-0">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={allFilteredSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Select all"
+                />
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Select items ({selectedIds.size}/{items.length})
+                </span>
+              </div>
+              {selectedIds.size < items.length && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setSelectedIds(new Set(items.map((i) => i.id)))}
+                >
+                  Select all {items.length} items
+                </Button>
+              )}
             </div>
             <div className="overflow-y-auto divide-y divide-border flex-1">
               {paged.map((item) => {
