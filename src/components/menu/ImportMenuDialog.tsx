@@ -18,10 +18,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 import type { MenuItem, MenuVariant } from "./MenuItemForm";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ImportMenuDialogProps {
   open: boolean;
@@ -214,11 +222,71 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
   const [page, setPage] = useState(1);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
+
   const totalPages = Math.max(1, Math.ceil(parsedItems.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const paged = parsedItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const totalVariants = useMemo(() => parsedItems.reduce((s, i) => s + i.variants.length, 0), [parsedItems]);
+
+  const updateItem = (id: string, field: keyof MenuItem, value: string | number) => {
+    setParsedItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const updateVariant = (itemId: string, variantId: string, field: keyof MenuVariant, value: string | number) => {
+    setParsedItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              variants: item.variants.map((v) =>
+                v.id === variantId ? { ...v, [field]: value } : v
+              ),
+            }
+          : item
+      )
+    );
+  };
+
+  const EditableCell = ({ value, itemId, field, type = "text", className = "" }: {
+    value: string | number;
+    itemId: string;
+    field: keyof MenuItem;
+    type?: "text" | "number";
+    className?: string;
+  }) => {
+    const isEditing = editingCell?.id === itemId && editingCell?.field === field;
+    if (isEditing) {
+      return (
+        <Input
+          autoFocus
+          type={type}
+          defaultValue={value}
+          className={cn("h-7 text-xs px-1.5", className)}
+          onBlur={(e) => {
+            const v = type === "number" ? parseFloat(e.target.value) || 0 : e.target.value;
+            updateItem(itemId, field, v);
+            setEditingCell(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Escape") setEditingCell(null);
+          }}
+        />
+      );
+    }
+    return (
+      <span
+        className={cn("cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 inline-block min-w-[2ch]", className)}
+        onClick={() => setEditingCell({ id: itemId, field })}
+      >
+        {value || "—"}
+      </span>
+    );
+  };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -358,24 +426,70 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
                   <TableBody>
                     {paged.map((item) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium text-sm">{item.name}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{item.category}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{item.subcategory}</TableCell>
-                        <TableCell className="text-right text-sm">${item.price.toFixed(2)}</TableCell>
-                        <TableCell className="text-xs font-mono">{item.sku || "—"}</TableCell>
+                        <TableCell className="font-medium text-sm">
+                          <EditableCell value={item.name} itemId={item.id} field="name" />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <EditableCell value={item.category} itemId={item.id} field="category" />
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          <EditableCell value={item.subcategory} itemId={item.id} field="subcategory" />
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
+                          <EditableCell value={item.price} itemId={item.id} field="price" type="number" />
+                        </TableCell>
+                        <TableCell className="text-xs font-mono">
+                          <EditableCell value={item.sku} itemId={item.id} field="sku" />
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={item.status === "active" ? "default" : "secondary"} className="text-[10px]">
-                            {item.status}
-                          </Badge>
+                          <Select
+                            value={item.status}
+                            onValueChange={(v) => updateItem(item.id, "status", v)}
+                          >
+                            <SelectTrigger className="h-7 text-[10px] w-[80px] px-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">active</SelectItem>
+                              <SelectItem value="inactive">inactive</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           {item.variants.length > 0 ? (
-                            <div className="space-y-0.5">
-                              {item.variants.map((v) => (
-                                <p key={v.id} className="text-[11px] text-muted-foreground">
-                                  {v.name} — ${v.price.toFixed(2)}
-                                </p>
-                              ))}
+                            <div className="space-y-1">
+                              {item.variants.map((v) => {
+                                const isEditingVariantName = editingCell?.id === v.id && editingCell?.field === "name";
+                                const isEditingVariantPrice = editingCell?.id === v.id && editingCell?.field === "price";
+                                return (
+                                  <div key={v.id} className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                    {isEditingVariantName ? (
+                                      <Input
+                                        autoFocus
+                                        defaultValue={v.name}
+                                        className="h-5 text-[11px] px-1 w-16"
+                                        onBlur={(e) => { updateVariant(item.id, v.id, "name", e.target.value); setEditingCell(null); }}
+                                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingCell(null); }}
+                                      />
+                                    ) : (
+                                      <span className="cursor-pointer hover:bg-muted/50 rounded px-0.5" onClick={() => setEditingCell({ id: v.id, field: "name" })}>{v.name}</span>
+                                    )}
+                                    <span>—</span>
+                                    {isEditingVariantPrice ? (
+                                      <Input
+                                        autoFocus
+                                        type="number"
+                                        defaultValue={v.price}
+                                        className="h-5 text-[11px] px-1 w-14"
+                                        onBlur={(e) => { updateVariant(item.id, v.id, "price", parseFloat(e.target.value) || 0); setEditingCell(null); }}
+                                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingCell(null); }}
+                                      />
+                                    ) : (
+                                      <span className="cursor-pointer hover:bg-muted/50 rounded px-0.5" onClick={() => setEditingCell({ id: v.id, field: "price" })}>${v.price.toFixed(2)}</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
