@@ -1,4 +1,5 @@
 import { NavLink as RouterNavLink, useLocation } from "react-router-dom";
+import logoLight from "@/assets/logo-light.png";
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -42,10 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       >
         <div className="flex h-16 items-center justify-between border-b border-pos-sidebar-border px-5">
           <div className="flex items-center gap-2.5">
-          <img src="/favicon.png" alt="Smapps" className="h-7 w-7" />
-          <span className="font-heading text-lg font-bold text-pos-sidebar-fg-active tracking-tight">
-            Smapps
-          </span>
+          <img src={logoLight} alt="Smapps" className="h-7" />
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
