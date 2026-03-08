@@ -55,6 +55,8 @@ interface Props {
   inventoryItems: InventoryItem[];
   units: MeasuringUnit[];
   menuItems: { id: string; name: string; variants: { id: string; name: string }[] }[];
+  readOnly?: boolean;
+  selectedOutletId?: string;
 }
 
 const emptyForm = () => ({
@@ -65,7 +67,7 @@ const emptyForm = () => ({
   components: [] as CompositeComponent[],
 });
 
-export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems }: Props) {
+export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems, readOnly, selectedOutletId }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
@@ -128,7 +130,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
     } else {
       setComposites((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents },
+        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "" },
       ]);
       toast.success("Composite item created");
     }
