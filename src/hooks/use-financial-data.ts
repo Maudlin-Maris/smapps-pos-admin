@@ -154,6 +154,75 @@ export function useSales() {
   return { sales, setSales, getSalesByOutletAndPeriod };
 }
 
+// Stock adjustments persistence
+const ADJUSTMENTS_KEY = "financial_adjustments";
+
+export interface StoredAdjustment {
+  id: string;
+  inventoryItemId: string;
+  type: string;
+  quantityChange: number;
+  previousStock: number;
+  newStock: number;
+  reason: string;
+  timestamp: string;
+  outletId: string;
+  costPrice: number;
+  costTotal: number;
+}
+
+// Consumption types that count toward COGS
+const CONSUMPTION_TYPES = ["remove", "damaged"];
+
+// Sample seed adjustments for demo
+const defaultAdjustments: StoredAdjustment[] = [
+  { id: "adj1", inventoryItemId: "i1", type: "remove", quantityChange: 5, previousStock: 50, newStock: 45, reason: "Daily usage", timestamp: "2026-03-02T10:00:00Z", outletId: "outlet-1", costPrice: 12.5, costTotal: 62.5 },
+  { id: "adj2", inventoryItemId: "i2", type: "remove", quantityChange: 3, previousStock: 15, newStock: 12, reason: "Daily usage", timestamp: "2026-03-02T10:00:00Z", outletId: "outlet-1", costPrice: 1.2, costTotal: 3.6 },
+  { id: "adj3", inventoryItemId: "i3", type: "remove", quantityChange: 2, previousStock: 32, newStock: 30, reason: "Weekly baking", timestamp: "2026-03-03T09:00:00Z", outletId: "outlet-1", costPrice: 0.8, costTotal: 1.6 },
+  { id: "adj4", inventoryItemId: "i4", type: "remove", quantityChange: 50, previousStock: 200, newStock: 150, reason: "Daily cups used", timestamp: "2026-03-01T08:00:00Z", outletId: "outlet-2", costPrice: 0.05, costTotal: 2.5 },
+  { id: "adj5", inventoryItemId: "i5", type: "remove", quantityChange: 2, previousStock: 10, newStock: 8, reason: "Baked croissants", timestamp: "2026-03-03T07:00:00Z", outletId: "outlet-2", costPrice: 3.0, costTotal: 6.0 },
+  { id: "adj6", inventoryItemId: "i6", type: "remove", quantityChange: 2, previousStock: 5, newStock: 3, reason: "Client services", timestamp: "2026-03-04T14:00:00Z", outletId: "outlet-3", costPrice: 8.0, costTotal: 16.0 },
+  { id: "adj7", inventoryItemId: "i7", type: "remove", quantityChange: 2, previousStock: 20, newStock: 18, reason: "Color treatments", timestamp: "2026-03-04T14:00:00Z", outletId: "outlet-3", costPrice: 5.5, costTotal: 11.0 },
+  { id: "adj8", inventoryItemId: "i8", type: "damaged", quantityChange: 3, previousStock: 5, newStock: 2, reason: "Torn packaging", timestamp: "2026-03-05T09:00:00Z", outletId: "outlet-3", costPrice: 4.0, costTotal: 12.0 },
+  { id: "adj9", inventoryItemId: "i9", type: "remove", quantityChange: 6, previousStock: 30, newStock: 24, reason: "Sandwich prep", timestamp: "2026-03-03T08:00:00Z", outletId: "outlet-4", costPrice: 1.5, costTotal: 9.0 },
+  { id: "adj10", inventoryItemId: "i1", type: "add", quantityChange: 10, previousStock: 45, newStock: 55, reason: "New shipment", timestamp: "2026-03-04T11:00:00Z", outletId: "outlet-1", costPrice: 12.5, costTotal: 125.0 },
+];
+
+export function useStockAdjustments() {
+  const [adjustments, setAdjustments] = useState<StoredAdjustment[]>(() =>
+    loadFromStorage(ADJUSTMENTS_KEY, defaultAdjustments)
+  );
+
+  useEffect(() => {
+    saveToStorage(ADJUSTMENTS_KEY, adjustments);
+  }, [adjustments]);
+
+  const addAdjustment = useCallback((adj: StoredAdjustment) => {
+    setAdjustments((prev) => [adj, ...prev]);
+  }, []);
+
+  const getCOGSByOutletAndPeriod = useCallback(
+    (outletIds: string[], from: Date, to: Date) => {
+      const fromStr = from.toISOString().split("T")[0];
+      const toStr = to.toISOString().split("T")[0];
+      return adjustments
+        .filter((a) => {
+          const adjDate = a.timestamp.split("T")[0];
+          return (
+            outletIds.includes(a.outletId) &&
+            adjDate >= fromStr &&
+            adjDate <= toStr &&
+            CONSUMPTION_TYPES.includes(a.type)
+          );
+        })
+        .reduce((sum, a) => sum + a.costTotal, 0);
+    },
+    [adjustments]
+  );
+
+  return { adjustments, setAdjustments, addAdjustment, getCOGSByOutletAndPeriod };
+}
+
 export interface PnLData {
   revenue: { sales: number; otherIncome: number };
   costOfGoods: { inventory: number; directLabor: number };
