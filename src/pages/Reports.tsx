@@ -17,12 +17,13 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus } from "lucide-react";
+import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { outlets } from "@/data/outlets";
 import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
 import PnLStatement from "@/components/reports/PnLStatement";
 import COGSBreakdown from "@/components/reports/COGSBreakdown";
+import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -60,6 +61,16 @@ export default function Reports() {
     const cogsLabor = Math.round(totalSales * 0.10);
     return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
   }, [selectedOutletId, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
+
+  const cogsItemRows = useMemo(
+    () => buildCOGSItems(filteredAdjustments, itemNames),
+    [filteredAdjustments, itemNames]
+  );
+
+  const outletLabel = isAllOutlets ? "All Outlets" : outlets.find((o) => o.id === selectedOutletId)?.name || selectedOutletId;
+
+  const handleExportExcel = () => exportPnLToExcel(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+  const handleExportPDF = () => exportPnLToPDF(data, cogsItemRows, dateFrom, dateTo, outletLabel);
 
   const totalRevenue = data.revenue.sales + data.revenue.otherIncome;
   const totalCOGS = data.costOfGoods.inventory + data.costOfGoods.directLabor;
@@ -142,6 +153,14 @@ export default function Reports() {
               </div>
             </PopoverContent>
           </Popover>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Excel
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportPDF}>
+            <FileText className="h-3.5 w-3.5" />
+            PDF
+          </Button>
         </div>
       </div>
 
