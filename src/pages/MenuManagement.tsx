@@ -185,6 +185,14 @@ export default function MenuManagement() {
               </Button>
               <Button
                 size="sm"
+                variant="outline"
+                className="w-fit gap-1.5"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <Upload className="h-4 w-4" /> Import Excel
+              </Button>
+              <Button
+                size="sm"
                 className="w-fit"
                 onClick={() => { setEditingItem(null); setFormMode("add"); setFormOpen(true); }}
               >
