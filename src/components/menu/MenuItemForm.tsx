@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
@@ -34,6 +34,7 @@ export interface MenuVariant {
   salePrice: number | null;
   salePeriodStart: Date | null;
   salePeriodEnd: Date | null;
+  trackInventory: boolean;
 }
 
 export interface MenuItem {
@@ -51,6 +52,7 @@ export interface MenuItem {
   status: "active" | "inactive";
   images: string[];
   variants: MenuVariant[];
+  trackInventory: boolean;
 }
 
 interface MenuItemFormProps {
@@ -102,12 +104,35 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
         </div>
         <div>
           <Label className="text-xs">Quantity</Label>
-          <Input className="mt-1 h-9 text-sm" type="number" min="0" value={variant.quantity || ""} onChange={(e) => onChange({ ...variant, quantity: parseInt(e.target.value) || 0 })} placeholder="0" />
+          <Input
+            className="mt-1 h-9 text-sm"
+            type="number"
+            min="0"
+            value={variant.quantity || ""}
+            onChange={(e) => onChange({ ...variant, quantity: parseInt(e.target.value) || 0 })}
+            placeholder="0"
+            disabled={variant.trackInventory}
+          />
+          {variant.trackInventory && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">Managed by inventory</p>
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) onChange({ ...variant, salePrice: null, salePeriodStart: null, salePeriodEnd: null }); }} />
-        <Label className="text-xs text-muted-foreground">On Sale</Label>
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={variant.trackInventory}
+            onCheckedChange={(v) => onChange({ ...variant, trackInventory: v })}
+          />
+          <div className="flex items-center gap-1">
+            <PackageCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            <Label className="text-xs text-muted-foreground">Track from Inventory</Label>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) onChange({ ...variant, salePrice: null, salePeriodStart: null, salePeriodEnd: null }); }} />
+          <Label className="text-xs text-muted-foreground">On Sale</Label>
+        </div>
       </div>
       {showSale && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -138,6 +163,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [isActive, setIsActive] = useState(true);
   const [images, setImages] = useState<string[]>([]);
   const [variants, setVariants] = useState<MenuVariant[]>([]);
+  const [trackInventory, setTrackInventory] = useState(false);
 
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
@@ -157,6 +183,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setIsActive(item.status === "active");
         setImages(item.images ?? []);
         setVariants(item.variants ?? []);
+        setTrackInventory(item.trackInventory ?? false);
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
@@ -164,7 +191,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
-        setImages([]); setVariants([]);
+        setImages([]); setVariants([]); setTrackInventory(false);
       }
     }
   }, [open, item, categories]);
@@ -195,7 +222,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const addVariant = () => {
     setVariants((prev) => {
       if (prev.length === 0 && (price || quantity)) {
-        // Auto-create first variant from existing base price/qty
         const baseVariant: MenuVariant = {
           id: crypto.randomUUID(),
           name: "",
@@ -204,10 +230,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           salePrice: showSale && salePrice ? parseFloat(salePrice) : null,
           salePeriodStart: showSale ? salePeriodStart : null,
           salePeriodEnd: showSale ? salePeriodEnd : null,
+          trackInventory: trackInventory,
         };
-        return [baseVariant, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null }];
+        return [baseVariant, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false }];
       }
-      return [...prev, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null }];
+      return [...prev, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false }];
     });
   };
 
@@ -222,7 +249,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const handleSave = () => {
     const hasVariants = variants.length > 0;
     if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
-    // Validate all variants have names when variants exist
     if (hasVariants && variants.some((v) => !v.name.trim())) return;
     const cat = categories.find((c) => c.id === selectedCatId);
     const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
@@ -242,6 +268,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       status: isActive ? "active" : "inactive",
       images,
       variants,
+      trackInventory: hasVariants ? false : trackInventory,
     });
     onOpenChange(false);
   };
@@ -336,7 +363,30 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 </div>
                 <div>
                   <Label htmlFor="item-quantity-nv">Quantity</Label>
-                  <Input id="item-quantity-nv" className="mt-1" type="number" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" />
+                  <Input
+                    id="item-quantity-nv"
+                    className="mt-1"
+                    type="number"
+                    min="0"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="0"
+                    disabled={trackInventory}
+                  />
+                  {trackInventory && (
+                    <p className="text-xs text-muted-foreground mt-1">Managed by inventory</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 border border-border rounded-lg p-3">
+                <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
+                <div className="flex items-center gap-1.5">
+                  <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <Label className="text-sm font-medium">Track from Inventory</Label>
+                    <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                  </div>
                 </div>
               </div>
 
