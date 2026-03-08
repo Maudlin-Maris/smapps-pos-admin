@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KpiCard } from "@/components/KpiCard";
 import { Card } from "@/components/ui/card";
+import { TransactionsTable, type Transaction } from "@/components/TransactionsTable";
 import {
   Select,
   SelectContent,
@@ -27,7 +28,7 @@ const outletData: Record<string, {
   salesTrend: { name: string; sales: number }[];
   topItems: { name: string; qty: number; revenue: number }[];
   paymentMethods: { name: string; value: number; color: string }[];
-  recentTxns: { id: string; customer: string; amount: string; method: string; time: string; status: string }[];
+  transactions: Transaction[];
 }> = {
   all: {
     kpis: { sales: "$24,860", orders: "248", customers: "189", avgOrder: "$100.24", salesChange: "+12.5%", ordersChange: "+18", custChange: "+11", avgChange: "+4.2%" },
@@ -48,12 +49,19 @@ const outletData: Record<string, {
       { name: "Mobile Money", value: 4890, color: "hsl(var(--chart-3))" },
       { name: "Bank Transfer", value: 1600, color: "hsl(var(--chart-4))" },
     ],
-    recentTxns: [
-      { id: "TXN-001", customer: "Walk-in", amount: "$42.50", method: "Cash", time: "2 min ago", status: "Completed" },
-      { id: "TXN-002", customer: "Jane Smith", amount: "$128.00", method: "Card", time: "15 min ago", status: "Completed" },
-      { id: "TXN-003", customer: "Bob Wilson", amount: "$35.75", method: "Mobile Money", time: "32 min ago", status: "Refunded" },
-      { id: "TXN-004", customer: "Walk-in", amount: "$67.20", method: "Card", time: "1 hr ago", status: "Completed" },
-      { id: "TXN-005", customer: "Alice Brown", amount: "$215.00", method: "Cash", time: "1.5 hr ago", status: "Completed" },
+    transactions: [
+      { orderId: "ORD-1001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "$42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-1002", date: "2026-03-08 09:28", customerPhone: "+233 20 555 7788", amount: "$128.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
+      { orderId: "ORD-1003", date: "2026-03-08 09:45", customerPhone: "+233 27 333 4455", amount: "$35.75", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Refunded", paymentMethod: "Mobile Money", orderStatus: "Cancelled" },
+      { orderId: "ORD-1004", date: "2026-03-08 10:02", customerPhone: "+233 55 222 9900", amount: "$67.20", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
+      { orderId: "ORD-1005", date: "2026-03-08 10:18", customerPhone: "+233 24 888 1122", amount: "$215.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-1006", date: "2026-03-08 10:35", customerPhone: "+233 50 666 3344", amount: "$19.99", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", paymentMethod: "Mobile Money", orderStatus: "Completed" },
+      { orderId: "ORD-1007", date: "2026-03-08 10:50", customerPhone: "+233 26 444 5566", amount: "$88.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Pending", paymentMethod: "Bank Transfer", orderStatus: "Processing" },
+      { orderId: "ORD-1008", date: "2026-03-08 11:05", customerPhone: "+233 24 777 8899", amount: "$54.30", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
+      { orderId: "ORD-1009", date: "2026-03-08 11:22", customerPhone: "+233 20 999 0011", amount: "$32.00", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Failed", paymentMethod: "Card", orderStatus: "On Hold" },
+      { orderId: "ORD-1010", date: "2026-03-08 11:40", customerPhone: "+233 55 111 4455", amount: "$76.50", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-1011", date: "2026-03-08 11:55", customerPhone: "+233 27 222 6677", amount: "$145.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", paymentMethod: "Mobile Money", orderStatus: "Completed" },
+      { orderId: "ORD-1012", date: "2026-03-08 12:10", customerPhone: "+233 24 333 8899", amount: "$28.75", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
     ],
   },
   "outlet-1": {
@@ -75,10 +83,13 @@ const outletData: Record<string, {
       { name: "Mobile Money", value: 1420, color: "hsl(var(--chart-3))" },
       { name: "Bank Transfer", value: 300, color: "hsl(var(--chart-4))" },
     ],
-    recentTxns: [
-      { id: "TXN-101", customer: "Walk-in", amount: "$42.50", method: "Cash", time: "5 min ago", status: "Completed" },
-      { id: "TXN-102", customer: "Mary K.", amount: "$86.00", method: "Card", time: "22 min ago", status: "Completed" },
-      { id: "TXN-103", customer: "Walk-in", amount: "$19.99", method: "Mobile Money", time: "45 min ago", status: "Completed" },
+    transactions: [
+      { orderId: "ORD-2001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "$42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-2002", date: "2026-03-08 09:30", customerPhone: "+233 27 333 4455", amount: "$86.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
+      { orderId: "ORD-2003", date: "2026-03-08 10:15", customerPhone: "+233 55 222 9900", amount: "$19.99", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", paymentMethod: "Mobile Money", orderStatus: "Completed" },
+      { orderId: "ORD-2004", date: "2026-03-08 10:50", customerPhone: "+233 20 555 7788", amount: "$145.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Pending", paymentMethod: "Bank Transfer", orderStatus: "Processing" },
+      { orderId: "ORD-2005", date: "2026-03-08 11:20", customerPhone: "+233 24 888 1122", amount: "$63.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-2006", date: "2026-03-08 11:55", customerPhone: "+233 26 444 5566", amount: "$28.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
     ],
   },
   "outlet-2": {
@@ -100,9 +111,11 @@ const outletData: Record<string, {
       { name: "Mobile Money", value: 1040, color: "hsl(var(--chart-3))" },
       { name: "Bank Transfer", value: 200, color: "hsl(var(--chart-4))" },
     ],
-    recentTxns: [
-      { id: "TXN-201", customer: "Walk-in", amount: "$18.50", method: "Cash", time: "3 min ago", status: "Completed" },
-      { id: "TXN-202", customer: "Walk-in", amount: "$32.00", method: "Card", time: "18 min ago", status: "Completed" },
+    transactions: [
+      { orderId: "ORD-3001", date: "2026-03-08 09:05", customerPhone: "+233 20 555 7788", amount: "$18.50", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-3002", date: "2026-03-08 09:40", customerPhone: "+233 24 888 1122", amount: "$32.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
+      { orderId: "ORD-3003", date: "2026-03-08 10:15", customerPhone: "+233 50 666 3344", amount: "$45.75", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", paymentMethod: "Mobile Money", orderStatus: "Completed" },
+      { orderId: "ORD-3004", date: "2026-03-08 11:00", customerPhone: "+233 55 111 4455", amount: "$92.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Refunded", paymentMethod: "Card", orderStatus: "Cancelled" },
     ],
   },
   "outlet-3": {
@@ -124,9 +137,10 @@ const outletData: Record<string, {
       { name: "Mobile Money", value: 1250, color: "hsl(var(--chart-3))" },
       { name: "Bank Transfer", value: 200, color: "hsl(var(--chart-4))" },
     ],
-    recentTxns: [
-      { id: "TXN-301", customer: "Sarah M.", amount: "$45.00", method: "Card", time: "10 min ago", status: "Completed" },
-      { id: "TXN-302", customer: "Walk-in", amount: "$30.00", method: "Cash", time: "40 min ago", status: "Completed" },
+    transactions: [
+      { orderId: "ORD-4001", date: "2026-03-08 10:00", customerPhone: "+233 55 222 9900", amount: "$45.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
+      { orderId: "ORD-4002", date: "2026-03-08 10:45", customerPhone: "+233 24 777 8899", amount: "$30.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-4003", date: "2026-03-08 11:30", customerPhone: "+233 26 444 5566", amount: "$75.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Pending", paymentMethod: "Mobile Money", orderStatus: "Processing" },
     ],
   },
   "outlet-4": {
@@ -148,9 +162,10 @@ const outletData: Record<string, {
       { name: "Mobile Money", value: 880, color: "hsl(var(--chart-3))" },
       { name: "Bank Transfer", value: 200, color: "hsl(var(--chart-4))" },
     ],
-    recentTxns: [
-      { id: "TXN-401", customer: "Walk-in", amount: "$12.50", method: "Card", time: "8 min ago", status: "Completed" },
-      { id: "TXN-402", customer: "Walk-in", amount: "$28.00", method: "Cash", time: "25 min ago", status: "Completed" },
+    transactions: [
+      { orderId: "ORD-5001", date: "2026-03-08 08:30", customerPhone: "+233 50 666 3344", amount: "$12.50", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", paymentMethod: "Card", orderStatus: "Completed" },
+      { orderId: "ORD-5002", date: "2026-03-08 09:15", customerPhone: "+233 20 999 0011", amount: "$28.00", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", paymentMethod: "Cash", orderStatus: "Completed" },
+      { orderId: "ORD-5003", date: "2026-03-08 10:00", customerPhone: "+233 24 333 8899", amount: "$35.50", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Failed", paymentMethod: "Card", orderStatus: "On Hold" },
     ],
   },
 };
@@ -297,42 +312,8 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* Recent Transactions */}
-      <Card className="p-4 lg:p-5">
-        <h3 className="font-heading font-semibold mb-4">Recent Transactions</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="pb-3 font-medium text-muted-foreground">ID</th>
-                <th className="pb-3 font-medium text-muted-foreground hidden sm:table-cell">Customer</th>
-                <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground hidden md:table-cell">Method</th>
-                <th className="pb-3 font-medium text-muted-foreground hidden lg:table-cell">Time</th>
-                <th className="pb-3 font-medium text-muted-foreground">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.recentTxns.map((txn) => (
-                <tr key={txn.id} className="border-b border-border/50 last:border-0">
-                  <td className="py-3 font-mono text-xs">{txn.id}</td>
-                  <td className="py-3 hidden sm:table-cell">{txn.customer}</td>
-                  <td className="py-3 font-semibold">{txn.amount}</td>
-                  <td className="py-3 hidden md:table-cell">{txn.method}</td>
-                  <td className="py-3 text-muted-foreground hidden lg:table-cell">{txn.time}</td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      txn.status === "Completed" ? "bg-success/10 text-success" : "bg-warning/10 text-warning"
-                    }`}>
-                      {txn.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* Transactions */}
+      <TransactionsTable transactions={data.transactions} />
     </div>
   );
 }
