@@ -84,7 +84,20 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
     <Card className="p-4 lg:p-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h3 className="font-heading font-semibold">Transactions</h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Rows</span>
+            <Select value={rowsPerPage} onValueChange={handleRowsChange}>
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {rowsPerPageOptions.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="relative flex-1 sm:flex-none">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -148,21 +161,8 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
 
       {/* Pagination footer */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-border">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Rows per page</span>
-          <Select value={rowsPerPage} onValueChange={handleRowsChange}>
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {rowsPerPageOptions.map((opt) => (
-                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="ml-2">
-            {filtered.length === 0 ? "0" : `${startIdx + 1}–${Math.min(startIdx + perPage, filtered.length)}`} of {filtered.length}
-          </span>
+        <div className="text-sm text-muted-foreground">
+          {filtered.length === 0 ? "0" : `${startIdx + 1}–${Math.min(startIdx + perPage, filtered.length)}`} of {filtered.length}
         </div>
         <div className="flex items-center gap-1">
           <Button
