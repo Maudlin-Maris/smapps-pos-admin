@@ -231,33 +231,53 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                 <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-lg">No components added yet</p>
               )}
               {form.components.map((comp, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Select value={comp.inventoryItemId} onValueChange={(v) => updateComponent(i, "inventoryItemId", v)}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {inventoryItems.map((inv) => (
-                        <SelectItem key={inv.id} value={inv.id}>{inv.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    className="w-20"
-                    value={comp.quantity}
-                    onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
-                    min={0}
-                    step={0.1}
-                  />
-                  <span className="text-xs text-muted-foreground w-10 shrink-0">
-                    {getItemUnit(comp.inventoryItemId)}
-                  </span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                <div key={i} className="space-y-2 p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <ItemCombobox
+                      inventoryItems={inventoryItems}
+                      value={comp.inventoryItemId}
+                      onSelect={(v) => updateComponent(i, "inventoryItemId", v)}
+                    />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      className="w-24"
+                      value={comp.quantity}
+                      onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
+                      min={0}
+                      step={0.1}
+                      placeholder="Qty"
+                    />
+                    <span className="text-xs text-muted-foreground w-10 shrink-0">
+                      {getItemUnit(comp.inventoryItemId)}
+                    </span>
+                    <div className="flex gap-1 ml-auto">
+                      <Button
+                        type="button"
+                        variant={comp.role === "primary" ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs px-2.5"
+                        onClick={() => updateComponent(i, "role", "primary")}
+                      >
+                        Primary
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={comp.role === "secondary" ? "secondary" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs px-2.5"
+                        onClick={() => updateComponent(i, "role", "secondary")}
+                      >
+                        Secondary
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              ))
             </div>
           </div>
           <DialogFooter>
