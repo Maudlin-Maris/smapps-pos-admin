@@ -109,10 +109,10 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                   <TableCell className="text-sm">{item.category}</TableCell>
                   <TableCell className="text-sm">{item.subcategory}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{item.sku || "—"}</TableCell>
-                  <TableCell className="text-right font-heading font-semibold text-sm">${item.price.toFixed(2)}</TableCell>
-                  <TableCell className="text-right text-sm">{item.quantity}</TableCell>
+                  <TableCell className="text-right font-heading font-semibold text-sm">${(item.price ?? 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right text-sm">{item.quantity ?? 0}</TableCell>
                   <TableCell>
-                    {item.salePrice !== null ? (
+                    {item.salePrice != null ? (
                       <Badge variant="secondary" className="text-xs gap-1">
                         <Tag className="h-3 w-3" />${item.salePrice.toFixed(2)}
                       </Badge>
