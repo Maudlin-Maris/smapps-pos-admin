@@ -56,13 +56,21 @@ interface AdjustDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
-  onAdjust: (itemId: string, type: AdjustmentType, quantity: number, reason: string) => void;
+  onAdjust: (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number) => void;
 }
 
 export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: AdjustDialogProps) {
   const [type, setType] = useState<AdjustmentType>("add");
   const [quantity, setQuantity] = useState(0);
   const [reason, setReason] = useState("");
+  const [batchCostPrice, setBatchCostPrice] = useState<number>(0);
+
+  // Update batch cost when item or type changes
+  useState(() => {
+    if (item && (type === "add" || type === "returned")) {
+      setBatchCostPrice(item.costPrice);
+    }
+  });
 
   const handleSave = () => {
     if (quantity <= 0 && type !== "set") {
@@ -73,11 +81,16 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Please provide a reason for the adjustment");
       return;
     }
+    if ((type === "add" || type === "returned") && batchCostPrice <= 0) {
+      toast.error("Please enter the cost per unit for this batch");
+      return;
+    }
     if (!item) return;
-    onAdjust(item.id, type, quantity, reason);
+    onAdjust(item.id, type, quantity, reason, type === "add" || type === "returned" ? batchCostPrice : undefined);
     setType("add");
     setQuantity(0);
     setReason("");
+    setBatchCostPrice(0);
     onOpenChange(false);
   };
 
