@@ -109,10 +109,36 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                   <TableCell className="text-sm">{item.category}</TableCell>
                   <TableCell className="text-sm">{item.subcategory}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{item.sku || "—"}</TableCell>
-                  <TableCell className="text-right font-heading font-semibold text-sm">${(item.price ?? 0).toFixed(2)}</TableCell>
-                  <TableCell className="text-right text-sm">{item.quantity ?? 0}</TableCell>
+                  <TableCell className="text-right font-heading font-semibold text-sm">
+                    {item.variants?.length > 0 ? (
+                      (() => {
+                        const prices = item.variants.map((v) => v.price);
+                        const min = Math.min(...prices);
+                        const max = Math.max(...prices);
+                        return min === max ? `$${min.toFixed(2)}` : `$${min.toFixed(2)} – $${max.toFixed(2)}`;
+                      })()
+                    ) : (
+                      `$${(item.price ?? 0).toFixed(2)}`
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right text-sm">
+                    {item.variants?.length > 0
+                      ? item.variants.reduce((sum, v) => sum + (v.quantity ?? 0), 0)
+                      : (item.quantity ?? 0)}
+                  </TableCell>
                   <TableCell>
-                    {item.salePrice != null ? (
+                    {item.variants?.length > 0 ? (
+                      (() => {
+                        const onSale = item.variants.filter((v) => v.salePrice != null);
+                        return onSale.length > 0 ? (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Tag className="h-3 w-3" />{onSale.length} on sale
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        );
+                      })()
+                    ) : item.salePrice != null ? (
                       <Badge variant="secondary" className="text-xs gap-1">
                         <Tag className="h-3 w-3" />${item.salePrice.toFixed(2)}
                       </Badge>
@@ -122,7 +148,9 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                   </TableCell>
                   <TableCell>
                     {item.variants?.length > 0 ? (
-                      <span className="text-xs text-muted-foreground">{item.variants.length} variant{item.variants.length > 1 ? "s" : ""}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {item.variants.map((v) => v.name).filter(Boolean).join(", ") || `${item.variants.length} variant${item.variants.length > 1 ? "s" : ""}`}
+                      </span>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
