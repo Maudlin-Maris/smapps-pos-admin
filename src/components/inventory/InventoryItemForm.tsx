@@ -206,8 +206,11 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             </SelectContent>
           </Select>
         </div>
-        <Button size="sm" onClick={openNew} className="w-fit">
-          <Plus className="h-4 w-4 mr-1" /> Register Item
+        {!readOnly && (
+          <Button size="sm" onClick={openNew} className="w-fit">
+            <Plus className="h-4 w-4 mr-1" /> Register Item
+          </Button>
+        )}
         </Button>
       </div>
 
@@ -276,22 +279,24 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                   >
                     {item.status}
                   </Badge>
-                  <div className="flex gap-1 shrink-0">
-                    {onAdjustStock && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={() => onAdjustStock(item)} title="Adjust Stock">
-                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                  {!readOnly && (
+                    <div className="flex gap-1 shrink-0">
+                      {onAdjustStock && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={() => onAdjustStock(item)} title="Adjust Stock">
+                          <ArrowLeftRight className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(item)}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(item)}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
