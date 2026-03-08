@@ -123,6 +123,15 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       toast.error("Category and unit are required");
       return;
     }
+    if (form.conversions.length === 0) {
+      toast.error("At least one unit conversion is required");
+      return;
+    }
+    const hasIncompleteConversion = form.conversions.some(c => !c.toUnitId || c.fromQuantity <= 0 || c.toQuantity <= 0);
+    if (hasIncompleteConversion) {
+      toast.error("Please complete all conversion fields");
+      return;
+    }
     const status = computeStatus(form.stock, form.minStock);
     if (editing) {
       setItems((prev) =>
