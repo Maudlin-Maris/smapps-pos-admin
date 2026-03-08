@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { type MenuItem } from "@/components/menu/MenuItemForm";
 import InventoryCategoryManager, {
   defaultCategories,
   type InventoryCategory,

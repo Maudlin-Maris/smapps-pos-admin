@@ -308,6 +308,73 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   );
 }
 
+function MenuItemCombobox({
+  menuItems,
+  menuItemId,
+  menuVariantId,
+  onSelect,
+}: {
+  menuItems: { id: string; name: string; variants: { id: string; name: string }[] }[];
+  menuItemId: string;
+  menuVariantId: string;
+  onSelect: (itemId: string, variantId: string, displayName: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Build flat list: menu items + their variants
+  const options = useMemo(() => {
+    const list: { key: string; itemId: string; variantId: string; label: string; isVariant: boolean }[] = [];
+    for (const mi of menuItems) {
+      if (mi.variants.length === 0) {
+        list.push({ key: mi.id, itemId: mi.id, variantId: "", label: mi.name, isVariant: false });
+      } else {
+        for (const v of mi.variants) {
+          list.push({ key: `${mi.id}-${v.id}`, itemId: mi.id, variantId: v.id, label: `${mi.name} — ${v.name}`, isVariant: true });
+        }
+      }
+    }
+    return list;
+  }, [menuItems]);
+
+  const selectedLabel = options.find(
+    (o) => o.itemId === menuItemId && o.variantId === menuVariantId
+  )?.label;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between font-normal h-9 text-sm">
+          <span className="truncate">{selectedLabel || "Search menu items..."}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search menu items..." />
+          <CommandList>
+            <CommandEmpty>No menu items found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.key}
+                  value={opt.label}
+                  onSelect={() => {
+                    onSelect(opt.itemId, opt.variantId, opt.label);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 h-3.5 w-3.5", menuItemId === opt.itemId && menuVariantId === opt.variantId ? "opacity-100" : "opacity-0")} />
+                  <span className={opt.isVariant ? "ml-1" : "font-medium"}>{opt.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function ItemCombobox({
   inventoryItems,
   value,
