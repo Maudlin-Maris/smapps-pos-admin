@@ -40,10 +40,9 @@ import type { MeasuringUnit } from "./MeasuringUnitManager";
 
 export interface ItemConversion {
   id: string;
-  menuItemId: string;
-  menuVariantId?: string;
-  conversionRate: number;
-  conversionUnit: string; // e.g. "1 kg = 50 servings"
+  fromQuantity: number;
+  toQuantity: number;
+  toUnitId: string;
 }
 
 export interface InventoryItem {
