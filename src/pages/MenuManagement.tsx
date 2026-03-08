@@ -153,6 +153,11 @@ export default function MenuManagement() {
     toast.success(`${copiedItems.length} item${copiedItems.length > 1 ? "s" : ""} copied to ${targetOutlet?.name}`);
   };
 
+  const handleBulkImport = (items: MenuItem[]) => {
+    const withOutlet = items.map((i) => ({ ...i, outletId: selectedOutletId }));
+    setMenuItems((prev) => [...prev, ...withOutlet]);
+  };
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
