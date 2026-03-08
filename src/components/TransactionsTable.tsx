@@ -11,6 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 
+export interface PaymentSplit {
+  method: string;
+  amount: string;
+}
+
 export interface Transaction {
   orderId: string;
   date: string;
@@ -19,7 +24,7 @@ export interface Transaction {
   cashier: string;
   location: string;
   paymentStatus: "Paid" | "Pending" | "Failed" | "Refunded";
-  paymentMethod: string;
+  payments: PaymentSplit[];
   orderStatus: "Completed" | "Processing" | "Cancelled" | "On Hold";
 }
 
@@ -59,7 +64,7 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
         t.customerPhone.toLowerCase().includes(q) ||
         t.cashier.toLowerCase().includes(q) ||
         t.location.toLowerCase().includes(q) ||
-        t.paymentMethod.toLowerCase().includes(q) ||
+        t.payments.some((p) => p.method.toLowerCase().includes(q)) ||
         t.orderStatus.toLowerCase().includes(q) ||
         t.paymentStatus.toLowerCase().includes(q)
     );
@@ -121,7 +126,7 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
               <th className="pb-3 font-medium text-muted-foreground">Cashier</th>
               <th className="pb-3 font-medium text-muted-foreground">Location</th>
               <th className="pb-3 font-medium text-muted-foreground">Payment</th>
-              <th className="pb-3 font-medium text-muted-foreground">Method</th>
+              <th className="pb-3 font-medium text-muted-foreground">Method / Amount</th>
               <th className="pb-3 font-medium text-muted-foreground">Order Status</th>
             </tr>
           </thead>
@@ -146,7 +151,16 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
                       {txn.paymentStatus}
                     </span>
                   </td>
-                  <td className="py-3 text-xs">{txn.paymentMethod}</td>
+                  <td className="py-3">
+                    <div className="space-y-0.5">
+                      {txn.payments.map((p, i) => (
+                        <div key={i} className="flex items-center gap-1.5 text-xs">
+                          <span className="text-muted-foreground">{p.method}:</span>
+                          <span className="font-medium">{p.amount}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </td>
                   <td className="py-3">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${orderStatusStyles[txn.orderStatus] ?? ""}`}>
                       {txn.orderStatus}
