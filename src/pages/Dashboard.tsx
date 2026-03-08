@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { KpiCard } from "@/components/KpiCard";
 import { Card } from "@/components/ui/card";
+import { TransactionsTable, type Transaction } from "@/components/TransactionsTable";
 import {
   Select,
   SelectContent,
