@@ -346,18 +346,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="item-sku">SKU</Label>
-              <Input id="item-sku" className="mt-1" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. CAP-001" />
-            </div>
-
-            <div className="flex items-center gap-3 self-end pb-1">
-              <Switch checked={isActive} onCheckedChange={setIsActive} />
+            {variants.length === 0 && (
               <div>
-                <Label className="text-sm">Status</Label>
-                <p className="text-xs text-muted-foreground">{isActive ? "Active" : "Inactive"}</p>
+                <Label htmlFor="item-sku">SKU</Label>
+                <Input id="item-sku" className="mt-1" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. CAP-001" />
               </div>
-            </div>
+            )}
+
+            {variants.length === 0 && (
+              <div className="flex items-center gap-3 self-end pb-1">
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <div>
+                  <Label className="text-sm">Status</Label>
+                  <p className="text-xs text-muted-foreground">{isActive ? "Active" : "Inactive"}</p>
+                </div>
+              </div>
+            )}
 
             <div className="sm:col-span-2">
               <Label htmlFor="item-desc">Description</Label>
