@@ -7,6 +7,7 @@ import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
 import InventoryManagement from "@/pages/InventoryManagement";
+import Reports from "@/pages/Reports";
 import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
 import NotFound from "./pages/NotFound";
@@ -44,6 +45,13 @@ const App = () => (
               </AppLayout>
             }
           />
+          <Route
+            path="/reports"
+            element={
+              <AppLayout>
+                <Reports />
+              </AppLayout>
+            }
           <Route
             path="/outlets"
             element={
