@@ -55,6 +55,7 @@ export interface MenuItem {
   images: string[];
   variants: MenuVariant[];
   trackInventory: boolean;
+  outletId?: string;
 }
 
 interface MenuItemFormProps {

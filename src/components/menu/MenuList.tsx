@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck } from "lucide-react";
 import type { MenuItem } from "./MenuItemForm";
+import type { Outlet } from "@/data/outlets";
 
 interface MenuListProps {
   items: MenuItem[];
@@ -27,12 +28,20 @@ interface MenuListProps {
   onEdit: (item: MenuItem) => void;
   onDelete: (id: string) => void;
   onClone: (item: MenuItem) => void;
+  showOutlet?: boolean;
+  readOnly?: boolean;
+  outlets?: Outlet[];
 }
 
-export default function MenuList({ items, selectedSubcategory, onEdit, onDelete, onClone }: MenuListProps) {
+export default function MenuList({ items, selectedSubcategory, onEdit, onDelete, onClone, showOutlet = false, readOnly = false, outlets = [] }: MenuListProps) {
   const [search, setSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const getOutletName = (outletId?: string) => {
+    if (!outletId) return "—";
+    return outlets.find((o) => o.id === outletId)?.name ?? "—";
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -52,6 +61,8 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
   const pageItems = filtered.slice(startIdx, startIdx + rowsPerPage);
 
   useMemo(() => setCurrentPage(1), [search, selectedSubcategory, rowsPerPage]);
+
+  const colCount = 8 + (showOutlet ? 1 : 0) + (readOnly ? 0 : 1);
 
   return (
     <div className="space-y-4">
@@ -77,6 +88,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                {showOutlet && <TableHead>Outlet</TableHead>}
                 <TableHead>SKU</TableHead>
                 <TableHead>Variant</TableHead>
                 <TableHead className="text-right">Price</TableHead>
@@ -84,7 +96,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead>Inventory</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -111,6 +123,11 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                           </div>
                         </TableCell>
                       ) : null}
+                      {showOutlet && vIdx === 0 ? (
+                        <TableCell rowSpan={item.variants.length} className="align-top">
+                          <Badge variant="outline" className="text-xs whitespace-nowrap">{getOutletName(item.outletId)}</Badge>
+                        </TableCell>
+                      ) : showOutlet && vIdx > 0 ? null : null}
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{v.sku || "—"}</TableCell>
                       <TableCell className="text-sm font-medium">{v.name}</TableCell>
                       <TableCell className="text-right font-heading font-semibold text-sm">
@@ -138,7 +155,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                       <TableCell>
                         <Badge variant={v.status === "active" ? "default" : "secondary"} className="text-xs">{v.status}</Badge>
                       </TableCell>
-                      {vIdx === 0 ? (
+                      {!readOnly && vIdx === 0 ? (
                         <TableCell rowSpan={item.variants.length} className="align-top border-l border-border/50">
                           <div className="flex justify-end gap-1">
                             <button onClick={() => onClone(item)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground" title="Clone"><Copy className="h-3.5 w-3.5" /></button>
@@ -146,7 +163,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                             <button onClick={() => onDelete(item.id)} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
                           </div>
                         </TableCell>
-                      ) : null}
+                      ) : !readOnly && vIdx > 0 ? null : null}
                     </TableRow>
                   ));
                 }
@@ -169,6 +186,11 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                         </div>
                       </div>
                     </TableCell>
+                    {showOutlet && (
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs whitespace-nowrap">{getOutletName(item.outletId)}</Badge>
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{item.sku || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">—</TableCell>
                     <TableCell className="text-right font-heading font-semibold text-sm">
@@ -196,19 +218,21 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                     <TableCell>
                       <Badge variant={item.status === "active" ? "default" : "secondary"} className="text-xs">{item.status}</Badge>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => onClone(item)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground" title="Clone"><Copy className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => onEdit(item)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground" title="Edit"><Edit className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => onDelete(item.id)} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
-                      </div>
-                    </TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => onClone(item)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground" title="Clone"><Copy className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => onEdit(item)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground" title="Edit"><Edit className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => onDelete(item.id)} className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive" title="Delete"><Trash2 className="h-3.5 w-3.5" /></button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 );
               })}
               {pageItems.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground text-sm">No menu items found</TableCell>
+                  <TableCell colSpan={colCount} className="text-center py-8 text-muted-foreground text-sm">No menu items found</TableCell>
                 </TableRow>
               )}
             </TableBody>
