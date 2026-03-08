@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import CategoryManager, { type Category } from "@/components/menu/CategoryManager";
@@ -47,21 +46,16 @@ const initialCategories: Category[] = [
 ];
 
 const initialMenuItems: MenuItem[] = [
-  { id: "m1", name: "Cappuccino", description: "Rich espresso with steamed milk foam", category: "Food & Beverages", subcategory: "Hot Drinks", price: 4.5, sku: "HD-001", status: "active" },
-  { id: "m2", name: "Iced Latte", description: "Chilled espresso with cold milk", category: "Food & Beverages", subcategory: "Cold Drinks", price: 5.0, sku: "CD-001", status: "active" },
-  { id: "m3", name: "Croissant", description: "Buttery French pastry", category: "Food & Beverages", subcategory: "Pastries", price: 3.25, sku: "PS-001", status: "active" },
-  { id: "m4", name: "Club Sandwich", description: "Triple-decker with turkey and bacon", category: "Food & Beverages", subcategory: "Sandwiches", price: 8.5, sku: "SW-001", status: "inactive" },
-  { id: "m5", name: "Espresso", description: "Double shot espresso", category: "Food & Beverages", subcategory: "Hot Drinks", price: 3.0, sku: "HD-002", status: "active" },
-  { id: "m6", name: "Men's Haircut", description: "Classic men's cut and style", category: "Hair Services", subcategory: "Haircut", price: 25.0, sku: "HC-001", status: "active" },
-  { id: "m7", name: "Full Color", description: "Complete hair coloring service", category: "Hair Services", subcategory: "Coloring", price: 85.0, sku: "CL-001", status: "active" },
-  { id: "m8", name: "Blowout", description: "Professional blow dry and style", category: "Hair Services", subcategory: "Styling", price: 35.0, sku: "ST-001", status: "active" },
-  { id: "m9", name: "Americano", description: "Espresso with hot water", category: "Food & Beverages", subcategory: "Hot Drinks", price: 3.5, sku: "HD-003", status: "active" },
-  { id: "m10", name: "Mango Smoothie", description: "Fresh mango blended smoothie", category: "Food & Beverages", subcategory: "Cold Drinks", price: 6.0, sku: "CD-002", status: "active" },
-  { id: "m11", name: "Banana Bread", description: "Homemade banana bread slice", category: "Food & Beverages", subcategory: "Pastries", price: 3.75, sku: "PS-002", status: "active" },
-  { id: "m12", name: "Organic Apples", description: "Fresh organic apples per kg", category: "Grocery", subcategory: "Fresh Produce", price: 4.99, sku: "FP-001", status: "active" },
-  { id: "m13", name: "Whole Milk 1L", description: "Fresh whole milk", category: "Grocery", subcategory: "Dairy", price: 2.49, sku: "DY-001", status: "active" },
-  { id: "m14", name: "Trail Mix", description: "Mixed nuts and dried fruits", category: "Grocery", subcategory: "Snacks", price: 5.99, sku: "SN-001", status: "active" },
-  { id: "m15", name: "Women's Haircut", description: "Women's cut and blow dry", category: "Hair Services", subcategory: "Haircut", price: 45.0, sku: "HC-002", status: "active" },
+  { id: "m1", name: "Cappuccino", description: "Rich espresso with steamed milk foam", category: "Food & Beverages", subcategory: "Hot Drinks", price: 4.5, quantity: 100, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "HD-001", status: "active", images: [], variants: [{ id: "v1", name: "Small", price: 3.5, quantity: 50, salePrice: null, salePeriodStart: null, salePeriodEnd: null }, { id: "v2", name: "Large", price: 5.5, quantity: 50, salePrice: null, salePeriodStart: null, salePeriodEnd: null }] },
+  { id: "m2", name: "Iced Latte", description: "Chilled espresso with cold milk", category: "Food & Beverages", subcategory: "Cold Drinks", price: 5.0, quantity: 80, salePrice: 3.99, salePeriodStart: new Date("2026-03-01"), salePeriodEnd: new Date("2026-03-31"), sku: "CD-001", status: "active", images: [], variants: [] },
+  { id: "m3", name: "Croissant", description: "Buttery French pastry", category: "Food & Beverages", subcategory: "Pastries", price: 3.25, quantity: 40, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "PS-001", status: "active", images: [], variants: [] },
+  { id: "m4", name: "Club Sandwich", description: "Triple-decker with turkey and bacon", category: "Food & Beverages", subcategory: "Sandwiches", price: 8.5, quantity: 20, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "SW-001", status: "inactive", images: [], variants: [] },
+  { id: "m5", name: "Espresso", description: "Double shot espresso", category: "Food & Beverages", subcategory: "Hot Drinks", price: 3.0, quantity: 200, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "HD-002", status: "active", images: [], variants: [] },
+  { id: "m6", name: "Men's Haircut", description: "Classic men's cut and style", category: "Hair Services", subcategory: "Haircut", price: 25.0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "HC-001", status: "active", images: [], variants: [] },
+  { id: "m7", name: "Full Color", description: "Complete hair coloring service", category: "Hair Services", subcategory: "Coloring", price: 85.0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "CL-001", status: "active", images: [], variants: [] },
+  { id: "m8", name: "Blowout", description: "Professional blow dry and style", category: "Hair Services", subcategory: "Styling", price: 35.0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "ST-001", status: "active", images: [], variants: [] },
+  { id: "m9", name: "Organic Apples", description: "Fresh organic apples per kg", category: "Grocery", subcategory: "Fresh Produce", price: 4.99, quantity: 150, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "FP-001", status: "active", images: [], variants: [] },
+  { id: "m10", name: "Trail Mix", description: "Mixed nuts and dried fruits", category: "Grocery", subcategory: "Snacks", price: 5.99, quantity: 60, salePrice: null, salePeriodStart: null, salePeriodEnd: null, sku: "SN-001", status: "active", images: [], variants: [] },
 ];
 
 export default function MenuManagement() {
@@ -97,6 +91,7 @@ export default function MenuManagement() {
       id: crypto.randomUUID(),
       name: `${item.name} (Copy)`,
       sku: item.sku ? `${item.sku}-COPY` : "",
+      variants: item.variants.map((v) => ({ ...v, id: crypto.randomUUID() })),
     };
     setMenuItems((prev) => [...prev, cloned]);
     toast.success(`Cloned "${item.name}"`);
@@ -117,55 +112,37 @@ export default function MenuManagement() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Menu Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage items, categories and pricing</p>
         </div>
-        <Button
-          size="sm"
-          className="w-fit"
-          onClick={() => {
-            setEditingItem(null);
-            setFormOpen(true);
-          }}
-        >
+        <Button size="sm" className="w-fit" onClick={() => { setEditingItem(null); setFormOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" /> Add Item
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Category sidebar */}
         <CategoryManager
           categories={categories}
           onCategoriesChange={setCategories}
           selectedSubcategory={selectedSubcategory}
           onSelectSubcategory={setSelectedSubcategory}
         />
-
-        {/* Menu list */}
         <div className="lg:col-span-3">
           <MenuList
             items={menuItems}
             selectedSubcategory={selectedSubcategory}
             onEdit={handleEdit}
-            onDelete={(id) => {
-              setDeletingId(id);
-              setDeleteConfirmOpen(true);
-            }}
+            onDelete={(id) => { setDeletingId(id); setDeleteConfirmOpen(true); }}
             onClone={handleClone}
           />
         </div>
       </div>
 
-      {/* Add/Edit form dialog */}
       <MenuItemForm
         open={formOpen}
-        onOpenChange={(open) => {
-          setFormOpen(open);
-          if (!open) setEditingItem(null);
-        }}
+        onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingItem(null); }}
         categories={categories}
         item={editingItem}
         onSave={handleSave}
       />
 
-      {/* Delete confirmation */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
