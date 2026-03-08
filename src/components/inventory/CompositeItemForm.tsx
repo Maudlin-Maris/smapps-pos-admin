@@ -46,6 +46,7 @@ export interface CompositeItem {
   menuVariantId?: string;
   description: string;
   components: CompositeComponent[];
+  outletId: string;
 }
 
 interface Props {
@@ -54,6 +55,8 @@ interface Props {
   inventoryItems: InventoryItem[];
   units: MeasuringUnit[];
   menuItems: { id: string; name: string; variants: { id: string; name: string }[] }[];
+  readOnly?: boolean;
+  selectedOutletId?: string;
 }
 
 const emptyForm = () => ({
@@ -64,7 +67,7 @@ const emptyForm = () => ({
   components: [] as CompositeComponent[],
 });
 
-export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems }: Props) {
+export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems, readOnly, selectedOutletId }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
@@ -127,7 +130,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
     } else {
       setComposites((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents },
+        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "" },
       ]);
       toast.success("Composite item created");
     }
@@ -158,9 +161,11 @@ export default function CompositeItemForm({ composites, setComposites, inventory
         <div className="relative flex-1 max-w-sm">
           <Input placeholder="Search composites..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-        <Button size="sm" onClick={openNew} className="w-fit">
-          <Plus className="h-4 w-4 mr-1" /> Add Composite Item
-        </Button>
+        {!readOnly && (
+          <Button size="sm" onClick={openNew} className="w-fit">
+            <Plus className="h-4 w-4 mr-1" /> Add Composite Item
+          </Button>
+        )}
       </div>
 
       <PaginationControls
@@ -186,14 +191,16 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                   {item.description && <p className="text-xs text-muted-foreground truncate">{item.description}</p>}
                 </div>
               </div>
-              <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              {!readOnly && (
+                <div className="flex gap-1 shrink-0">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
             <ul className="space-y-1.5">
               {item.components.map((comp, i) => (

@@ -43,6 +43,7 @@ export interface InventoryItem {
   costPrice: number;
   status: "good" | "low" | "critical";
   conversions: ItemConversion[];
+  outletId: string;
 }
 
 interface Props {
@@ -51,11 +52,13 @@ interface Props {
   categories: InventoryCategory[];
   units: MeasuringUnit[];
   onAdjustStock?: (item: InventoryItem) => void;
+  readOnly?: boolean;
+  selectedOutletId?: string;
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
 
-const emptyForm = (): FormState => ({
+const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
   sku: "",
   categoryId: "",
@@ -64,6 +67,7 @@ const emptyForm = (): FormState => ({
   minStock: 0,
   costPrice: 0,
   conversions: [],
+  outletId,
 });
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
@@ -74,16 +78,16 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 // No longer need MenuItemCombobox - conversions are now unit-to-unit
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm());
+  const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
 
   const openNew = () => {
     setEditing(null);
-    setForm(emptyForm());
+    setForm(emptyForm(selectedOutletId));
     setOpen(true);
   };
 
@@ -98,6 +102,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       minStock: item.minStock,
       costPrice: item.costPrice,
       conversions: item.conversions || [],
+      outletId: item.outletId,
     });
     setOpen(true);
   };
@@ -201,9 +206,11 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             </SelectContent>
           </Select>
         </div>
-        <Button size="sm" onClick={openNew} className="w-fit">
-          <Plus className="h-4 w-4 mr-1" /> Register Item
-        </Button>
+        {!readOnly && (
+          <Button size="sm" onClick={openNew} className="w-fit">
+            <Plus className="h-4 w-4 mr-1" /> Register Item
+          </Button>
+        )}
       </div>
 
       <PaginationControls
@@ -271,22 +278,24 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                   >
                     {item.status}
                   </Badge>
-                  <div className="flex gap-1 shrink-0">
-                    {onAdjustStock && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={() => onAdjustStock(item)} title="Adjust Stock">
-                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                  {!readOnly && (
+                    <div className="flex gap-1 shrink-0">
+                      {onAdjustStock && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={() => onAdjustStock(item)} title="Adjust Stock">
+                          <ArrowLeftRight className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(item)}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(item)}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
