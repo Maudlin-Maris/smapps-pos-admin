@@ -28,7 +28,7 @@ const outletData: Record<string, {
   salesTrend: { name: string; sales: number }[];
   topItems: { name: string; qty: number; revenue: number }[];
   paymentMethods: { name: string; value: number; color: string }[];
-  recentTxns: { id: string; customer: string; amount: string; method: string; time: string; status: string }[];
+  transactions: Transaction[];
 }> = {
   all: {
     kpis: { sales: "$24,860", orders: "248", customers: "189", avgOrder: "$100.24", salesChange: "+12.5%", ordersChange: "+18", custChange: "+11", avgChange: "+4.2%" },
