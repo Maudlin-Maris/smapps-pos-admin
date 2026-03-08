@@ -23,9 +23,12 @@ import { toast } from "sonner";
 import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 
+export type ComponentRole = "primary" | "secondary";
+
 export interface CompositeComponent {
   inventoryItemId: string;
   quantity: number;
+  role: ComponentRole;
 }
 
 export interface CompositeItem {
