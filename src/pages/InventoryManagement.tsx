@@ -51,6 +51,20 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 type Tab = "stock" | "categories" | "units" | "composite" | "adjustments";
 
+// Simplified menu items for composite item linking (shared data would come from a DB in production)
+const sampleMenuItems: { id: string; name: string; variants: { id: string; name: string }[] }[] = [
+  { id: "m1", name: "Cappuccino", variants: [{ id: "v1", name: "Regular" }, { id: "v2", name: "Small" }, { id: "v3", name: "Large" }] },
+  { id: "m2", name: "Iced Latte", variants: [] },
+  { id: "m3", name: "Croissant", variants: [] },
+  { id: "m4", name: "Club Sandwich", variants: [] },
+  { id: "m5", name: "Espresso", variants: [] },
+  { id: "m6", name: "Men's Haircut", variants: [] },
+  { id: "m7", name: "Full Color", variants: [] },
+  { id: "m8", name: "Blowout", variants: [] },
+  { id: "m9", name: "Organic Apples", variants: [] },
+  { id: "m10", name: "Trail Mix", variants: [] },
+];
+
 export default function InventoryManagement() {
   const [tab, setTab] = useState<Tab>("stock");
   const [categories, setCategories] = useState<InventoryCategory[]>(defaultCategories);
@@ -161,7 +175,7 @@ export default function InventoryManagement() {
         <MeasuringUnitManager units={units} setUnits={setUnits} />
       )}
       {tab === "composite" && (
-        <CompositeItemForm composites={composites} setComposites={setComposites} inventoryItems={items} units={units} />
+        <CompositeItemForm composites={composites} setComposites={setComposites} inventoryItems={items} units={units} menuItems={sampleMenuItems} />
       )}
 
       <StockAdjustDialog
