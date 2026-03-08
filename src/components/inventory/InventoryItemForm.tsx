@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryCategory } from "./InventoryCategoryManager";
@@ -42,6 +42,7 @@ interface Props {
   setItems: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   categories: InventoryCategory[];
   units: MeasuringUnit[];
+  onAdjustStock?: (item: InventoryItem) => void;
 }
 
 const emptyForm = (): Omit<InventoryItem, "id" | "status"> => ({
@@ -61,7 +62,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
   return "good";
 }
 
-export default function InventoryItemForm({ items, setItems, categories, units }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState(emptyForm());
@@ -215,6 +216,11 @@ export default function InventoryItemForm({ items, setItems, categories, units }
                     {item.status}
                   </Badge>
                   <div className="flex gap-1 shrink-0">
+                    {onAdjustStock && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={() => onAdjustStock(item)} title="Adjust Stock">
+                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
