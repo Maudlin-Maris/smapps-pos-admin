@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
 import {
@@ -12,20 +13,30 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Layers, X } from "lucide-react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Plus, Pencil, Trash2, Layers, X, ChevronsUpDown, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 
+export type ComponentRole = "primary" | "secondary";
+
 export interface CompositeComponent {
   inventoryItemId: string;
   quantity: number;
+  role: ComponentRole;
 }
 
 export interface CompositeItem {
@@ -69,7 +80,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   const addComponent = () => {
     setForm((f) => ({
       ...f,
-      components: [...f.components, { inventoryItemId: "", quantity: 1 }],
+      components: [...f.components, { inventoryItemId: "", quantity: 1, role: "primary" as ComponentRole }],
     }));
   };
 
@@ -182,8 +193,11 @@ export default function CompositeItemForm({ composites, setComposites, inventory
             <ul className="space-y-1.5">
               {item.components.map((comp, i) => (
                 <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+                  <div className={cn("h-1.5 w-1.5 rounded-full", comp.role === "primary" ? "bg-primary" : "bg-muted-foreground/40")} />
                   {getItemName(comp.inventoryItemId)} — {comp.quantity} {getItemUnit(comp.inventoryItemId)}
+                  <Badge variant={comp.role === "primary" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 h-4 ml-auto">
+                    {comp.role}
+                  </Badge>
                 </li>
               ))}
             </ul>
@@ -220,31 +234,51 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                 <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-lg">No components added yet</p>
               )}
               {form.components.map((comp, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Select value={comp.inventoryItemId} onValueChange={(v) => updateComponent(i, "inventoryItemId", v)}>
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {inventoryItems.map((inv) => (
-                        <SelectItem key={inv.id} value={inv.id}>{inv.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    className="w-20"
-                    value={comp.quantity}
-                    onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
-                    min={0}
-                    step={0.1}
-                  />
-                  <span className="text-xs text-muted-foreground w-10 shrink-0">
-                    {getItemUnit(comp.inventoryItemId)}
-                  </span>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                <div key={i} className="space-y-2 p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <ItemCombobox
+                      inventoryItems={inventoryItems}
+                      value={comp.inventoryItemId}
+                      onSelect={(v) => updateComponent(i, "inventoryItemId", v)}
+                    />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      className="w-24"
+                      value={comp.quantity}
+                      onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
+                      min={0}
+                      step={0.1}
+                      placeholder="Qty"
+                    />
+                    <span className="text-xs text-muted-foreground w-10 shrink-0">
+                      {getItemUnit(comp.inventoryItemId)}
+                    </span>
+                    <div className="flex gap-1 ml-auto">
+                      <Button
+                        type="button"
+                        variant={comp.role === "primary" ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs px-2.5"
+                        onClick={() => updateComponent(i, "role", "primary")}
+                      >
+                        Primary
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={comp.role === "secondary" ? "secondary" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs px-2.5"
+                        onClick={() => updateComponent(i, "role", "secondary")}
+                      >
+                        Secondary
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -256,5 +290,52 @@ export default function CompositeItemForm({ composites, setComposites, inventory
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function ItemCombobox({
+  inventoryItems,
+  value,
+  onSelect,
+}: {
+  inventoryItems: InventoryItem[];
+  value: string;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedName = inventoryItems.find((i) => i.id === value)?.name;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open} className="flex-1 justify-between font-normal h-9 text-sm">
+          <span className="truncate">{selectedName || "Select item..."}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[250px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search items..." />
+          <CommandList>
+            <CommandEmpty>No items found.</CommandEmpty>
+            <CommandGroup>
+              {inventoryItems.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  value={item.name}
+                  onSelect={() => {
+                    onSelect(item.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 h-3.5 w-3.5", value === item.id ? "opacity-100" : "opacity-0")} />
+                  {item.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
