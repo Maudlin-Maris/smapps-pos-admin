@@ -153,6 +153,14 @@ export default function Reports() {
               </div>
             </PopoverContent>
           </Popover>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Excel
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportPDF}>
+            <FileText className="h-3.5 w-3.5" />
+            PDF
+          </Button>
         </div>
       </div>
 
