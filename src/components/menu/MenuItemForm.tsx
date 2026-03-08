@@ -35,6 +35,8 @@ export interface MenuVariant {
   salePeriodStart: Date | null;
   salePeriodEnd: Date | null;
   trackInventory: boolean;
+  sku: string;
+  status: "active" | "inactive";
 }
 
 export interface MenuItem {
@@ -97,6 +99,14 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
         <div>
           <Label className="text-xs">Name *</Label>
           <Input className="mt-1 h-9 text-sm" value={variant.name} onChange={(e) => onChange({ ...variant, name: e.target.value })} placeholder="e.g. Large" />
+        </div>
+        <div>
+          <Label className="text-xs">SKU</Label>
+          <Input className="mt-1 h-9 text-sm" value={variant.sku} onChange={(e) => onChange({ ...variant, sku: e.target.value })} placeholder="e.g. CAP-LG" />
+        </div>
+        <div className="flex items-center gap-2 self-end pb-1">
+          <Switch checked={variant.status === "active"} onCheckedChange={(v) => onChange({ ...variant, status: v ? "active" : "inactive" })} />
+          <Label className="text-xs text-muted-foreground">{variant.status === "active" ? "Active" : "Inactive"}</Label>
         </div>
         <div>
           <Label className="text-xs">Price *</Label>
@@ -231,10 +241,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           salePeriodStart: showSale ? salePeriodStart : null,
           salePeriodEnd: showSale ? salePeriodEnd : null,
           trackInventory: trackInventory,
+          sku: sku,
+          status: isActive ? "active" : "inactive",
         };
-        return [baseVariant, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false }];
+        return [baseVariant, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false, sku: "", status: "active" as const }];
       }
-      return [...prev, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false }];
+      return [...prev, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false, sku: "", status: "active" as const }];
     });
   };
 
@@ -334,18 +346,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="item-sku">SKU</Label>
-              <Input id="item-sku" className="mt-1" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. CAP-001" />
-            </div>
-
-            <div className="flex items-center gap-3 self-end pb-1">
-              <Switch checked={isActive} onCheckedChange={setIsActive} />
+            {variants.length === 0 && (
               <div>
-                <Label className="text-sm">Status</Label>
-                <p className="text-xs text-muted-foreground">{isActive ? "Active" : "Inactive"}</p>
+                <Label htmlFor="item-sku">SKU</Label>
+                <Input id="item-sku" className="mt-1" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. CAP-001" />
               </div>
-            </div>
+            )}
+
+            {variants.length === 0 && (
+              <div className="flex items-center gap-3 self-end pb-1">
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <div>
+                  <Label className="text-sm">Status</Label>
+                  <p className="text-xs text-muted-foreground">{isActive ? "Active" : "Inactive"}</p>
+                </div>
+              </div>
+            )}
 
             <div className="sm:col-span-2">
               <Label htmlFor="item-desc">Description</Label>
