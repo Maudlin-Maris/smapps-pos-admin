@@ -7,12 +7,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Copy } from "lucide-react";
+import { Plus, Copy, Upload } from "lucide-react";
 import { toast } from "sonner";
 import CategoryManager, { type Category } from "@/components/menu/CategoryManager";
 import MenuItemForm, { type MenuItem } from "@/components/menu/MenuItemForm";
 import MenuList from "@/components/menu/MenuList";
 import CopyMenuDialog from "@/components/menu/CopyMenuDialog";
+import ImportMenuDialog from "@/components/menu/ImportMenuDialog";
 import {
   Dialog,
   DialogContent,
@@ -78,6 +79,7 @@ export default function MenuManagement() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const isAllOutlets = selectedOutletId === "all";
   const currentOutlet = outlets.find((o) => o.id === selectedOutletId);
@@ -151,6 +153,11 @@ export default function MenuManagement() {
     toast.success(`${copiedItems.length} item${copiedItems.length > 1 ? "s" : ""} copied to ${targetOutlet?.name}`);
   };
 
+  const handleBulkImport = (items: MenuItem[]) => {
+    const withOutlet = items.map((i) => ({ ...i, outletId: selectedOutletId }));
+    setMenuItems((prev) => [...prev, ...withOutlet]);
+  };
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -180,6 +187,14 @@ export default function MenuManagement() {
                 disabled={outletItems.length === 0}
               >
                 <Copy className="h-4 w-4" /> Copy to Outlet
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-fit gap-1.5"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <Upload className="h-4 w-4" /> Import Excel
               </Button>
               <Button
                 size="sm"
@@ -247,6 +262,14 @@ export default function MenuManagement() {
           currentOutletName={currentOutlet.name}
           outlets={outlets}
           onCopy={handleCopyToOutlet}
+        />
+      )}
+
+      {!isAllOutlets && (
+        <ImportMenuDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          onImport={handleBulkImport}
         />
       )}
     </div>
