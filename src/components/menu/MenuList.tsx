@@ -111,11 +111,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                           </div>
                         </TableCell>
                       ) : null}
-                      {vIdx === 0 ? (
-                        <TableCell rowSpan={item.variants.length} className="text-sm text-muted-foreground align-top border-r border-border/50">
-                          {item.sku || "—"}
-                        </TableCell>
-                      ) : null}
+                      <TableCell className="text-sm text-muted-foreground">{v.sku || "—"}</TableCell>
                       <TableCell className="text-sm font-medium">{v.name}</TableCell>
                       <TableCell className="text-right font-heading font-semibold text-sm">
                         ${(v.price ?? 0).toFixed(2)}
@@ -139,11 +135,9 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                           <span className="text-xs text-muted-foreground">Manual</span>
                         )}
                       </TableCell>
-                      {vIdx === 0 ? (
-                        <TableCell rowSpan={item.variants.length} className="align-top border-l border-border/50">
-                          <Badge variant={item.status === "active" ? "default" : "secondary"} className="text-xs">{item.status}</Badge>
-                        </TableCell>
-                      ) : null}
+                      <TableCell>
+                        <Badge variant={v.status === "active" ? "default" : "secondary"} className="text-xs">{v.status}</Badge>
+                      </TableCell>
                       {vIdx === 0 ? (
                         <TableCell rowSpan={item.variants.length} className="align-top border-l border-border/50">
                           <div className="flex justify-end gap-1">
