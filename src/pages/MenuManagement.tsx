@@ -264,6 +264,14 @@ export default function MenuManagement() {
           onCopy={handleCopyToOutlet}
         />
       )}
+
+      {!isAllOutlets && (
+        <ImportMenuDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          onImport={handleBulkImport}
+        />
+      )}
     </div>
   );
 }
