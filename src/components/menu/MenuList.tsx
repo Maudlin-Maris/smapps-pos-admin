@@ -111,7 +111,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                           </div>
                         </TableCell>
                       ) : null}
-                      <TableCell className="text-sm text-muted-foreground">{v.sku || "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{v.sku || "—"}</TableCell>
                       <TableCell className="text-sm font-medium">{v.name}</TableCell>
                       <TableCell className="text-right font-heading font-semibold text-sm">
                         ${(v.price ?? 0).toFixed(2)}
@@ -169,7 +169,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{item.sku || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{item.sku || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">—</TableCell>
                     <TableCell className="text-right font-heading font-semibold text-sm">
                       ${(item.price ?? 0).toFixed(2)}
