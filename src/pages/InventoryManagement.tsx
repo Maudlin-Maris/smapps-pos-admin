@@ -14,7 +14,6 @@ import MeasuringUnitManager, {
 } from "@/components/inventory/MeasuringUnitManager";
 import InventoryItemForm, {
   type InventoryItem,
-  type MenuItemOption,
 } from "@/components/inventory/InventoryItemForm";
 import CompositeItemForm, {
   type CompositeItem,
@@ -49,6 +48,8 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
   if (stock <= min) return "low";
   return "good";
 }
+
+type MenuItemOption = { id: string; name: string; variants: { id: string; name: string }[] };
 
 type Tab = "stock" | "categories" | "units" | "composite" | "adjustments";
 
@@ -163,7 +164,7 @@ export default function InventoryManagement() {
       </div>
 
       {tab === "stock" && (
-        <InventoryItemForm items={items} setItems={setItems} categories={categories} units={units} menuItems={sampleMenuItems} onAdjustStock={openAdjust} />
+        <InventoryItemForm items={items} setItems={setItems} categories={categories} units={units} onAdjustStock={openAdjust} />
       )}
       {tab === "adjustments" && (
         <StockAdjustmentHistory adjustments={adjustments} inventoryItems={items} units={units} />
