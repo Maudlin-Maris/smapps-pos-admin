@@ -137,6 +137,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
     .filter((i) => filterCategory === "all" || i.categoryId === filterCategory);
 
+  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">

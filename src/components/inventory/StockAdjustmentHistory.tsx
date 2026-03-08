@@ -219,6 +219,7 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
           <p className="text-xs text-muted-foreground mt-1">Stock changes will appear here</p>
         </div>
       ) : (
+        <>
         <PaginationControls
           page={page}
           totalPages={totalPages}
@@ -272,7 +273,7 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
             </Card>
           ))}
         </div>
-      )}
+      </>)}
     </div>
   );
 }
