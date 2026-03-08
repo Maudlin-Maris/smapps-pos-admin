@@ -128,7 +128,7 @@ export default function MenuManagement() {
     toast.success("Menu item deleted");
   };
 
-  const handleCopyToOutlet = (itemIds: string[], targetOutletId: string) => {
+  const handleCopyToOutlet = (itemIds: string[], targetOutletId: string, priceOverrides?: Record<string, { basePrice?: number; variantPrices?: Record<string, number> }>) => {
     const targetOutlet = outlets.find((o) => o.id === targetOutletId);
     const copiedItems = itemIds
       .map((id) => menuItems.find((m) => m.id === id))
@@ -136,9 +136,15 @@ export default function MenuManagement() {
       .map((item) => ({
         ...item!,
         id: crypto.randomUUID(),
+        price: priceOverrides?.[item!.id]?.basePrice ?? item!.price,
         sku: "",
         outletId: targetOutletId,
-        variants: item!.variants.map((v) => ({ ...v, id: crypto.randomUUID(), sku: "" })),
+        variants: item!.variants.map((v) => ({
+          ...v,
+          id: crypto.randomUUID(),
+          price: priceOverrides?.[item!.id]?.variantPrices?.[v.id] ?? v.price,
+          sku: "",
+        })),
       }));
 
     setMenuItems((prev) => [...prev, ...copiedItems]);
