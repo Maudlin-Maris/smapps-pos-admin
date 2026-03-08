@@ -280,7 +280,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                     </div>
                   </div>
                 </div>
-              ))
+              ))}
             </div>
           </div>
           <DialogFooter>
