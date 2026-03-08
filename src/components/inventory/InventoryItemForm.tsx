@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "./PaginationControls";
 import {
   Dialog,
   DialogContent,
@@ -135,6 +137,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
     .filter((i) => filterCategory === "all" || i.categoryId === filterCategory);
 
+  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
@@ -160,8 +164,18 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
         </Button>
       </div>
 
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        perPage={perPage}
+        totalItems={totalItems}
+        pageSizeOptions={pageSizeOptions}
+        onPageChange={setPage}
+        onPerPageChange={setPerPage}
+      />
+
       <div className="grid gap-3">
-        {filtered.map((item) => {
+        {paginatedItems.map((item) => {
           const percentage = item.maxStock > 0 ? Math.round((item.stock / item.maxStock) * 100) : 0;
           const unit = getUnit(item.unitId);
           const category = getCategory(item.categoryId);
