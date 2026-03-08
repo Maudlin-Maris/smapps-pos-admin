@@ -100,10 +100,6 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
           <Label className="text-xs">Name *</Label>
           <Input className="mt-1 h-9 text-sm" value={variant.name} onChange={(e) => onChange({ ...variant, name: e.target.value })} placeholder="e.g. Large" />
         </div>
-        <div>
-          <Label className="text-xs">SKU</Label>
-          <Input className="mt-1 h-9 text-sm" value={variant.sku} onChange={(e) => onChange({ ...variant, sku: e.target.value })} placeholder="e.g. CAP-LG" />
-        </div>
         <div className="flex items-center gap-2 self-end pb-1">
           <Switch checked={variant.status === "active"} onCheckedChange={(v) => onChange({ ...variant, status: v ? "active" : "inactive" })} />
           <Label className="text-xs text-muted-foreground">{variant.status === "active" ? "Active" : "Inactive"}</Label>
@@ -229,6 +225,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
   const removeImage = (idx: number) => setImages((prev) => prev.filter((_, i) => i !== idx));
 
+  const generateSku = () => {
+    const prefix = name.trim().substring(0, 3).toUpperCase().replace(/[^A-Z]/g, "X") || "ITM";
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${prefix}-${rand}`;
+  };
+
   const addVariant = () => {
     setVariants((prev) => {
       if (prev.length === 0 && (price || quantity)) {
@@ -241,7 +243,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           salePeriodStart: showSale ? salePeriodStart : null,
           salePeriodEnd: showSale ? salePeriodEnd : null,
           trackInventory: trackInventory,
-          sku: sku,
+          sku: "",
           status: isActive ? "active" : "inactive",
         };
         return [baseVariant, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false, sku: "", status: "active" as const }];
@@ -265,6 +267,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const cat = categories.find((c) => c.id === selectedCatId);
     const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
     const baseQty = hasVariants ? variants.reduce((sum, v) => sum + v.quantity, 0) : parseInt(quantity) || 0;
+    const autoSku = generateSku();
+    const finalVariants = hasVariants
+      ? variants.map((v, i) => ({
+          ...v,
+          sku: v.sku || `${autoSku}-V${i + 1}`,
+        }))
+      : variants;
     onSave({
       id: item?.id ?? crypto.randomUUID(),
       name: name.trim(),
@@ -276,10 +285,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       salePrice: hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
       salePeriodStart: hasVariants ? null : (showSale ? salePeriodStart : null),
       salePeriodEnd: hasVariants ? null : (showSale ? salePeriodEnd : null),
-      sku: sku.trim(),
+      sku: item?.sku || autoSku,
       status: isActive ? "active" : "inactive",
       images,
-      variants,
+      variants: finalVariants,
       trackInventory: hasVariants ? false : trackInventory,
     });
     onOpenChange(false);
@@ -346,12 +355,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </Select>
             </div>
 
-            {variants.length === 0 && (
-              <div>
-                <Label htmlFor="item-sku">SKU</Label>
-                <Input id="item-sku" className="mt-1" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. CAP-001" />
-              </div>
-            )}
 
             {variants.length === 0 && (
               <div className="flex items-center gap-3 self-end pb-1">
