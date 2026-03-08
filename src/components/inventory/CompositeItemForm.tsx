@@ -220,8 +220,18 @@ export default function CompositeItemForm({ composites, setComposites, inventory
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Name *</label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Cappuccino" />
+              <label className="text-sm font-medium">Menu Item *</label>
+              <MenuItemCombobox
+                menuItems={menuItems}
+                menuItemId={form.menuItemId}
+                menuVariantId={form.menuVariantId}
+                onSelect={(itemId, variantId, displayName) => {
+                  setForm((f) => ({ ...f, menuItemId: itemId, menuVariantId: variantId, name: displayName }));
+                }}
+              />
+              {form.name && (
+                <p className="text-xs text-muted-foreground">Selected: <span className="font-medium text-foreground">{form.name}</span></p>
+              )}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Description</label>
