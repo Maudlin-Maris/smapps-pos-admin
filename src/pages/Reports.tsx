@@ -17,12 +17,13 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus } from "lucide-react";
+import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { outlets } from "@/data/outlets";
 import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
 import PnLStatement from "@/components/reports/PnLStatement";
 import COGSBreakdown from "@/components/reports/COGSBreakdown";
+import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
