@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AlertTriangle, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
 import {
   Select,
   SelectContent,
@@ -81,6 +82,7 @@ export default function InventoryManagement() {
   const [units, setUnits] = useState<MeasuringUnit[]>(defaultUnits);
   const [items, setItems] = useState<InventoryItem[]>(defaultItems);
   const [composites, setComposites] = useState<CompositeItem[]>(defaultComposites);
+  const { adjustments: storedAdjustments, addAdjustment } = useStockAdjustments();
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -121,6 +123,7 @@ export default function InventoryManagement() {
     }
 
     const quantityChange = type === "set" ? Math.abs(newStock - previousStock) : quantity;
+    const costTotal = quantityChange * item.costPrice;
 
     const adjustment: StockAdjustment = {
       id: crypto.randomUUID(),
@@ -132,9 +135,19 @@ export default function InventoryManagement() {
       reason,
       timestamp: new Date(),
       outletId: item.outletId,
+      costPrice: item.costPrice,
+      costTotal,
     };
 
     setAdjustments((prev) => [adjustment, ...prev]);
+
+    // Also persist to localStorage for COGS reporting
+    const storedAdj: StoredAdjustment = {
+      ...adjustment,
+      timestamp: adjustment.timestamp.toISOString(),
+    };
+    addAdjustment(storedAdj);
+
     setItems((prev) =>
       prev.map((i) =>
         i.id === itemId
@@ -142,7 +155,7 @@ export default function InventoryManagement() {
           : i
       )
     );
-    toast.success(`Stock adjusted: ${previousStock} → ${newStock}`);
+    toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: $${costTotal.toFixed(2)})`);
   };
 
   const openAdjust = (item: InventoryItem) => {
