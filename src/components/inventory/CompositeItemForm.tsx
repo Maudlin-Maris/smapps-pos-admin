@@ -64,7 +64,7 @@ const emptyForm = () => ({
   components: [] as CompositeComponent[],
 });
 
-export default function CompositeItemForm({ composites, setComposites, inventoryItems, units }: Props) {
+export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
@@ -78,7 +78,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
   const openEdit = (item: CompositeItem) => {
     setEditing(item);
-    setForm({ name: item.name, description: item.description, components: [...item.components] });
+    setForm({ name: item.name, menuItemId: item.menuItemId || "", menuVariantId: item.menuVariantId || "", description: item.description, components: [...item.components] });
     setOpen(true);
   };
 
@@ -121,13 +121,13 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
     if (editing) {
       setComposites((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, description: form.description, components: validComponents } : c))
+        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents } : c))
       );
       toast.success("Composite item updated");
     } else {
       setComposites((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: form.name, description: form.description, components: validComponents },
+        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents },
       ]);
       toast.success("Composite item created");
     }
