@@ -7,6 +7,7 @@ import {
   Package,
   Store,
   CreditCard,
+  FileBarChart,
   Menu,
   X,
   ChevronsLeft,
@@ -19,6 +20,7 @@ const navItems = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   { title: "Menu", path: "/menu", icon: UtensilsCrossed },
   { title: "Inventory", path: "/inventory", icon: Package },
+  { title: "Reports", path: "/reports", icon: FileBarChart },
   { title: "Outlets", path: "/outlets", icon: Store },
   { title: "Subscription", path: "/subscription", icon: CreditCard },
 ];
