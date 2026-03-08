@@ -20,7 +20,7 @@ import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { outlets } from "@/data/outlets";
-import { useExpenses, useSales, buildPnL, type PnLData } from "@/hooks/use-financial-data";
+import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
 import PnLStatement from "@/components/reports/PnLStatement";
 
 function fmt(n: number) {
@@ -34,6 +34,7 @@ export default function Reports() {
 
   const { getExpensesByOutletAndPeriod } = useExpenses();
   const { getSalesByOutletAndPeriod } = useSales();
+  const { getCOGSByOutletAndPeriod } = useStockAdjustments();
 
   const isAllOutlets = selectedOutletId === "all";
   const outletIds = isAllOutlets ? outlets.map((o) => o.id) : [selectedOutletId];
@@ -41,12 +42,12 @@ export default function Reports() {
   const data = useMemo(() => {
     const filteredExpenses = getExpensesByOutletAndPeriod(outletIds, dateFrom, dateTo);
     const filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
-    // COGS: In a real system this would come from inventory consumption. Using estimate for now.
+    const cogsInventory = getCOGSByOutletAndPeriod(outletIds, dateFrom, dateTo);
+    // Direct labor tracked separately from salaries expense; estimate from sales if needed
     const totalSales = filteredSales.reduce((s, r) => s + r.totalSales, 0);
-    const cogsInventory = Math.round(totalSales * 0.35); // ~35% of sales
-    const cogsLabor = Math.round(totalSales * 0.10); // ~10% of sales
+    const cogsLabor = Math.round(totalSales * 0.10);
     return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
-  }, [selectedOutletId, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod]);
+  }, [selectedOutletId, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
 
   const totalRevenue = data.revenue.sales + data.revenue.otherIncome;
   const totalCOGS = data.costOfGoods.inventory + data.costOfGoods.directLabor;
