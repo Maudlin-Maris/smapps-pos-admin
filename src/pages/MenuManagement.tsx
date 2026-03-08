@@ -90,11 +90,11 @@ export default function MenuManagement() {
       ...item,
       id: crypto.randomUUID(),
       name: `${item.name} (Copy)`,
-      sku: item.sku ? `${item.sku}-COPY` : "",
-      variants: item.variants.map((v) => ({ ...v, id: crypto.randomUUID() })),
+      sku: "",
+      variants: item.variants.map((v) => ({ ...v, id: crypto.randomUUID(), sku: "" })),
     };
-    setMenuItems((prev) => [...prev, cloned]);
-    toast.success(`Cloned "${item.name}"`);
+    setEditingItem(cloned);
+    setFormOpen(true);
   };
 
   const handleDeleteConfirm = () => {
