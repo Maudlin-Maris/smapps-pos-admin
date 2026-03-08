@@ -37,9 +37,9 @@ const defaultItems: InventoryItem[] = [
 ];
 
 const defaultComposites: CompositeItem[] = [
-  { id: "c1", name: "Cappuccino", description: "Classic cappuccino", components: [{ inventoryItemId: "i1", quantity: 0.02 }, { inventoryItemId: "i2", quantity: 0.15 }, { inventoryItemId: "i4", quantity: 1 }] },
-  { id: "c2", name: "Club Sandwich", description: "Triple-decker sandwich", components: [{ inventoryItemId: "i9", quantity: 2 }, { inventoryItemId: "i3", quantity: 0.005 }] },
-  { id: "c3", name: "Hair Coloring Service", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1 }, { inventoryItemId: "i8", quantity: 1 }, { inventoryItemId: "i6", quantity: 0.03 }] },
+  { id: "c1", name: "Cappuccino", description: "Classic cappuccino", components: [{ inventoryItemId: "i1", quantity: 0.02, role: "primary" }, { inventoryItemId: "i2", quantity: 0.15, role: "secondary" }, { inventoryItemId: "i4", quantity: 1, role: "secondary" }] },
+  { id: "c2", name: "Club Sandwich", description: "Triple-decker sandwich", components: [{ inventoryItemId: "i9", quantity: 2, role: "primary" }, { inventoryItemId: "i3", quantity: 0.005, role: "secondary" }] },
+  { id: "c3", name: "Hair Coloring Service", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1, role: "primary" }, { inventoryItemId: "i8", quantity: 1, role: "secondary" }, { inventoryItemId: "i6", quantity: 0.03, role: "secondary" }] },
 ];
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {

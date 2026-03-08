@@ -72,7 +72,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   const addComponent = () => {
     setForm((f) => ({
       ...f,
-      components: [...f.components, { inventoryItemId: "", quantity: 1 }],
+      components: [...f.components, { inventoryItemId: "", quantity: 1, role: "primary" as ComponentRole }],
     }));
   };
 
