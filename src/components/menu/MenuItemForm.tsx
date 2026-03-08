@@ -193,7 +193,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const removeImage = (idx: number) => setImages((prev) => prev.filter((_, i) => i !== idx));
 
   const addVariant = () => {
-    setVariants((prev) => [...prev, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null }]);
+    setVariants((prev) => {
+      if (prev.length === 0 && (price || quantity)) {
+        // Auto-create first variant from existing base price/qty
+        const baseVariant: MenuVariant = {
+          id: crypto.randomUUID(),
+          name: "",
+          price: parseFloat(price) || 0,
+          quantity: parseInt(quantity) || 0,
+          salePrice: showSale && salePrice ? parseFloat(salePrice) : null,
+          salePeriodStart: showSale ? salePeriodStart : null,
+          salePeriodEnd: showSale ? salePeriodEnd : null,
+        };
+        return [baseVariant, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null }];
+      }
+      return [...prev, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null }];
+    });
   };
 
   const updateVariant = (id: string, updated: MenuVariant) => {
@@ -205,19 +220,24 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   };
 
   const handleSave = () => {
-    if (!name.trim() || !price || !subcategory) return;
+    const hasVariants = variants.length > 0;
+    if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
+    // Validate all variants have names when variants exist
+    if (hasVariants && variants.some((v) => !v.name.trim())) return;
     const cat = categories.find((c) => c.id === selectedCatId);
+    const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
+    const baseQty = hasVariants ? variants.reduce((sum, v) => sum + v.quantity, 0) : parseInt(quantity) || 0;
     onSave({
       id: item?.id ?? crypto.randomUUID(),
       name: name.trim(),
       description: description.trim(),
       category: cat?.name ?? "",
       subcategory,
-      price: parseFloat(price),
-      quantity: parseInt(quantity) || 0,
-      salePrice: showSale && salePrice ? parseFloat(salePrice) : null,
-      salePeriodStart: showSale ? salePeriodStart : null,
-      salePeriodEnd: showSale ? salePeriodEnd : null,
+      price: basePrice,
+      quantity: baseQty,
+      salePrice: hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
+      salePeriodStart: hasVariants ? null : (showSale ? salePeriodStart : null),
+      salePeriodEnd: hasVariants ? null : (showSale ? salePeriodEnd : null),
       sku: sku.trim(),
       status: isActive ? "active" : "inactive",
       images,
@@ -288,16 +308,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
 
             <div>
-              <Label htmlFor="item-price">Price *</Label>
-              <Input id="item-price" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-            </div>
-
-            <div>
-              <Label htmlFor="item-quantity">Quantity</Label>
-              <Input id="item-quantity" className="mt-1" type="number" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" />
-            </div>
-
-            <div>
               <Label htmlFor="item-sku">SKU</Label>
               <Input id="item-sku" className="mt-1" value={sku} onChange={(e) => setSku(e.target.value)} placeholder="e.g. CAP-001" />
             </div>
@@ -316,35 +326,52 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           </div>
 
-          {/* Sale section */}
-          <div className="border border-border rounded-lg p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-              <Label className="text-sm font-medium">On Sale</Label>
-            </div>
-            {showSale && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {/* Price/Qty/Sale - only when no variants */}
+          {variants.length === 0 && (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-xs">Sale Price</Label>
-                  <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                  <Label htmlFor="item-price-nv">Price *</Label>
+                  <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
                 </div>
-                <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                <div>
+                  <Label htmlFor="item-quantity-nv">Quantity</Label>
+                  <Input id="item-quantity-nv" className="mt-1" type="number" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" />
+                </div>
               </div>
-            )}
-          </div>
+
+              <div className="border border-border rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                  <Label className="text-sm font-medium">On Sale</Label>
+                </div>
+                {showSale && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs">Sale Price</Label>
+                      <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                    </div>
+                    <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                    <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Variants */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Variants</Label>
+              <div>
+                <Label className="text-sm font-medium">Variants</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {variants.length > 0 ? "All pricing and stock is managed per variant." : "Add variants for different sizes, flavors, etc."}
+                </p>
+              </div>
               <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                 <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
               </Button>
             </div>
-            {variants.length === 0 && (
-              <p className="text-xs text-muted-foreground">No variants. Add variants for different sizes, flavors, etc.</p>
-            )}
             {variants.map((v) => (
               <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
             ))}
@@ -353,7 +380,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!name.trim() || !price || !subcategory}>
+          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || (variants.length > 0 && variants.some((v) => !v.name.trim()))}>
             {isEditing ? "Update Item" : "Add Item"}
           </Button>
         </DialogFooter>
