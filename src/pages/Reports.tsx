@@ -78,9 +78,10 @@ export default function Reports() {
       const oExpenses = getExpensesByOutletAndPeriod([o.id], dateFrom, dateTo);
       const oSales = getSalesByOutletAndPeriod([o.id], dateFrom, dateTo);
       const rev = oSales.reduce((s, r) => s + r.totalSales + r.otherIncome, 0);
-      const cogsEst = Math.round(rev * 0.45);
+      const cogs = getCOGSByOutletAndPeriod([o.id], dateFrom, dateTo);
+      const laborEst = Math.round(rev * 0.10);
       const exp = oExpenses.reduce((s, e) => s + e.amount, 0);
-      return { name: o.name.split(" ")[0], revenue: rev, profit: rev - cogsEst - exp };
+      return { name: o.name.split(" ")[0], revenue: rev, profit: rev - cogs - laborEst - exp };
     });
   }, [isAllOutlets, dateFrom, dateTo, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod]);
 
