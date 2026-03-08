@@ -39,6 +39,8 @@ export interface StockAdjustment {
   reason: string;
   timestamp: Date;
   outletId: string;
+  costPrice: number; // cost per unit at time of adjustment
+  costTotal: number; // quantityChange * costPrice (for consumption tracking)
 }
 
 const adjustmentTypeLabels: Record<AdjustmentType, string> = {
