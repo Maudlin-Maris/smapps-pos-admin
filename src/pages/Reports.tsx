@@ -234,6 +234,9 @@ export default function Reports() {
         </div>
       </div>
 
+      {/* COGS Breakdown */}
+      <COGSBreakdown adjustments={filteredAdjustments} itemNames={itemNames} />
+
       {/* Outlet Comparison */}
       {isAllOutlets && outletComparison.length > 0 && (
         <Card className="p-4">
