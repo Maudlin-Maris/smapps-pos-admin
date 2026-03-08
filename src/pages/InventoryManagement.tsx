@@ -164,11 +164,20 @@ export default function InventoryManagement() {
     setItems((prev) =>
       prev.map((i) =>
         i.id === itemId
-          ? { ...i, stock: newStock, status: computeStatus(newStock, i.minStock) }
+          ? { 
+              ...i, 
+              stock: newStock, 
+              costPrice: newAverageCost, // Update with WAC
+              status: computeStatus(newStock, i.minStock) 
+            }
           : i
       )
     );
-    toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: $${costTotal.toFixed(2)})`);
+    
+    const costChangeMsg = newAverageCost !== item.costPrice 
+      ? ` | Avg cost updated: $${item.costPrice.toFixed(2)} → $${newAverageCost.toFixed(2)}`
+      : "";
+    toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: $${costTotal.toFixed(2)})${costChangeMsg}`);
   };
 
   const openAdjust = (item: InventoryItem) => {
