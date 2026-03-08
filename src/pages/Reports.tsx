@@ -22,6 +22,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { outlets } from "@/data/outlets";
 import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
 import PnLStatement from "@/components/reports/PnLStatement";
+import COGSBreakdown from "@/components/reports/COGSBreakdown";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -34,16 +35,27 @@ export default function Reports() {
 
   const { getExpensesByOutletAndPeriod } = useExpenses();
   const { getSalesByOutletAndPeriod } = useSales();
-  const { getCOGSByOutletAndPeriod } = useStockAdjustments();
+  const { getCOGSByOutletAndPeriod, getAdjustmentsByOutletAndPeriod } = useStockAdjustments();
 
   const isAllOutlets = selectedOutletId === "all";
   const outletIds = isAllOutlets ? outlets.map((o) => o.id) : [selectedOutletId];
+
+  const filteredAdjustments = useMemo(
+    () => getAdjustmentsByOutletAndPeriod(outletIds, dateFrom, dateTo),
+    [outletIds, dateFrom, dateTo, getAdjustmentsByOutletAndPeriod]
+  );
+
+  // Item name map from default inventory (localStorage items could be loaded here too)
+  const itemNames: Record<string, string> = useMemo(() => ({
+    i1: "Coffee Beans (Arabica)", i2: "Whole Milk", i3: "Sugar",
+    i4: "Paper Cups (12oz)", i5: "Croissant Dough", i6: "Shampoo (Professional)",
+    i7: "Hair Color Mix", i8: "Disposable Gloves", i9: "Sandwich Bread", i10: "Napkins",
+  }), []);
 
   const data = useMemo(() => {
     const filteredExpenses = getExpensesByOutletAndPeriod(outletIds, dateFrom, dateTo);
     const filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
     const cogsInventory = getCOGSByOutletAndPeriod(outletIds, dateFrom, dateTo);
-    // Direct labor tracked separately from salaries expense; estimate from sales if needed
     const totalSales = filteredSales.reduce((s, r) => s + r.totalSales, 0);
     const cogsLabor = Math.round(totalSales * 0.10);
     return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
@@ -221,6 +233,9 @@ export default function Reports() {
           </Card>
         </div>
       </div>
+
+      {/* COGS Breakdown */}
+      <COGSBreakdown adjustments={filteredAdjustments} itemNames={itemNames} />
 
       {/* Outlet Comparison */}
       {isAllOutlets && outletComparison.length > 0 && (

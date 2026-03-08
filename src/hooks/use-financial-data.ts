@@ -220,7 +220,19 @@ export function useStockAdjustments() {
     [adjustments]
   );
 
-  return { adjustments, setAdjustments, addAdjustment, getCOGSByOutletAndPeriod };
+  const getAdjustmentsByOutletAndPeriod = useCallback(
+    (outletIds: string[], from: Date, to: Date) => {
+      const fromStr = from.toISOString().split("T")[0];
+      const toStr = to.toISOString().split("T")[0];
+      return adjustments.filter((a) => {
+        const adjDate = a.timestamp.split("T")[0];
+        return outletIds.includes(a.outletId) && adjDate >= fromStr && adjDate <= toStr;
+      });
+    },
+    [adjustments]
+  );
+
+  return { adjustments, setAdjustments, addAdjustment, getCOGSByOutletAndPeriod, getAdjustmentsByOutletAndPeriod };
 }
 
 export interface PnLData {
