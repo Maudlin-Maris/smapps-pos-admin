@@ -62,6 +62,16 @@ export default function Reports() {
     return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
   }, [selectedOutletId, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
 
+  const cogsItemRows = useMemo(
+    () => buildCOGSItems(filteredAdjustments, itemNames),
+    [filteredAdjustments, itemNames]
+  );
+
+  const outletLabel = isAllOutlets ? "All Outlets" : outlets.find((o) => o.id === selectedOutletId)?.name || selectedOutletId;
+
+  const handleExportExcel = () => exportPnLToExcel(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+  const handleExportPDF = () => exportPnLToPDF(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+
   const totalRevenue = data.revenue.sales + data.revenue.otherIncome;
   const totalCOGS = data.costOfGoods.inventory + data.costOfGoods.directLabor;
   const grossProfit = totalRevenue - totalCOGS;
