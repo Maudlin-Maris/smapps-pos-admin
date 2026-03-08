@@ -43,6 +43,7 @@ export interface InventoryItem {
   costPrice: number;
   status: "good" | "low" | "critical";
   conversions: ItemConversion[];
+  outletId: string;
 }
 
 interface Props {

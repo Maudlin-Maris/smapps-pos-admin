@@ -38,6 +38,7 @@ export interface StockAdjustment {
   newStock: number;
   reason: string;
   timestamp: Date;
+  outletId: string;
 }
 
 const adjustmentTypeLabels: Record<AdjustmentType, string> = {

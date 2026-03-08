@@ -46,6 +46,7 @@ export interface CompositeItem {
   menuVariantId?: string;
   description: string;
   components: CompositeComponent[];
+  outletId: string;
 }
 
 interface Props {
