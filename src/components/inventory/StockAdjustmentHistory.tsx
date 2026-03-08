@@ -129,14 +129,29 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Quantity</label>
-            <Input
-              type="number"
-              min={0}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Quantity</label>
+              <Input
+                type="number"
+                min={0}
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+              />
+            </div>
+            
+            {(type === "add" || type === "returned") && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cost per unit ($)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={batchCostPrice}
+                  onChange={(e) => setBatchCostPrice(Number(e.target.value))}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

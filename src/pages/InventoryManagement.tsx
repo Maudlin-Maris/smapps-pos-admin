@@ -108,22 +108,35 @@ export default function InventoryManagement() {
 
   const lowStockCount = outletItems.filter((i) => i.status === "low" || i.status === "critical").length;
 
-  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string) => {
+  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number) => {
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
 
     const previousStock = item.stock;
     let newStock: number;
+    let newAverageCost = item.costPrice;
+    
     if (type === "set") {
       newStock = quantity;
     } else if (type === "add" || type === "returned") {
       newStock = previousStock + quantity;
+      
+      // Calculate Weighted Average Cost (WAC)
+      if (batchCostPrice !== undefined && batchCostPrice > 0 && newStock > 0) {
+        const currentTotalValue = previousStock * item.costPrice;
+        const newBatchValue = quantity * batchCostPrice;
+        newAverageCost = (currentTotalValue + newBatchValue) / newStock;
+      }
     } else {
       newStock = Math.max(0, previousStock - quantity);
     }
 
     const quantityChange = type === "set" ? Math.abs(newStock - previousStock) : quantity;
-    const costTotal = quantityChange * item.costPrice;
+    
+    // For additions, use the new batch cost for the adjustment record.
+    // For consumptions, use the current average cost.
+    const recordedCostPrice = (type === "add" || type === "returned") && batchCostPrice ? batchCostPrice : item.costPrice;
+    const costTotal = quantityChange * recordedCostPrice;
 
     const adjustment: StockAdjustment = {
       id: crypto.randomUUID(),
@@ -135,7 +148,7 @@ export default function InventoryManagement() {
       reason,
       timestamp: new Date(),
       outletId: item.outletId,
-      costPrice: item.costPrice,
+      costPrice: recordedCostPrice,
       costTotal,
     };
 
