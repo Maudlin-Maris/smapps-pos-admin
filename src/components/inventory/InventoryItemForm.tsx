@@ -52,11 +52,13 @@ interface Props {
   categories: InventoryCategory[];
   units: MeasuringUnit[];
   onAdjustStock?: (item: InventoryItem) => void;
+  readOnly?: boolean;
+  selectedOutletId?: string;
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
 
-const emptyForm = (): FormState => ({
+const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
   sku: "",
   categoryId: "",
@@ -65,6 +67,7 @@ const emptyForm = (): FormState => ({
   minStock: 0,
   costPrice: 0,
   conversions: [],
+  outletId,
 });
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
@@ -75,16 +78,16 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 // No longer need MenuItemCombobox - conversions are now unit-to-unit
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
-  const [form, setForm] = useState<FormState>(emptyForm());
+  const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
 
   const openNew = () => {
     setEditing(null);
-    setForm(emptyForm());
+    setForm(emptyForm(selectedOutletId));
     setOpen(true);
   };
 
@@ -99,6 +102,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       minStock: item.minStock,
       costPrice: item.costPrice,
       conversions: item.conversions || [],
+      outletId: item.outletId,
     });
     setOpen(true);
   };
