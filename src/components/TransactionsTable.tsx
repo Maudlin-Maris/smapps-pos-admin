@@ -11,6 +11,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, ChevronRight } from "lucide-react";
 
+export interface PaymentSplit {
+  method: string;
+  amount: string;
+}
+
 export interface Transaction {
   orderId: string;
   date: string;
@@ -19,7 +24,7 @@ export interface Transaction {
   cashier: string;
   location: string;
   paymentStatus: "Paid" | "Pending" | "Failed" | "Refunded";
-  paymentMethod: string;
+  payments: PaymentSplit[];
   orderStatus: "Completed" | "Processing" | "Cancelled" | "On Hold";
 }
 
