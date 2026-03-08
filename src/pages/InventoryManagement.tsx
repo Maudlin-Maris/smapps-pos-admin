@@ -14,6 +14,7 @@ import MeasuringUnitManager, {
 } from "@/components/inventory/MeasuringUnitManager";
 import InventoryItemForm, {
   type InventoryItem,
+  type MenuItemOption,
 } from "@/components/inventory/InventoryItemForm";
 import CompositeItemForm, {
   type CompositeItem,
@@ -25,22 +26,22 @@ import StockAdjustmentHistory, {
 } from "@/components/inventory/StockAdjustmentHistory";
 
 const defaultItems: InventoryItem[] = [
-  { id: "i1", name: "Coffee Beans (Arabica)", sku: "CB-001", categoryId: "1", unitId: "1", stock: 45, minStock: 20, maxStock: 100, costPrice: 12.5, status: "good" },
-  { id: "i2", name: "Whole Milk", sku: "ML-001", categoryId: "1", unitId: "3", stock: 12, minStock: 15, maxStock: 60, costPrice: 1.2, status: "low" },
-  { id: "i3", name: "Sugar", sku: "SG-001", categoryId: "2", unitId: "1", stock: 30, minStock: 10, maxStock: 50, costPrice: 0.8, status: "good" },
-  { id: "i4", name: "Paper Cups (12oz)", sku: "PC-012", categoryId: "3", unitId: "5", stock: 150, minStock: 200, maxStock: 1000, costPrice: 0.05, status: "low" },
-  { id: "i5", name: "Croissant Dough", sku: "CD-001", categoryId: "2", unitId: "1", stock: 8, minStock: 5, maxStock: 25, costPrice: 3.0, status: "good" },
-  { id: "i6", name: "Shampoo (Professional)", sku: "SH-001", categoryId: "4", unitId: "7", stock: 3, minStock: 5, maxStock: 20, costPrice: 8.0, status: "critical" },
-  { id: "i7", name: "Hair Color Mix", sku: "HC-001", categoryId: "4", unitId: "8", stock: 18, minStock: 10, maxStock: 40, costPrice: 5.5, status: "good" },
-  { id: "i8", name: "Disposable Gloves", sku: "DG-001", categoryId: "4", unitId: "6", stock: 2, minStock: 5, maxStock: 20, costPrice: 4.0, status: "critical" },
-  { id: "i9", name: "Sandwich Bread", sku: "SB-001", categoryId: "2", unitId: "9", stock: 24, minStock: 10, maxStock: 50, costPrice: 1.5, status: "good" },
-  { id: "i10", name: "Napkins", sku: "NP-001", categoryId: "3", unitId: "5", stock: 500, minStock: 200, maxStock: 2000, costPrice: 0.01, status: "good" },
+  { id: "i1", name: "Coffee Beans (Arabica)", sku: "CB-001", categoryId: "1", unitId: "1", stock: 45, minStock: 20, costPrice: 12.5, status: "good", conversions: [{ id: "cv1", menuItemId: "m1", conversionRate: 50, conversionUnit: "1 kg = 50 cups" }] },
+  { id: "i2", name: "Whole Milk", sku: "ML-001", categoryId: "1", unitId: "3", stock: 12, minStock: 15, costPrice: 1.2, status: "low", conversions: [{ id: "cv2", menuItemId: "m1", menuVariantId: "v1", conversionRate: 6, conversionUnit: "1 L = 6 servings" }] },
+  { id: "i3", name: "Sugar", sku: "SG-001", categoryId: "2", unitId: "1", stock: 30, minStock: 10, costPrice: 0.8, status: "good", conversions: [] },
+  { id: "i4", name: "Paper Cups (12oz)", sku: "PC-012", categoryId: "3", unitId: "5", stock: 150, minStock: 200, costPrice: 0.05, status: "low", conversions: [] },
+  { id: "i5", name: "Croissant Dough", sku: "CD-001", categoryId: "2", unitId: "1", stock: 8, minStock: 5, costPrice: 3.0, status: "good", conversions: [{ id: "cv3", menuItemId: "m3", conversionRate: 10, conversionUnit: "1 kg = 10 croissants" }] },
+  { id: "i6", name: "Shampoo (Professional)", sku: "SH-001", categoryId: "4", unitId: "7", stock: 3, minStock: 5, costPrice: 8.0, status: "critical", conversions: [] },
+  { id: "i7", name: "Hair Color Mix", sku: "HC-001", categoryId: "4", unitId: "8", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [] },
+  { id: "i8", name: "Disposable Gloves", sku: "DG-001", categoryId: "4", unitId: "6", stock: 2, minStock: 5, costPrice: 4.0, status: "critical", conversions: [] },
+  { id: "i9", name: "Sandwich Bread", sku: "SB-001", categoryId: "2", unitId: "9", stock: 24, minStock: 10, costPrice: 1.5, status: "good", conversions: [{ id: "cv4", menuItemId: "m4", conversionRate: 2, conversionUnit: "2 slices per sandwich" }] },
+  { id: "i10", name: "Napkins", sku: "NP-001", categoryId: "3", unitId: "5", stock: 500, minStock: 200, costPrice: 0.01, status: "good", conversions: [] },
 ];
 
 const defaultComposites: CompositeItem[] = [
-  { id: "c1", name: "Cappuccino", description: "Classic cappuccino", components: [{ inventoryItemId: "i1", quantity: 0.02, role: "primary" }, { inventoryItemId: "i2", quantity: 0.15, role: "secondary" }, { inventoryItemId: "i4", quantity: 1, role: "secondary" }] },
-  { id: "c2", name: "Club Sandwich", description: "Triple-decker sandwich", components: [{ inventoryItemId: "i9", quantity: 2, role: "primary" }, { inventoryItemId: "i3", quantity: 0.005, role: "secondary" }] },
-  { id: "c3", name: "Hair Coloring Service", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1, role: "primary" }, { inventoryItemId: "i8", quantity: 1, role: "secondary" }, { inventoryItemId: "i6", quantity: 0.03, role: "secondary" }] },
+  { id: "c1", name: "Cappuccino", menuItemId: "m1", menuVariantId: "v1", description: "Classic cappuccino", components: [{ inventoryItemId: "i1", quantity: 0.02, role: "primary" }, { inventoryItemId: "i2", quantity: 0.15, role: "secondary" }, { inventoryItemId: "i4", quantity: 1, role: "secondary" }] },
+  { id: "c2", name: "Club Sandwich", menuItemId: "m4", description: "Triple-decker sandwich", components: [{ inventoryItemId: "i9", quantity: 2, role: "primary" }, { inventoryItemId: "i3", quantity: 0.005, role: "secondary" }] },
+  { id: "c3", name: "Hair Coloring Service", menuItemId: "m7", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1, role: "primary" }, { inventoryItemId: "i8", quantity: 1, role: "secondary" }, { inventoryItemId: "i6", quantity: 0.03, role: "secondary" }] },
 ];
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
@@ -51,8 +52,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 type Tab = "stock" | "categories" | "units" | "composite" | "adjustments";
 
-// Simplified menu items for composite item linking (shared data would come from a DB in production)
-const sampleMenuItems: { id: string; name: string; variants: { id: string; name: string }[] }[] = [
+const sampleMenuItems: MenuItemOption[] = [
   { id: "m1", name: "Cappuccino", variants: [{ id: "v1", name: "Regular" }, { id: "v2", name: "Small" }, { id: "v3", name: "Large" }] },
   { id: "m2", name: "Iced Latte", variants: [] },
   { id: "m3", name: "Croissant", variants: [] },
@@ -163,7 +163,7 @@ export default function InventoryManagement() {
       </div>
 
       {tab === "stock" && (
-        <InventoryItemForm items={items} setItems={setItems} categories={categories} units={units} onAdjustStock={openAdjust} />
+        <InventoryItemForm items={items} setItems={setItems} categories={categories} units={units} menuItems={sampleMenuItems} onAdjustStock={openAdjust} />
       )}
       {tab === "adjustments" && (
         <StockAdjustmentHistory adjustments={adjustments} inventoryItems={items} units={units} />

@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
 import {
@@ -20,11 +19,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, ChevronsUpDown, Check, X, ArrowRightLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryCategory } from "./InventoryCategoryManager";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
+
+export interface ItemConversion {
+  id: string;
+  menuItemId: string;
+  menuVariantId?: string;
+  conversionRate: number;
+  conversionUnit: string; // e.g. "1 kg = 50 servings"
+}
 
 export interface InventoryItem {
   id: string;
@@ -34,9 +54,15 @@ export interface InventoryItem {
   unitId: string;
   stock: number;
   minStock: number;
-  maxStock: number;
   costPrice: number;
   status: "good" | "low" | "critical";
+  conversions: ItemConversion[];
+}
+
+export interface MenuItemOption {
+  id: string;
+  name: string;
+  variants: { id: string; name: string }[];
 }
 
 interface Props {
@@ -44,18 +70,21 @@ interface Props {
   setItems: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   categories: InventoryCategory[];
   units: MeasuringUnit[];
+  menuItems: MenuItemOption[];
   onAdjustStock?: (item: InventoryItem) => void;
 }
 
-const emptyForm = (): Omit<InventoryItem, "id" | "status"> => ({
+type FormState = Omit<InventoryItem, "id" | "status">;
+
+const emptyForm = (): FormState => ({
   name: "",
   sku: "",
   categoryId: "",
   unitId: "",
   stock: 0,
   minStock: 0,
-  maxStock: 100,
   costPrice: 0,
+  conversions: [],
 });
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
@@ -64,10 +93,87 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
   return "good";
 }
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock }: Props) {
+// Sub-component: searchable menu item picker for conversions
+function MenuItemCombobox({
+  menuItems,
+  value,
+  variantValue,
+  onChange,
+}: {
+  menuItems: MenuItemOption[];
+  value: string;
+  variantValue?: string;
+  onChange: (menuItemId: string, menuVariantId?: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Flatten menu items + variants
+  type FlatOption = { id: string; menuItemId: string; menuVariantId?: string; label: string };
+  const options: FlatOption[] = menuItems.flatMap((mi) => {
+    if (mi.variants.length === 0) {
+      return [{ id: mi.id, menuItemId: mi.id, label: mi.name }];
+    }
+    return [
+      { id: mi.id, menuItemId: mi.id, label: mi.name },
+      ...mi.variants.map((v) => ({
+        id: `${mi.id}__${v.id}`,
+        menuItemId: mi.id,
+        menuVariantId: v.id,
+        label: `${mi.name} — ${v.name}`,
+      })),
+    ];
+  });
+
+  const selectedLabel = (() => {
+    if (!value) return "Select menu item...";
+    const mi = menuItems.find((m) => m.id === value);
+    if (!mi) return "Select menu item...";
+    if (variantValue) {
+      const v = mi.variants.find((vr) => vr.id === variantValue);
+      return v ? `${mi.name} — ${v.name}` : mi.name;
+    }
+    return mi.name;
+  })();
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between text-sm h-9 font-normal">
+          <span className="truncate">{selectedLabel}</span>
+          <ChevronsUpDown className="ml-1 h-3.5 w-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[280px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search menu items..." className="h-9" />
+          <CommandList>
+            <CommandEmpty>No menu items found.</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.id}
+                  value={opt.label}
+                  onSelect={() => {
+                    onChange(opt.menuItemId, opt.menuVariantId);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 h-3.5 w-3.5", value === opt.menuItemId && variantValue === opt.menuVariantId ? "opacity-100" : "opacity-0")} />
+                  <span className={opt.menuVariantId ? "pl-2 text-muted-foreground" : "font-medium"}>{opt.label}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export default function InventoryItemForm({ items, setItems, categories, units, menuItems, onAdjustStock }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
-  const [form, setForm] = useState(emptyForm());
+  const [form, setForm] = useState<FormState>(emptyForm());
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
 
@@ -86,8 +192,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       unitId: item.unitId,
       stock: item.stock,
       minStock: item.minStock,
-      maxStock: item.maxStock,
       costPrice: item.costPrice,
+      conversions: item.conversions || [],
     });
     setOpen(true);
   };
@@ -98,6 +204,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       id: crypto.randomUUID(),
       name: `${item.name} (Copy)`,
       sku: `${item.sku}-COPY`,
+      conversions: item.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
     };
     setItems((prev) => [...prev, cloned]);
     toast.success("Item cloned");
@@ -128,6 +235,28 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const handleDelete = (id: string) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
     toast.success("Item deleted");
+  };
+
+  // Conversion helpers
+  const addConversion = () => {
+    setForm((prev) => ({
+      ...prev,
+      conversions: [...prev.conversions, { id: crypto.randomUUID(), menuItemId: "", conversionRate: 1, conversionUnit: "" }],
+    }));
+  };
+
+  const updateConversion = (index: number, updates: Partial<ItemConversion>) => {
+    setForm((prev) => ({
+      ...prev,
+      conversions: prev.conversions.map((c, i) => (i === index ? { ...c, ...updates } : c)),
+    }));
+  };
+
+  const removeConversion = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      conversions: prev.conversions.filter((_, i) => i !== index),
+    }));
   };
 
   const getUnit = (id: string) => units.find((u) => u.id === id);
@@ -176,7 +305,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
       <div className="grid gap-3">
         {paginatedItems.map((item) => {
-          const percentage = item.maxStock > 0 ? Math.round((item.stock / item.maxStock) * 100) : 0;
           const unit = getUnit(item.unitId);
           const category = getCategory(item.categoryId);
           return (
@@ -197,6 +325,12 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     <div className="flex items-center gap-2">
                       <p className="text-xs text-muted-foreground font-mono">{item.sku}</p>
                       {category && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{category.name}</Badge>}
+                      {item.conversions?.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5">
+                          <ArrowRightLeft className="h-2.5 w-2.5" />
+                          {item.conversions.length}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -207,17 +341,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                       {item.stock} <span className="text-muted-foreground font-normal text-xs">{unit?.abbreviation || ""}</span>
                     </p>
                     <p className="text-xs text-muted-foreground">Min: {item.minStock}</p>
-                  </div>
-                  <div className="w-24 hidden md:block">
-                    <Progress
-                      value={percentage}
-                      className={cn(
-                        "h-2",
-                        item.status === "critical" && "[&>div]:bg-destructive",
-                        item.status === "low" && "[&>div]:bg-warning",
-                        item.status === "good" && "[&>div]:bg-success"
-                      )}
-                    />
                   </div>
                   <Badge
                     variant={item.status === "good" ? "default" : "secondary"}
@@ -257,7 +380,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
       {/* Registration / Edit Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</DialogTitle>
           </DialogHeader>
@@ -296,7 +419,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Current Stock</label>
                 <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} />
@@ -305,14 +428,70 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 <label className="text-sm font-medium">Min Stock</label>
                 <Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Max Stock</label>
-                <Input type="number" value={form.maxStock} onChange={(e) => setForm({ ...form, maxStock: Number(e.target.value) })} />
-              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Cost Price</label>
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
+            </div>
+
+            {/* Conversions Section */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium">Menu Item Conversions</label>
+                  <p className="text-xs text-muted-foreground">How this item converts to menu items or recipes</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addConversion} className="h-7 text-xs">
+                  <Plus className="h-3 w-3 mr-1" /> Add
+                </Button>
+              </div>
+
+              {form.conversions.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
+                  No conversions added yet
+                </p>
+              )}
+
+              {form.conversions.map((conv, idx) => (
+                <Card key={conv.id} className="p-3 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-xs font-medium text-muted-foreground">Menu Item / Variant</label>
+                      <MenuItemCombobox
+                        menuItems={menuItems}
+                        value={conv.menuItemId}
+                        variantValue={conv.menuVariantId}
+                        onChange={(menuItemId, menuVariantId) => updateConversion(idx, { menuItemId, menuVariantId })}
+                      />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0 mt-5" onClick={() => removeConversion(idx)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Rate (per unit)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={conv.conversionRate}
+                        onChange={(e) => updateConversion(idx, { conversionRate: Number(e.target.value) })}
+                        className="h-8 text-sm"
+                        placeholder="e.g. 50"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Description</label>
+                      <Input
+                        value={conv.conversionUnit}
+                        onChange={(e) => updateConversion(idx, { conversionUnit: e.target.value })}
+                        className="h-8 text-sm"
+                        placeholder="e.g. 1 kg = 50 cups"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
           </div>
           <DialogFooter>
