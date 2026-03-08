@@ -221,11 +221,71 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
   const [page, setPage] = useState(1);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
+
   const totalPages = Math.max(1, Math.ceil(parsedItems.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const paged = parsedItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const totalVariants = useMemo(() => parsedItems.reduce((s, i) => s + i.variants.length, 0), [parsedItems]);
+
+  const updateItem = (id: string, field: keyof MenuItem, value: string | number) => {
+    setParsedItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const updateVariant = (itemId: string, variantId: string, field: keyof MenuVariant, value: string | number) => {
+    setParsedItems((prev) =>
+      prev.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              variants: item.variants.map((v) =>
+                v.id === variantId ? { ...v, [field]: value } : v
+              ),
+            }
+          : item
+      )
+    );
+  };
+
+  const EditableCell = ({ value, itemId, field, type = "text", className = "" }: {
+    value: string | number;
+    itemId: string;
+    field: keyof MenuItem;
+    type?: "text" | "number";
+    className?: string;
+  }) => {
+    const isEditing = editingCell?.id === itemId && editingCell?.field === field;
+    if (isEditing) {
+      return (
+        <Input
+          autoFocus
+          type={type}
+          defaultValue={value}
+          className={cn("h-7 text-xs px-1.5", className)}
+          onBlur={(e) => {
+            const v = type === "number" ? parseFloat(e.target.value) || 0 : e.target.value;
+            updateItem(itemId, field, v);
+            setEditingCell(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            if (e.key === "Escape") setEditingCell(null);
+          }}
+        />
+      );
+    }
+    return (
+      <span
+        className={cn("cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 inline-block min-w-[2ch]", className)}
+        onClick={() => setEditingCell({ id: itemId, field })}
+      >
+        {value || "—"}
+      </span>
+    );
+  };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
