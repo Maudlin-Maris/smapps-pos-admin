@@ -298,15 +298,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <DialogTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Item Name *</label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">SKU</label>
-                <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="e.g. CB-001" />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Item Name *</label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -391,7 +385,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                       <div className="flex-1 space-y-1">
                         <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
                         <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                          {itemUnit ? `${itemUnit.name} (${itemUnit.abbreviation})` : "Select item unit first"}
+                          {itemUnit ? itemUnit.abbreviation : "—"}
                         </div>
                       </div>
                       <span className="text-sm font-medium text-muted-foreground pt-4">=</span>
