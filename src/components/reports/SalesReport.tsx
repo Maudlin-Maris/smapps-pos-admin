@@ -261,13 +261,13 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
   const salesByDatePag = usePagination(salesByDate, 10);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Cashier Filter */}
       {availableCashiers.length > 0 && (
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedCashier} onValueChange={setSelectedCashier}>
-            <SelectTrigger className="w-[180px] h-9">
+            <SelectTrigger className="w-[150px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -281,45 +281,49 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
       )}
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Sales + Other Income</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Total Revenue</p>
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Sales + Other Income</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalSales)}</div>
-            <p className="text-xs text-muted-foreground">{filteredSales.length} transactions</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Total Sales</p>
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalSales)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{filteredSales.length} transactions</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Top Business Day</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{topBusinessDay?.fullDay || "—"}</div>
-            <p className="text-xs text-muted-foreground">{topBusinessDay ? formatCurrency(topBusinessDay.sales) : "No data"}</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Top Day</p>
+            <div className="text-lg sm:text-2xl font-bold">{topBusinessDay?.fullDay || "—"}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{topBusinessDay ? formatCurrency(topBusinessDay.sales) : "No data"}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg per Transaction</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgDailySales)}</div>
-            <p className="text-xs text-muted-foreground">Across selected period</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Avg / Transaction</p>
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(avgDailySales)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Across selected period</p>
           </CardContent>
         </Card>
       </div>
