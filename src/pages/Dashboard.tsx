@@ -163,9 +163,9 @@ const outletData: Record<string, {
       { name: "Bank Transfer", value: 200, color: "hsl(var(--chart-4))" },
     ],
     transactions: [
-      { orderId: "ORD-5001", date: "2026-03-08 08:30", customerPhone: "+233 50 666 3344", amount: "$12.50", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$12.50" }], orderStatus: "Completed" },
-      { orderId: "ORD-5002", date: "2026-03-08 09:15", customerPhone: "+233 20 999 0011", amount: "$28.00", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$28.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-5003", date: "2026-03-08 10:00", customerPhone: "+233 24 333 8899", amount: "$35.50", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Failed", payments: [{ method: "Card", amount: "$35.50" }], orderStatus: "On Hold" },
+      { orderId: "ORD-5001", date: "2026-03-08 08:30", customerPhone: "+233 50 666 3344", amount: "₦12.50", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦12.50" }], orderStatus: "Completed" },
+      { orderId: "ORD-5002", date: "2026-03-08 09:15", customerPhone: "+233 20 999 0011", amount: "₦28.00", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦28.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-5003", date: "2026-03-08 10:00", customerPhone: "+233 24 333 8899", amount: "₦35.50", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Failed", payments: [{ method: "Card", amount: "₦35.50" }], orderStatus: "On Hold" },
     ],
   },
 };
