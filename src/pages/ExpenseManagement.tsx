@@ -154,22 +154,6 @@ export default function ExpenseManagement() {
         </Button>
       </div>
 
-      {/* Summary Card */}
-      <Card className="p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-            <Receipt className="h-5 w-5 text-destructive" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Total (filtered)</p>
-            <p className="text-lg font-heading font-bold">{fmt(totalFiltered)}</p>
-          </div>
-        </div>
-        <Badge variant="secondary" className="text-xs">
-          {totalItems} expenses
-        </Badge>
-      </Card>
-
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
         <div className="relative flex-1 max-w-sm">
@@ -199,6 +183,22 @@ export default function ExpenseManagement() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Summary Card */}
+      <Card className="p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+            <Receipt className="h-5 w-5 text-destructive" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total (filtered)</p>
+            <p className="text-lg font-heading font-bold">{fmt(totalFiltered)}</p>
+          </div>
+        </div>
+        <Badge variant="secondary" className="text-xs">
+          {totalItems} expenses
+        </Badge>
+      </Card>
 
       <PaginationControls
         page={page}
