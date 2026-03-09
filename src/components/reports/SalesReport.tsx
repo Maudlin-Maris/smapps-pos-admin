@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -6,9 +6,11 @@ import { SalesRecord } from "@/hooks/use-financial-data";
 import { outlets } from "@/data/outlets";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, AreaChart, Area,
+  PieChart, Pie, Cell, Legend,
 } from "recharts";
 import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star } from "lucide-react";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "@/components/inventory/PaginationControls";
 
 interface SalesReportProps {
   sales: SalesRecord[];
@@ -66,7 +68,6 @@ const outletItemSales: Record<string, { name: string; category: string; qty: num
   ],
 };
 
-// Payment method distribution per outlet (percentages)
 const outletPaymentSplits: Record<string, Record<string, number>> = {
   "outlet-1": { Cash: 0.45, Card: 0.30, "Mobile Money": 0.18, "Bank Transfer": 0.07 },
   "outlet-2": { Cash: 0.35, Card: 0.38, "Mobile Money": 0.22, "Bank Transfer": 0.05 },
@@ -107,8 +108,8 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     }));
   }, [filteredSales]);
 
-  // --- Daily sales trend ---
-  const dailySalesTrend = useMemo(() => {
+  // --- Sales by date ---
+  const salesByDate = useMemo(() => {
     const grouped: Record<string, { sales: number; otherIncome: number }> = {};
     filteredSales.forEach((s) => {
       if (!grouped[s.date]) grouped[s.date] = { sales: 0, otherIncome: 0 };
@@ -118,14 +119,15 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     return Object.entries(grouped)
       .map(([date, d]) => ({
         date,
-        displayDate: new Date(date).toLocaleDateString("en-NG", { month: "short", day: "numeric" }),
-        ...d,
+        displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric", year: "numeric" }),
+        sales: d.sales,
+        otherIncome: d.otherIncome,
         total: d.sales + d.otherIncome,
       }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredSales]);
 
-  // --- Sales by business day (day of week) ---
+  // --- Sales by business day ---
   const salesByBusinessDay = useMemo(() => {
     const dayTotals: Record<number, { sales: number; count: number }> = {};
     filteredSales.forEach((s) => {
@@ -148,7 +150,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     return sorted[0];
   }, [salesByBusinessDay]);
 
-  // --- Top selling items (aggregated from all selected outlets) ---
+  // --- All items aggregated ---
   const allItems = useMemo(() => {
     const itemMap: Record<string, { name: string; category: string; qty: number; revenue: number }> = {};
     selectedOutlets.forEach((outletId) => {
@@ -165,8 +167,6 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     return Object.values(itemMap).sort((a, b) => b.revenue - a.revenue);
   }, [selectedOutlets]);
 
-  const topSellingItems = allItems.slice(0, 10);
-
   // --- Sales by item category ---
   const salesByCategory = useMemo(() => {
     const catMap: Record<string, { qty: number; revenue: number }> = {};
@@ -175,8 +175,9 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
       catMap[item.category].qty += item.qty;
       catMap[item.category].revenue += item.revenue;
     });
+    const totalItemRevenue = allItems.reduce((s, i) => s + i.revenue, 0);
     return Object.entries(catMap)
-      .map(([category, data]) => ({ category, ...data }))
+      .map(([category, data]) => ({ category, ...data, pct: totalItemRevenue > 0 ? ((data.revenue / totalItemRevenue) * 100).toFixed(1) : "0" }))
       .sort((a, b) => b.revenue - a.revenue);
   }, [allItems]);
 
@@ -186,11 +187,11 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     selectedOutlets.forEach((outletId) => {
       const splits = outletPaymentSplits[outletId];
       if (!splits) return;
-      const outletSales = filteredSales
+      const outletSalesTotal = filteredSales
         .filter((s) => s.outletId === outletId)
         .reduce((sum, s) => sum + s.totalSales, 0);
       Object.entries(splits).forEach(([method, pct]) => {
-        methods[method] = (methods[method] || 0) + outletSales * pct;
+        methods[method] = (methods[method] || 0) + outletSalesTotal * pct;
       });
     });
     return Object.entries(methods).map(([name, value]) => ({
@@ -200,12 +201,17 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     }));
   }, [selectedOutlets, filteredSales]);
 
-  // Outlet pie distribution
   const outletDistribution = salesByOutlet.map((o, idx) => ({
     name: o.outletName,
     value: o.total,
     color: COLORS[idx % COLORS.length],
   }));
+
+  // Pagination hooks
+  const topItemsPag = usePagination(allItems, 5);
+  const allItemsPag = usePagination(allItems, 10);
+  const categoryPag = usePagination(salesByCategory, 10);
+  const salesByDatePag = usePagination(salesByDate, 10);
 
   return (
     <div className="space-y-6">
@@ -253,35 +259,35 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </Card>
       </div>
 
-      {/* Daily Sales Trend + Payment Methods */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      {/* Sales by Business Day + Payment Methods */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
           <CardHeader>
-            <CardTitle>Daily Sales Trend</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4" /> Sales by Business Day
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {dailySalesTrend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={dailySalesTrend}>
-                  <defs>
-                    <linearGradient id="salesReportGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="displayDate" className="text-xs" />
-                  <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
-                  <Tooltip
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                  />
-                  <Area type="monotone" dataKey="sales" name="Sales" stroke="hsl(var(--primary))" fill="url(#salesReportGrad)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="otherIncome" name="Other Income" stroke="hsl(var(--chart-2))" fill="hsl(var(--chart-2))" fillOpacity={0.1} strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-[300px] items-center justify-center text-muted-foreground">No sales data for selected period</div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={salesByBusinessDay}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="day" className="text-xs" />
+                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                <Tooltip
+                  formatter={(value: number, name: string) => [formatCurrency(value), name === "sales" ? "Total Sales" : "Avg Sales"]}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                />
+                <Bar dataKey="sales" name="Total Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            {topBusinessDay && topBusinessDay.sales > 0 && (
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-primary/5 p-3">
+                <Trophy className="h-4 w-4 text-primary" />
+                <span className="text-sm">
+                  <strong>{topBusinessDay.fullDay}</strong> is the top business day with{" "}
+                  <strong>{formatCurrency(topBusinessDay.sales)}</strong> in sales
+                </span>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -320,80 +326,142 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </Card>
       </div>
 
-      {/* Sales by Business Day + Top Selling Items */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Sales by Business Day */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" /> Sales by Business Day
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={salesByBusinessDay}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="day" className="text-xs" />
-                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
-                <Tooltip
-                  formatter={(value: number, name: string) => [formatCurrency(value), name === "sales" ? "Total Sales" : "Avg Sales"]}
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                />
-                <Bar dataKey="sales" name="Total Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            {topBusinessDay && topBusinessDay.sales > 0 && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-primary/5 p-3">
-                <Trophy className="h-4 w-4 text-primary" />
-                <span className="text-sm">
-                  <strong>{topBusinessDay.fullDay}</strong> is the top business day with{" "}
-                  <strong>{formatCurrency(topBusinessDay.sales)}</strong> in sales
-                </span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Sales by Dates */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sales by Date</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <PaginationControls
+            page={salesByDatePag.page}
+            totalPages={salesByDatePag.totalPages}
+            perPage={salesByDatePag.perPage}
+            totalItems={salesByDatePag.totalItems}
+            pageSizeOptions={salesByDatePag.pageSizeOptions}
+            onPageChange={salesByDatePag.setPage}
+            onPerPageChange={salesByDatePag.setPerPage}
+          />
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Sales</TableHead>
+                <TableHead className="text-right">Other Income</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {salesByDatePag.paginatedItems.length > 0 ? (
+                salesByDatePag.paginatedItems.map((row) => (
+                  <TableRow key={row.date}>
+                    <TableCell className="font-medium">{row.displayDate}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.otherIncome)}</TableCell>
+                    <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-muted-foreground">No sales data</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-        {/* Top Selling Items */}
+      {/* Top Selling Items + Sales by Item Category */}
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Star className="h-4 w-4" /> Top Selling Items
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <PaginationControls
+              page={topItemsPag.page}
+              totalPages={topItemsPag.totalPages}
+              perPage={topItemsPag.perPage}
+              totalItems={topItemsPag.totalItems}
+              pageSizeOptions={topItemsPag.pageSizeOptions}
+              onPageChange={topItemsPag.setPage}
+              onPerPageChange={topItemsPag.setPerPage}
+            />
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>#</TableHead>
                   <TableHead>Item</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
+                  <TableHead className="text-right">Qty Sold</TableHead>
                   <TableHead className="text-right">Revenue</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {topSellingItems.length > 0 ? (
-                  topSellingItems.map((item, idx) => (
+                {topItemsPag.paginatedItems.length > 0 ? (
+                  topItemsPag.paginatedItems.map((item, idx) => (
                     <TableRow key={item.name}>
-                      <TableCell>
-                        {idx < 3 ? (
-                          <Badge variant={idx === 0 ? "default" : "secondary"} className="w-6 h-6 rounded-full flex items-center justify-center p-0 text-xs">
-                            {idx + 1}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs ml-1.5">{idx + 1}</span>
-                        )}
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {(topItemsPag.page - 1) * topItemsPag.perPage + idx < 3 ? (
+                            <Badge variant={(topItemsPag.page - 1) * topItemsPag.perPage + idx === 0 ? "default" : "secondary"} className="w-5 h-5 rounded-full flex items-center justify-center p-0 text-xs shrink-0">
+                              {(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs w-5 text-center shrink-0">{(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}</span>
+                          )}
+                          {item.name}
+                        </div>
                       </TableCell>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell><Badge variant="outline" className="text-xs">{item.category}</Badge></TableCell>
                       <TableCell className="text-right">{item.qty}</TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(item.revenue)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">No item data</TableCell>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">No item data</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales by Item Category</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <PaginationControls
+              page={categoryPag.page}
+              totalPages={categoryPag.totalPages}
+              perPage={categoryPag.perPage}
+              totalItems={categoryPag.totalItems}
+              pageSizeOptions={categoryPag.pageSizeOptions}
+              onPageChange={categoryPag.setPage}
+              onPerPageChange={categoryPag.setPerPage}
+            />
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Items Sold</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">% of Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categoryPag.paginatedItems.length > 0 ? (
+                  categoryPag.paginatedItems.map((cat) => (
+                    <TableRow key={cat.category}>
+                      <TableCell className="font-medium">{cat.category}</TableCell>
+                      <TableCell className="text-right">{cat.qty}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(cat.revenue)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{cat.pct}%</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">No category data</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -402,139 +470,93 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </Card>
       </div>
 
-      {/* Sales by Item Category + Outlet Distribution */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Sales by Item Category */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales by Item Category</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {salesByCategory.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={Math.max(200, salesByCategory.length * 40)}>
-                  <BarChart data={salesByCategory} layout="vertical" margin={{ left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis type="number" tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
-                    <YAxis type="category" dataKey="category" width={110} className="text-xs" />
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                    <Bar dataKey="revenue" name="Revenue" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-                <Table className="mt-4">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Items Sold</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">% of Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {salesByCategory.map((cat) => {
-                      const totalItemRevenue = allItems.reduce((s, i) => s + i.revenue, 0);
-                      const pct = totalItemRevenue > 0 ? ((cat.revenue / totalItemRevenue) * 100).toFixed(1) : "0";
-                      return (
-                        <TableRow key={cat.category}>
-                          <TableCell className="font-medium">{cat.category}</TableCell>
-                          <TableCell className="text-right">{cat.qty}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(cat.revenue)}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">{pct}%</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </>
-            ) : (
-              <div className="flex h-[200px] items-center justify-center text-muted-foreground">No category data</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Sales by Outlet */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales by Outlet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {outletDistribution.length > 0 ? (
-              <>
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie data={outletDistribution} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name.split(" ")[0]} (${(percent * 100).toFixed(0)}%)`}>
-                      {outletDistribution.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <Table className="mt-4">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Outlet</TableHead>
-                      <TableHead className="text-right">Sales</TableHead>
-                      <TableHead className="text-right">Other Income</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {salesByOutlet.map((row) => (
-                      <TableRow key={row.outletId}>
-                        <TableCell className="font-medium">{row.outletName}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(row.otherIncome)}</TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
-                      </TableRow>
+      {/* Sales by Outlet */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Sales by Outlet</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {outletDistribution.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie data={outletDistribution} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name.split(" ")[0]} (${(percent * 100).toFixed(0)}%)`}>
+                    {outletDistribution.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
                     ))}
-                    <TableRow className="bg-muted/50 font-semibold">
-                      <TableCell>Total</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalSales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalOtherIncome)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <Table className="mt-4">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Outlet</TableHead>
+                    <TableHead className="text-right">Sales</TableHead>
+                    <TableHead className="text-right">Other Income</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {salesByOutlet.map((row) => (
+                    <TableRow key={row.outletId}>
+                      <TableCell className="font-medium">{row.outletName}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(row.otherIncome)}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
                     </TableRow>
-                  </TableBody>
-                </Table>
-              </>
-            ) : (
-              <div className="flex h-[250px] items-center justify-center text-muted-foreground">No outlet data</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  ))}
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell>Total</TableCell>
+                    <TableCell className="text-right">{formatCurrency(totalSales)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(totalOtherIncome)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </>
+          ) : (
+            <div className="flex h-[250px] items-center justify-center text-muted-foreground">No outlet data</div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Full Sales by Item Table */}
+      {/* Sales by Item */}
       <Card>
         <CardHeader>
           <CardTitle>Sales by Item</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <PaginationControls
+            page={allItemsPag.page}
+            totalPages={allItemsPag.totalPages}
+            perPage={allItemsPag.perPage}
+            totalItems={allItemsPag.totalItems}
+            pageSizeOptions={allItemsPag.pageSizeOptions}
+            onPageChange={allItemsPag.setPage}
+            onPerPageChange={allItemsPag.setPerPage}
+          />
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Item</TableHead>
-                <TableHead>Category</TableHead>
                 <TableHead className="text-right">Qty Sold</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
-                <TableHead className="text-right">Avg Price</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allItems.length > 0 ? (
-                allItems.map((item) => (
+              {allItemsPag.paginatedItems.length > 0 ? (
+                allItemsPag.paginatedItems.map((item) => (
                   <TableRow key={item.name}>
                     <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{item.category}</Badge></TableCell>
                     <TableCell className="text-right">{item.qty}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(item.revenue)}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">{formatCurrency(item.qty > 0 ? item.revenue / item.qty : 0)}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">No item data available</TableCell>
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">No item data available</TableCell>
                 </TableRow>
               )}
             </TableBody>
