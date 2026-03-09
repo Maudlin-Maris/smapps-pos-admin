@@ -261,13 +261,13 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
   const salesByDatePag = usePagination(salesByDate, 10);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Cashier Filter */}
       {availableCashiers.length > 0 && (
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedCashier} onValueChange={setSelectedCashier}>
-            <SelectTrigger className="w-[180px] h-9">
+            <SelectTrigger className="w-[150px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -281,76 +281,80 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
       )}
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Sales + Other Income</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Total Revenue</p>
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Sales + Other Income</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalSales)}</div>
-            <p className="text-xs text-muted-foreground">{filteredSales.length} transactions</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Total Sales</p>
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalSales)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{filteredSales.length} transactions</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Top Business Day</CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{topBusinessDay?.fullDay || "—"}</div>
-            <p className="text-xs text-muted-foreground">{topBusinessDay ? formatCurrency(topBusinessDay.sales) : "No data"}</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Top Day</p>
+            <div className="text-lg sm:text-2xl font-bold">{topBusinessDay?.fullDay || "—"}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{topBusinessDay ? formatCurrency(topBusinessDay.sales) : "No data"}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <Card className="p-3 sm:p-0">
+          <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg per Transaction</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(avgDailySales)}</div>
-            <p className="text-xs text-muted-foreground">Across selected period</p>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Avg / Transaction</p>
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(avgDailySales)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Across selected period</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Sales by Business Day + Payment Methods */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <CalendarDays className="h-4 w-4" /> Sales by Business Day
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={salesByBusinessDay}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="day" className="text-xs" />
-                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                <XAxis dataKey="day" className="text-xs" tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" tick={{ fontSize: 10 }} width={45} />
                 <Tooltip
                   formatter={(value: number, name: string) => [formatCurrency(value), name === "sales" ? "Total Sales" : "Avg Sales"]}
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
                 />
                 <Bar dataKey="sales" name="Total Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             {topBusinessDay && topBusinessDay.sales > 0 && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-primary/5 p-3">
-                <Trophy className="h-4 w-4 text-primary" />
-                <span className="text-sm">
-                  <strong>{topBusinessDay.fullDay}</strong> is the top business day with{" "}
-                  <strong>{formatCurrency(topBusinessDay.sales)}</strong> in sales
+              <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary/5 p-2 sm:p-3">
+                <Trophy className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-xs sm:text-sm">
+                  <strong>{topBusinessDay.fullDay}</strong> is the top day with{" "}
+                  <strong>{formatCurrency(topBusinessDay.sales)}</strong>
                 </span>
               </div>
             )}
@@ -358,26 +362,26 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sales by Payment Method</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base">Sales by Payment Method</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {paymentMethodData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
-                    <Pie data={paymentMethodData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} dataKey="value" paddingAngle={2}>
+                    <Pie data={paymentMethodData} cx="50%" cy="50%" innerRadius={35} outerRadius={65} dataKey="value" paddingAngle={2}>
                       {paymentMethodData.map((entry, index) => (
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ fontSize: "12px" }} />
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="space-y-2 mt-2">
+                <div className="space-y-1.5 mt-2">
                   {paymentMethodData.map((pm) => (
-                    <div key={pm.name} className="flex items-center justify-between text-sm">
+                    <div key={pm.name} className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground">{pm.name}</span>
                       <span className="font-medium">{formatCurrency(pm.value)}</span>
                     </div>
@@ -385,19 +389,19 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
                 </div>
               </>
             ) : (
-              <div className="flex h-[220px] items-center justify-center text-muted-foreground">No data</div>
+              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">No data</div>
             )}
           </CardContent>
         </Card>
       </div>
 
       {/* Sales by Date + Sales by Item */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Sales by Date</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base">Sales by Date</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
             <PaginationControls
               page={salesByDatePag.page}
               totalPages={salesByDatePag.totalPages}
@@ -407,38 +411,40 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
               onPageChange={salesByDatePag.setPage}
               onPerPageChange={salesByDatePag.setPerPage}
             />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Orders</TableHead>
-                  <TableHead className="text-right">Total Sales</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {salesByDatePag.paginatedItems.length > 0 ? (
-                  salesByDatePag.paginatedItems.map((row) => (
-                    <TableRow key={row.date}>
-                      <TableCell className="font-medium">{row.displayDate}</TableCell>
-                      <TableCell className="text-right">{row.orders}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(row.sales)}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">No sales data</TableCell>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-right text-xs">Orders</TableHead>
+                    <TableHead className="text-right text-xs">Total Sales</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {salesByDatePag.paginatedItems.length > 0 ? (
+                    salesByDatePag.paginatedItems.map((row) => (
+                      <TableRow key={row.date}>
+                        <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{row.displayDate}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{row.orders}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.sales)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No sales data</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sales by Item</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base">Sales by Item</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
             <PaginationControls
               page={allItemsPag.page}
               totalPages={allItemsPag.totalPages}
@@ -448,43 +454,45 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
               onPageChange={allItemsPag.setPage}
               onPerPageChange={allItemsPag.setPerPage}
             />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qty Sold</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allItemsPag.paginatedItems.length > 0 ? (
-                  allItemsPag.paginatedItems.map((item) => (
-                    <TableRow key={item.name}>
-                      <TableCell className="font-medium">{item.name}</TableCell>
-                      <TableCell className="text-right">{item.qty}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(item.revenue)}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">No item data</TableCell>
+                    <TableHead className="text-xs">Item</TableHead>
+                    <TableHead className="text-right text-xs">Qty</TableHead>
+                    <TableHead className="text-right text-xs">Revenue</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {allItemsPag.paginatedItems.length > 0 ? (
+                    allItemsPag.paginatedItems.map((item) => (
+                      <TableRow key={item.name}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{item.name}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No item data</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Top Selling Items + Sales by Item Category */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Star className="h-4 w-4" /> Top Selling Items
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
             <PaginationControls
               page={topItemsPag.page}
               totalPages={topItemsPag.totalPages}
@@ -494,49 +502,51 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
               onPageChange={topItemsPag.setPage}
               onPerPageChange={topItemsPag.setPerPage}
             />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qty Sold</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topItemsPag.paginatedItems.length > 0 ? (
-                  topItemsPag.paginatedItems.map((item, idx) => (
-                    <TableRow key={item.name}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {(topItemsPag.page - 1) * topItemsPag.perPage + idx < 3 ? (
-                            <Badge variant={(topItemsPag.page - 1) * topItemsPag.perPage + idx === 0 ? "default" : "secondary"} className="w-5 h-5 rounded-full flex items-center justify-center p-0 text-xs shrink-0">
-                              {(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs w-5 text-center shrink-0">{(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}</span>
-                          )}
-                          {item.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">{item.qty}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(item.revenue)}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">No item data</TableCell>
+                    <TableHead className="text-xs">Item</TableHead>
+                    <TableHead className="text-right text-xs">Qty</TableHead>
+                    <TableHead className="text-right text-xs">Revenue</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {topItemsPag.paginatedItems.length > 0 ? (
+                    topItemsPag.paginatedItems.map((item, idx) => (
+                      <TableRow key={item.name}>
+                        <TableCell className="font-medium text-xs sm:text-sm">
+                          <div className="flex items-center gap-1.5">
+                            {(topItemsPag.page - 1) * topItemsPag.perPage + idx < 3 ? (
+                              <Badge variant={(topItemsPag.page - 1) * topItemsPag.perPage + idx === 0 ? "default" : "secondary"} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center p-0 text-[10px] sm:text-xs shrink-0">
+                                {(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-[10px] sm:text-xs w-4 sm:w-5 text-center shrink-0">{(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}</span>
+                            )}
+                            <span className="truncate">{item.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No item data</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sales by Item Category</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base">Sales by Item Category</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
             <PaginationControls
               page={categoryPag.page}
               totalPages={categoryPag.totalPages}
@@ -546,106 +556,110 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
               onPageChange={categoryPag.setPage}
               onPerPageChange={categoryPag.setPerPage}
             />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Items Sold</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">% of Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categoryPag.paginatedItems.length > 0 ? (
-                  categoryPag.paginatedItems.map((cat) => (
-                    <TableRow key={cat.category}>
-                      <TableCell className="font-medium">{cat.category}</TableCell>
-                      <TableCell className="text-right">{cat.qty}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(cat.revenue)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">{cat.pct}%</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">No category data</TableCell>
+                    <TableHead className="text-xs">Category</TableHead>
+                    <TableHead className="text-right text-xs">Qty</TableHead>
+                    <TableHead className="text-right text-xs">Revenue</TableHead>
+                    <TableHead className="text-right text-xs">%</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {categoryPag.paginatedItems.length > 0 ? (
+                    categoryPag.paginatedItems.map((cat) => (
+                      <TableRow key={cat.category}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{cat.category}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{cat.qty}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(cat.revenue)}</TableCell>
+                        <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{cat.pct}%</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground text-xs">No category data</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Sales by Cashier + Sales by Outlet */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Sales by Cashier */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {salesByCashier.length > 0 && (
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
+            <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <User className="h-4 w-4" /> Sales by Cashier
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cashier</TableHead>
-                    <TableHead className="text-right">Transactions</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {salesByCashier.map((row) => (
-                    <TableRow key={row.cashier}>
-                      <TableCell className="font-medium">{row.cashier}</TableCell>
-                      <TableCell className="text-right">{row.transactions}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Cashier</TableHead>
+                      <TableHead className="text-right text-xs">Txns</TableHead>
+                      <TableHead className="text-right text-xs">Total</TableHead>
                     </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell>Total</TableCell>
-                    <TableCell className="text-right">{filteredSales.length}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {salesByCashier.map((row) => (
+                      <TableRow key={row.cashier}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{row.cashier}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{row.transactions}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.total)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-semibold">
+                      <TableCell className="text-xs sm:text-sm">Total</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{filteredSales.length}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalRevenue)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Sales by Outlet */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Sales by Outlet</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+            <CardTitle className="text-sm sm:text-base">Sales by Outlet</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="p-3 sm:p-6 pt-0">
             {outletDistribution.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Outlet</TableHead>
-                    <TableHead className="text-right">Sales</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {salesByOutlet.map((row) => (
-                    <TableRow key={row.outletId}>
-                      <TableCell className="font-medium">{row.outletName}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Outlet</TableHead>
+                      <TableHead className="text-right text-xs">Sales</TableHead>
+                      <TableHead className="text-right text-xs">Total</TableHead>
                     </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell>Total</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalSales)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {salesByOutlet.map((row) => (
+                      <TableRow key={row.outletId}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{row.outletName}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(row.sales)}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.total)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-semibold">
+                      <TableCell className="text-xs sm:text-sm">Total</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalSales)}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalRevenue)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
-              <div className="flex h-[100px] items-center justify-center text-muted-foreground">No outlet data</div>
+              <div className="flex h-[100px] items-center justify-center text-muted-foreground text-sm">No outlet data</div>
             )}
           </CardContent>
         </Card>
