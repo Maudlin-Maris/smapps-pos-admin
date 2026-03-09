@@ -31,7 +31,7 @@ const outletData: Record<string, {
   transactions: Transaction[];
 }> = {
   all: {
-    kpis: { sales: "$24,860", orders: "248", customers: "189", avgOrder: "$100.24", salesChange: "+12.5%", ordersChange: "+18", custChange: "+11", avgChange: "+4.2%" },
+    kpis: { sales: "₦24,860", orders: "248", customers: "189", avgOrder: "₦100.24", salesChange: "+12.5%", ordersChange: "+18", custChange: "+11", avgChange: "+4.2%" },
     salesTrend: [
       { name: "Mon", sales: 12400 }, { name: "Tue", sales: 15800 }, { name: "Wed", sales: 13900 },
       { name: "Thu", sales: 17300 }, { name: "Fri", sales: 19100 }, { name: "Sat", sales: 24860 }, { name: "Sun", sales: 18800 },
@@ -50,22 +50,22 @@ const outletData: Record<string, {
       { name: "Bank Transfer", value: 1600, color: "hsl(var(--chart-4))" },
     ],
     transactions: [
-      { orderId: "ORD-1001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "$42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$20.00" }, { method: "Card", amount: "$22.50" }], orderStatus: "Completed" },
-      { orderId: "ORD-1002", date: "2026-03-08 09:28", customerPhone: "+233 20 555 7788", amount: "$128.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$128.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-1003", date: "2026-03-08 09:45", customerPhone: "+233 27 333 4455", amount: "$35.75", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Refunded", payments: [{ method: "Mobile Money", amount: "$35.75" }], orderStatus: "Cancelled" },
-      { orderId: "ORD-1004", date: "2026-03-08 10:02", customerPhone: "+233 55 222 9900", amount: "$67.20", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$50.00" }, { method: "Cash", amount: "$17.20" }], orderStatus: "Completed" },
-      { orderId: "ORD-1005", date: "2026-03-08 10:18", customerPhone: "+233 24 888 1122", amount: "$215.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$100.00" }, { method: "Mobile Money", amount: "$115.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-1006", date: "2026-03-08 10:35", customerPhone: "+233 50 666 3344", amount: "$19.99", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "$19.99" }], orderStatus: "Completed" },
-      { orderId: "ORD-1007", date: "2026-03-08 10:50", customerPhone: "+233 26 444 5566", amount: "$88.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Pending", payments: [{ method: "Bank Transfer", amount: "$88.00" }], orderStatus: "Processing" },
-      { orderId: "ORD-1008", date: "2026-03-08 11:05", customerPhone: "+233 24 777 8899", amount: "$54.30", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$54.30" }], orderStatus: "Completed" },
-      { orderId: "ORD-1009", date: "2026-03-08 11:22", customerPhone: "+233 20 999 0011", amount: "$32.00", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Failed", payments: [{ method: "Card", amount: "$32.00" }], orderStatus: "On Hold" },
-      { orderId: "ORD-1010", date: "2026-03-08 11:40", customerPhone: "+233 55 111 4455", amount: "$76.50", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$76.50" }], orderStatus: "Completed" },
-      { orderId: "ORD-1011", date: "2026-03-08 11:55", customerPhone: "+233 27 222 6677", amount: "$145.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "$45.00" }, { method: "Card", amount: "$100.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-1012", date: "2026-03-08 12:10", customerPhone: "+233 24 333 8899", amount: "$28.75", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$28.75" }], orderStatus: "Completed" },
+      { orderId: "ORD-1001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "₦42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦20.00" }, { method: "Card", amount: "₦22.50" }], orderStatus: "Completed" },
+      { orderId: "ORD-1002", date: "2026-03-08 09:28", customerPhone: "+233 20 555 7788", amount: "₦128.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦128.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-1003", date: "2026-03-08 09:45", customerPhone: "+233 27 333 4455", amount: "₦35.75", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Refunded", payments: [{ method: "Mobile Money", amount: "₦35.75" }], orderStatus: "Cancelled" },
+      { orderId: "ORD-1004", date: "2026-03-08 10:02", customerPhone: "+233 55 222 9900", amount: "₦67.20", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦50.00" }, { method: "Cash", amount: "₦17.20" }], orderStatus: "Completed" },
+      { orderId: "ORD-1005", date: "2026-03-08 10:18", customerPhone: "+233 24 888 1122", amount: "₦215.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦100.00" }, { method: "Mobile Money", amount: "₦115.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-1006", date: "2026-03-08 10:35", customerPhone: "+233 50 666 3344", amount: "₦19.99", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "₦19.99" }], orderStatus: "Completed" },
+      { orderId: "ORD-1007", date: "2026-03-08 10:50", customerPhone: "+233 26 444 5566", amount: "₦88.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Pending", payments: [{ method: "Bank Transfer", amount: "₦88.00" }], orderStatus: "Processing" },
+      { orderId: "ORD-1008", date: "2026-03-08 11:05", customerPhone: "+233 24 777 8899", amount: "₦54.30", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦54.30" }], orderStatus: "Completed" },
+      { orderId: "ORD-1009", date: "2026-03-08 11:22", customerPhone: "+233 20 999 0011", amount: "₦32.00", cashier: "Esi D.", location: "Airport Kiosk", paymentStatus: "Failed", payments: [{ method: "Card", amount: "₦32.00" }], orderStatus: "On Hold" },
+      { orderId: "ORD-1010", date: "2026-03-08 11:40", customerPhone: "+233 55 111 4455", amount: "₦76.50", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦76.50" }], orderStatus: "Completed" },
+      { orderId: "ORD-1011", date: "2026-03-08 11:55", customerPhone: "+233 27 222 6677", amount: "₦145.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "₦45.00" }, { method: "Card", amount: "₦100.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-1012", date: "2026-03-08 12:10", customerPhone: "+233 24 333 8899", amount: "₦28.75", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦28.75" }], orderStatus: "Completed" },
     ],
   },
   "outlet-1": {
-    kpis: { sales: "$8,420", orders: "84", customers: "62", avgOrder: "$100.24", salesChange: "+12.5%", ordersChange: "+8", custChange: "-3", avgChange: "+4.2%" },
+    kpis: { sales: "₦8,420", orders: "84", customers: "62", avgOrder: "₦100.24", salesChange: "+12.5%", ordersChange: "+8", custChange: "-3", avgChange: "+4.2%" },
     salesTrend: [
       { name: "Mon", sales: 4200 }, { name: "Tue", sales: 5800 }, { name: "Wed", sales: 4900 },
       { name: "Thu", sales: 6300 }, { name: "Fri", sales: 7100 }, { name: "Sat", sales: 8400 }, { name: "Sun", sales: 6800 },
@@ -84,16 +84,16 @@ const outletData: Record<string, {
       { name: "Bank Transfer", value: 300, color: "hsl(var(--chart-4))" },
     ],
     transactions: [
-      { orderId: "ORD-2001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "$42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$42.50" }], orderStatus: "Completed" },
-      { orderId: "ORD-2002", date: "2026-03-08 09:30", customerPhone: "+233 27 333 4455", amount: "$86.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$50.00" }, { method: "Cash", amount: "$36.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-2003", date: "2026-03-08 10:15", customerPhone: "+233 55 222 9900", amount: "$19.99", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "$19.99" }], orderStatus: "Completed" },
-      { orderId: "ORD-2004", date: "2026-03-08 10:50", customerPhone: "+233 20 555 7788", amount: "$145.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Pending", payments: [{ method: "Bank Transfer", amount: "$145.00" }], orderStatus: "Processing" },
-      { orderId: "ORD-2005", date: "2026-03-08 11:20", customerPhone: "+233 24 888 1122", amount: "$63.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$63.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-2006", date: "2026-03-08 11:55", customerPhone: "+233 26 444 5566", amount: "$28.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$28.50" }], orderStatus: "Completed" },
+      { orderId: "ORD-2001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "₦42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦42.50" }], orderStatus: "Completed" },
+      { orderId: "ORD-2002", date: "2026-03-08 09:30", customerPhone: "+233 27 333 4455", amount: "₦86.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦50.00" }, { method: "Cash", amount: "₦36.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-2003", date: "2026-03-08 10:15", customerPhone: "+233 55 222 9900", amount: "₦19.99", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "₦19.99" }], orderStatus: "Completed" },
+      { orderId: "ORD-2004", date: "2026-03-08 10:50", customerPhone: "+233 20 555 7788", amount: "₦145.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Pending", payments: [{ method: "Bank Transfer", amount: "₦145.00" }], orderStatus: "Processing" },
+      { orderId: "ORD-2005", date: "2026-03-08 11:20", customerPhone: "+233 24 888 1122", amount: "₦63.00", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦63.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-2006", date: "2026-03-08 11:55", customerPhone: "+233 26 444 5566", amount: "₦28.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦28.50" }], orderStatus: "Completed" },
     ],
   },
   "outlet-2": {
-    kpis: { sales: "$6,240", orders: "72", customers: "58", avgOrder: "$86.67", salesChange: "+8.1%", ordersChange: "+5", custChange: "+7", avgChange: "-1.3%" },
+    kpis: { sales: "₦6,240", orders: "72", customers: "58", avgOrder: "₦86.67", salesChange: "+8.1%", ordersChange: "+5", custChange: "+7", avgChange: "-1.3%" },
     salesTrend: [
       { name: "Mon", sales: 3100 }, { name: "Tue", sales: 4200 }, { name: "Wed", sales: 3800 },
       { name: "Thu", sales: 5100 }, { name: "Fri", sales: 5600 }, { name: "Sat", sales: 6240 }, { name: "Sun", sales: 4900 },
@@ -112,14 +112,14 @@ const outletData: Record<string, {
       { name: "Bank Transfer", value: 200, color: "hsl(var(--chart-4))" },
     ],
     transactions: [
-      { orderId: "ORD-3001", date: "2026-03-08 09:05", customerPhone: "+233 20 555 7788", amount: "$18.50", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$18.50" }], orderStatus: "Completed" },
-      { orderId: "ORD-3002", date: "2026-03-08 09:40", customerPhone: "+233 24 888 1122", amount: "$32.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$20.00" }, { method: "Mobile Money", amount: "$12.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-3003", date: "2026-03-08 10:15", customerPhone: "+233 50 666 3344", amount: "$45.75", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "$45.75" }], orderStatus: "Completed" },
-      { orderId: "ORD-3004", date: "2026-03-08 11:00", customerPhone: "+233 55 111 4455", amount: "$92.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Refunded", payments: [{ method: "Card", amount: "$92.00" }], orderStatus: "Cancelled" },
+      { orderId: "ORD-3001", date: "2026-03-08 09:05", customerPhone: "+233 20 555 7788", amount: "₦18.50", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦18.50" }], orderStatus: "Completed" },
+      { orderId: "ORD-3002", date: "2026-03-08 09:40", customerPhone: "+233 24 888 1122", amount: "₦32.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦20.00" }, { method: "Mobile Money", amount: "₦12.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-3003", date: "2026-03-08 10:15", customerPhone: "+233 50 666 3344", amount: "₦45.75", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Mobile Money", amount: "₦45.75" }], orderStatus: "Completed" },
+      { orderId: "ORD-3004", date: "2026-03-08 11:00", customerPhone: "+233 55 111 4455", amount: "₦92.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Refunded", payments: [{ method: "Card", amount: "₦92.00" }], orderStatus: "Cancelled" },
     ],
   },
   "outlet-3": {
-    kpis: { sales: "$5,800", orders: "48", customers: "42", avgOrder: "$120.83", salesChange: "+15.2%", ordersChange: "+3", custChange: "+5", avgChange: "+6.8%" },
+    kpis: { sales: "₦5,800", orders: "48", customers: "42", avgOrder: "₦120.83", salesChange: "+15.2%", ordersChange: "+3", custChange: "+5", avgChange: "+6.8%" },
     salesTrend: [
       { name: "Mon", sales: 2800 }, { name: "Tue", sales: 3200 }, { name: "Wed", sales: 2900 },
       { name: "Thu", sales: 3500 }, { name: "Fri", sales: 4200 }, { name: "Sat", sales: 5800 }, { name: "Sun", sales: 4100 },
@@ -138,13 +138,13 @@ const outletData: Record<string, {
       { name: "Bank Transfer", value: 200, color: "hsl(var(--chart-4))" },
     ],
     transactions: [
-      { orderId: "ORD-4001", date: "2026-03-08 10:00", customerPhone: "+233 55 222 9900", amount: "$45.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Card", amount: "$45.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-4002", date: "2026-03-08 10:45", customerPhone: "+233 24 777 8899", amount: "$30.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "$15.00" }, { method: "Mobile Money", amount: "$15.00" }], orderStatus: "Completed" },
-      { orderId: "ORD-4003", date: "2026-03-08 11:30", customerPhone: "+233 26 444 5566", amount: "$75.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Pending", payments: [{ method: "Mobile Money", amount: "$75.00" }], orderStatus: "Processing" },
+      { orderId: "ORD-4001", date: "2026-03-08 10:00", customerPhone: "+233 55 222 9900", amount: "₦45.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦45.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-4002", date: "2026-03-08 10:45", customerPhone: "+233 24 777 8899", amount: "₦30.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦15.00" }, { method: "Mobile Money", amount: "₦15.00" }], orderStatus: "Completed" },
+      { orderId: "ORD-4003", date: "2026-03-08 11:30", customerPhone: "+233 26 444 5566", amount: "₦75.00", cashier: "Yaw M.", location: "Westside Salon", paymentStatus: "Pending", payments: [{ method: "Mobile Money", amount: "₦75.00" }], orderStatus: "Processing" },
     ],
   },
   "outlet-4": {
-    kpis: { sales: "$4,400", orders: "44", customers: "27", avgOrder: "$100.00", salesChange: "+6.3%", ordersChange: "+2", custChange: "+2", avgChange: "+1.1%" },
+    kpis: { sales: "₦4,400", orders: "44", customers: "27", avgOrder: "₦100.00", salesChange: "+6.3%", ordersChange: "+2", custChange: "+2", avgChange: "+1.1%" },
     salesTrend: [
       { name: "Mon", sales: 2300 }, { name: "Tue", sales: 2600 }, { name: "Wed", sales: 2300 },
       { name: "Thu", sales: 2400 }, { name: "Fri", sales: 2200 }, { name: "Sat", sales: 4400 }, { name: "Sun", sales: 3000 },
