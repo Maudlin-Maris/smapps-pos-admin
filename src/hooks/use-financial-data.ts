@@ -28,6 +28,7 @@ export interface SalesRecord {
   date: string;
   totalSales: number;
   otherIncome: number;
+  cashier?: string;
 }
 
 const EXPENSES_KEY = "financial_expenses";
@@ -76,26 +77,26 @@ const defaultExpenses: Expense[] = [
 
 // Default sample sales
 const defaultSales: SalesRecord[] = [
-  { id: "s1", outletId: "outlet-1", date: "2026-03-01", totalSales: 1420, otherIncome: 40 },
-  { id: "s2", outletId: "outlet-1", date: "2026-03-02", totalSales: 1380, otherIncome: 0 },
-  { id: "s3", outletId: "outlet-1", date: "2026-03-03", totalSales: 1510, otherIncome: 60 },
-  { id: "s4", outletId: "outlet-1", date: "2026-03-04", totalSales: 1290, otherIncome: 0 },
-  { id: "s5", outletId: "outlet-1", date: "2026-03-05", totalSales: 1600, otherIncome: 80 },
-  { id: "s6", outletId: "outlet-2", date: "2026-03-01", totalSales: 1250, otherIncome: 30 },
-  { id: "s7", outletId: "outlet-2", date: "2026-03-02", totalSales: 1180, otherIncome: 0 },
-  { id: "s8", outletId: "outlet-2", date: "2026-03-03", totalSales: 1340, otherIncome: 50 },
-  { id: "s9", outletId: "outlet-2", date: "2026-03-04", totalSales: 1100, otherIncome: 0 },
-  { id: "s10", outletId: "outlet-2", date: "2026-03-05", totalSales: 1450, otherIncome: 40 },
-  { id: "s11", outletId: "outlet-3", date: "2026-03-01", totalSales: 980, otherIncome: 20 },
-  { id: "s12", outletId: "outlet-3", date: "2026-03-02", totalSales: 920, otherIncome: 0 },
-  { id: "s13", outletId: "outlet-3", date: "2026-03-03", totalSales: 1050, otherIncome: 30 },
-  { id: "s14", outletId: "outlet-3", date: "2026-03-04", totalSales: 870, otherIncome: 0 },
-  { id: "s15", outletId: "outlet-3", date: "2026-03-05", totalSales: 1100, otherIncome: 20 },
-  { id: "s16", outletId: "outlet-4", date: "2026-03-01", totalSales: 520, otherIncome: 10 },
-  { id: "s17", outletId: "outlet-4", date: "2026-03-02", totalSales: 480, otherIncome: 0 },
-  { id: "s18", outletId: "outlet-4", date: "2026-03-03", totalSales: 550, otherIncome: 20 },
-  { id: "s19", outletId: "outlet-4", date: "2026-03-04", totalSales: 430, otherIncome: 0 },
-  { id: "s20", outletId: "outlet-4", date: "2026-03-05", totalSales: 600, otherIncome: 10 },
+  { id: "s1", outletId: "outlet-1", date: "2026-03-01", totalSales: 1420, otherIncome: 40, cashier: "Amina" },
+  { id: "s2", outletId: "outlet-1", date: "2026-03-02", totalSales: 1380, otherIncome: 0, cashier: "Tunde" },
+  { id: "s3", outletId: "outlet-1", date: "2026-03-03", totalSales: 1510, otherIncome: 60, cashier: "Amina" },
+  { id: "s4", outletId: "outlet-1", date: "2026-03-04", totalSales: 1290, otherIncome: 0, cashier: "Blessing" },
+  { id: "s5", outletId: "outlet-1", date: "2026-03-05", totalSales: 1600, otherIncome: 80, cashier: "Tunde" },
+  { id: "s6", outletId: "outlet-2", date: "2026-03-01", totalSales: 1250, otherIncome: 30, cashier: "Chidi" },
+  { id: "s7", outletId: "outlet-2", date: "2026-03-02", totalSales: 1180, otherIncome: 0, cashier: "Fatima" },
+  { id: "s8", outletId: "outlet-2", date: "2026-03-03", totalSales: 1340, otherIncome: 50, cashier: "Chidi" },
+  { id: "s9", outletId: "outlet-2", date: "2026-03-04", totalSales: 1100, otherIncome: 0, cashier: "Fatima" },
+  { id: "s10", outletId: "outlet-2", date: "2026-03-05", totalSales: 1450, otherIncome: 40, cashier: "Chidi" },
+  { id: "s11", outletId: "outlet-3", date: "2026-03-01", totalSales: 980, otherIncome: 20, cashier: "Grace" },
+  { id: "s12", outletId: "outlet-3", date: "2026-03-02", totalSales: 920, otherIncome: 0, cashier: "Emeka" },
+  { id: "s13", outletId: "outlet-3", date: "2026-03-03", totalSales: 1050, otherIncome: 30, cashier: "Grace" },
+  { id: "s14", outletId: "outlet-3", date: "2026-03-04", totalSales: 870, otherIncome: 0, cashier: "Emeka" },
+  { id: "s15", outletId: "outlet-3", date: "2026-03-05", totalSales: 1100, otherIncome: 20, cashier: "Grace" },
+  { id: "s16", outletId: "outlet-4", date: "2026-03-01", totalSales: 520, otherIncome: 10, cashier: "Kemi" },
+  { id: "s17", outletId: "outlet-4", date: "2026-03-02", totalSales: 480, otherIncome: 0, cashier: "Kemi" },
+  { id: "s18", outletId: "outlet-4", date: "2026-03-03", totalSales: 550, otherIncome: 20, cashier: "Dayo" },
+  { id: "s19", outletId: "outlet-4", date: "2026-03-04", totalSales: 430, otherIncome: 0, cashier: "Dayo" },
+  { id: "s20", outletId: "outlet-4", date: "2026-03-05", totalSales: 600, otherIncome: 10, cashier: "Kemi" },
 ];
 
 export function useExpenses() {
