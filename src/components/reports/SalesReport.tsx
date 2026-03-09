@@ -110,19 +110,18 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
 
   // --- Sales by date ---
   const salesByDate = useMemo(() => {
-    const grouped: Record<string, { sales: number; otherIncome: number }> = {};
+    const grouped: Record<string, { sales: number; orders: number }> = {};
     filteredSales.forEach((s) => {
-      if (!grouped[s.date]) grouped[s.date] = { sales: 0, otherIncome: 0 };
+      if (!grouped[s.date]) grouped[s.date] = { sales: 0, orders: 0 };
       grouped[s.date].sales += s.totalSales;
-      grouped[s.date].otherIncome += s.otherIncome;
+      grouped[s.date].orders += 1;
     });
     return Object.entries(grouped)
       .map(([date, d]) => ({
         date,
         displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric", year: "numeric" }),
         sales: d.sales,
-        otherIncome: d.otherIncome,
-        total: d.sales + d.otherIncome,
+        orders: d.orders,
       }))
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredSales]);
@@ -326,49 +325,90 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </Card>
       </div>
 
-      {/* Sales by Dates */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales by Date</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <PaginationControls
-            page={salesByDatePag.page}
-            totalPages={salesByDatePag.totalPages}
-            perPage={salesByDatePag.perPage}
-            totalItems={salesByDatePag.totalItems}
-            pageSizeOptions={salesByDatePag.pageSizeOptions}
-            onPageChange={salesByDatePag.setPage}
-            onPerPageChange={salesByDatePag.setPerPage}
-          />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Sales</TableHead>
-                <TableHead className="text-right">Other Income</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {salesByDatePag.paginatedItems.length > 0 ? (
-                salesByDatePag.paginatedItems.map((row) => (
-                  <TableRow key={row.date}>
-                    <TableCell className="font-medium">{row.displayDate}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.otherIncome)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
+      {/* Sales by Date + Sales by Item */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales by Date</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <PaginationControls
+              page={salesByDatePag.page}
+              totalPages={salesByDatePag.totalPages}
+              perPage={salesByDatePag.perPage}
+              totalItems={salesByDatePag.totalItems}
+              pageSizeOptions={salesByDatePag.pageSizeOptions}
+              onPageChange={salesByDatePag.setPage}
+              onPerPageChange={salesByDatePag.setPerPage}
+            />
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">No sales data</TableCell>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Orders</TableHead>
+                  <TableHead className="text-right">Total Sales</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {salesByDatePag.paginatedItems.length > 0 ? (
+                  salesByDatePag.paginatedItems.map((row) => (
+                    <TableRow key={row.date}>
+                      <TableCell className="font-medium">{row.displayDate}</TableCell>
+                      <TableCell className="text-right">{row.orders}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(row.sales)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">No sales data</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales by Item</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <PaginationControls
+              page={allItemsPag.page}
+              totalPages={allItemsPag.totalPages}
+              perPage={allItemsPag.perPage}
+              totalItems={allItemsPag.totalItems}
+              pageSizeOptions={allItemsPag.pageSizeOptions}
+              onPageChange={allItemsPag.setPage}
+              onPerPageChange={allItemsPag.setPerPage}
+            />
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead className="text-right">Qty Sold</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allItemsPag.paginatedItems.length > 0 ? (
+                  allItemsPag.paginatedItems.map((item) => (
+                    <TableRow key={item.name}>
+                      <TableCell className="font-medium">{item.name}</TableCell>
+                      <TableCell className="text-right">{item.qty}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(item.revenue)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground">No item data</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Top Selling Items + Sales by Item Category */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -522,47 +562,6 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </CardContent>
       </Card>
 
-      {/* Sales by Item */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales by Item</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <PaginationControls
-            page={allItemsPag.page}
-            totalPages={allItemsPag.totalPages}
-            perPage={allItemsPag.perPage}
-            totalItems={allItemsPag.totalItems}
-            pageSizeOptions={allItemsPag.pageSizeOptions}
-            onPageChange={allItemsPag.setPage}
-            onPerPageChange={allItemsPag.setPerPage}
-          />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead className="text-right">Qty Sold</TableHead>
-                <TableHead className="text-right">Revenue</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allItemsPag.paginatedItems.length > 0 ? (
-                allItemsPag.paginatedItems.map((item) => (
-                  <TableRow key={item.name}>
-                    <TableCell className="font-medium">{item.name}</TableCell>
-                    <TableCell className="text-right">{item.qty}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(item.revenue)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">No item data available</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 }
