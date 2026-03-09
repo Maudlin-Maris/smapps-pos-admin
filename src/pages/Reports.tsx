@@ -113,14 +113,28 @@ export default function Reports() {
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight">Reports</h1>
-          <p className="text-sm text-muted-foreground mt-1">Financial performance and sales analytics</p>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-heading font-bold tracking-tight">Reports</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Financial performance & analytics</p>
+          </div>
+          {activeTab === "pnl" && (
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportExcel}>
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Excel</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportPDF}>
+                <FileText className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">PDF</span>
+              </Button>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
           <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
-            <SelectTrigger className="w-[180px] h-9">
+            <SelectTrigger className="w-[150px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm shrink-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -132,7 +146,7 @@ export default function Reports() {
           </Select>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-9">
+              <Button variant="outline" size="sm" className="gap-1.5 h-8 sm:h-9 text-xs sm:text-sm shrink-0">
                 <CalendarIcon className="h-3.5 w-3.5" />
                 {format(dateFrom, "MMM d")} – {format(dateTo, "MMM d, yyyy")}
               </Button>
@@ -155,26 +169,14 @@ export default function Reports() {
               </div>
             </PopoverContent>
           </Popover>
-          {activeTab === "pnl" && (
-            <>
-              <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportExcel}>
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                Excel
-              </Button>
-              <Button variant="outline" size="sm" className="gap-1.5 h-9" onClick={handleExportPDF}>
-                <FileText className="h-3.5 w-3.5" />
-                PDF
-              </Button>
-            </>
-          )}
         </div>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="pnl">Profit & Loss</TabsTrigger>
-          <TabsTrigger value="sales">Sales Report</TabsTrigger>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="pnl" className="flex-1 sm:flex-none text-xs sm:text-sm">Profit & Loss</TabsTrigger>
+          <TabsTrigger value="sales" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales Report</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pnl" className="space-y-6 mt-6">
