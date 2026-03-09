@@ -576,70 +576,56 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </Card>
       </div>
 
-      {/* Sales by Cashier */}
-      {salesByCashier.length > 0 && (
+      {/* Sales by Cashier + Sales by Outlet */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Sales by Cashier */}
+        {salesByCashier.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <User className="h-4 w-4" /> Sales by Cashier
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cashier</TableHead>
+                    <TableHead className="text-right">Transactions</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {salesByCashier.map((row) => (
+                    <TableRow key={row.cashier}>
+                      <TableCell className="font-medium">{row.cashier}</TableCell>
+                      <TableCell className="text-right">{row.transactions}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell>Total</TableCell>
+                    <TableCell className="text-right">{filteredSales.length}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Sales by Outlet */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <User className="h-4 w-4" /> Sales by Cashier
-            </CardTitle>
+            <CardTitle className="text-base">Sales by Outlet</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cashier</TableHead>
-                  <TableHead className="text-right">Transactions</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {salesByCashier.map((row) => (
-                  <TableRow key={row.cashier}>
-                    <TableCell className="font-medium">{row.cashier}</TableCell>
-                    <TableCell className="text-right">{row.transactions}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell>Total</TableCell>
-                  <TableCell className="text-right">{filteredSales.length}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(totalSales)}</TableCell>
-                  <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Sales by Outlet */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales by Outlet</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {outletDistribution.length > 0 ? (
-            <>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={outletDistribution} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name.split(" ")[0]} (${(percent * 100).toFixed(0)}%)`}>
-                    {outletDistribution.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-                </PieChart>
-              </ResponsiveContainer>
-              <Table className="mt-4">
+            {outletDistribution.length > 0 ? (
+              <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Outlet</TableHead>
                     <TableHead className="text-right">Sales</TableHead>
-                    <TableHead className="text-right">Other Income</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -648,24 +634,22 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
                     <TableRow key={row.outletId}>
                       <TableCell className="font-medium">{row.outletName}</TableCell>
                       <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.otherIncome)}</TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="bg-muted/50 font-semibold">
                     <TableCell>Total</TableCell>
                     <TableCell className="text-right">{formatCurrency(totalSales)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalOtherIncome)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
-            </>
-          ) : (
-            <div className="flex h-[250px] items-center justify-center text-muted-foreground">No outlet data</div>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <div className="flex h-[100px] items-center justify-center text-muted-foreground">No outlet data</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
     </div>
   );
