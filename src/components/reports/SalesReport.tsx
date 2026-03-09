@@ -232,6 +232,28 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     color: COLORS[idx % COLORS.length],
   }));
 
+  // --- Sales by Cashier ---
+  const salesByCashier = useMemo(() => {
+    const grouped: Record<string, { sales: number; otherIncome: number; count: number }> = {};
+    filteredSales.forEach((s) => {
+      const name = s.cashier || "Unknown";
+      if (!grouped[name]) grouped[name] = { sales: 0, otherIncome: 0, count: 0 };
+      grouped[name].sales += s.totalSales;
+      grouped[name].otherIncome += s.otherIncome;
+      grouped[name].count += 1;
+    });
+    return Object.entries(grouped)
+      .map(([cashier, data]) => ({
+        cashier,
+        sales: data.sales,
+        otherIncome: data.otherIncome,
+        total: data.sales + data.otherIncome,
+        transactions: data.count,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredSales]);
+
+
   // Pagination hooks
   const topItemsPag = usePagination(allItems, 5);
   const allItemsPag = usePagination(allItems, 10);
