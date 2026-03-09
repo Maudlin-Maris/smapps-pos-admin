@@ -33,6 +33,19 @@ export interface SalesRecord {
 
 const EXPENSES_KEY = "financial_expenses";
 const SALES_KEY = "financial_sales";
+const DATA_VERSION_KEY = "financial_data_version";
+const CURRENT_DATA_VERSION = 2; // Bump when default data schema changes
+
+// Clear stale localStorage when data version changes
+(function migrateStorage() {
+  const stored = localStorage.getItem(DATA_VERSION_KEY);
+  if (stored !== String(CURRENT_DATA_VERSION)) {
+    localStorage.removeItem(EXPENSES_KEY);
+    localStorage.removeItem(SALES_KEY);
+    localStorage.removeItem("financial_adjustments");
+    localStorage.setItem(DATA_VERSION_KEY, String(CURRENT_DATA_VERSION));
+  }
+})();
 
 function loadFromStorage<T>(key: string, fallback: T[]): T[] {
   try {
