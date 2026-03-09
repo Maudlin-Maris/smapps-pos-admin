@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,8 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Download, FileSpreadsheet, Eye } from "lucide-react";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import type { Transaction } from "@/components/TransactionsTable";
+import TransactionDetailDialog from "./TransactionDetailDialog";
 
 const paymentStatusStyles: Record<string, string> = {
   Paid: "bg-success/10 text-success",
@@ -26,8 +29,7 @@ const orderStatusStyles: Record<string, string> = {
   "On Hold": "bg-warning/10 text-warning",
 };
 
-// All mock transactions across outlets
-const allTransactions: Transaction[] = [
+const initialTransactions: Transaction[] = [
   { orderId: "ORD-1001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "₦42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦20.00" }, { method: "Card", amount: "₦22.50" }], orderStatus: "Completed" },
   { orderId: "ORD-1002", date: "2026-03-08 09:28", customerPhone: "+233 20 555 7788", amount: "₦128.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦128.00" }], orderStatus: "Completed" },
   { orderId: "ORD-1003", date: "2026-03-08 09:45", customerPhone: "+233 27 333 4455", amount: "₦35.75", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Refunded", payments: [{ method: "Mobile Money", amount: "₦35.75" }], orderStatus: "Cancelled" },
@@ -56,29 +58,43 @@ interface ReportTransactionsProps {
   dateRange: { from: Date; to: Date };
 }
 
+function flattenForExport(txn: Transaction) {
+  return {
+    "Order ID": txn.orderId,
+    Date: txn.date,
+    Phone: txn.customerPhone,
+    Amount: txn.amount,
+    Cashier: txn.cashier,
+    Location: txn.location,
+    "Payment Status": txn.paymentStatus,
+    "Payment Methods": txn.payments.map((p) => `${p.method}: ${p.amount}`).join(", "),
+    "Order Status": txn.orderStatus,
+  };
+}
+
 export default function ReportTransactions({ selectedOutlets, dateRange }: ReportTransactionsProps) {
+  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [search, setSearch] = useState("");
   const [selectedCashier, setSelectedCashier] = useState("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
+  const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const perPage = parseInt(rowsPerPage);
 
-  // Filter by outlets
   const outletFiltered = useMemo(() => {
     const locationNames = selectedOutlets.map((id) => outletLocationMap[id]).filter(Boolean);
     if (locationNames.length === 0 || locationNames.length === Object.keys(outletLocationMap).length) {
-      return allTransactions;
+      return transactions;
     }
-    return allTransactions.filter((t) => locationNames.includes(t.location));
-  }, [selectedOutlets]);
+    return transactions.filter((t) => locationNames.includes(t.location));
+  }, [selectedOutlets, transactions]);
 
-  // Available cashiers from filtered data
   const availableCashiers = useMemo(() => {
     return [...new Set(outletFiltered.map((t) => t.cashier))].sort();
   }, [outletFiltered]);
 
-  // Apply cashier + search filters
   const filtered = useMemo(() => {
     let result = outletFiltered;
     if (selectedCashier !== "all") {
@@ -109,137 +125,207 @@ export default function ReportTransactions({ selectedOutlets, dateRange }: Repor
   const handleRowsChange = (val: string) => { setRowsPerPage(val); setPage(1); };
   const handleCashierChange = (val: string) => { setSelectedCashier(val); setPage(1); };
 
+  const handleExportCSV = useCallback(() => {
+    if (filtered.length === 0) { toast.error("No data to export"); return; }
+    const rows = filtered.map(flattenForExport);
+    const headers = Object.keys(rows[0]);
+    const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => `"${(r as any)[h]}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "transactions.csv"; a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filtered.length} transactions as CSV`);
+  }, [filtered]);
+
+  const handleExportExcel = useCallback(() => {
+    if (filtered.length === 0) { toast.error("No data to export"); return; }
+    const rows = filtered.map(flattenForExport);
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+    ws["!cols"] = Object.keys(rows[0]).map(() => ({ wch: 20 }));
+    XLSX.writeFile(wb, "transactions.xlsx");
+    toast.success(`Exported ${filtered.length} transactions as Excel`);
+  }, [filtered]);
+
+  const handleTransactionUpdate = useCallback((updated: Transaction) => {
+    setTransactions((prev) => prev.map((t) => (t.orderId === updated.orderId ? updated : t)));
+    setSelectedTxn(updated);
+  }, []);
+
+  const openDetail = (txn: Transaction) => {
+    setSelectedTxn(txn);
+    setDetailOpen(true);
+  };
+
   return (
-    <Card className="p-3 sm:p-4 lg:p-5">
-      <div className="flex flex-col gap-3 mb-4">
-        <h3 className="font-heading font-semibold text-sm sm:text-base">Transactions</h3>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={selectedCashier} onValueChange={handleCashierChange}>
-            <SelectTrigger className="h-8 w-[140px] sm:w-[160px] text-xs sm:text-sm">
-              <SelectValue placeholder="All Cashiers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Cashiers</SelectItem>
-              {availableCashiers.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-            <span>Rows</span>
-            <Select value={rowsPerPage} onValueChange={handleRowsChange}>
-              <SelectTrigger className="h-8 w-[60px] sm:w-[70px]">
-                <SelectValue />
+    <>
+      <Card className="p-3 sm:p-4 lg:p-5">
+        <div className="flex flex-col gap-3 mb-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading font-semibold text-sm sm:text-base">Transactions</h3>
+            <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1 h-7 sm:h-8 text-xs" onClick={handleExportCSV}>
+                <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">CSV</span>
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1 h-7 sm:h-8 text-xs" onClick={handleExportExcel}>
+                <FileSpreadsheet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">Excel</span>
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedCashier} onValueChange={handleCashierChange}>
+              <SelectTrigger className="h-8 w-[140px] sm:w-[160px] text-xs sm:text-sm">
+                <SelectValue placeholder="All Cashiers" />
               </SelectTrigger>
               <SelectContent>
-                {rowsPerPageOptions.map((opt) => (
-                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                <SelectItem value="all">All Cashiers</SelectItem>
+                {availableCashiers.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="relative flex-1 min-w-[160px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-8 h-8 sm:h-9 text-xs sm:text-sm w-full"
-            />
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+              <span>Rows</span>
+              <Select value={rowsPerPage} onValueChange={handleRowsChange}>
+                <SelectTrigger className="h-8 w-[60px] sm:w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {rowsPerPageOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="relative flex-1 min-w-[160px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-8 h-8 sm:h-9 text-xs sm:text-sm w-full"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="overflow-x-auto -mx-3 sm:-mx-4 lg:-mx-5">
-        <div className="px-3 sm:px-4 lg:px-5 min-w-[800px]">
-          <table className="w-full text-xs sm:text-sm">
-            <thead>
-              <tr className="border-b border-border text-left">
-                <th className="pb-3 font-medium text-muted-foreground">Order ID</th>
-                <th className="pb-3 font-medium text-muted-foreground">Date</th>
-                <th className="pb-3 font-medium text-muted-foreground">Phone</th>
-                <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground">Cashier</th>
-                <th className="pb-3 font-medium text-muted-foreground">Location</th>
-                <th className="pb-3 font-medium text-muted-foreground">Payment</th>
-                <th className="pb-3 font-medium text-muted-foreground">Method / Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground">Order Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="py-8 text-center text-muted-foreground">
-                    No transactions found
-                  </td>
+        <div className="overflow-x-auto -mx-3 sm:-mx-4 lg:-mx-5">
+          <div className="px-3 sm:px-4 lg:px-5 min-w-[850px]">
+            <table className="w-full text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="pb-3 font-medium text-muted-foreground">Order ID</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Date</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Phone</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Cashier</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Location</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Payment</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Method / Amount</th>
+                  <th className="pb-3 font-medium text-muted-foreground">Order Status</th>
+                  <th className="pb-3 font-medium text-muted-foreground w-[50px]"></th>
                 </tr>
-              ) : (
-                pageData.map((txn) => (
-                  <tr key={txn.orderId} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="py-3 font-mono text-xs">{txn.orderId}</td>
-                    <td className="py-3 text-muted-foreground text-xs">{txn.date}</td>
-                    <td className="py-3">{txn.customerPhone}</td>
-                    <td className="py-3 font-semibold">{txn.amount}</td>
-                    <td className="py-3">{txn.cashier}</td>
-                    <td className="py-3 text-xs">{txn.location}</td>
-                    <td className="py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${paymentStatusStyles[txn.paymentStatus] ?? ""}`}>
-                        {txn.paymentStatus}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <div className="space-y-0.5">
-                        {txn.payments.map((p, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-xs">
-                            <span className="text-muted-foreground">{p.method}:</span>
-                            <span className="font-medium">{p.amount}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${orderStatusStyles[txn.orderStatus] ?? ""}`}>
-                        {txn.orderStatus}
-                      </span>
+              </thead>
+              <tbody>
+                {pageData.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                      No transactions found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  pageData.map((txn) => (
+                    <tr
+                      key={txn.orderId}
+                      className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => openDetail(txn)}
+                    >
+                      <td className="py-3 font-mono text-xs">{txn.orderId}</td>
+                      <td className="py-3 text-muted-foreground text-xs">{txn.date}</td>
+                      <td className="py-3">{txn.customerPhone}</td>
+                      <td className="py-3 font-semibold">{txn.amount}</td>
+                      <td className="py-3">{txn.cashier}</td>
+                      <td className="py-3 text-xs">{txn.location}</td>
+                      <td className="py-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${paymentStatusStyles[txn.paymentStatus] ?? ""}`}>
+                          {txn.paymentStatus}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="space-y-0.5">
+                          {txn.payments.map((p, i) => (
+                            <div key={i} className="flex items-center gap-1.5 text-xs">
+                              <span className="text-muted-foreground">{p.method}:</span>
+                              <span className="font-medium">{p.amount}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${orderStatusStyles[txn.orderStatus] ?? ""}`}>
+                          {txn.orderStatus}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => { e.stopPropagation(); openDetail(txn); }}
+                        >
+                          <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-border">
-        <div className="text-xs sm:text-sm text-muted-foreground">
-          {filtered.length === 0 ? "0" : `${startIdx + 1}–${Math.min(startIdx + perPage, filtered.length)}`} of {filtered.length}
+        {/* Pagination */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-3 border-t border-border">
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            {filtered.length === 0 ? "0" : `${startIdx + 1}–${Math.min(startIdx + perPage, filtered.length)}`} of {filtered.length}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" disabled={currentPage <= 1} onClick={() => setPage((p) => p - 1)}>
+              <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+              .reduce<(number | "ellipsis")[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("ellipsis");
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, i) =>
+                p === "ellipsis" ? (
+                  <span key={`e-${i}`} className="px-1 text-muted-foreground">…</span>
+                ) : (
+                  <Button key={p} variant={p === currentPage ? "default" : "outline"} size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-xs" onClick={() => setPage(p)}>
+                    {p}
+                  </Button>
+                )
+              )}
+            <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" disabled={currentPage >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" disabled={currentPage <= 1} onClick={() => setPage((p) => p - 1)}>
-            <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-            .reduce<(number | "ellipsis")[]>((acc, p, idx, arr) => {
-              if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("ellipsis");
-              acc.push(p);
-              return acc;
-            }, [])
-            .map((p, i) =>
-              p === "ellipsis" ? (
-                <span key={`e-${i}`} className="px-1 text-muted-foreground">…</span>
-              ) : (
-                <Button key={p} variant={p === currentPage ? "default" : "outline"} size="icon" className="h-7 w-7 sm:h-8 sm:w-8 text-xs" onClick={() => setPage(p)}>
-                  {p}
-                </Button>
-              )
-            )}
-          <Button variant="outline" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" disabled={currentPage >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          </Button>
-        </div>
-      </div>
-    </Card>
+      </Card>
+
+      <TransactionDetailDialog
+        transaction={selectedTxn}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onUpdate={handleTransactionUpdate}
+      />
+    </>
   );
 }
