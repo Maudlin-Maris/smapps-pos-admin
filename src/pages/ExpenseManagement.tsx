@@ -140,7 +140,7 @@ export default function ExpenseManagement() {
   const getCategoryLabel = (cat: string) => expenseCategories.find((c) => c.value === cat)?.label || cat;
 
   const fmt = (n: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">

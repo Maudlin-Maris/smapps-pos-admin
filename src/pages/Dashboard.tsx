@@ -238,7 +238,7 @@ export default function Dashboard() {
                     borderRadius: "8px",
                     fontSize: "13px",
                   }}
-                  formatter={(value: number) => [`$${value.toLocaleString()}`, "Sales"]}
+                  formatter={(value: number) => [`₦${value.toLocaleString()}`, "Sales"]}
                 />
                 <Area type="monotone" dataKey="sales" stroke="hsl(196, 84%, 64%)" fill="url(#salesGrad)" strokeWidth={2} />
               </AreaChart>
@@ -264,7 +264,7 @@ export default function Dashboard() {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                <Tooltip formatter={(value: number) => `₦${value.toLocaleString()}`} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
               </PieChart>
             </ResponsiveContainer>

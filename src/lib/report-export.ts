@@ -96,7 +96,7 @@ export function exportPnLToPDF(
   const netProfit = grossProfit - totalExpenses;
 
   const cur = (n: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+    new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 
   const pnlLine = (label: string, amount: number, bold = false, indent = false) =>
     `<tr style="${bold ? "font-weight:700;" : ""}">
