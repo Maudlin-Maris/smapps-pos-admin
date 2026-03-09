@@ -199,7 +199,6 @@ export default function ExpenseManagement() {
           {totalItems} expenses
         </Badge>
       </Card>
-      </div>
 
       <PaginationControls
         page={page}
