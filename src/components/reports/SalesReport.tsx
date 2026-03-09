@@ -579,26 +579,13 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
       {/* Sales by Cashier */}
       {salesByCashier.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
               <User className="h-4 w-4" /> Sales by Cashier
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={salesByCashier} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis type="number" tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
-                <YAxis type="category" dataKey="cashier" width={80} className="text-xs" />
-                <Tooltip
-                  formatter={(value: number, name: string) => [formatCurrency(value), name === "sales" ? "Sales" : "Other Income"]}
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
-                />
-                <Bar dataKey="sales" name="Sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="otherIncome" name="Other Income" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <Table className="mt-4">
+          <CardContent className="pt-0">
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Cashier</TableHead>
