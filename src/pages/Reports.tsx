@@ -24,6 +24,7 @@ import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } fr
 import PnLStatement from "@/components/reports/PnLStatement";
 import COGSBreakdown from "@/components/reports/COGSBreakdown";
 import SalesReport from "@/components/reports/SalesReport";
+import ReportTransactions from "@/components/reports/ReportTransactions";
 import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
 
 function fmt(n: number) {
