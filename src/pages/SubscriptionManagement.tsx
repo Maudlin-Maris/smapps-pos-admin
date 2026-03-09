@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const currentPlan = {
   name: "Business Pro",
-  price: "$79/mo",
+  price: "₦79/mo",
   renewalDate: "March 15, 2026",
   daysLeft: 18,
   features: ["Unlimited outlets", "Advanced analytics", "Priority support", "API access", "Custom reports"],
@@ -17,29 +17,29 @@ const currentPlan = {
 const plans = [
   {
     name: "Starter",
-    price: "$29/mo",
+    price: "₦29/mo",
     features: ["1 outlet", "Basic analytics", "Email support", "500 transactions/mo"],
     popular: false,
   },
   {
     name: "Business Pro",
-    price: "$79/mo",
+    price: "₦79/mo",
     features: ["Unlimited outlets", "Advanced analytics", "Priority support", "API access", "Custom reports"],
     popular: true,
   },
   {
     name: "Enterprise",
-    price: "$199/mo",
+    price: "₦199/mo",
     features: ["Everything in Pro", "Dedicated manager", "SLA guarantee", "White-label", "Custom integrations"],
     popular: false,
   },
 ];
 
 const paymentHistory = [
-  { date: "Feb 15, 2026", amount: "$79.00", status: "Paid", method: "Visa •••• 4242" },
-  { date: "Jan 15, 2026", amount: "$79.00", status: "Paid", method: "Visa •••• 4242" },
-  { date: "Dec 15, 2025", amount: "$79.00", status: "Paid", method: "Visa •••• 4242" },
-  { date: "Nov 15, 2025", amount: "$79.00", status: "Paid", method: "Visa •••• 4242" },
+  { date: "Feb 15, 2026", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
+  { date: "Jan 15, 2026", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
+  { date: "Dec 15, 2025", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
+  { date: "Nov 15, 2025", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
 ];
 
 export default function SubscriptionManagement() {

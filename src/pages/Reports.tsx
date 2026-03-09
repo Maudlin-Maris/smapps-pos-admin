@@ -26,7 +26,7 @@ import COGSBreakdown from "@/components/reports/COGSBreakdown";
 import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
 
 function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 }
 
 export default function Reports() {
@@ -242,7 +242,7 @@ export default function Reports() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={expenseBreakdown} layout="vertical" margin={{ left: 10 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                  <XAxis type="number" tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
                   <YAxis type="category" dataKey="name" width={80} className="text-xs" />
                   <Tooltip formatter={(v: number) => fmt(v)} />
                   <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
@@ -265,7 +265,7 @@ export default function Reports() {
               <BarChart data={outletComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis dataKey="name" className="text-xs" />
-                <YAxis tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
                 <Tooltip formatter={(v: number) => fmt(v)} />
                 <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
                 <Bar dataKey="revenue" name="Revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />

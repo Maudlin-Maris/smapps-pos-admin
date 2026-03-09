@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import type { PnLData } from "@/hooks/use-financial-data";
 
 function fmt(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 }
 
 function pct(part: number, total: number) {

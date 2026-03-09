@@ -14,7 +14,7 @@ import type { StoredAdjustment } from "@/hooks/use-financial-data";
 function fmt(n: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "NGN",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n);
@@ -125,7 +125,7 @@ export default function COGSBreakdown({ adjustments, itemNames }: Props) {
                 />
                 <XAxis
                   type="number"
-                  tickFormatter={(v) => `$${v.toFixed(0)}`}
+                  tickFormatter={(v) => `₦${v.toFixed(0)}`}
                   className="text-xs"
                 />
                 <YAxis

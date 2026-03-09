@@ -142,7 +142,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             
             {(type === "add" || type === "returned") && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cost per unit ($)</label>
+                <label className="text-sm font-medium">Cost per unit (₦)</label>
                 <Input
                   type="number"
                   min={0}
