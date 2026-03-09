@@ -485,14 +485,14 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
       </div>
 
       {/* Top Selling Items + Sales by Item Category */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <Star className="h-4 w-4" /> Top Selling Items
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
             <PaginationControls
               page={topItemsPag.page}
               totalPages={topItemsPag.totalPages}
@@ -502,49 +502,51 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
               onPageChange={topItemsPag.setPage}
               onPerPageChange={topItemsPag.setPerPage}
             />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right">Qty Sold</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topItemsPag.paginatedItems.length > 0 ? (
-                  topItemsPag.paginatedItems.map((item, idx) => (
-                    <TableRow key={item.name}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {(topItemsPag.page - 1) * topItemsPag.perPage + idx < 3 ? (
-                            <Badge variant={(topItemsPag.page - 1) * topItemsPag.perPage + idx === 0 ? "default" : "secondary"} className="w-5 h-5 rounded-full flex items-center justify-center p-0 text-xs shrink-0">
-                              {(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-xs w-5 text-center shrink-0">{(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}</span>
-                          )}
-                          {item.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">{item.qty}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(item.revenue)}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">No item data</TableCell>
+                    <TableHead className="text-xs">Item</TableHead>
+                    <TableHead className="text-right text-xs">Qty</TableHead>
+                    <TableHead className="text-right text-xs">Revenue</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {topItemsPag.paginatedItems.length > 0 ? (
+                    topItemsPag.paginatedItems.map((item, idx) => (
+                      <TableRow key={item.name}>
+                        <TableCell className="font-medium text-xs sm:text-sm">
+                          <div className="flex items-center gap-1.5">
+                            {(topItemsPag.page - 1) * topItemsPag.perPage + idx < 3 ? (
+                              <Badge variant={(topItemsPag.page - 1) * topItemsPag.perPage + idx === 0 ? "default" : "secondary"} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center p-0 text-[10px] sm:text-xs shrink-0">
+                                {(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-[10px] sm:text-xs w-4 sm:w-5 text-center shrink-0">{(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}</span>
+                            )}
+                            <span className="truncate">{item.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No item data</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sales by Item Category</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base">Sales by Item Category</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
             <PaginationControls
               page={categoryPag.page}
               totalPages={categoryPag.totalPages}
@@ -554,106 +556,110 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
               onPageChange={categoryPag.setPage}
               onPerPageChange={categoryPag.setPerPage}
             />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Items Sold</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">% of Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categoryPag.paginatedItems.length > 0 ? (
-                  categoryPag.paginatedItems.map((cat) => (
-                    <TableRow key={cat.category}>
-                      <TableCell className="font-medium">{cat.category}</TableCell>
-                      <TableCell className="text-right">{cat.qty}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(cat.revenue)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">{cat.pct}%</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">No category data</TableCell>
+                    <TableHead className="text-xs">Category</TableHead>
+                    <TableHead className="text-right text-xs">Qty</TableHead>
+                    <TableHead className="text-right text-xs">Revenue</TableHead>
+                    <TableHead className="text-right text-xs">%</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {categoryPag.paginatedItems.length > 0 ? (
+                    categoryPag.paginatedItems.map((cat) => (
+                      <TableRow key={cat.category}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{cat.category}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{cat.qty}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(cat.revenue)}</TableCell>
+                        <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{cat.pct}%</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground text-xs">No category data</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Sales by Cashier + Sales by Outlet */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Sales by Cashier */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {salesByCashier.length > 0 && (
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
+            <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <User className="h-4 w-4" /> Sales by Cashier
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cashier</TableHead>
-                    <TableHead className="text-right">Transactions</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {salesByCashier.map((row) => (
-                    <TableRow key={row.cashier}>
-                      <TableCell className="font-medium">{row.cashier}</TableCell>
-                      <TableCell className="text-right">{row.transactions}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Cashier</TableHead>
+                      <TableHead className="text-right text-xs">Txns</TableHead>
+                      <TableHead className="text-right text-xs">Total</TableHead>
                     </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell>Total</TableCell>
-                    <TableCell className="text-right">{filteredSales.length}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {salesByCashier.map((row) => (
+                      <TableRow key={row.cashier}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{row.cashier}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{row.transactions}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.total)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-semibold">
+                      <TableCell className="text-xs sm:text-sm">Total</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{filteredSales.length}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalRevenue)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Sales by Outlet */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Sales by Outlet</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+            <CardTitle className="text-sm sm:text-base">Sales by Outlet</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="p-3 sm:p-6 pt-0">
             {outletDistribution.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Outlet</TableHead>
-                    <TableHead className="text-right">Sales</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {salesByOutlet.map((row) => (
-                    <TableRow key={row.outletId}>
-                      <TableCell className="font-medium">{row.outletName}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Outlet</TableHead>
+                      <TableHead className="text-right text-xs">Sales</TableHead>
+                      <TableHead className="text-right text-xs">Total</TableHead>
                     </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell>Total</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalSales)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {salesByOutlet.map((row) => (
+                      <TableRow key={row.outletId}>
+                        <TableCell className="font-medium text-xs sm:text-sm">{row.outletName}</TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(row.sales)}</TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.total)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-semibold">
+                      <TableCell className="text-xs sm:text-sm">Total</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalSales)}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalRevenue)}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             ) : (
-              <div className="flex h-[100px] items-center justify-center text-muted-foreground">No outlet data</div>
+              <div className="flex h-[100px] items-center justify-center text-muted-foreground text-sm">No outlet data</div>
             )}
           </CardContent>
         </Card>
