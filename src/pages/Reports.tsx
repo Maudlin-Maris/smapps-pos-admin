@@ -178,6 +178,7 @@ export default function Reports() {
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="pnl" className="flex-1 sm:flex-none text-xs sm:text-sm">Profit & Loss</TabsTrigger>
           <TabsTrigger value="sales" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales Report</TabsTrigger>
+          <TabsTrigger value="transactions" className="flex-1 sm:flex-none text-xs sm:text-sm">Transactions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pnl" className="space-y-6 mt-6">
@@ -296,6 +297,10 @@ export default function Reports() {
 
         <TabsContent value="sales" className="mt-6">
           <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
+        </TabsContent>
+
+        <TabsContent value="transactions" className="mt-6">
+          <ReportTransactions selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
         </TabsContent>
       </Tabs>
     </div>
