@@ -154,6 +154,36 @@ export default function ExpenseManagement() {
         </Button>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search expenses..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={filterOutlet} onValueChange={setFilterOutlet}>
+          <SelectTrigger className="w-[180px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Outlets</SelectItem>
+            {outlets.map((o) => (
+              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {expenseCategories.map((c) => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Summary Card */}
       <Card className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -165,6 +195,10 @@ export default function ExpenseManagement() {
             <p className="text-lg font-heading font-bold">{fmt(totalFiltered)}</p>
           </div>
         </div>
+        <Badge variant="secondary" className="text-xs">
+          {totalItems} expenses
+        </Badge>
+      </Card>
         <Badge variant="secondary" className="text-xs">
           {totalItems} expenses
         </Badge>
