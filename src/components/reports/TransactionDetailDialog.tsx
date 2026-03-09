@@ -45,6 +45,7 @@ import {
   Clock,
   XCircle,
   AlertTriangle,
+  ShoppingBag,
 } from "lucide-react";
 import type { Transaction } from "@/components/TransactionsTable";
 
