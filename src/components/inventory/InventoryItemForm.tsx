@@ -354,7 +354,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cost Price</label>
+              <label className="text-sm font-medium">Cost per Unit</label>
+              <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. This updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
