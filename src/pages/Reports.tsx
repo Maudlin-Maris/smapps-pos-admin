@@ -24,6 +24,7 @@ import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } fr
 import PnLStatement from "@/components/reports/PnLStatement";
 import COGSBreakdown from "@/components/reports/COGSBreakdown";
 import SalesReport from "@/components/reports/SalesReport";
+import ReportTransactions from "@/components/reports/ReportTransactions";
 import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
 
 function fmt(n: number) {
@@ -177,6 +178,7 @@ export default function Reports() {
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="pnl" className="flex-1 sm:flex-none text-xs sm:text-sm">Profit & Loss</TabsTrigger>
           <TabsTrigger value="sales" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales Report</TabsTrigger>
+          <TabsTrigger value="transactions" className="flex-1 sm:flex-none text-xs sm:text-sm">Transactions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pnl" className="space-y-6 mt-6">
@@ -295,6 +297,10 @@ export default function Reports() {
 
         <TabsContent value="sales" className="mt-6">
           <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
+        </TabsContent>
+
+        <TabsContent value="transactions" className="mt-6">
+          <ReportTransactions selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
         </TabsContent>
       </Tabs>
     </div>
