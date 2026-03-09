@@ -16,6 +16,13 @@ export interface PaymentSplit {
   amount: string;
 }
 
+export interface OrderItem {
+  name: string;
+  qty: number;
+  unitPrice: string;
+  total: string;
+}
+
 export interface Transaction {
   orderId: string;
   date: string;
@@ -26,6 +33,7 @@ export interface Transaction {
   paymentStatus: "Paid" | "Pending" | "Failed" | "Refunded";
   payments: PaymentSplit[];
   orderStatus: "Completed" | "Processing" | "Cancelled" | "On Hold";
+  items?: OrderItem[];
 }
 
 interface TransactionsTableProps {

@@ -45,6 +45,7 @@ import {
   Clock,
   XCircle,
   AlertTriangle,
+  ShoppingBag,
 } from "lucide-react";
 import type { Transaction } from "@/components/TransactionsTable";
 
@@ -254,6 +255,46 @@ export default function TransactionDetailDialog({
                 </div>
               )}
             </div>
+
+            {/* Order Items */}
+            {transaction.items && transaction.items.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <ShoppingBag className="h-3.5 w-3.5" /> Order Items
+                  </p>
+                  <div className="rounded-md border border-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-muted/50 text-muted-foreground">
+                          <th className="text-left py-1.5 px-3 font-medium">Item</th>
+                          <th className="text-center py-1.5 px-2 font-medium">Qty</th>
+                          <th className="text-right py-1.5 px-2 font-medium">Price</th>
+                          <th className="text-right py-1.5 px-3 font-medium">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {transaction.items.map((item, i) => (
+                          <tr key={i} className="border-t border-border/50">
+                            <td className="py-1.5 px-3 font-medium">{item.name}</td>
+                            <td className="py-1.5 px-2 text-center text-muted-foreground">{item.qty}</td>
+                            <td className="py-1.5 px-2 text-right text-muted-foreground">{item.unitPrice}</td>
+                            <td className="py-1.5 px-3 text-right font-medium">{item.total}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-border bg-muted/30">
+                          <td colSpan={3} className="py-1.5 px-3 font-semibold text-right">Total</td>
+                          <td className="py-1.5 px-3 text-right font-semibold">{transaction.amount}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Quick actions footer */}
             <div className="flex items-center gap-2 pt-2">
