@@ -329,32 +329,32 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
       </div>
 
       {/* Sales by Business Day + Payment Methods */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <CalendarDays className="h-4 w-4" /> Sales by Business Day
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={salesByBusinessDay}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="day" className="text-xs" />
-                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                <XAxis dataKey="day" className="text-xs" tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" tick={{ fontSize: 10 }} width={45} />
                 <Tooltip
                   formatter={(value: number, name: string) => [formatCurrency(value), name === "sales" ? "Total Sales" : "Avg Sales"]}
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
                 />
                 <Bar dataKey="sales" name="Total Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             {topBusinessDay && topBusinessDay.sales > 0 && (
-              <div className="mt-3 flex items-center gap-2 rounded-lg bg-primary/5 p-3">
-                <Trophy className="h-4 w-4 text-primary" />
-                <span className="text-sm">
-                  <strong>{topBusinessDay.fullDay}</strong> is the top business day with{" "}
-                  <strong>{formatCurrency(topBusinessDay.sales)}</strong> in sales
+              <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary/5 p-2 sm:p-3">
+                <Trophy className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-xs sm:text-sm">
+                  <strong>{topBusinessDay.fullDay}</strong> is the top day with{" "}
+                  <strong>{formatCurrency(topBusinessDay.sales)}</strong>
                 </span>
               </div>
             )}
@@ -362,26 +362,26 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Sales by Payment Method</CardTitle>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+            <CardTitle className="text-sm sm:text-base">Sales by Payment Method</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {paymentMethodData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={180}>
                   <PieChart>
-                    <Pie data={paymentMethodData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} dataKey="value" paddingAngle={2}>
+                    <Pie data={paymentMethodData} cx="50%" cy="50%" innerRadius={35} outerRadius={65} dataKey="value" paddingAngle={2}>
                       {paymentMethodData.map((entry, index) => (
                         <Cell key={index} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ fontSize: "12px" }} />
+                    <Legend iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="space-y-2 mt-2">
+                <div className="space-y-1.5 mt-2">
                   {paymentMethodData.map((pm) => (
-                    <div key={pm.name} className="flex items-center justify-between text-sm">
+                    <div key={pm.name} className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground">{pm.name}</span>
                       <span className="font-medium">{formatCurrency(pm.value)}</span>
                     </div>
@@ -389,7 +389,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
                 </div>
               </>
             ) : (
-              <div className="flex h-[220px] items-center justify-center text-muted-foreground">No data</div>
+              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">No data</div>
             )}
           </CardContent>
         </Card>
