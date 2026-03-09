@@ -232,6 +232,28 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
     color: COLORS[idx % COLORS.length],
   }));
 
+  // --- Sales by Cashier ---
+  const salesByCashier = useMemo(() => {
+    const grouped: Record<string, { sales: number; otherIncome: number; count: number }> = {};
+    filteredSales.forEach((s) => {
+      const name = s.cashier || "Unknown";
+      if (!grouped[name]) grouped[name] = { sales: 0, otherIncome: 0, count: 0 };
+      grouped[name].sales += s.totalSales;
+      grouped[name].otherIncome += s.otherIncome;
+      grouped[name].count += 1;
+    });
+    return Object.entries(grouped)
+      .map(([cashier, data]) => ({
+        cashier,
+        sales: data.sales,
+        otherIncome: data.otherIncome,
+        total: data.sales + data.otherIncome,
+        transactions: data.count,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredSales]);
+
+
   // Pagination hooks
   const topItemsPag = usePagination(allItems, 5);
   const allItemsPag = usePagination(allItems, 10);
@@ -553,6 +575,58 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
           </CardContent>
         </Card>
       </div>
+
+      {/* Sales by Cashier */}
+      {salesByCashier.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-4 w-4" /> Sales by Cashier
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={salesByCashier} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis type="number" tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                <YAxis type="category" dataKey="cashier" width={80} className="text-xs" />
+                <Tooltip
+                  formatter={(value: number, name: string) => [formatCurrency(value), name === "sales" ? "Sales" : "Other Income"]}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                />
+                <Bar dataKey="sales" name="Sales" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="otherIncome" name="Other Income" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+            <Table className="mt-4">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cashier</TableHead>
+                  <TableHead className="text-right">Transactions</TableHead>
+                  <TableHead className="text-right">Sales</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {salesByCashier.map((row) => (
+                  <TableRow key={row.cashier}>
+                    <TableCell className="font-medium">{row.cashier}</TableCell>
+                    <TableCell className="text-right">{row.transactions}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(row.sales)}</TableCell>
+                    <TableCell className="text-right font-semibold">{formatCurrency(row.total)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableRow className="bg-muted/50 font-semibold">
+                  <TableCell>Total</TableCell>
+                  <TableCell className="text-right">{filteredSales.length}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(totalSales)}</TableCell>
+                  <TableCell className="text-right">{formatCurrency(totalRevenue)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sales by Outlet */}
       <Card>
