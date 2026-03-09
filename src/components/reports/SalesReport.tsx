@@ -5,10 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { SalesRecord } from "@/hooks/use-financial-data";
 import { outlets } from "@/data/outlets";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star } from "lucide-react";
+import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star, User } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 
@@ -78,13 +85,32 @@ const outletPaymentSplits: Record<string, Record<string, number>> = {
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function SalesReport({ sales, selectedOutlets, dateRange }: SalesReportProps) {
+  const [selectedCashier, setSelectedCashier] = useState<string>("all");
+
+  // Get unique cashiers from sales matching outlet/date filters
+  const availableCashiers = useMemo(() => {
+    const fromStr = dateRange.from.toISOString().split("T")[0];
+    const toStr = dateRange.to.toISOString().split("T")[0];
+    const names = new Set<string>();
+    sales.forEach((s) => {
+      if (selectedOutlets.includes(s.outletId) && s.date >= fromStr && s.date <= toStr && s.cashier) {
+        names.add(s.cashier);
+      }
+    });
+    return Array.from(names).sort();
+  }, [sales, selectedOutlets, dateRange]);
+
   const filteredSales = useMemo(() => {
     const fromStr = dateRange.from.toISOString().split("T")[0];
     const toStr = dateRange.to.toISOString().split("T")[0];
     return sales.filter(
-      (s) => selectedOutlets.includes(s.outletId) && s.date >= fromStr && s.date <= toStr
+      (s) =>
+        selectedOutlets.includes(s.outletId) &&
+        s.date >= fromStr &&
+        s.date <= toStr &&
+        (selectedCashier === "all" || s.cashier === selectedCashier)
     );
-  }, [sales, selectedOutlets, dateRange]);
+  }, [sales, selectedOutlets, dateRange, selectedCashier]);
 
   const totalSales = filteredSales.reduce((sum, s) => sum + s.totalSales, 0);
   const totalOtherIncome = filteredSales.reduce((sum, s) => sum + s.otherIncome, 0);
