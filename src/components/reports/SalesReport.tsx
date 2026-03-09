@@ -240,6 +240,24 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
 
   return (
     <div className="space-y-6">
+      {/* Cashier Filter */}
+      {availableCashiers.length > 0 && (
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <Select value={selectedCashier} onValueChange={setSelectedCashier}>
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cashiers</SelectItem>
+              {availableCashiers.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
