@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
+import DepartmentManagerDialog from "@/components/outlets/DepartmentManagerDialog";
+import { initialDepartments, type Department } from "@/data/departments";
 import { toast } from "sonner";
 
 interface OutletData {
@@ -37,6 +39,8 @@ export default function OutletManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
   const [editingOutlet, setEditingOutlet] = useState<OutletData | null>(null);
+  const [departments, setDepartments] = useState<Department[]>(initialDepartments);
+  const [deptDialogOutlet, setDeptDialogOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -97,6 +101,9 @@ export default function OutletManagement() {
       ...editingOutlet.formData,
     };
   };
+
+  const getDeptCount = (outletId: number) =>
+    departments.filter((d) => d.outletId === outletId).length;
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -169,6 +176,18 @@ export default function OutletManagement() {
             </div>
 
             <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => setDeptDialogOutlet(outlet)}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Departments
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                  {getDeptCount(outlet.id)}
+                </Badge>
+              </Button>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
                 <p className="text-lg font-heading font-bold">{outlet.staff}</p>
@@ -185,6 +204,17 @@ export default function OutletManagement() {
         initialData={getInitialData()}
         onSubmit={handleSubmit}
       />
+
+      {deptDialogOutlet && (
+        <DepartmentManagerDialog
+          open={!!deptDialogOutlet}
+          onOpenChange={(open) => !open && setDeptDialogOutlet(null)}
+          outletId={deptDialogOutlet.id}
+          outletName={deptDialogOutlet.name}
+          departments={departments}
+          onUpdateDepartments={setDepartments}
+        />
+      )}
     </div>
   );
 }
