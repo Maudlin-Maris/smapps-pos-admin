@@ -68,9 +68,11 @@ export function getCategoryMap(items: MenuItem[]): Record<string, string[]> {
 
 /** Count how many menu items a department covers */
 export function getDeptItemCount(dept: Department, items: MenuItem[]): number {
+  const cats = dept.assignedCategories ?? [];
+  const subs = dept.assignedSubcategories ?? [];
   return items.filter((item) => {
-    if (dept.assignedCategories.includes(item.category)) return true;
-    if (item.subcategory && dept.assignedSubcategories.includes(`${item.category}::${item.subcategory}`)) return true;
+    if (cats.includes(item.category)) return true;
+    if (item.subcategory && subs.includes(`${item.category}::${item.subcategory}`)) return true;
     return false;
   }).length;
 }
