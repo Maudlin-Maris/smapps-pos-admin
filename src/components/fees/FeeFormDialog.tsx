@@ -31,10 +31,11 @@ interface FeeFormDialogProps {
   mode: "add" | "edit";
   initialData?: Partial<FeeFormData>;
   onSubmit: (data: FeeFormData) => void;
+  hideOutletSelector?: boolean;
 }
 
 export default function FeeFormDialog({
-  open, onOpenChange, mode, initialData, onSubmit,
+  open, onOpenChange, mode, initialData, onSubmit, hideOutletSelector = false,
 }: FeeFormDialogProps) {
   const form = useForm<FeeFormData>({
     defaultValues: {
@@ -75,37 +76,38 @@ export default function FeeFormDialog({
         <DialogHeader>
           <DialogTitle>{mode === "add" ? "Add Fee / Tax" : "Edit Fee / Tax"}</DialogTitle>
           <DialogDescription>
-            {mode === "add" ? "Create a new fee or tax for an outlet." : "Update the fee or tax details."}
+            {mode === "add" ? "Create a new fee or tax." : "Update the fee or tax details."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            {/* Outlet */}
-            <FormField
-              control={form.control}
-              name="outletId"
-              rules={{ required: "Please select an outlet" }}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Outlet</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose outlet" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {outlets.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Outlet — only shown when not embedded in outlet context */}
+            {!hideOutletSelector && (
+              <FormField
+                control={form.control}
+                name="outletId"
+                rules={{ required: "Please select an outlet" }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Outlet</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose outlet" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {outlets.map((o) => (
+                          <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
-            {/* Name */}
             <FormField
               control={form.control}
               name="name"
@@ -121,7 +123,6 @@ export default function FeeFormDialog({
               )}
             />
 
-            {/* Service Option */}
             <FormField
               control={form.control}
               name="serviceOption"
@@ -145,7 +146,6 @@ export default function FeeFormDialog({
               )}
             />
 
-            {/* Is Fixed */}
             <FormField
               control={form.control}
               name="isFixed"
@@ -171,7 +171,6 @@ export default function FeeFormDialog({
               )}
             />
 
-            {/* Charge To Customers */}
             <FormField
               control={form.control}
               name="chargeToCustomers"
@@ -191,7 +190,6 @@ export default function FeeFormDialog({
               )}
             />
 
-            {/* Order Peg */}
             <FormField
               control={form.control}
               name="orderPeg"
@@ -206,7 +204,6 @@ export default function FeeFormDialog({
               )}
             />
 
-            {/* Min / Max Fee row */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
