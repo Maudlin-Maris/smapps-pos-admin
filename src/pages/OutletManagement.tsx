@@ -113,6 +113,8 @@ export default function OutletManagement() {
           </Card>
         ))}
       </div>
+
+      <AddOutletDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </div>
   );
 }
