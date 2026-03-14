@@ -239,6 +239,17 @@ export default function OutletManagement() {
           onUpdateDepartments={setDepartments}
         />
       )}
+
+      {feeDialogOutlet && (
+        <FeeManagerDialog
+          open={!!feeDialogOutlet}
+          onOpenChange={(open) => !open && setFeeDialogOutlet(null)}
+          outletId={feeDialogOutlet.id}
+          outletName={feeDialogOutlet.name}
+          fees={fees}
+          onUpdateFees={setFees}
+        />
+      )}
     </div>
   );
 }
