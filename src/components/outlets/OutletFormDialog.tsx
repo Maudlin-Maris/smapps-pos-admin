@@ -213,11 +213,27 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="bank">Bank</Label>
-                <Input id="bank" placeholder="Bank name" value={form.bank} onChange={(e) => update("bank", e.target.value)} />
+                <Select value={form.bank} onValueChange={(v) => update("bank", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger>
+                  <SelectContent>
+                    {[
+                      "Access Bank", "Citibank", "Ecobank", "Fidelity Bank", "First Bank of Nigeria",
+                      "First City Monument Bank (FCMB)", "Globus Bank", "Guaranty Trust Bank (GTBank)",
+                      "Heritage Bank", "Jaiz Bank", "Keystone Bank", "Kuda Bank", "Lotus Bank",
+                      "Moniepoint MFB", "Opay", "Palmpay", "Parallex Bank", "Polaris Bank",
+                      "Providus Bank", "Stanbic IBTC Bank", "Standard Chartered Bank",
+                      "Sterling Bank", "SunTrust Bank", "Titan Trust Bank", "Union Bank of Nigeria",
+                      "United Bank for Africa (UBA)", "Unity Bank", "VFD Microfinance Bank",
+                      "Wema Bank", "Zenith Bank",
+                    ].map((bank) => (
+                      <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accountNumber">Account Number</Label>
-                <Input id="accountNumber" placeholder="0000000000" value={form.accountNumber} onChange={(e) => update("accountNumber", e.target.value)} />
+                <Input id="accountNumber" type="number" placeholder="0000000000" value={form.accountNumber} onChange={(e) => update("accountNumber", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accountName">Account Name</Label>
