@@ -11,18 +11,25 @@ interface OutletData {
   name: string;
   address: string;
   phone: string;
-  hours: string;
+  currency: string;
+  businessType: string;
   status: "open" | "closed";
-  todaySales: string;
   staff: number;
   formData?: Partial<OutletFormData>;
 }
 
+const businessTypeLabels: Record<string, string> = {
+  restaurant: "Restaurant/Bar/Lounge",
+  retail: "Retail",
+  pharmacy: "Pharmacy",
+  service: "Service",
+};
+
 const initialOutlets: OutletData[] = [
-  { id: 1, name: "Downtown Flagship", address: "123 Main Street, Downtown", phone: "+1 (555) 123-4567", hours: "7:00 AM - 10:00 PM", status: "open", todaySales: "$3,420", staff: 8 },
-  { id: 2, name: "Mall Branch", address: "456 Shopping Center Blvd, Level 2", phone: "+1 (555) 234-5678", hours: "10:00 AM - 9:00 PM", status: "open", todaySales: "$2,180", staff: 5 },
-  { id: 3, name: "Airport Kiosk", address: "Terminal 3, Gate B12", phone: "+1 (555) 345-6789", hours: "5:00 AM - 11:00 PM", status: "open", todaySales: "$1,850", staff: 3 },
-  { id: 4, name: "Suburban Store", address: "789 Oak Avenue, Westside", phone: "+1 (555) 456-7890", hours: "8:00 AM - 8:00 PM", status: "closed", todaySales: "$0", staff: 4 },
+  { id: 1, name: "Downtown Flagship", address: "123 Main Street, Downtown", phone: "+1 (555) 123-4567", currency: "NGN", businessType: "restaurant", status: "open", staff: 8 },
+  { id: 2, name: "Mall Branch", address: "456 Shopping Center Blvd, Level 2", phone: "+1 (555) 234-5678", currency: "NGN", businessType: "retail", status: "open", staff: 5 },
+  { id: 3, name: "Airport Kiosk", address: "Terminal 3, Gate B12", phone: "+1 (555) 345-6789", currency: "USD", businessType: "restaurant", status: "open", staff: 3 },
+  { id: 4, name: "Suburban Store", address: "789 Oak Avenue, Westside", phone: "+1 (555) 456-7890", currency: "GBP", businessType: "pharmacy", status: "closed", staff: 4 },
 ];
 
 export default function OutletManagement() {
