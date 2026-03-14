@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
 import DepartmentManagerDialog from "@/components/outlets/DepartmentManagerDialog";
+import FeeManagerDialog from "@/components/outlets/FeeManagerDialog";
 import { initialDepartments, type Department } from "@/data/departments";
+import { type FeeFormData } from "@/components/fees/FeeFormDialog";
 import { toast } from "sonner";
 
 interface OutletData {
