@@ -159,16 +159,16 @@ export default function OutletManagement() {
                 <span>{outlet.phone}</span>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                <span>{outlet.hours}</span>
+                <Banknote className="h-3.5 w-3.5 shrink-0" />
+                <span>{outlet.currency}</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Store className="h-3.5 w-3.5 shrink-0" />
+                <span>{businessTypeLabels[outlet.businessType] || outlet.businessType}</span>
               </div>
             </div>
 
             <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Today's Sales</p>
-                <p className="text-lg font-heading font-bold">{outlet.todaySales}</p>
-              </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
                 <p className="text-lg font-heading font-bold">{outlet.staff}</p>
