@@ -112,6 +112,9 @@ export default function OutletManagement() {
   const getDeptCount = (outletId: number) =>
     departments.filter((d) => d.outletId === outletId).length;
 
+  const getFeeCount = (outletId: number) =>
+    fees.filter((f) => f.outletId === String(outletId)).length;
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
