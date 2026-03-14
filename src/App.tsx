@@ -12,6 +12,7 @@ import ExpenseManagement from "@/pages/ExpenseManagement";
 import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
 import CashierManagement from "@/pages/CashierManagement";
+import FeesAndTaxes from "@/pages/FeesAndTaxes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
