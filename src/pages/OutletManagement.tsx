@@ -186,18 +186,32 @@ export default function OutletManagement() {
             </div>
 
             <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-xs"
-                onClick={() => setDeptDialogOutlet(outlet)}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Departments
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                  {getDeptCount(outlet.id)}
-                </Badge>
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setDeptDialogOutlet(outlet)}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  Departments
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                    {getDeptCount(outlet.id)}
+                  </Badge>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setFeeDialogOutlet(outlet)}
+                >
+                  <Percent className="h-3.5 w-3.5" />
+                  Fees & Taxes
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                    {getFeeCount(outlet.id)}
+                  </Badge>
+                </Button>
+              </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
                 <p className="text-lg font-heading font-bold">{outlet.staff}</p>
