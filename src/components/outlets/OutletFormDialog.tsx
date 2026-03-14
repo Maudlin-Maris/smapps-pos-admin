@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,41 +17,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Building2, Wallet } from "lucide-react";
+import { Upload, Building2, Wallet, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
-interface AddOutletDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+export interface OutletFormData {
+  name: string;
+  locationAddress: string;
+  outletAddress: string;
+  email: string;
+  phone: string;
+  currency: string;
+  businessType: string;
+  payBeforeOrder: boolean;
+  payAfterOrder: boolean;
+  disableMobileOrder: boolean;
+  restrictMerging: boolean;
+  restrictSettlement: boolean;
+  bank: string;
+  accountNumber: string;
+  accountName: string;
+  otpEmail: string;
 }
 
-export default function AddOutletDialog({ open, onOpenChange }: AddOutletDialogProps) {
-  const [form, setForm] = useState({
-    name: "",
-    locationAddress: "",
-    outletAddress: "",
-    email: "",
-    phone: "",
-    currency: "",
-    businessType: "",
-    payBeforeOrder: false,
-    payAfterOrder: false,
-    disableMobileOrder: false,
-    restrictMerging: false,
-    restrictSettlement: false,
-    bank: "",
-    accountNumber: "",
-    accountName: "",
-    otpEmail: "",
-  });
+const emptyForm: OutletFormData = {
+  name: "", locationAddress: "", outletAddress: "", email: "", phone: "",
+  currency: "", businessType: "", payBeforeOrder: false, payAfterOrder: false,
+  disableMobileOrder: false, restrictMerging: false, restrictSettlement: false,
+  bank: "", accountNumber: "", accountName: "", otpEmail: "",
+};
 
+interface OutletFormDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: "add" | "edit";
+  initialData?: Partial<OutletFormData>;
+  onSubmit: (data: OutletFormData) => void;
+}
+
+export default function OutletFormDialog({ open, onOpenChange, mode, initialData, onSubmit }: OutletFormDialogProps) {
+  const [form, setForm] = useState<OutletFormData>(emptyForm);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
-  const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: "logo" | "banner"
-  ) => {
+  useEffect(() => {
+    if (open) {
+      setForm({ ...emptyForm, ...initialData });
+      setLogoPreview(null);
+      setBannerPreview(null);
+    }
+  }, [open, initialData]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "logo" | "banner") => {
     const file = e.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -64,33 +80,26 @@ export default function AddOutletDialog({ open, onOpenChange }: AddOutletDialogP
       toast.error("Outlet name is required");
       return;
     }
-    toast.success(`Outlet "${form.name}" created successfully`);
+    onSubmit(form);
     onOpenChange(false);
-    setForm({
-      name: "", locationAddress: "", outletAddress: "", email: "", phone: "",
-      currency: "", businessType: "", payBeforeOrder: false, payAfterOrder: false,
-      disableMobileOrder: false, restrictMerging: false, restrictSettlement: false,
-      bank: "", accountNumber: "", accountName: "", otpEmail: "",
-    });
-    setLogoPreview(null);
-    setBannerPreview(null);
   };
 
   const update = (key: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const isEdit = mode === "edit";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-heading">
-            <Building2 className="h-5 w-5 text-accent" />
-            Add New Outlet
+            {isEdit ? <Pencil className="h-5 w-5 text-accent" /> : <Building2 className="h-5 w-5 text-accent" />}
+            {isEdit ? "Edit Outlet" : "Add New Outlet"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
-          {/* Basic Info */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="name">Outlet Name</Label>
@@ -139,7 +148,6 @@ export default function AddOutletDialog({ open, onOpenChange }: AddOutletDialogP
 
           <Separator />
 
-          {/* Logo & Banner */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Outlet Logo</Label>
@@ -173,7 +181,6 @@ export default function AddOutletDialog({ open, onOpenChange }: AddOutletDialogP
 
           <Separator />
 
-          {/* Order Settings */}
           <div className="space-y-4">
             <h3 className="text-sm font-heading font-semibold text-foreground">Order Settings</h3>
             <div className="space-y-3">
@@ -188,7 +195,7 @@ export default function AddOutletDialog({ open, onOpenChange }: AddOutletDialogP
                   <Label htmlFor={key} className="text-sm font-normal cursor-pointer flex-1">{label}</Label>
                   <Switch
                     id={key}
-                    checked={form[key as keyof typeof form] as boolean}
+                    checked={form[key as keyof OutletFormData] as boolean}
                     onCheckedChange={(v) => update(key, v)}
                   />
                 </div>
@@ -198,7 +205,6 @@ export default function AddOutletDialog({ open, onOpenChange }: AddOutletDialogP
 
           <Separator />
 
-          {/* Wallet Payout */}
           <div className="space-y-4">
             <h3 className="text-sm font-heading font-semibold text-foreground flex items-center gap-2">
               <Wallet className="h-4 w-4 text-accent" />
@@ -227,7 +233,7 @@ export default function AddOutletDialog({ open, onOpenChange }: AddOutletDialogP
 
         <div className="flex justify-end gap-3 pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit}>Create Outlet</Button>
+          <Button onClick={handleSubmit}>{isEdit ? "Save Changes" : "Create Outlet"}</Button>
         </div>
       </DialogContent>
     </Dialog>
