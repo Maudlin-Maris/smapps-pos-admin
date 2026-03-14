@@ -68,9 +68,9 @@ export default function OutletManagement() {
         name: data.name,
         address: data.outletAddress || data.locationAddress,
         phone: data.phone,
-        hours: "9:00 AM - 9:00 PM",
+        currency: data.currency || "NGN",
+        businessType: data.businessType || "restaurant",
         status: "closed",
-        todaySales: "$0",
         staff: 0,
         formData: data,
       };
