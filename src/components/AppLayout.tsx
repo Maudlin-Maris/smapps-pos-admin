@@ -14,6 +14,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Users,
+  Percent,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
