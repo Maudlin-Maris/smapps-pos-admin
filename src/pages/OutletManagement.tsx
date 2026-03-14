@@ -49,6 +49,8 @@ const outlets = [
 ];
 
 export default function OutletManagement() {
+  const [showAddDialog, setShowAddDialog] = useState(false);
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -56,7 +58,7 @@ export default function OutletManagement() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Outlets</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage your business locations</p>
         </div>
-        <Button size="sm" className="w-fit">
+        <Button size="sm" className="w-fit" onClick={() => setShowAddDialog(true)}>
           <Plus className="h-4 w-4 mr-1" /> Add Outlet
         </Button>
       </div>
