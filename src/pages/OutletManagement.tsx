@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Clock, Pencil, Power } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
 import { toast } from "sonner";
 
