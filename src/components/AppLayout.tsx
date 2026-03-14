@@ -14,6 +14,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Users,
+  Percent,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const navItems = [
   { title: "Reports", path: "/reports", icon: FileBarChart },
   { title: "Outlets", path: "/outlets", icon: Store },
   { title: "Cashiers", path: "/cashiers", icon: Users },
+  { title: "Fees & Taxes", path: "/fees-taxes", icon: Percent },
   { title: "Subscription", path: "/subscription", icon: CreditCard },
 ];
 
