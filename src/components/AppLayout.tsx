@@ -25,6 +25,7 @@ const navItems = [
   { title: "Expenses", path: "/expenses", icon: Receipt },
   { title: "Reports", path: "/reports", icon: FileBarChart },
   { title: "Outlets", path: "/outlets", icon: Store },
+  { title: "Cashiers", path: "/cashiers", icon: Users },
   { title: "Subscription", path: "/subscription", icon: CreditCard },
 ];
 

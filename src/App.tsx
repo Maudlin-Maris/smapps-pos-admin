@@ -72,6 +72,14 @@ const App = () => (
             }
           />
           <Route
+            path="/cashiers"
+            element={
+              <AppLayout>
+                <CashierManagement />
+              </AppLayout>
+            }
+          />
+          <Route
             path="/subscription"
             element={
               <AppLayout>
