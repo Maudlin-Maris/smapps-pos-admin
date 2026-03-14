@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
 import DepartmentManagerDialog from "@/components/outlets/DepartmentManagerDialog";
+import FeeManagerDialog from "@/components/outlets/FeeManagerDialog";
 import { initialDepartments, type Department } from "@/data/departments";
+import { type FeeFormData } from "@/components/fees/FeeFormDialog";
 import { toast } from "sonner";
 
 interface OutletData {
@@ -41,6 +43,11 @@ export default function OutletManagement() {
   const [editingOutlet, setEditingOutlet] = useState<OutletData | null>(null);
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
   const [deptDialogOutlet, setDeptDialogOutlet] = useState<OutletData | null>(null);
+  const [fees, setFees] = useState<FeeFormData[]>([
+    { id: 1, outletId: "1", name: "VAT", serviceOption: "all", isFixed: false, chargeToCustomers: true, orderPeg: "5", minimumFee: "0", maximumFee: "10000" },
+    { id: 2, outletId: "1", name: "Service Charge", serviceOption: "dine_in", isFixed: true, chargeToCustomers: true, orderPeg: "10", minimumFee: "500", maximumFee: "5000" },
+  ]);
+  const [feeDialogOutlet, setFeeDialogOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -104,6 +111,9 @@ export default function OutletManagement() {
 
   const getDeptCount = (outletId: number) =>
     departments.filter((d) => d.outletId === outletId).length;
+
+  const getFeeCount = (outletId: number) =>
+    fees.filter((f) => f.outletId === String(outletId)).length;
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -176,18 +186,32 @@ export default function OutletManagement() {
             </div>
 
             <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-xs"
-                onClick={() => setDeptDialogOutlet(outlet)}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Departments
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                  {getDeptCount(outlet.id)}
-                </Badge>
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setDeptDialogOutlet(outlet)}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  Departments
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                    {getDeptCount(outlet.id)}
+                  </Badge>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setFeeDialogOutlet(outlet)}
+                >
+                  <Percent className="h-3.5 w-3.5" />
+                  Fees & Taxes
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                    {getFeeCount(outlet.id)}
+                  </Badge>
+                </Button>
+              </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
                 <p className="text-lg font-heading font-bold">{outlet.staff}</p>
@@ -213,6 +237,17 @@ export default function OutletManagement() {
           outletName={deptDialogOutlet.name}
           departments={departments}
           onUpdateDepartments={setDepartments}
+        />
+      )}
+
+      {feeDialogOutlet && (
+        <FeeManagerDialog
+          open={!!feeDialogOutlet}
+          onOpenChange={(open) => !open && setFeeDialogOutlet(null)}
+          outletId={feeDialogOutlet.id}
+          outletName={feeDialogOutlet.name}
+          fees={fees}
+          onUpdateFees={setFees}
         />
       )}
     </div>
