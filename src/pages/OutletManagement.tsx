@@ -43,6 +43,11 @@ export default function OutletManagement() {
   const [editingOutlet, setEditingOutlet] = useState<OutletData | null>(null);
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
   const [deptDialogOutlet, setDeptDialogOutlet] = useState<OutletData | null>(null);
+  const [fees, setFees] = useState<FeeFormData[]>([
+    { id: 1, outletId: "1", name: "VAT", serviceOption: "all", isFixed: false, chargeToCustomers: true, orderPeg: "5", minimumFee: "0", maximumFee: "10000" },
+    { id: 2, outletId: "1", name: "Service Charge", serviceOption: "dine_in", isFixed: true, chargeToCustomers: true, orderPeg: "10", minimumFee: "500", maximumFee: "5000" },
+  ]);
+  const [feeDialogOutlet, setFeeDialogOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
