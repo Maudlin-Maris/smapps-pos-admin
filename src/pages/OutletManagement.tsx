@@ -80,7 +80,7 @@ export default function OutletManagement() {
       setOutlets((prev) =>
         prev.map((o) =>
           o.id === editingOutlet.id
-            ? { ...o, name: data.name, address: data.outletAddress || data.locationAddress || o.address, phone: data.phone || o.phone, formData: data }
+            ? { ...o, name: data.name, address: data.outletAddress || data.locationAddress || o.address, phone: data.phone || o.phone, currency: data.currency || o.currency, businessType: data.businessType || o.businessType, formData: data }
             : o
         )
       );
