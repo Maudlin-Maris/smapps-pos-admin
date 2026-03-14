@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, MapPin, Phone, Clock, MoreVertical } from "lucide-react";
+import AddOutletDialog from "@/components/outlets/AddOutletDialog";
 
 const outlets = [
   {
