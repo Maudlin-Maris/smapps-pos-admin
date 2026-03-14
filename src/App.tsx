@@ -81,6 +81,14 @@ const App = () => (
             }
           />
           <Route
+            path="/fees-taxes"
+            element={
+              <AppLayout>
+                <FeesAndTaxes />
+              </AppLayout>
+            }
+          />
+          <Route
             path="/subscription"
             element={
               <AppLayout>
