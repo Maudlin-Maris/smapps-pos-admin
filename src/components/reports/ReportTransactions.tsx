@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight, Download, FileSpreadsheet, Eye } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Download, FileSpreadsheet, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import type { Transaction } from "@/components/TransactionsTable";
