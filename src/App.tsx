@@ -11,6 +11,7 @@ import Reports from "@/pages/Reports";
 import ExpenseManagement from "@/pages/ExpenseManagement";
 import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
+import CashierManagement from "@/pages/CashierManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,14 @@ const App = () => (
             element={
               <AppLayout>
                 <OutletManagement />
+              </AppLayout>
+            }
+          />
+          <Route
+            path="/cashiers"
+            element={
+              <AppLayout>
+                <CashierManagement />
               </AppLayout>
             }
           />

@@ -13,6 +13,7 @@ import {
   X,
   ChevronsLeft,
   ChevronsRight,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ const navItems = [
   { title: "Expenses", path: "/expenses", icon: Receipt },
   { title: "Reports", path: "/reports", icon: FileBarChart },
   { title: "Outlets", path: "/outlets", icon: Store },
+  { title: "Cashiers", path: "/cashiers", icon: Users },
   { title: "Subscription", path: "/subscription", icon: CreditCard },
 ];
 
