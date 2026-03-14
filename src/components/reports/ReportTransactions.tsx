@@ -258,9 +258,16 @@ export default function ReportTransactions({ selectedOutlets, dateRange }: Repor
                       <td className="py-3">
                         <div className="space-y-0.5">
                           {txn.payments.map((p, i) => (
-                            <div key={i} className="flex items-center gap-1.5 text-xs">
+                            <div key={i} className="flex items-center gap-1.5 text-xs group/pay">
                               <span className="text-muted-foreground">{p.method}:</span>
                               <span className="font-medium">{p.amount}</span>
+                              <button
+                                className="opacity-0 group-hover/pay:opacity-100 transition-opacity text-muted-foreground hover:text-foreground ml-1"
+                                onClick={(e) => { e.stopPropagation(); openDetail(txn); }}
+                                title="Edit payment"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
                             </div>
                           ))}
                         </div>

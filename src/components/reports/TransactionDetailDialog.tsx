@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -36,7 +37,6 @@ import { toast } from "sonner";
 import {
   MoreHorizontal,
   Ban,
-  RefreshCw,
   CreditCard,
   Printer,
   Send,
@@ -46,14 +46,18 @@ import {
   XCircle,
   AlertTriangle,
   ShoppingBag,
+  Trash2,
+  Pencil,
 } from "lucide-react";
 import type { Transaction } from "@/components/TransactionsTable";
+
+const VOID_CODE = "1234"; // In production, this would be validated server-side
 
 const paymentStatusConfig: Record<string, { class: string; icon: React.ElementType }> = {
   Paid: { class: "bg-success/10 text-success border-success/20", icon: CheckCircle2 },
   Pending: { class: "bg-warning/10 text-warning border-warning/20", icon: Clock },
   Failed: { class: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
-  Refunded: { class: "bg-info/10 text-info border-info/20", icon: RefreshCw },
+  Refunded: { class: "bg-info/10 text-info border-info/20", icon: CreditCard },
 };
 
 const orderStatusConfig: Record<string, { class: string; icon: React.ElementType }> = {
@@ -79,8 +83,9 @@ export default function TransactionDetailDialog({
   onUpdate,
 }: TransactionDetailDialogProps) {
   const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
-  const [refundConfirmOpen, setRefundConfirmOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState(false);
+  const [voidCode, setVoidCode] = useState("");
+  const [voidCodeError, setVoidCodeError] = useState("");
+  const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
 
   if (!transaction) return null;
@@ -91,37 +96,41 @@ export default function TransactionDetailDialog({
   const OrderIcon = oStatus.icon;
 
   const canVoid = transaction.orderStatus !== "Cancelled" && transaction.paymentStatus !== "Refunded";
-  const canRefund = transaction.paymentStatus === "Paid";
-  const canUpdatePayment = transaction.paymentStatus === "Pending" || transaction.paymentStatus === "Failed";
 
   const handleVoid = () => {
+    if (voidCode !== VOID_CODE) {
+      setVoidCodeError("Invalid void code. Please try again.");
+      return;
+    }
     onUpdate({
       ...transaction,
       orderStatus: "Cancelled",
       paymentStatus: "Refunded",
     });
     setVoidConfirmOpen(false);
+    setVoidCode("");
+    setVoidCodeError("");
     toast.success(`Order ${transaction.orderId} has been voided`);
   };
 
-  const handleRefund = () => {
-    onUpdate({ ...transaction, paymentStatus: "Refunded" });
-    setRefundConfirmOpen(false);
-    toast.success(`Refund initiated for ${transaction.orderId}`);
+  const handleUpdatePaymentMethod = (index: number) => {
+    if (!newPaymentMethod) return;
+    const updatedPayments = [...transaction.payments];
+    updatedPayments[index] = { ...updatedPayments[index], method: newPaymentMethod };
+    onUpdate({ ...transaction, payments: updatedPayments });
+    setEditingPaymentIndex(null);
+    setNewPaymentMethod("");
+    toast.success("Payment method updated");
   };
 
-  const handleUpdatePayment = () => {
-    if (!newPaymentMethod) return;
-    const updated: Transaction = {
-      ...transaction,
-      payments: [{ method: newPaymentMethod, amount: transaction.amount }],
-      paymentStatus: "Paid",
-      orderStatus: transaction.orderStatus === "On Hold" ? "Processing" : transaction.orderStatus,
-    };
-    onUpdate(updated);
-    setEditingPayment(false);
-    setNewPaymentMethod("");
-    toast.success(`Payment method updated to ${newPaymentMethod}`);
+  const handleRemovePayment = (index: number) => {
+    if (transaction.payments.length <= 1) {
+      toast.error("Cannot remove the only payment method");
+      return;
+    }
+    const updatedPayments = transaction.payments.filter((_, i) => i !== index);
+    onUpdate({ ...transaction, payments: updatedPayments });
+    toast.success("Payment method removed");
   };
 
   const handleCopyId = () => {
@@ -161,16 +170,13 @@ export default function TransactionDetailDialog({
                   <DropdownMenuItem onClick={handleResend}>
                     <Send className="h-4 w-4 mr-2" /> Resend Receipt
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {canRefund && (
-                    <DropdownMenuItem onClick={() => setRefundConfirmOpen(true)} className="text-warning focus:text-warning">
-                      <RefreshCw className="h-4 w-4 mr-2" /> Issue Refund
-                    </DropdownMenuItem>
-                  )}
                   {canVoid && (
-                    <DropdownMenuItem onClick={() => setVoidConfirmOpen(true)} className="text-destructive focus:text-destructive">
-                      <Ban className="h-4 w-4 mr-2" /> Void Order
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setVoidConfirmOpen(true)} className="text-destructive focus:text-destructive">
+                        <Ban className="h-4 w-4 mr-2" /> Void Order
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -216,44 +222,56 @@ export default function TransactionDetailDialog({
 
             {/* Payment breakdown */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Payment Breakdown</p>
-                {canUpdatePayment && !editingPayment && (
-                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setEditingPayment(true)}>
-                    <CreditCard className="h-3 w-3" /> Update
-                  </Button>
-                )}
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Payment Breakdown</p>
+              <div className="space-y-1.5">
+                {transaction.payments.map((p, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm bg-muted/40 rounded-md px-3 py-2">
+                    {editingPaymentIndex === i ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod}>
+                          <SelectTrigger className="h-7 text-xs flex-1">
+                            <SelectValue placeholder="Select method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {paymentMethods.map((m) => (
+                              <SelectItem key={m} value={m}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" className="h-7 text-xs px-2" onClick={() => handleUpdatePaymentMethod(i)} disabled={!newPaymentMethod}>
+                          Save
+                        </Button>
+                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => { setEditingPaymentIndex(null); setNewPaymentMethod(""); }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">{p.method}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{p.amount}</span>
+                          <button
+                            onClick={() => { setEditingPaymentIndex(i); setNewPaymentMethod(p.method); }}
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                            title="Change payment method"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          {transaction.payments.length > 1 && (
+                            <button
+                              onClick={() => handleRemovePayment(i)}
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                              title="Remove payment method"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
-
-              {editingPayment ? (
-                <div className="flex items-center gap-2">
-                  <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod}>
-                    <SelectTrigger className="h-8 text-xs flex-1">
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentMethods.map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="sm" className="h-8 text-xs" onClick={handleUpdatePayment} disabled={!newPaymentMethod}>
-                    Save
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setEditingPayment(false); setNewPaymentMethod(""); }}>
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {transaction.payments.map((p, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm bg-muted/40 rounded-md px-3 py-2">
-                      <span className="text-muted-foreground">{p.method}</span>
-                      <span className="font-medium">{p.amount}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Order Items */}
@@ -303,51 +321,41 @@ export default function TransactionDetailDialog({
                   <Ban className="h-3.5 w-3.5" /> Void Order
                 </Button>
               )}
-              {canRefund && (
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => setRefundConfirmOpen(true)}>
-                  <RefreshCw className="h-3.5 w-3.5" /> Refund
-                </Button>
-              )}
-              {canUpdatePayment && (
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => setEditingPayment(true)}>
-                  <CreditCard className="h-3.5 w-3.5" /> Update Payment
-                </Button>
-              )}
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Void confirmation */}
-      <AlertDialog open={voidConfirmOpen} onOpenChange={setVoidConfirmOpen}>
+      {/* Void confirmation with code */}
+      <AlertDialog open={voidConfirmOpen} onOpenChange={(open) => { setVoidConfirmOpen(open); if (!open) { setVoidCode(""); setVoidCodeError(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Void Order {transaction.orderId}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will cancel the order and initiate a refund of {transaction.amount}. This action cannot be undone.
+              This will cancel the order and initiate a refund of {transaction.amount}. Enter the void authorization code to proceed.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="py-2">
+            <Input
+              type="password"
+              placeholder="Enter void code"
+              value={voidCode}
+              onChange={(e) => { setVoidCode(e.target.value); setVoidCodeError(""); }}
+              className={voidCodeError ? "border-destructive" : ""}
+            />
+            {voidCodeError && (
+              <p className="text-xs text-destructive mt-1.5">{voidCodeError}</p>
+            )}
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleVoid} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleVoid(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!voidCode}
+            >
               Void Order
             </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Refund confirmation */}
-      <AlertDialog open={refundConfirmOpen} onOpenChange={setRefundConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Refund {transaction.amount}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              A refund of {transaction.amount} will be initiated for order {transaction.orderId}. This may take 3-5 business days to process.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRefund}>Issue Refund</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
