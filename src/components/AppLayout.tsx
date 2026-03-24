@@ -65,10 +65,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Group items by section
   const grouped: { section: string; items: NavItem[] }[] = [];
-  let currentSection = "";
+  let currentSection: string | null = null;
   navItems.forEach((item) => {
     const section = item.section || "";
-    if (section !== currentSection) {
+    if (section !== currentSection || grouped.length === 0) {
       currentSection = section;
       grouped.push({ section, items: [item] });
     } else {
