@@ -162,8 +162,8 @@ export default function MenuManagement() {
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight">Menu Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage items, categories and pricing</p>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">Product Catalog</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage products, services, categories and pricing</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
