@@ -111,6 +111,12 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
           <Label className="text-xs">Price *</Label>
           <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={variant.price || ""} onChange={(e) => onChange({ ...variant, price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
         </div>
+        <div className="col-span-2 sm:col-span-3">
+          <Label className="text-xs">SKU / Barcode</Label>
+          <div className="mt-1">
+            <BarcodeScanner value={variant.sku} onChange={(val) => onChange({ ...variant, sku: val })} placeholder="Scan or enter barcode/SKU" />
+          </div>
+        </div>
         <div>
           <Label className="text-xs">Quantity</Label>
           <Input
