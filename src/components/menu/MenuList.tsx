@@ -18,9 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck } from "lucide-react";
+import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, ScanBarcode } from "lucide-react";
 import type { MenuItem } from "./MenuItemForm";
 import type { Outlet } from "@/data/outlets";
+import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 
 interface MenuListProps {
   items: MenuItem[];
