@@ -47,6 +47,15 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
   };
 
   const filtered = useMemo(() => {
+    if (searchMode === "barcode" && barcodeSearch.trim()) {
+      const bc = barcodeSearch.trim().toLowerCase();
+      return items.filter(
+        (item) =>
+          (!selectedSubcategory || item.subcategory === selectedSubcategory) &&
+          (item.sku.toLowerCase() === bc ||
+            item.variants.some((v) => v.sku.toLowerCase() === bc))
+      );
+    }
     const q = search.toLowerCase();
     return items.filter(
       (item) =>
@@ -54,9 +63,10 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
         (item.name.toLowerCase().includes(q) ||
           item.sku.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
-          item.subcategory.toLowerCase().includes(q))
+          item.subcategory.toLowerCase().includes(q) ||
+          item.variants.some((v) => v.sku.toLowerCase().includes(q)))
     );
-  }, [items, selectedSubcategory, search]);
+  }, [items, selectedSubcategory, search, barcodeSearch, searchMode]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const safePage = Math.min(currentPage, totalPages);
