@@ -36,6 +36,8 @@ interface MenuListProps {
 
 export default function MenuList({ items, selectedSubcategory, onEdit, onDelete, onClone, showOutlet = false, readOnly = false, outlets = [] }: MenuListProps) {
   const [search, setSearch] = useState("");
+  const [barcodeSearch, setBarcodeSearch] = useState("");
+  const [searchMode, setSearchMode] = useState<"text" | "barcode">("text");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
