@@ -36,7 +36,7 @@ interface NavItem {
 const coreNavItems: NavItem[] = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   // Sales & Catalog
-  { title: "Menu", path: "/menu", icon: UtensilsCrossed, section: "Sales" },
+  { title: "Catalog", path: "/menu", icon: UtensilsCrossed, section: "Sales" },
   
   { title: "Appointments", path: "/appointments", icon: CalendarClock, section: "Sales" },
   { title: "Omnichannel", path: "/omnichannel", icon: Globe, section: "Sales" },
