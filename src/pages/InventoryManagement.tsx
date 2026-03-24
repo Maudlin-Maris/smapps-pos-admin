@@ -114,16 +114,46 @@ type MenuItemOption = { id: string; name: string; variants: { id: string; name: 
 type Tab = "stock" | "categories" | "units" | "composite" | "adjustments";
 
 const sampleMenuItems: MenuItemOption[] = [
+  // Restaurant
   { id: "m1", name: "Cappuccino", variants: [{ id: "v1", name: "Regular" }, { id: "v2", name: "Small" }, { id: "v3", name: "Large" }] },
   { id: "m2", name: "Iced Latte", variants: [] },
   { id: "m3", name: "Croissant", variants: [] },
   { id: "m4", name: "Club Sandwich", variants: [] },
   { id: "m5", name: "Espresso", variants: [] },
-  { id: "m6", name: "Men's Haircut", variants: [] },
+  { id: "m20", name: "Chicken Wrap", variants: [] },
+  { id: "m21", name: "Orange Juice", variants: [] },
+  // Pharmacy
+  { id: "m22", name: "Paracetamol 500mg", variants: [] },
+  { id: "m23", name: "Vitamin C 1000mg", variants: [] },
+  { id: "m24", name: "Cough Syrup", variants: [] },
+  // Salon
+  { id: "m6", name: "Women's Haircut", variants: [] },
   { id: "m7", name: "Full Color", variants: [] },
   { id: "m8", name: "Blowout", variants: [] },
+  // Barber
+  { id: "m27", name: "Men's Haircut", variants: [{ id: "v4", name: "Regular Cut" }, { id: "v5", name: "Fade" }, { id: "v6", name: "Skin Fade + Beard" }] },
+  { id: "m28", name: "Hot Towel Shave", variants: [] },
+  // Grocery
   { id: "m9", name: "Organic Apples", variants: [] },
-  { id: "m10", name: "Trail Mix", variants: [] },
+  { id: "m29", name: "Tomatoes (1kg)", variants: [] },
+  { id: "m30", name: "Basmati Rice 5kg", variants: [] },
+  // Supermarket
+  { id: "m32", name: "Full Cream Milk 1L", variants: [] },
+  { id: "m33", name: "Cheddar Cheese 250g", variants: [] },
+  // Wine & Liquor
+  { id: "m36", name: "Cabernet Sauvignon Reserve", variants: [] },
+  { id: "m37", name: "Hennessy VS 750ml", variants: [] },
+  // Clothing
+  { id: "m39", name: "Classic T-Shirt", variants: [{ id: "v7", name: "S" }, { id: "v8", name: "M" }, { id: "v9", name: "L" }, { id: "v10", name: "XL" }] },
+  { id: "m40", name: "Slim Fit Jeans", variants: [{ id: "v11", name: "30" }, { id: "v12", name: "32" }, { id: "v13", name: "34" }] },
+  // Electronics
+  { id: "m42", name: "USB-C Cable 1m", variants: [] },
+  { id: "m43", name: "Wireless Earbuds Pro", variants: [{ id: "v17", name: "Black" }, { id: "v18", name: "White" }] },
+  { id: "m44", name: "Power Bank 10000mAh", variants: [] },
+  // Hair / Wig Store
+  { id: "m46", name: "Brazilian Body Wave", variants: [{ id: "v19", name: "14 inch" }, { id: "v20", name: "18 inch" }, { id: "v21", name: "22 inch" }] },
+  { id: "m47", name: "Lace Front Wig (Bob)", variants: [] },
+  { id: "m48", name: "4x4 Closure Straight", variants: [] },
 ];
 
 export default function InventoryManagement() {
