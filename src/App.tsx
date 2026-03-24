@@ -7,7 +7,7 @@ import { OutletProvider } from "@/contexts/OutletContext";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
-import ProductManagement from "@/pages/ProductManagement";
+
 import InventoryManagement from "@/pages/InventoryManagement";
 import AdvancedInventory from "@/pages/AdvancedInventory";
 import PurchaseOrders from "@/pages/PurchaseOrders";
@@ -34,7 +34,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
             <Route path="/menu" element={<AppLayout><MenuManagement /></AppLayout>} />
-            <Route path="/products" element={<AppLayout><ProductManagement /></AppLayout>} />
+            
             <Route path="/inventory" element={<AppLayout><InventoryManagement /></AppLayout>} />
             <Route path="/inventory/advanced" element={<AppLayout><AdvancedInventory /></AppLayout>} />
             <Route path="/purchase-orders" element={<AppLayout><PurchaseOrders /></AppLayout>} />

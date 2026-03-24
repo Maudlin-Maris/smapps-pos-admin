@@ -18,9 +18,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck } from "lucide-react";
+import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, ScanBarcode } from "lucide-react";
 import type { MenuItem } from "./MenuItemForm";
 import type { Outlet } from "@/data/outlets";
+import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 
 interface MenuListProps {
   items: MenuItem[];
@@ -35,6 +36,8 @@ interface MenuListProps {
 
 export default function MenuList({ items, selectedSubcategory, onEdit, onDelete, onClone, showOutlet = false, readOnly = false, outlets = [] }: MenuListProps) {
   const [search, setSearch] = useState("");
+  const [barcodeSearch, setBarcodeSearch] = useState("");
+  const [searchMode, setSearchMode] = useState<"text" | "barcode">("text");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -44,6 +47,15 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
   };
 
   const filtered = useMemo(() => {
+    if (searchMode === "barcode" && barcodeSearch.trim()) {
+      const bc = barcodeSearch.trim().toLowerCase();
+      return items.filter(
+        (item) =>
+          (!selectedSubcategory || item.subcategory === selectedSubcategory) &&
+          (item.sku.toLowerCase() === bc ||
+            item.variants.some((v) => v.sku.toLowerCase() === bc))
+      );
+    }
     const q = search.toLowerCase();
     return items.filter(
       (item) =>
@@ -51,9 +63,10 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
         (item.name.toLowerCase().includes(q) ||
           item.sku.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
-          item.subcategory.toLowerCase().includes(q))
+          item.subcategory.toLowerCase().includes(q) ||
+          item.variants.some((v) => v.sku.toLowerCase().includes(q)))
     );
-  }, [items, selectedSubcategory, search]);
+  }, [items, selectedSubcategory, search, barcodeSearch, searchMode]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const safePage = Math.min(currentPage, totalPages);
@@ -67,9 +80,35 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by name, SKU, category..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        <div className="flex items-center gap-2 flex-1">
+          <Button
+            variant={searchMode === "text" ? "default" : "outline"}
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => setSearchMode("text")}
+            title="Search by text"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={searchMode === "barcode" ? "default" : "outline"}
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => setSearchMode("barcode")}
+            title="Search by barcode"
+          >
+            <ScanBarcode className="h-4 w-4" />
+          </Button>
+          {searchMode === "text" ? (
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by name, SKU, category..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            </div>
+          ) : (
+            <div className="flex-1">
+              <BarcodeScanner value={barcodeSearch} onChange={setBarcodeSearch} placeholder="Scan or enter barcode/SKU..." />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground whitespace-nowrap">Rows</span>
