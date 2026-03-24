@@ -24,7 +24,15 @@ const defaultCategories: InventoryCategory[] = [
   { id: "1", name: "Beverages", description: "Drinks and beverage ingredients", itemCount: 3 },
   { id: "2", name: "Food Supplies", description: "Raw food and bakery ingredients", itemCount: 2 },
   { id: "3", name: "Packaging", description: "Cups, bags, and containers", itemCount: 2 },
-  { id: "4", name: "Salon Supplies", description: "Hair and beauty products", itemCount: 3 },
+  { id: "4", name: "Salon & Barber Supplies", description: "Hair and beauty products", itemCount: 3 },
+  { id: "5", name: "Pharmaceuticals", description: "Drugs, supplements, and medical supplies", itemCount: 0 },
+  { id: "6", name: "Fresh Produce", description: "Fruits, vegetables, and perishables", itemCount: 0 },
+  { id: "7", name: "Dairy & Frozen", description: "Milk, cheese, ice cream, frozen goods", itemCount: 0 },
+  { id: "8", name: "Wines & Spirits", description: "Alcoholic beverages and mixers", itemCount: 0 },
+  { id: "9", name: "Apparel", description: "Clothing, footwear, accessories", itemCount: 0 },
+  { id: "10", name: "Electronics & Gadgets", description: "Phones, accessories, devices", itemCount: 0 },
+  { id: "11", name: "Hair & Wigs", description: "Wigs, extensions, hair accessories", itemCount: 0 },
+  { id: "12", name: "Grocery Staples", description: "Rice, oil, canned goods, snacks", itemCount: 0 },
 ];
 
 interface Props {

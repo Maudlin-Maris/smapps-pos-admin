@@ -35,22 +35,72 @@ import StockAdjustmentHistory, {
 } from "@/components/inventory/StockAdjustmentHistory";
 
 const defaultItems: InventoryItem[] = [
+  // Restaurant (outlet-1, outlet-3)
   { id: "i1", name: "Coffee Beans (Arabica)", sku: "CB-001", categoryId: "1", unitId: "1", stock: 45, minStock: 20, costPrice: 12.5, status: "good", conversions: [{ id: "cv1", fromQuantity: 1, toQuantity: 50, toUnitId: "5" }], outletId: "outlet-1" },
   { id: "i2", name: "Whole Milk", sku: "ML-001", categoryId: "1", unitId: "3", stock: 12, minStock: 15, costPrice: 1.2, status: "low", conversions: [{ id: "cv2", fromQuantity: 1, toQuantity: 1000, toUnitId: "4" }], outletId: "outlet-1" },
   { id: "i3", name: "Sugar", sku: "SG-001", categoryId: "2", unitId: "1", stock: 30, minStock: 10, costPrice: 0.8, status: "good", conversions: [{ id: "cv3", fromQuantity: 1, toQuantity: 1000, toUnitId: "2" }], outletId: "outlet-1" },
-  { id: "i4", name: "Paper Cups (12oz)", sku: "PC-012", categoryId: "3", unitId: "5", stock: 150, minStock: 200, costPrice: 0.05, status: "low", conversions: [], outletId: "outlet-2" },
-  { id: "i5", name: "Croissant Dough", sku: "CD-001", categoryId: "2", unitId: "1", stock: 8, minStock: 5, costPrice: 3.0, status: "good", conversions: [{ id: "cv4", fromQuantity: 1, toQuantity: 10, toUnitId: "5" }], outletId: "outlet-2" },
-  { id: "i6", name: "Shampoo (Professional)", sku: "SH-001", categoryId: "4", unitId: "7", stock: 3, minStock: 5, costPrice: 8.0, status: "critical", conversions: [], outletId: "outlet-3" },
-  { id: "i7", name: "Hair Color Mix", sku: "HC-001", categoryId: "4", unitId: "8", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-3" },
-  { id: "i8", name: "Disposable Gloves", sku: "DG-001", categoryId: "4", unitId: "6", stock: 2, minStock: 5, costPrice: 4.0, status: "critical", conversions: [], outletId: "outlet-3" },
-  { id: "i9", name: "Sandwich Bread", sku: "SB-001", categoryId: "2", unitId: "9", stock: 24, minStock: 10, costPrice: 1.5, status: "good", conversions: [], outletId: "outlet-4" },
-  { id: "i10", name: "Napkins", sku: "NP-001", categoryId: "3", unitId: "5", stock: 500, minStock: 200, costPrice: 0.01, status: "good", conversions: [], outletId: "outlet-4" },
+  { id: "i4", name: "Paper Cups (12oz)", sku: "PC-012", categoryId: "3", unitId: "5", stock: 150, minStock: 200, costPrice: 0.05, status: "low", conversions: [], outletId: "outlet-3" },
+  { id: "i5", name: "Croissant Dough", sku: "CD-001", categoryId: "2", unitId: "1", stock: 8, minStock: 5, costPrice: 3.0, status: "good", conversions: [{ id: "cv4", fromQuantity: 1, toQuantity: 10, toUnitId: "5" }], outletId: "outlet-3" },
+  // Retail (outlet-2)
+  { id: "i9", name: "Sandwich Bread", sku: "SB-001", categoryId: "2", unitId: "9", stock: 24, minStock: 10, costPrice: 1.5, status: "good", conversions: [], outletId: "outlet-2" },
+  { id: "i10", name: "Napkins", sku: "NP-001", categoryId: "3", unitId: "5", stock: 500, minStock: 200, costPrice: 0.01, status: "good", conversions: [], outletId: "outlet-2" },
+  // Pharmacy (outlet-4)
+  { id: "i11", name: "Paracetamol 500mg", sku: "PH-001", categoryId: "5", unitId: "10", stock: 200, minStock: 50, costPrice: 0.15, status: "good", conversions: [{ id: "cv5", fromQuantity: 1, toQuantity: 12, toUnitId: "16" }], outletId: "outlet-4" },
+  { id: "i12", name: "Amoxicillin 250mg", sku: "PH-002", categoryId: "5", unitId: "10", stock: 80, minStock: 30, costPrice: 0.45, status: "good", conversions: [], outletId: "outlet-4" },
+  { id: "i13", name: "Vitamin C 1000mg", sku: "PH-003", categoryId: "5", unitId: "7", stock: 15, minStock: 20, costPrice: 3.5, status: "low", conversions: [], outletId: "outlet-4" },
+  { id: "i14", name: "Cough Syrup", sku: "PH-004", categoryId: "5", unitId: "7", stock: 40, minStock: 15, costPrice: 2.8, status: "good", conversions: [], outletId: "outlet-4" },
+  { id: "i15", name: "First Aid Bandages", sku: "PH-005", categoryId: "5", unitId: "6", stock: 5, minStock: 10, costPrice: 4.0, status: "critical", conversions: [], outletId: "outlet-4" },
+  // Salon (outlet-5)
+  { id: "i6", name: "Shampoo (Professional)", sku: "SH-001", categoryId: "4", unitId: "7", stock: 3, minStock: 5, costPrice: 8.0, status: "critical", conversions: [], outletId: "outlet-5" },
+  { id: "i7", name: "Hair Color Mix", sku: "HC-001", categoryId: "4", unitId: "8", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-5" },
+  { id: "i8", name: "Disposable Gloves", sku: "DG-001", categoryId: "4", unitId: "6", stock: 2, minStock: 5, costPrice: 4.0, status: "critical", conversions: [], outletId: "outlet-5" },
+  { id: "i16", name: "Conditioner (Deep)", sku: "SL-002", categoryId: "4", unitId: "7", stock: 10, minStock: 5, costPrice: 9.0, status: "good", conversions: [], outletId: "outlet-5" },
+  { id: "i17", name: "Hair Clips (Assorted)", sku: "SL-003", categoryId: "4", unitId: "10", stock: 50, minStock: 20, costPrice: 0.3, status: "good", conversions: [], outletId: "outlet-5" },
+  // Barber (outlet-6)
+  { id: "i18", name: "Clipper Oil", sku: "BR-001", categoryId: "4", unitId: "7", stock: 6, minStock: 3, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-6" },
+  { id: "i19", name: "Aftershave Lotion", sku: "BR-002", categoryId: "4", unitId: "7", stock: 8, minStock: 5, costPrice: 6.0, status: "good", conversions: [], outletId: "outlet-6" },
+  { id: "i20", name: "Razor Blades", sku: "BR-003", categoryId: "4", unitId: "10", stock: 10, minStock: 20, costPrice: 0.8, status: "low", conversions: [], outletId: "outlet-6" },
+  { id: "i21", name: "Shaving Cream", sku: "BR-004", categoryId: "4", unitId: "8", stock: 12, minStock: 5, costPrice: 3.0, status: "good", conversions: [], outletId: "outlet-6" },
+  // Grocery (outlet-7)
+  { id: "i22", name: "Tomatoes (Fresh)", sku: "GR-001", categoryId: "6", unitId: "1", stock: 60, minStock: 20, costPrice: 1.2, status: "good", conversions: [], outletId: "outlet-7" },
+  { id: "i23", name: "Onions", sku: "GR-002", categoryId: "6", unitId: "1", stock: 40, minStock: 15, costPrice: 0.8, status: "good", conversions: [], outletId: "outlet-7" },
+  { id: "i24", name: "Palm Oil", sku: "GR-003", categoryId: "12", unitId: "3", stock: 25, minStock: 10, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-7" },
+  { id: "i25", name: "Basmati Rice 5kg", sku: "GR-004", categoryId: "12", unitId: "5", stock: 8, minStock: 15, costPrice: 8.0, status: "low", conversions: [], outletId: "outlet-7" },
+  { id: "i26", name: "Instant Noodles (Carton)", sku: "GR-005", categoryId: "12", unitId: "11", stock: 14, minStock: 5, costPrice: 12.0, status: "good", conversions: [{ id: "cv6", fromQuantity: 1, toQuantity: 40, toUnitId: "5" }], outletId: "outlet-7" },
+  // Supermarket (outlet-8)
+  { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8" },
+  { id: "i28", name: "Cheddar Cheese Block", sku: "SM-002", categoryId: "7", unitId: "5", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-8" },
+  { id: "i29", name: "Frozen Chicken Wings 1kg", sku: "SM-003", categoryId: "7", unitId: "10", stock: 12, minStock: 20, costPrice: 6.0, status: "low", conversions: [], outletId: "outlet-8" },
+  { id: "i30", name: "Toilet Tissue (Pack 12)", sku: "SM-004", categoryId: "3", unitId: "10", stock: 45, minStock: 15, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-8" },
+  { id: "i31", name: "Detergent 2kg", sku: "SM-005", categoryId: "3", unitId: "5", stock: 22, minStock: 10, costPrice: 3.2, status: "good", conversions: [], outletId: "outlet-8" },
+  // Wine & Liquor (outlet-9)
+  { id: "i32", name: "Cabernet Sauvignon Reserve", sku: "WN-001", categoryId: "8", unitId: "7", stock: 24, minStock: 10, costPrice: 15.0, status: "good", conversions: [], outletId: "outlet-9" },
+  { id: "i33", name: "Hennessy VS 750ml", sku: "WN-002", categoryId: "8", unitId: "7", stock: 8, minStock: 5, costPrice: 35.0, status: "good", conversions: [], outletId: "outlet-9" },
+  { id: "i34", name: "Prosecco Brut", sku: "WN-003", categoryId: "8", unitId: "7", stock: 3, minStock: 6, costPrice: 12.0, status: "critical", conversions: [], outletId: "outlet-9" },
+  { id: "i35", name: "Tonic Water (Pack 6)", sku: "WN-004", categoryId: "8", unitId: "10", stock: 20, minStock: 10, costPrice: 4.0, status: "good", conversions: [], outletId: "outlet-9" },
+  // Clothing (outlet-10)
+  { id: "i36", name: "Cotton T-Shirt Blank (White)", sku: "CL-001", categoryId: "9", unitId: "5", stock: 120, minStock: 30, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-10" },
+  { id: "i37", name: "Denim Jeans (Unisex)", sku: "CL-002", categoryId: "9", unitId: "5", stock: 45, minStock: 15, costPrice: 12.0, status: "good", conversions: [], outletId: "outlet-10" },
+  { id: "i38", name: "Sneakers (Running)", sku: "CL-003", categoryId: "9", unitId: "12", stock: 8, minStock: 10, costPrice: 25.0, status: "low", conversions: [], outletId: "outlet-10" },
+  { id: "i39", name: "Leather Belt", sku: "CL-004", categoryId: "9", unitId: "5", stock: 30, minStock: 10, costPrice: 6.0, status: "good", conversions: [], outletId: "outlet-10" },
+  // Electronics (outlet-11)
+  { id: "i40", name: "USB-C Charging Cable", sku: "EL-001", categoryId: "10", unitId: "5", stock: 200, minStock: 50, costPrice: 1.5, status: "good", conversions: [], outletId: "outlet-11" },
+  { id: "i41", name: "Wireless Earbuds", sku: "EL-002", categoryId: "10", unitId: "5", stock: 35, minStock: 15, costPrice: 18.0, status: "good", conversions: [], outletId: "outlet-11" },
+  { id: "i42", name: "Phone Screen Protector", sku: "EL-003", categoryId: "10", unitId: "10", stock: 80, minStock: 30, costPrice: 0.8, status: "good", conversions: [], outletId: "outlet-11" },
+  { id: "i43", name: "Power Bank 10000mAh", sku: "EL-004", categoryId: "10", unitId: "5", stock: 4, minStock: 10, costPrice: 12.0, status: "critical", conversions: [], outletId: "outlet-11" },
+  { id: "i44", name: "Bluetooth Speaker", sku: "EL-005", categoryId: "10", unitId: "5", stock: 15, minStock: 8, costPrice: 22.0, status: "good", conversions: [], outletId: "outlet-11" },
+  // Hair / Wig Store (outlet-12)
+  { id: "i45", name: "Brazilian Body Wave 18\"", sku: "HW-001", categoryId: "11", unitId: "5", stock: 20, minStock: 8, costPrice: 45.0, status: "good", conversions: [], outletId: "outlet-12" },
+  { id: "i46", name: "Lace Front Wig (Bob)", sku: "HW-002", categoryId: "11", unitId: "5", stock: 6, minStock: 5, costPrice: 65.0, status: "good", conversions: [], outletId: "outlet-12" },
+  { id: "i47", name: "Closure 4x4 Straight", sku: "HW-003", categoryId: "11", unitId: "5", stock: 12, minStock: 5, costPrice: 30.0, status: "good", conversions: [], outletId: "outlet-12" },
+  { id: "i48", name: "Wig Cap (Mesh)", sku: "HW-004", categoryId: "11", unitId: "10", stock: 3, minStock: 10, costPrice: 1.0, status: "critical", conversions: [], outletId: "outlet-12" },
+  { id: "i49", name: "Edge Control Gel", sku: "HW-005", categoryId: "11", unitId: "5", stock: 25, minStock: 10, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-12" },
 ];
 
 const defaultComposites: CompositeItem[] = [
   { id: "c1", name: "Cappuccino", menuItemId: "m1", menuVariantId: "v1", description: "Classic cappuccino", components: [{ inventoryItemId: "i1", quantity: 0.02, role: "primary" }, { inventoryItemId: "i2", quantity: 0.15, role: "secondary" }, { inventoryItemId: "i4", quantity: 1, role: "secondary" }], outletId: "outlet-1" },
-  { id: "c2", name: "Club Sandwich", menuItemId: "m4", description: "Triple-decker sandwich", components: [{ inventoryItemId: "i9", quantity: 2, role: "primary" }, { inventoryItemId: "i3", quantity: 0.005, role: "secondary" }], outletId: "outlet-2" },
-  { id: "c3", name: "Hair Coloring Service", menuItemId: "m7", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1, role: "primary" }, { inventoryItemId: "i8", quantity: 1, role: "secondary" }, { inventoryItemId: "i6", quantity: 0.03, role: "secondary" }], outletId: "outlet-3" },
+  { id: "c2", name: "Club Sandwich", menuItemId: "m4", description: "Triple-decker sandwich", components: [{ inventoryItemId: "i9", quantity: 2, role: "primary" }, { inventoryItemId: "i3", quantity: 0.005, role: "secondary" }], outletId: "outlet-3" },
+  { id: "c3", name: "Hair Coloring Service", menuItemId: "m7", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1, role: "primary" }, { inventoryItemId: "i8", quantity: 1, role: "secondary" }, { inventoryItemId: "i6", quantity: 0.03, role: "secondary" }], outletId: "outlet-5" },
 ];
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
@@ -64,16 +114,46 @@ type MenuItemOption = { id: string; name: string; variants: { id: string; name: 
 type Tab = "stock" | "categories" | "units" | "composite" | "adjustments";
 
 const sampleMenuItems: MenuItemOption[] = [
+  // Restaurant
   { id: "m1", name: "Cappuccino", variants: [{ id: "v1", name: "Regular" }, { id: "v2", name: "Small" }, { id: "v3", name: "Large" }] },
   { id: "m2", name: "Iced Latte", variants: [] },
   { id: "m3", name: "Croissant", variants: [] },
   { id: "m4", name: "Club Sandwich", variants: [] },
   { id: "m5", name: "Espresso", variants: [] },
-  { id: "m6", name: "Men's Haircut", variants: [] },
+  { id: "m20", name: "Chicken Wrap", variants: [] },
+  { id: "m21", name: "Orange Juice", variants: [] },
+  // Pharmacy
+  { id: "m22", name: "Paracetamol 500mg", variants: [] },
+  { id: "m23", name: "Vitamin C 1000mg", variants: [] },
+  { id: "m24", name: "Cough Syrup", variants: [] },
+  // Salon
+  { id: "m6", name: "Women's Haircut", variants: [] },
   { id: "m7", name: "Full Color", variants: [] },
   { id: "m8", name: "Blowout", variants: [] },
+  // Barber
+  { id: "m27", name: "Men's Haircut", variants: [{ id: "v4", name: "Regular Cut" }, { id: "v5", name: "Fade" }, { id: "v6", name: "Skin Fade + Beard" }] },
+  { id: "m28", name: "Hot Towel Shave", variants: [] },
+  // Grocery
   { id: "m9", name: "Organic Apples", variants: [] },
-  { id: "m10", name: "Trail Mix", variants: [] },
+  { id: "m29", name: "Tomatoes (1kg)", variants: [] },
+  { id: "m30", name: "Basmati Rice 5kg", variants: [] },
+  // Supermarket
+  { id: "m32", name: "Full Cream Milk 1L", variants: [] },
+  { id: "m33", name: "Cheddar Cheese 250g", variants: [] },
+  // Wine & Liquor
+  { id: "m36", name: "Cabernet Sauvignon Reserve", variants: [] },
+  { id: "m37", name: "Hennessy VS 750ml", variants: [] },
+  // Clothing
+  { id: "m39", name: "Classic T-Shirt", variants: [{ id: "v7", name: "S" }, { id: "v8", name: "M" }, { id: "v9", name: "L" }, { id: "v10", name: "XL" }] },
+  { id: "m40", name: "Slim Fit Jeans", variants: [{ id: "v11", name: "30" }, { id: "v12", name: "32" }, { id: "v13", name: "34" }] },
+  // Electronics
+  { id: "m42", name: "USB-C Cable 1m", variants: [] },
+  { id: "m43", name: "Wireless Earbuds Pro", variants: [{ id: "v17", name: "Black" }, { id: "v18", name: "White" }] },
+  { id: "m44", name: "Power Bank 10000mAh", variants: [] },
+  // Hair / Wig Store
+  { id: "m46", name: "Brazilian Body Wave", variants: [{ id: "v19", name: "14 inch" }, { id: "v20", name: "18 inch" }, { id: "v21", name: "22 inch" }] },
+  { id: "m47", name: "Lace Front Wig (Bob)", variants: [] },
+  { id: "m48", name: "4x4 Closure Straight", variants: [] },
 ];
 
 export default function InventoryManagement() {

@@ -28,6 +28,13 @@ const defaultUnits: MeasuringUnit[] = [
   { id: "7", name: "Bottle", abbreviation: "btl" },
   { id: "8", name: "Tube", abbreviation: "tube" },
   { id: "9", name: "Loaf", abbreviation: "loaf" },
+  { id: "10", name: "Pack", abbreviation: "pk" },
+  { id: "11", name: "Carton", abbreviation: "ctn" },
+  { id: "12", name: "Pair", abbreviation: "pr" },
+  { id: "13", name: "Roll", abbreviation: "roll" },
+  { id: "14", name: "Sachet", abbreviation: "sct" },
+  { id: "15", name: "Tablet", abbreviation: "tab" },
+  { id: "16", name: "Strip", abbreviation: "strip" },
 ];
 
 interface Props {
