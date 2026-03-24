@@ -25,6 +25,7 @@ import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck } from "lucide-r
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
+import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 
 export interface MenuVariant {
   id: string;
