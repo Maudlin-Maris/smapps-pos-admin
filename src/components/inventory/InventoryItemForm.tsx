@@ -324,6 +324,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               <label className="text-sm font-medium">Barcode / SKU</label>
               <BarcodeScanner value={form.sku} onChange={(val) => setForm({ ...form, sku: val })} placeholder="Scan barcode or enter SKU" />
             </div>
+            <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Category *</label>
                 <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
