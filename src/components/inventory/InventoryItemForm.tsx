@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, ArrowRightLeft } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, ArrowRightLeft, ScanBarcode } from "lucide-react";
+import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryCategory } from "./InventoryCategoryManager";
@@ -318,6 +319,10 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <div className="space-y-2">
               <label className="text-sm font-medium">Item Name *</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Barcode / SKU</label>
+              <BarcodeScanner value={form.sku} onChange={(val) => setForm({ ...form, sku: val })} placeholder="Scan barcode or enter SKU" />
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">

@@ -22,12 +22,7 @@ interface OutletData {
   formData?: Partial<OutletFormData>;
 }
 
-const businessTypeLabels: Record<string, string> = {
-  restaurant: "Restaurant/Bar/Lounge",
-  retail: "Retail",
-  pharmacy: "Pharmacy",
-  service: "Service",
-};
+import { getBusinessType } from "@/data/businessTypes";
 
 const initialOutlets: OutletData[] = [
   { id: 1, name: "Downtown Flagship", address: "123 Main Street, Downtown", phone: "+1 (555) 123-4567", currency: "NGN", businessType: "restaurant", status: "open", staff: 8 },
@@ -181,7 +176,7 @@ export default function OutletManagement() {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Store className="h-3.5 w-3.5 shrink-0" />
-                <span>{businessTypeLabels[outlet.businessType] || outlet.businessType}</span>
+                <span>{getBusinessType(outlet.businessType).label}</span>
               </div>
             </div>
 
