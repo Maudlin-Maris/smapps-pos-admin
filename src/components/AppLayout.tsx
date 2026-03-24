@@ -14,13 +14,24 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Users,
+  CalendarClock,
+  ShoppingCart,
+  type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavItem {
+  title: string;
+  path: string;
+  icon: LucideIcon;
+}
+
+const coreNavItems: NavItem[] = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   { title: "Menu", path: "/menu", icon: UtensilsCrossed },
+  { title: "Products", path: "/products", icon: ShoppingCart },
+  { title: "Appointments", path: "/appointments", icon: CalendarClock },
   { title: "Inventory", path: "/inventory", icon: Package },
   { title: "Expenses", path: "/expenses", icon: Receipt },
   { title: "Reports", path: "/reports", icon: FileBarChart },
@@ -33,6 +44,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+
+  // Show all nav items - the pages themselves handle business type context
+  const navItems = coreNavItems;
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -147,7 +161,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-border bg-card py-2 lg:hidden">
-        {navItems.map((item) => {
+        {navItems.slice(0, 7).map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <RouterNavLink
