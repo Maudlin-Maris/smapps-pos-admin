@@ -9,6 +9,11 @@ import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
 import ProductManagement from "@/pages/ProductManagement";
 import InventoryManagement from "@/pages/InventoryManagement";
+import AdvancedInventory from "@/pages/AdvancedInventory";
+import PurchaseOrders from "@/pages/PurchaseOrders";
+import CustomerManagement from "@/pages/CustomerManagement";
+import EcommerceDashboard from "@/pages/EcommerceDashboard";
+import AdvancedReports from "@/pages/AdvancedReports";
 import Reports from "@/pages/Reports";
 import ExpenseManagement from "@/pages/ExpenseManagement";
 import OutletManagement from "@/pages/OutletManagement";
@@ -31,6 +36,11 @@ const App = () => (
             <Route path="/menu" element={<AppLayout><MenuManagement /></AppLayout>} />
             <Route path="/products" element={<AppLayout><ProductManagement /></AppLayout>} />
             <Route path="/inventory" element={<AppLayout><InventoryManagement /></AppLayout>} />
+            <Route path="/inventory/advanced" element={<AppLayout><AdvancedInventory /></AppLayout>} />
+            <Route path="/purchase-orders" element={<AppLayout><PurchaseOrders /></AppLayout>} />
+            <Route path="/customers" element={<AppLayout><CustomerManagement /></AppLayout>} />
+            <Route path="/omnichannel" element={<AppLayout><EcommerceDashboard /></AppLayout>} />
+            <Route path="/insights" element={<AppLayout><AdvancedReports /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><Reports /></AppLayout>} />
             <Route path="/expenses" element={<AppLayout><ExpenseManagement /></AppLayout>} />
             <Route path="/outlets" element={<AppLayout><OutletManagement /></AppLayout>} />

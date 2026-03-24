@@ -16,6 +16,11 @@ import {
   Users,
   CalendarClock,
   ShoppingCart,
+  Truck,
+  ArrowLeftRight,
+  Heart,
+  Globe,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -25,19 +30,30 @@ interface NavItem {
   title: string;
   path: string;
   icon: LucideIcon;
+  section?: string;
 }
 
 const coreNavItems: NavItem[] = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
-  { title: "Menu", path: "/menu", icon: UtensilsCrossed },
-  { title: "Products", path: "/products", icon: ShoppingCart },
-  { title: "Appointments", path: "/appointments", icon: CalendarClock },
-  { title: "Inventory", path: "/inventory", icon: Package },
-  { title: "Expenses", path: "/expenses", icon: Receipt },
-  { title: "Reports", path: "/reports", icon: FileBarChart },
-  { title: "Outlets", path: "/outlets", icon: Store },
-  { title: "Cashiers", path: "/cashiers", icon: Users },
-  { title: "Subscription", path: "/subscription", icon: CreditCard },
+  // Sales & Catalog
+  { title: "Menu", path: "/menu", icon: UtensilsCrossed, section: "Sales" },
+  { title: "Products", path: "/products", icon: ShoppingCart, section: "Sales" },
+  { title: "Appointments", path: "/appointments", icon: CalendarClock, section: "Sales" },
+  { title: "Omnichannel", path: "/omnichannel", icon: Globe, section: "Sales" },
+  // Inventory & Supply
+  { title: "Inventory", path: "/inventory", icon: Package, section: "Inventory" },
+  { title: "Advanced Inventory", path: "/inventory/advanced", icon: ArrowLeftRight, section: "Inventory" },
+  { title: "Purchase Orders", path: "/purchase-orders", icon: Truck, section: "Inventory" },
+  // Customers
+  { title: "Customers & Loyalty", path: "/customers", icon: Heart, section: "Customers" },
+  // Finance & Reports
+  { title: "Expenses", path: "/expenses", icon: Receipt, section: "Finance" },
+  { title: "Reports", path: "/reports", icon: FileBarChart, section: "Finance" },
+  { title: "Advanced Insights", path: "/insights", icon: BarChart3, section: "Finance" },
+  // Settings
+  { title: "Outlets", path: "/outlets", icon: Store, section: "Settings" },
+  { title: "Cashiers", path: "/cashiers", icon: Users, section: "Settings" },
+  { title: "Subscription", path: "/subscription", icon: CreditCard, section: "Settings" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -45,8 +61,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
-  // Show all nav items - the pages themselves handle business type context
   const navItems = coreNavItems;
+
+  // Group items by section
+  const grouped: { section: string; items: NavItem[] }[] = [];
+  let currentSection = "";
+  navItems.forEach((item) => {
+    const section = item.section || "";
+    if (section !== currentSection) {
+      currentSection = section;
+      grouped.push({ section, items: [item] });
+    } else {
+      grouped[grouped.length - 1].items.push(item);
+    }
+  });
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -82,28 +110,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 p-2">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <RouterNavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                title={collapsed ? item.title : undefined}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-0",
-                  isActive
-                    ? "bg-pos-sidebar-accent text-pos-sidebar-fg-active"
-                    : "text-pos-sidebar-fg hover:bg-pos-sidebar-accent/60 hover:text-pos-sidebar-fg-active"
-                )}
-              >
-                <item.icon className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span>{item.title}</span>}
-              </RouterNavLink>
-            );
-          })}
+        <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
+          {grouped.map((group, gi) => (
+            <div key={gi}>
+              {group.section && !collapsed && (
+                <p className="px-3 pt-4 pb-1 text-[10px] uppercase tracking-wider text-pos-sidebar-fg/50 font-semibold">
+                  {group.section}
+                </p>
+              )}
+              {collapsed && group.section && <div className="my-2 mx-2 border-t border-pos-sidebar-border" />}
+              {group.items.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <RouterNavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setSidebarOpen(false)}
+                    title={collapsed ? item.title : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      collapsed && "justify-center px-0",
+                      isActive
+                        ? "bg-pos-sidebar-accent text-pos-sidebar-fg-active"
+                        : "text-pos-sidebar-fg hover:bg-pos-sidebar-accent/60 hover:text-pos-sidebar-fg-active"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {!collapsed && <span className="truncate">{item.title}</span>}
+                  </RouterNavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Collapse toggle (desktop only) */}
@@ -161,7 +199,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around border-t border-border bg-card py-2 lg:hidden">
-        {navItems.slice(0, 7).map((item) => {
+        {[coreNavItems[0], ...coreNavItems.filter((i) => ["Products", "Inventory", "Reports", "Customers & Loyalty", "Outlets"].includes(i.title))].slice(0, 6).map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <RouterNavLink
@@ -173,7 +211,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span>{item.title}</span>
+              <span className="truncate max-w-[60px]">{item.title.split(" ")[0]}</span>
             </RouterNavLink>
           );
         })}
