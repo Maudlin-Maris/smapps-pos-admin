@@ -7,7 +7,6 @@ import { OutletProvider } from "@/contexts/OutletContext";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
-
 import InventoryManagement from "@/pages/InventoryManagement";
 import AdvancedInventory from "@/pages/AdvancedInventory";
 import PurchaseOrders from "@/pages/PurchaseOrders";
