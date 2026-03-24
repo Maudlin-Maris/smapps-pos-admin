@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Upload, Building2, Wallet, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { businessTypeList } from "@/data/businessTypes";
 
 export interface OutletFormData {
   name: string;
