@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +18,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, ScanBarcode } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer } from "lucide-react";
+import { toast } from "sonner";
 import type { MenuItem } from "./MenuItemForm";
 import type { Outlet } from "@/data/outlets";
-import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 
 interface MenuListProps {
   items: MenuItem[];
@@ -36,10 +42,77 @@ interface MenuListProps {
 
 export default function MenuList({ items, selectedSubcategory, onEdit, onDelete, onClone, showOutlet = false, readOnly = false, outlets = [] }: MenuListProps) {
   const [search, setSearch] = useState("");
-  const [barcodeSearch, setBarcodeSearch] = useState("");
-  const [searchMode, setSearchMode] = useState<"text" | "barcode">("text");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
+  const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set());
+  const scannerRef = useRef<HTMLDivElement>(null);
+  const html5QrCodeRef = useRef<any>(null);
+
+  // External barcode scanner listener
+  const bufferRef = useRef("");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (document.activeElement && document.activeElement !== inputRef.current &&
+        (document.activeElement as HTMLElement).tagName === "INPUT") return;
+    if (e.key === "Enter" && bufferRef.current.length >= 4) {
+      setSearch(bufferRef.current);
+      bufferRef.current = "";
+      toast.success("Barcode scanned!");
+      e.preventDefault();
+      return;
+    }
+    if (e.key.length === 1) {
+      bufferRef.current += e.key;
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => { bufferRef.current = ""; }, 100);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Camera scanner
+  useEffect(() => {
+    if (!cameraOpen || !scannerRef.current) return;
+    let scanner: any = null;
+    const initScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        scanner = new Html5Qrcode("menu-barcode-reader");
+        html5QrCodeRef.current = scanner;
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 150 } },
+          (decodedText: string) => {
+            setSearch(decodedText);
+            toast.success("Barcode scanned!");
+            scanner.stop().catch(() => {});
+            setCameraOpen(false);
+          },
+          () => {}
+        );
+      } catch {
+        toast.error("Camera access denied or not available");
+        setCameraOpen(false);
+      }
+    };
+    const timer = setTimeout(initScanner, 300);
+    return () => {
+      clearTimeout(timer);
+      if (scanner) scanner.stop().catch(() => {});
+    };
+  }, [cameraOpen]);
+
+  const stopCamera = () => {
+    if (html5QrCodeRef.current) html5QrCodeRef.current.stop().catch(() => {});
+    setCameraOpen(false);
+  };
 
   const getOutletName = (outletId?: string) => {
     if (!outletId) return "—";
@@ -47,15 +120,6 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
   };
 
   const filtered = useMemo(() => {
-    if (searchMode === "barcode" && barcodeSearch.trim()) {
-      const bc = barcodeSearch.trim().toLowerCase();
-      return items.filter(
-        (item) =>
-          (!selectedSubcategory || item.subcategory === selectedSubcategory) &&
-          (item.sku.toLowerCase() === bc ||
-            item.variants.some((v) => v.sku.toLowerCase() === bc))
-      );
-    }
     const q = search.toLowerCase();
     return items.filter(
       (item) =>
@@ -66,7 +130,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
           item.subcategory.toLowerCase().includes(q) ||
           item.variants.some((v) => v.sku.toLowerCase().includes(q)))
     );
-  }, [items, selectedSubcategory, search, barcodeSearch, searchMode]);
+  }, [items, selectedSubcategory, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const safePage = Math.min(currentPage, totalPages);
@@ -77,40 +141,115 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
 
   const colCount = 8 + (showOutlet ? 1 : 0) + (readOnly ? 0 : 1);
 
+  // Print helpers
+  const togglePrintSelect = (id: string) => {
+    setSelectedForPrint((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedForPrint.size === items.length) {
+      setSelectedForPrint(new Set());
+    } else {
+      setSelectedForPrint(new Set(items.map((i) => i.id)));
+    }
+  };
+
+  const printableItems = items.filter((i) => selectedForPrint.has(i.id));
+
+  const handlePrint = () => {
+    const labels: { name: string; variant: string; sku: string; price: string }[] = [];
+    printableItems.forEach((item) => {
+      if (item.variants.length > 0) {
+        item.variants.forEach((v) => {
+          if (v.sku) labels.push({ name: item.name, variant: v.name, sku: v.sku, price: `$${v.price.toFixed(2)}` });
+        });
+      } else if (item.sku) {
+        labels.push({ name: item.name, variant: "", sku: item.sku, price: `$${item.price.toFixed(2)}` });
+      }
+    });
+
+    if (labels.length === 0) {
+      toast.error("No items with SKU/barcode to print");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) { toast.error("Pop-up blocked"); return; }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html><head><title>Barcode Labels</title>
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; padding: 8mm; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+        .label {
+          border: 1px solid #ccc; border-radius: 4px; padding: 3mm;
+          text-align: center; page-break-inside: avoid; min-height: 25mm;
+          display: flex; flex-direction: column; justify-content: center; gap: 1mm;
+        }
+        .label .name { font-size: 9pt; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .label .variant { font-size: 7pt; color: #666; }
+        .label .barcode { font-size: 14pt; letter-spacing: 2px; font-family: 'Libre Barcode 39', 'Courier New', monospace; }
+        .label .sku-text { font-size: 7pt; color: #333; }
+        .label .price { font-size: 10pt; font-weight: bold; }
+        @media print { body { padding: 0; } .no-print { display: none; } }
+      </style>
+      <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet">
+      </head><body>
+      <div class="no-print" style="margin-bottom:8mm;text-align:center">
+        <button onclick="window.print()" style="padding:8px 24px;font-size:14px;cursor:pointer">Print Labels</button>
+        <span style="margin-left:12px;font-size:13px;color:#666">${labels.length} label(s)</span>
+      </div>
+      <div class="grid">
+        ${labels.map((l) => `
+          <div class="label">
+            <div class="name">${l.name}</div>
+            ${l.variant ? `<div class="variant">${l.variant}</div>` : ""}
+            <div class="barcode">*${l.sku}*</div>
+            <div class="sku-text">${l.sku}</div>
+            <div class="price">${l.price}</div>
+          </div>
+        `).join("")}
+      </div>
+      </body></html>
+    `);
+    printWindow.document.close();
+    setPrintOpen(false);
+    toast.success(`${labels.length} barcode label(s) ready to print`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-        <div className="flex items-center gap-2 flex-1">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            placeholder="Search by name, SKU, category, or scan barcode..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-10"
+          />
           <Button
-            variant={searchMode === "text" ? "default" : "outline"}
+            type="button"
+            variant="ghost"
             size="icon"
-            className="h-9 w-9 shrink-0"
-            onClick={() => setSearchMode("text")}
-            title="Search by text"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+            onClick={() => setCameraOpen(true)}
+            title="Scan with camera"
           >
-            <Search className="h-4 w-4" />
+            <Camera className="h-4 w-4 text-muted-foreground" />
           </Button>
-          <Button
-            variant={searchMode === "barcode" ? "default" : "outline"}
-            size="icon"
-            className="h-9 w-9 shrink-0"
-            onClick={() => setSearchMode("barcode")}
-            title="Search by barcode"
-          >
-            <ScanBarcode className="h-4 w-4" />
-          </Button>
-          {searchMode === "text" ? (
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search by name, SKU, category..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-            </div>
-          ) : (
-            <div className="flex-1">
-              <BarcodeScanner value={barcodeSearch} onChange={setBarcodeSearch} placeholder="Scan or enter barcode/SKU..." />
-            </div>
-          )}
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setSelectedForPrint(new Set(items.map((i) => i.id))); setPrintOpen(true); }}>
+            <Printer className="h-4 w-4" /> Print Barcodes
+          </Button>
           <span className="text-xs text-muted-foreground whitespace-nowrap">Rows</span>
           <Select value={String(rowsPerPage)} onValueChange={(v) => setRowsPerPage(Number(v))}>
             <SelectTrigger className="w-[70px] h-9"><SelectValue /></SelectTrigger>
@@ -207,7 +346,6 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                   ));
                 }
 
-                // No variants - single row
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
@@ -304,6 +442,70 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
           </div>
         </div>
       </Card>
+
+      {/* Camera Scanner Dialog */}
+      <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-accent" />
+              Scan Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div id="menu-barcode-reader" ref={scannerRef} className="w-full min-h-[250px] rounded-lg overflow-hidden bg-muted" />
+            <p className="text-sm text-muted-foreground text-center">Point your camera at the barcode</p>
+            <Button variant="outline" className="w-full" onClick={stopCamera}>Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Print Dialog */}
+      <Dialog open={printOpen} onOpenChange={setPrintOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Printer className="h-5 w-5 text-primary" />
+              Print Barcode Labels
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Button variant="outline" size="sm" onClick={toggleSelectAll}>
+                {selectedForPrint.size === items.length ? "Deselect All" : "Select All"}
+              </Button>
+              <span className="text-sm text-muted-foreground">{selectedForPrint.size} item(s) selected</span>
+            </div>
+            <div className="space-y-1 max-h-[40vh] overflow-y-auto border border-border rounded-lg p-2">
+              {items.map((item) => {
+                const skuCount = item.variants.length > 0
+                  ? item.variants.filter((v) => v.sku).length
+                  : item.sku ? 1 : 0;
+                return (
+                  <label key={item.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedForPrint.has(item.id)}
+                      onChange={() => togglePrintSelect(item.id)}
+                      className="rounded border-input"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.variants.length > 0 ? `${item.variants.length} variant(s)` : "No variants"} · {skuCount} barcode(s)
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <Button className="w-full" onClick={handlePrint} disabled={selectedForPrint.size === 0}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print {selectedForPrint.size > 0 ? `${selectedForPrint.size} Item(s)` : "Labels"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
