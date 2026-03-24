@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, ArrowRightLeft } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, ArrowRightLeft, ScanBarcode } from "lucide-react";
+import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryCategory } from "./InventoryCategoryManager";
