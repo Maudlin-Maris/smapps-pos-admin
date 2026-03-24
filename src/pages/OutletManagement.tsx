@@ -176,7 +176,7 @@ export default function OutletManagement() {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Store className="h-3.5 w-3.5 shrink-0" />
-                <span>{businessTypeLabels[outlet.businessType] || outlet.businessType}</span>
+                <span>{getBusinessType(outlet.businessType).label}</span>
               </div>
             </div>
 

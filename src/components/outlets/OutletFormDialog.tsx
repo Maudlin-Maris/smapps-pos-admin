@@ -138,10 +138,9 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
               <Select value={form.businessType} onValueChange={(v) => update("businessType", v)}>
                 <SelectTrigger><SelectValue placeholder="Choose" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="restaurant">Restaurant/Bar/Lounge</SelectItem>
-                  <SelectItem value="retail">Retail</SelectItem>
-                  <SelectItem value="pharmacy">Pharmacy</SelectItem>
-                  <SelectItem value="service">Service</SelectItem>
+                  {businessTypeList.map((bt) => (
+                    <SelectItem key={bt.id} value={bt.id}>{bt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
