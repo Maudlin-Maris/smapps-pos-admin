@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, LogOut, Delete, LogIn, Users } from "lucide-react";
