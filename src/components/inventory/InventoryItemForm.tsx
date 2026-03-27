@@ -63,6 +63,8 @@ interface Props {
 
 type FormState = Omit<InventoryItem, "id" | "status">;
 
+const BATCH_EXPIRY_BUSINESS_TYPES = ["pharmacy", "grocery", "supermarket"];
+
 const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
   sku: "",
@@ -73,6 +75,8 @@ const emptyForm = (outletId: string = ""): FormState => ({
   costPrice: 0,
   conversions: [],
   outletId,
+  batchNumber: "",
+  expiryDate: "",
 });
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
