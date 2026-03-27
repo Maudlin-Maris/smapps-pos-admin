@@ -90,8 +90,12 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Quantity must be greater than 0");
       return;
     }
-    if ((isAddType || isReturnType) && batchCostPrice <= 0) {
+    if (isAddType && batchCostPrice <= 0) {
       toast.error("Please enter the cost per unit for this batch");
+      return;
+    }
+    if (!reason.trim()) {
+      toast.error("Please provide a reason for this adjustment");
       return;
     }
     if (isBatchTracked && isReturnType && returnBatchId === "new" && !expiryDate) {
@@ -125,9 +129,9 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       type,
       quantity,
       reason,
-      (isAddType || isReturnType) ? batchCostPrice : undefined,
-      isBatchTracked && (isAddType || isReturnType) ? (finalBatchNumber || new Date().toISOString().slice(0, 16).replace("T", " ")) : undefined,
-      isBatchTracked && (isAddType || isReturnType) ? finalExpiryDate : undefined
+      isAddType ? batchCostPrice : undefined,
+      isBatchTracked && isAddType ? (finalBatchNumber || new Date().toISOString().slice(0, 16).replace("T", " ")) : (isBatchTracked && isReturnType ? finalBatchNumber : undefined),
+      isBatchTracked && isAddType ? finalExpiryDate : (isBatchTracked && isReturnType ? finalExpiryDate : undefined)
     );
     setType("add");
     setQuantity(0);
@@ -238,7 +242,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               />
             </div>
             
-          {(isAddType || isReturnType) && (
+          {isAddType && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cost per unit (₦)</label>
                 <Input
@@ -253,7 +257,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
           </div>
 
           {/* Batch info for new stock additions or new-batch returns */}
-          {isBatchTracked && (isAddType || (isReturnType && returnBatchId === "new")) && (
+          {isBatchTracked && isAddType && (
             <div className="border-t pt-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Expiry Date</label>
@@ -267,7 +271,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Reason</label>
+            <label className="text-sm font-medium">Reason <span className="text-destructive">*</span></label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
