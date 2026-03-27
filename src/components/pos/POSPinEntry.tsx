@@ -64,6 +64,12 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)] p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
+            <div className="text-5xl font-light text-white tracking-wide mb-1">
+              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="text-sm text-[hsl(210,3%,50%)] mb-6">
+              {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
             <img src={logoLight} alt="Smapps" className="h-6 mx-auto mb-6 opacity-60" />
             <h2 className="text-xl font-bold text-white">Switch User</h2>
             <p className="text-[hsl(210,3%,60%)] text-sm mt-1">Select a profile or sign in as someone else</p>
