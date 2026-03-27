@@ -77,8 +77,8 @@ const defaultItems: InventoryItem[] = [
   { id: "i21", name: "Shaving Cream", sku: "BR-004", categoryId: "4", unitId: "8", stock: 12, minStock: 5, costPrice: 3.0, status: "good", conversions: [], outletId: "outlet-6" },
   // Grocery (outlet-7)
   { id: "i22", name: "Tomatoes (Fresh)", sku: "GR-001", categoryId: "6", unitId: "1", stock: 60, minStock: 20, costPrice: 1.2, status: "good", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b22a", batchNumber: "GR-TM-001", expiryDate: "2026-04-05", quantity: 25, initialQuantity: 30, costPrice: 1.2, createdAt: "2026-03-01T07:00:00Z" },
-    { id: "b22b", batchNumber: "GR-TM-002", expiryDate: "2026-04-20", quantity: 35, initialQuantity: 35, costPrice: 1.15, createdAt: "2026-03-15T08:00:00Z" },
+    { id: "b22a", batchNumber: "2026-03-01 07:00", expiryDate: "2026-04-05", quantity: 25, initialQuantity: 30, costPrice: 1.2, createdAt: "2026-03-01T07:00:00Z" },
+    { id: "b22b", batchNumber: "2026-03-15 08:00", expiryDate: "2026-04-20", quantity: 35, initialQuantity: 35, costPrice: 1.15, createdAt: "2026-03-15T08:00:00Z" },
   ] },
   { id: "i23", name: "Onions", sku: "GR-002", categoryId: "6", unitId: "1", stock: 40, minStock: 15, costPrice: 0.8, status: "good", conversions: [], outletId: "outlet-7" },
   { id: "i24", name: "Palm Oil", sku: "GR-003", categoryId: "12", unitId: "3", stock: 25, minStock: 10, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-7", batches: [
