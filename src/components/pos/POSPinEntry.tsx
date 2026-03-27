@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
-import { Lock, ArrowLeft, LogOut, Delete } from "lucide-react";
+import { ArrowLeft, LogOut, Delete, LogIn, Users } from "lucide-react";
 import logoLight from "@/assets/logo-light.png";
 
 interface POSPinEntryProps {
@@ -9,15 +9,22 @@ interface POSPinEntryProps {
 }
 
 export default function POSPinEntry({ mode }: POSPinEntryProps) {
-  const { currentCashier, loginWithPin, logout, switchProfile } = usePOS();
+  const { currentCashier, signedInCashiers, loginWithPin, logout, selectCashier } = usePOS();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
+  const [showUserList, setShowUserList] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     containerRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    setPin("");
+    setError(false);
+    setShowUserList(false);
+  }, [currentCashier?.id]);
 
   const handleDigit = (digit: string) => {
     if (pin.length >= 4) return;
@@ -42,7 +49,67 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
     setError(false);
   };
 
+  const otherCashiers = signedInCashiers.filter(c => c.id !== currentCashier?.id);
   const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
+
+  if (showUserList) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)] p-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <img src={logoLight} alt="Smapps" className="h-6 mx-auto mb-6 opacity-60" />
+            <h2 className="text-xl font-bold text-white">Switch User</h2>
+            <p className="text-[hsl(210,3%,60%)] text-sm mt-1">Select a profile or sign in as someone else</p>
+          </div>
+
+          <div className="space-y-2 mb-6">
+            {signedInCashiers.map(cashier => (
+              <button
+                key={cashier.id}
+                onClick={() => { selectCashier(cashier); setShowUserList(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                  cashier.id === currentCashier?.id
+                    ? "bg-[hsl(var(--accent))]/15 border-[hsl(var(--accent))]/40 text-white"
+                    : "bg-[hsl(233,37%,14%)]/60 border-[hsl(233,30%,24%)] text-[hsl(210,3%,75%)] hover:bg-[hsl(233,37%,20%)]"
+                }`}
+              >
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold shrink-0 ${
+                  cashier.id === currentCashier?.id
+                    ? "bg-[hsl(var(--accent))]/20 text-[hsl(var(--accent))]"
+                    : "bg-[hsl(233,30%,24%)] text-[hsl(210,3%,75%)]"
+                }`}>
+                  {cashier.name.charAt(0)}
+                </div>
+                <div className="text-left flex-1">
+                  <div className="font-medium text-sm">{cashier.name}</div>
+                  <div className="text-xs text-[hsl(210,3%,50%)] capitalize">{cashier.role}</div>
+                </div>
+                {cashier.id === currentCashier?.id && (
+                  <span className="text-[10px] font-medium text-[hsl(var(--accent))] bg-[hsl(var(--accent))]/10 px-2 py-0.5 rounded-full">Current</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="border-t border-[hsl(233,30%,24%)] pt-4 space-y-2">
+            <Button
+              variant="ghost"
+              onClick={logout}
+              className="w-full justify-start text-[hsl(210,3%,75%)] hover:text-white hover:bg-[hsl(233,37%,20%)] h-12"
+            >
+              <LogIn className="w-4 h-4 mr-3" /> Sign in as someone else
+            </Button>
+          </div>
+
+          <div className="flex justify-center mt-6">
+            <Button variant="ghost" onClick={() => setShowUserList(false)} className="text-[hsl(210,3%,60%)] hover:text-white hover:bg-[hsl(233,37%,20%)]">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)] p-4"
@@ -102,8 +169,8 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
         <div className="flex justify-center gap-4">
           {mode === "locked" ? (
             <>
-              <Button variant="ghost" onClick={switchProfile} className="text-[hsl(210,3%,60%)] hover:text-white hover:bg-[hsl(233,37%,20%)]">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Switch User
+              <Button variant="ghost" onClick={() => setShowUserList(true)} className="text-[hsl(210,3%,60%)] hover:text-white hover:bg-[hsl(233,37%,20%)]">
+                <Users className="w-4 h-4 mr-2" /> Switch User
               </Button>
               <Button variant="ghost" onClick={logout} className="text-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10">
                 <LogOut className="w-4 h-4 mr-2" /> Sign Out
