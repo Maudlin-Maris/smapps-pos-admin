@@ -93,9 +93,18 @@ const defaultItems: InventoryItem[] = [
     { id: "b26b", batchNumber: "GR-B-2026-30", expiryDate: "2027-01-10", quantity: 8 },
   ] },
   // Supermarket (outlet-8)
-  { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12" },
-  { id: "i28", name: "Cheddar Cheese Block", sku: "SM-002", categoryId: "7", unitId: "5", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-8", batchNumber: "SM-2026-A2", expiryDate: "2026-06-30" },
-  { id: "i29", name: "Frozen Chicken Wings 1kg", sku: "SM-003", categoryId: "7", unitId: "10", stock: 12, minStock: 20, costPrice: 6.0, status: "low", conversions: [], outletId: "outlet-8", batchNumber: "SM-2026-B1", expiryDate: "2026-08-15" },
+  { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8", batches: [
+    { id: "b27a", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12", quantity: 10 },
+    { id: "b27b", batchNumber: "SM-2026-C3", expiryDate: "2026-05-25", quantity: 20 },
+  ] },
+  { id: "i28", name: "Cheddar Cheese Block", sku: "SM-002", categoryId: "7", unitId: "5", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-8", batches: [
+    { id: "b28a", batchNumber: "SM-2026-A2", expiryDate: "2026-04-30", quantity: 8 },
+    { id: "b28b", batchNumber: "SM-2026-D1", expiryDate: "2026-06-30", quantity: 10 },
+  ] },
+  { id: "i29", name: "Frozen Chicken Wings 1kg", sku: "SM-003", categoryId: "7", unitId: "10", stock: 12, minStock: 20, costPrice: 6.0, status: "low", conversions: [], outletId: "outlet-8", batches: [
+    { id: "b29a", batchNumber: "SM-2026-B1", expiryDate: "2026-05-15", quantity: 4 },
+    { id: "b29b", batchNumber: "SM-2026-B5", expiryDate: "2026-08-15", quantity: 8 },
+  ] },
   { id: "i30", name: "Toilet Tissue (Pack 12)", sku: "SM-004", categoryId: "3", unitId: "10", stock: 45, minStock: 15, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-8" },
   { id: "i31", name: "Detergent 2kg", sku: "SM-005", categoryId: "3", unitId: "5", stock: 22, minStock: 10, costPrice: 3.2, status: "good", conversions: [], outletId: "outlet-8" },
   // Wine & Liquor (outlet-9)
