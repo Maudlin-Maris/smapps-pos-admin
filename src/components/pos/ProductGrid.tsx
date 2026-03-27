@@ -100,7 +100,7 @@ export default function ProductGrid() {
 
       {/* Categories */}
       <div className="border-b border-border">
-        <ScrollArea className="w-full" orientation="horizontal">
+        <div className="w-full overflow-x-auto">
           <div className="flex gap-1.5 p-2 pb-2">
             <button
               onClick={() => { setSelectedCategory(null); setSelectedSubcategory(null); }}
