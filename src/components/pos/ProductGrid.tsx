@@ -148,7 +148,7 @@ export default function ProductGrid() {
                 </button>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
 
