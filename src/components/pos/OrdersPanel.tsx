@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { formatNaira } from "@/lib/currency";
 import type { POSOrder, OrderStatus } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
