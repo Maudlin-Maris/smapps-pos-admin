@@ -27,6 +27,7 @@ interface POSContextType {
   addToCart: (item: Omit<POSCartItem, "id">) => void;
   removeFromCart: (itemId: string) => void;
   updateCartItemQuantity: (itemId: string, quantity: number) => void;
+  updateCartItem: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number }[], unitPrice: number) => void;
   clearCart: () => void;
   cartTotal: number;
 
@@ -126,6 +127,14 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setCart([]), []);
 
+  const updateCartItem = useCallback((itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number }[], unitPrice: number) => {
+    setCart(prev => prev.map(i => {
+      if (i.id !== itemId) return i;
+      const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
+      return { ...i, variantId, variantName, extras, unitPrice, totalPrice: (unitPrice + extrasTotal) * i.quantity };
+    }));
+  }, []);
+
   const cartTotal = cart.reduce((sum, i) => sum + i.totalPrice, 0);
 
   const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean) => {
@@ -198,7 +207,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
     <POSContext.Provider value={{
       authState, currentCashier, loginWithCredentials, loginWithPin, lockScreen, switchProfile, logout,
       currentOutlet, setCurrentOutlet, availableOutlets,
-      cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart, cartTotal,
+      cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
       orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder,
       orderType, setOrderType,
     }}>
