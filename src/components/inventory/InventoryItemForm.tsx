@@ -39,6 +39,8 @@ export interface ItemBatch {
   batchNumber: string;
   expiryDate: string;
   quantity: number;
+  costPrice?: number;
+  createdAt?: string;
 }
 
 export interface InventoryItem {
