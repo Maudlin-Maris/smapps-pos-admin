@@ -82,7 +82,7 @@ const defaultItems: InventoryItem[] = [
   ] },
   { id: "i23", name: "Onions", sku: "GR-002", categoryId: "6", unitId: "1", stock: 40, minStock: 15, costPrice: 0.8, status: "good", conversions: [], outletId: "outlet-7" },
   { id: "i24", name: "Palm Oil", sku: "GR-003", categoryId: "12", unitId: "3", stock: 25, minStock: 10, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b24a", batchNumber: "GR-B-2026-03", expiryDate: "2027-03-20", quantity: 25, initialQuantity: 25, costPrice: 3.5, createdAt: "2026-03-01T09:00:00Z" },
+    { id: "b24a", batchNumber: "2026-03-01 09:00", expiryDate: "2027-03-20", quantity: 25, initialQuantity: 25, costPrice: 3.5, createdAt: "2026-03-01T09:00:00Z" },
   ] },
   { id: "i25", name: "Basmati Rice 5kg", sku: "GR-004", categoryId: "12", unitId: "5", stock: 8, minStock: 15, costPrice: 8.0, status: "low", conversions: [], outletId: "outlet-7", batches: [
     { id: "b25a", batchNumber: "GR-B-2025-88", expiryDate: "2026-05-15", quantity: 3, initialQuantity: 10, costPrice: 7.8, createdAt: "2025-03-29T10:00:00Z" },
