@@ -299,6 +299,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               ))}
             </SelectContent>
           </Select>
+          {showBatchExpiry && (
+            <Select value={filterExpiry} onValueChange={setFilterExpiry}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Expiry Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Expiry Status</SelectItem>
+                <SelectItem value="expired">Has Expired Units</SelectItem>
+                <SelectItem value="expiring_soon">Expiring Soon (90d)</SelectItem>
+                <SelectItem value="valid">All Valid</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
         {!readOnly && (
           <Button size="sm" onClick={openNew} className="w-fit">

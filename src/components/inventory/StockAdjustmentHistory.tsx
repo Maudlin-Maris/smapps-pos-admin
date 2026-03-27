@@ -252,7 +252,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               />
             </div>
             
-            {isAddType && (
+          {(isAddType || isReturnType) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cost per unit (₦)</label>
                 <Input
