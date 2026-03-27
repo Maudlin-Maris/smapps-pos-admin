@@ -122,11 +122,11 @@ export default function ProductGrid() {
               </button>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Subcategories */}
         {currentCategory?.subcategories && (
-          <ScrollArea className="w-full" orientation="horizontal">
+          <div className="w-full overflow-x-auto">
             <div className="flex gap-1.5 px-2 pb-2">
               <button
                 onClick={() => setSelectedSubcategory(null)}
