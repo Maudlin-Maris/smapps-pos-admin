@@ -26,7 +26,8 @@ type Step = "type" | "discount" | "payment" | "split" | "complete";
 export default function PaymentDialog({ open, onClose, existingOrderId }: Props) {
   const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
   const [step, setStep] = useState<Step>("type");
-  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>("walk_in");
+  const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
+  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -49,7 +50,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
-  const allowedOrderTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
+  const allowedOrderTypes = allowedTypes;
   const outletLocations = currentOutlet ? posLocations.filter(l => l.outletId === currentOutlet.id) : [];
   const showLocationPicker = features?.hasDineIn && selectedOrderType === "dine_in";
 
