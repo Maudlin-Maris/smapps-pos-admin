@@ -50,10 +50,8 @@ export interface StockAdjustment {
 const adjustmentTypeLabels: Record<AdjustmentType, string> = {
   add: "Stock Added",
   remove: "Stock Removed",
-  set: "Stock Set",
   damaged: "Damaged",
   returned: "Returned",
-  correction: "Correction",
 };
 
 interface AdjustDialogProps {
