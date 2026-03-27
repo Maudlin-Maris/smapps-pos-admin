@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, User, Store, ChevronDown,
+  ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
   Menu as MenuIcon
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,7 +24,7 @@ type POSTab = "catalog" | "orders" | "kitchen";
 export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
-    lockScreen, logout, switchProfile, cart, cartTotal
+    lockScreen, logout, cart, cartTotal
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -96,9 +96,6 @@ export default function POSMain() {
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={lockScreen} title="Lock Screen">
             <Lock className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={switchProfile} title="Switch User">
-            <User className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={logout} title="Sign Out">
             <LogOut className="w-4 h-4" />

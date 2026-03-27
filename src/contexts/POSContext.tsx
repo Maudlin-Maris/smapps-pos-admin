@@ -11,8 +11,10 @@ interface POSContextType {
   // Auth
   authState: AuthState;
   currentCashier: POSCashier | null;
+  signedInCashiers: POSCashier[];
   loginWithCredentials: (username: string, password: string) => boolean;
   loginWithPin: (pin: string) => boolean;
+  selectCashier: (cashier: POSCashier) => void;
   lockScreen: () => void;
   switchProfile: () => void;
   logout: () => void;
@@ -50,6 +52,7 @@ const POSContext = createContext<POSContextType | null>(null);
 export function POSProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>("login");
   const [currentCashier, setCurrentCashier] = useState<POSCashier | null>(null);
+  const [signedInCashiers, setSignedInCashiers] = useState<POSCashier[]>([]);
   const [currentOutlet, setCurrentOutlet] = useState<POSOutlet | null>(null);
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [orders, setOrders] = useState<POSOrder[]>(mockOrders);
@@ -60,6 +63,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
     const cashier = posCashiers.find(c => c.username.toLowerCase() === username.toLowerCase());
     if (cashier) {
       setCurrentCashier(cashier);
+      setSignedInCashiers(prev => prev.some(c => c.id === cashier.id) ? prev : [...prev, cashier]);
       setAuthState("pin");
       return true;
     }
@@ -78,17 +82,24 @@ export function POSProvider({ children }: { children: ReactNode }) {
     return false;
   }, [currentCashier, currentOutlet]);
 
+  const selectCashier = useCallback((cashier: POSCashier) => {
+    setCurrentCashier(cashier);
+    setAuthState("locked");
+    setCart([]);
+  }, []);
+
   const lockScreen = useCallback(() => setAuthState("locked"), []);
   const switchProfile = useCallback(() => {
     setAuthState("pin");
     setCart([]);
   }, []);
   const logout = useCallback(() => {
+    setSignedInCashiers(prev => prev.filter(c => c.id !== currentCashier?.id));
     setAuthState("login");
     setCurrentCashier(null);
     setCurrentOutlet(null);
     setCart([]);
-  }, []);
+  }, [currentCashier]);
 
   const availableOutlets = currentCashier
     ? posOutlets.filter(o => currentCashier.assignedOutlets.includes(o.id))
@@ -208,7 +219,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   return (
     <POSContext.Provider value={{
-      authState, currentCashier, loginWithCredentials, loginWithPin, lockScreen, switchProfile, logout,
+      authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentOutlet, setCurrentOutlet, availableOutlets,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
       orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder,
