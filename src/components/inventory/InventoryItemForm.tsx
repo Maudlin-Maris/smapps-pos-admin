@@ -70,6 +70,7 @@ interface Props {
   readOnly?: boolean;
   selectedOutletId?: string;
   filterLowStock?: boolean;
+  filterExpiryStatus?: "expired" | "expiring";
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
