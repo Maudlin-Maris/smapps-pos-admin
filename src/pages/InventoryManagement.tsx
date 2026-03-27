@@ -303,7 +303,7 @@ export default function InventoryManagement() {
       }
     }
 
-    const quantityChange = type === "set" ? Math.abs(newStock - previousStock) : quantity;
+    const quantityChange = quantity;
     
     const recordedCostPrice = (type === "add" || type === "returned") && batchCostPrice ? batchCostPrice : item.costPrice;
     const costTotal = quantityChange * recordedCostPrice;

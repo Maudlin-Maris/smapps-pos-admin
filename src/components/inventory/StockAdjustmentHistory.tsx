@@ -141,9 +141,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   };
 
   const previewStock = item
-    ? type === "set"
-      ? quantity
-      : (isAddType || isReturnType)
+    ? (isAddType || isReturnType)
         ? item.stock + quantity
         : item.stock - quantity
     : 0;
