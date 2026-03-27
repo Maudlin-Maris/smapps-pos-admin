@@ -36,6 +36,7 @@ export default function ProductGrid() {
       addToCart({
         productId: product.id,
         productName: product.name,
+        categoryId: product.categoryId,
         extras: [],
         quantity: 1,
         unitPrice: product.price,
