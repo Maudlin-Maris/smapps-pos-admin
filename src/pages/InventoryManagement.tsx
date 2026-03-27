@@ -255,6 +255,7 @@ export default function InventoryManagement() {
             batchNumber,
             expiryDate: expiryDate || "",
             quantity,
+            initialQuantity: quantity,
             costPrice: batchCostPrice,
             createdAt: new Date().toISOString(),
           });
