@@ -51,8 +51,8 @@ const defaultItems: InventoryItem[] = [
     { id: "b11c", batchNumber: "2026-02-14 14:00", expiryDate: "2028-01-10", quantity: 50, initialQuantity: 50, costPrice: 0.16, createdAt: "2026-02-14T14:00:00Z" },
   ] },
   { id: "i12", name: "Amoxicillin 250mg", sku: "PH-002", categoryId: "5", unitId: "10", stock: 80, minStock: 30, costPrice: 0.45, status: "good", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b12a", batchNumber: "BT-2025-180", expiryDate: "2026-05-01", quantity: 30, initialQuantity: 50, costPrice: 0.45, createdAt: "2025-06-30T08:00:00Z" },
-    { id: "b12b", batchNumber: "BT-2026-002", expiryDate: "2026-12-01", quantity: 50, initialQuantity: 50, costPrice: 0.44, createdAt: "2026-01-10T11:00:00Z" },
+    { id: "b12a", batchNumber: "2025-06-30 08:00", expiryDate: "2026-05-01", quantity: 30, initialQuantity: 50, costPrice: 0.45, createdAt: "2025-06-30T08:00:00Z" },
+    { id: "b12b", batchNumber: "2026-01-10 11:00", expiryDate: "2026-12-01", quantity: 50, initialQuantity: 50, costPrice: 0.44, createdAt: "2026-01-10T11:00:00Z" },
   ] },
   { id: "i13", name: "Vitamin C 1000mg", sku: "PH-003", categoryId: "5", unitId: "7", stock: 15, minStock: 20, costPrice: 3.5, status: "low", conversions: [], outletId: "outlet-4", batches: [
     { id: "b13a", batchNumber: "BT-2025-118", expiryDate: "2026-04-10", quantity: 5, initialQuantity: 20, costPrice: 3.5, createdAt: "2025-04-28T09:00:00Z" },
