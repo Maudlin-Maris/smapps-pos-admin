@@ -255,22 +255,28 @@ export default function InventoryManagement() {
             batchNumber,
             expiryDate: expiryDate || "",
             quantity,
+            costPrice: batchCostPrice,
+            createdAt: new Date().toISOString(),
           });
         }
-      } else if (type === "add" && batchNumber && expiryDate && updatedBatches) {
+      } else if (type === "add" && batchNumber && updatedBatches) {
         // Add stock always creates a new batch
         updatedBatches.push({
           id: crypto.randomUUID(),
           batchNumber,
-          expiryDate,
+          expiryDate: expiryDate || "",
           quantity,
+          costPrice: batchCostPrice,
+          createdAt: new Date().toISOString(),
         });
-      } else if (batchNumber && expiryDate && !updatedBatches) {
+      } else if (batchNumber && !updatedBatches) {
         updatedBatches = [{
           id: crypto.randomUUID(),
           batchNumber,
-          expiryDate,
+          expiryDate: expiryDate || "",
           quantity,
+          costPrice: batchCostPrice,
+          createdAt: new Date().toISOString(),
         }];
       }
     } else {

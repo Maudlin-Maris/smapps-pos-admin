@@ -39,6 +39,8 @@ export interface ItemBatch {
   batchNumber: string;
   expiryDate: string;
   quantity: number;
+  costPrice?: number;
+  createdAt?: string;
 }
 
 export interface InventoryItem {
@@ -461,20 +463,30 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                         isExpiringSoon ? "bg-warning/5 border border-warning/20" :
                         "bg-muted/50"
                       )}>
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium">{batch.batchNumber || "No batch #"}</span>
-                          {batch.expiryDate && (
-                            <span className={cn(
-                              "flex items-center gap-1",
-                              isExpired && "text-destructive",
-                              isExpiringSoon && "text-warning"
-                            )}>
-                              <Calendar className="h-3 w-3" />
-                              {isExpired ? "Expired" : "Exp"}: {batch.expiryDate}
-                            </span>
-                          )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium">{batch.batchNumber || "No batch #"}</span>
+                            {batch.expiryDate && (
+                              <span className={cn(
+                                "flex items-center gap-1",
+                                isExpired && "text-destructive",
+                                isExpiringSoon && "text-warning"
+                              )}>
+                                <Calendar className="h-3 w-3" />
+                                {isExpired ? "Expired" : "Exp"}: {batch.expiryDate}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 text-muted-foreground">
+                            {batch.costPrice !== undefined && (
+                              <span>Cost: ₦{batch.costPrice.toFixed(2)}/unit</span>
+                            )}
+                            {batch.createdAt && (
+                              <span>Added: {new Date(batch.createdAt).toLocaleDateString()} {new Date(batch.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            )}
+                          </div>
                         </div>
-                        <span className="font-heading font-bold">
+                        <span className="font-heading font-bold shrink-0">
                           {batch.quantity} <span className="font-normal text-muted-foreground">{unit?.abbreviation || ""}</span>
                         </span>
                       </div>

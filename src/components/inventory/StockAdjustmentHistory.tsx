@@ -92,16 +92,8 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Quantity must be greater than 0");
       return;
     }
-    if (!reason.trim()) {
-      toast.error("Please provide a reason for the adjustment");
-      return;
-    }
     if ((isAddType || isReturnType) && batchCostPrice <= 0) {
       toast.error("Please enter the cost per unit for this batch");
-      return;
-    }
-    if (isBatchTracked && isAddType && !expiryDate) {
-      toast.error("Please enter an expiry date for this batch");
       return;
     }
     if (isBatchTracked && isReturnType && returnBatchId === "new" && !expiryDate) {
@@ -278,7 +270,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Expiry Date *</label>
+                <label className="text-sm font-medium">Expiry Date</label>
                 <Input
                   type="date"
                   value={expiryDate}
@@ -289,7 +281,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Reason *</label>
+            <label className="text-sm font-medium">Reason</label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
