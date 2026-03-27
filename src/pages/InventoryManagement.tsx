@@ -102,8 +102,8 @@ const defaultItems: InventoryItem[] = [
     { id: "b28b", batchNumber: "2026-03-10 10:00", expiryDate: "2026-06-30", quantity: 10, initialQuantity: 10, costPrice: 5.6, createdAt: "2026-03-10T10:00:00Z" },
   ] },
   { id: "i29", name: "Frozen Chicken Wings 1kg", sku: "SM-003", categoryId: "7", unitId: "10", stock: 12, minStock: 20, costPrice: 6.0, status: "low", conversions: [], outletId: "outlet-8", batches: [
-    { id: "b29a", batchNumber: "SM-2026-B1", expiryDate: "2026-05-15", quantity: 4, initialQuantity: 10, costPrice: 5.8, createdAt: "2026-02-01T08:00:00Z" },
-    { id: "b29b", batchNumber: "SM-2026-B5", expiryDate: "2026-08-15", quantity: 8, initialQuantity: 8, costPrice: 6.2, createdAt: "2026-03-05T09:00:00Z" },
+    { id: "b29a", batchNumber: "2026-02-01 08:00", expiryDate: "2026-05-15", quantity: 4, initialQuantity: 10, costPrice: 5.8, createdAt: "2026-02-01T08:00:00Z" },
+    { id: "b29b", batchNumber: "2026-03-05 09:00", expiryDate: "2026-08-15", quantity: 8, initialQuantity: 8, costPrice: 6.2, createdAt: "2026-03-05T09:00:00Z" },
   ] },
   { id: "i30", name: "Toilet Tissue (Pack 12)", sku: "SM-004", categoryId: "3", unitId: "10", stock: 45, minStock: 15, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-8" },
   { id: "i31", name: "Detergent 2kg", sku: "SM-005", categoryId: "3", unitId: "5", stock: 22, minStock: 10, costPrice: 3.2, status: "good", conversions: [], outletId: "outlet-8" },
