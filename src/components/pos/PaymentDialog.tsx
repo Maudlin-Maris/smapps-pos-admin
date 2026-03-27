@@ -613,14 +613,26 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
             {tipValue > 0 && (
               <p className="text-sm text-primary">Tip: {formatNaira(tipValue)}</p>
             )}
-            <div className="flex gap-2 justify-center">
-              <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-                <Printer className="w-4 h-4" /> Print Receipt
-              </Button>
-              <Button onClick={handleClose}>Done</Button>
+            <div className="flex flex-col gap-2 items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => setShowPrintDialog(true)}>
+                  <Printer className="w-4 h-4" /> Receipt
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => { setShowPrintDialog(true); }}>
+                  <ChefHat className="w-4 h-4" /> Dockets
+                </Button>
+              </div>
+              <Button onClick={handleClose} className="w-40">Done</Button>
             </div>
           </div>
         )}
+
+        {/* Print Receipt/Docket Dialog */}
+        <PrintReceiptDialog
+          open={showPrintDialog}
+          onClose={() => setShowPrintDialog(false)}
+          order={completedOrder ? orders.find(o => o.id === completedOrder.id) || null : null}
+        />
       </DialogContent>
     </Dialog>
   );
