@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { type POSCartItem, posProducts } from "@/data/posData";
+import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Check, Trash2 } from "lucide-react";
