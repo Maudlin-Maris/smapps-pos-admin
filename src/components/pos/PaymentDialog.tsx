@@ -460,8 +460,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               <Tabs defaultValue="custom" className="w-full">
                 <TabsList className="w-full">
                   <TabsTrigger value="equal" className="flex-1" onClick={() => {
-                    const perPerson = Math.round(total / splitCount);
-                    setCustomAmounts(Array.from({ length: splitCount }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toString() })));
+                    const perPerson = Math.floor(total / splitCount);
+                    const remainder = total - perPerson * splitCount;
+                    setCustomAmounts(Array.from({ length: splitCount }, (_, i) => ({
+                      method: "cash" as PaymentMethod,
+                      amount: (i === splitCount - 1 ? perPerson + remainder : perPerson).toString()
+                    })));
                   }}>Split Equally</TabsTrigger>
                   <TabsTrigger value="custom" className="flex-1">By Amount</TabsTrigger>
                 </TabsList>
@@ -470,14 +474,39 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                   <div className="flex items-center gap-2">
                     <label className="text-sm">Split between</label>
                     <Input type="number" min={2} max={10} value={splitCount} onChange={e => {
-                      const n = parseInt(e.target.value) || 2;
+                      const n = Math.max(2, Math.min(10, parseInt(e.target.value) || 2));
                       setSplitCount(n);
-                      const perPerson = Math.round(total / n);
-                      setCustomAmounts(Array.from({ length: n }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toString() })));
+                      const perPerson = Math.floor(total / n);
+                      const remainder = total - perPerson * n;
+                      setCustomAmounts(Array.from({ length: n }, (_, i) => ({
+                        method: "cash" as PaymentMethod,
+                        amount: (i === n - 1 ? perPerson + remainder : perPerson).toString()
+                      })));
                     }} className="w-20 h-8" />
                     <span className="text-sm">people</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{formatNaira(Math.round(total / splitCount))} each</p>
+                  <div className="space-y-2">
+                    {customAmounts.map((ca, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-muted-foreground">Person {i + 1}</span>
+                          <select
+                            value={ca.method}
+                            onChange={e => {
+                              const next = [...customAmounts];
+                              next[i] = { ...next[i], method: e.target.value as PaymentMethod };
+                              setCustomAmounts(next);
+                            }}
+                            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                          >
+                            {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.label}</option>)}
+                          </select>
+                        </div>
+                        <span className="font-semibold text-foreground">{formatNaira(parseFloat(ca.amount) || 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-center text-muted-foreground">✓ {formatNaira(Math.floor(total / splitCount))} each</p>
                 </TabsContent>
 
                 <TabsContent value="custom" className="space-y-3">
