@@ -183,7 +183,7 @@ export default function OrdersPanel() {
                     {selectedOrder.paidAmount > 0 && (
                       <div className="flex justify-between text-sm text-[hsl(var(--success))]">
                         <span>Paid</span>
-                        <span>${selectedOrder.paidAmount.toFixed(2)}</span>
+                        <span>{formatNaira(selectedOrder.paidAmount)}</span>
                       </div>
                     )}
                   </div>
