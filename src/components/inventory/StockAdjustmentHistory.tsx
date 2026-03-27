@@ -119,14 +119,25 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       }
     }
 
+    // For returns to existing batch, pass that batch's info
+    let finalBatchNumber = batchNumber;
+    let finalExpiryDate = expiryDate;
+    if (isReturnType && isBatchTracked && returnBatchId !== "new" && hasBatches) {
+      const targetBatch = item.batches!.find(b => b.id === returnBatchId);
+      if (targetBatch) {
+        finalBatchNumber = targetBatch.batchNumber;
+        finalExpiryDate = targetBatch.expiryDate;
+      }
+    }
+
     onAdjust(
       item.id,
       type,
       quantity,
       reason,
-      isAddType ? batchCostPrice : undefined,
-      isBatchTracked && isAddType ? (batchNumber || `BT-${Date.now()}`) : undefined,
-      isBatchTracked && isAddType ? expiryDate : undefined
+      (isAddType || isReturnType) ? batchCostPrice : undefined,
+      isBatchTracked && (isAddType || isReturnType) ? (finalBatchNumber || `BT-${Date.now()}`) : undefined,
+      isBatchTracked && (isAddType || isReturnType) ? finalExpiryDate : undefined
     );
     setType("add");
     setQuantity(0);
@@ -135,6 +146,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
     setBatchNumber("");
     setExpiryDate("");
     setSelectedBatchId("new");
+    setReturnBatchId("new");
     onOpenChange(false);
   };
 
