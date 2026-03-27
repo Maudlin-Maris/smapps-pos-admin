@@ -1,0 +1,332 @@
+import { useState } from "react";
+import { usePOS } from "@/contexts/POSContext";
+import type { OrderType, PaymentMethod } from "@/data/posData";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer, CheckCircle2, SplitSquareHorizontal } from "lucide-react";
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  existingOrderId?: string; // for paying existing orders
+}
+
+export default function PaymentDialog({ open, onClose, existingOrderId }: Props) {
+  const { cartTotal, cart, createOrder, addPayment, orders, orderType, setOrderType } = usePOS();
+  const [step, setStep] = useState<"type" | "payment" | "split" | "complete">("type");
+  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(orderType);
+  const [tableNumber, setTableNumber] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
+  const [splitCount, setSplitCount] = useState(2);
+  const [customAmounts, setCustomAmounts] = useState<{ method: PaymentMethod; amount: string }[]>([]);
+  const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
+  const [payNow, setPayNow] = useState(true);
+
+  const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
+  const total = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
+
+  const reset = () => {
+    setStep("type");
+    setTableNumber("");
+    setCustomerName("");
+    setPaymentMethod("cash");
+    setSplitMode(null);
+    setSplitCount(2);
+    setCustomAmounts([]);
+    setCompletedOrder(null);
+    setPayNow(true);
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleProceedToPayment = () => {
+    if (!payNow) {
+      // Pay later - create order without payment
+      const order = createOrder(selectedOrderType, tableNumber || undefined, customerName || undefined, false);
+      setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount });
+      setStep("complete");
+      return;
+    }
+    setStep("payment");
+  };
+
+  const handleFullPayment = () => {
+    if (existingOrderId) {
+      addPayment(existingOrderId, { method: paymentMethod, amount: total });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total });
+    } else {
+      const order = createOrder(selectedOrderType, tableNumber || undefined, customerName || undefined, true);
+      addPayment(order.id, { method: paymentMethod, amount: total });
+      setCompletedOrder({ orderNumber: order.orderNumber, total });
+    }
+    setStep("complete");
+  };
+
+  const handleSplitPayment = () => {
+    if (customAmounts.length === 0) return;
+    if (existingOrderId) {
+      customAmounts.forEach(ca => {
+        const amt = parseFloat(ca.amount);
+        if (amt > 0) addPayment(existingOrderId, { method: ca.method, amount: amt });
+      });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total });
+    } else {
+      const order = createOrder(selectedOrderType, tableNumber || undefined, customerName || undefined, true);
+      customAmounts.forEach(ca => {
+        const amt = parseFloat(ca.amount);
+        if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
+      });
+      setCompletedOrder({ orderNumber: order.orderNumber, total });
+    }
+    setStep("complete");
+  };
+
+  const initSplit = (mode: "equal" | "custom") => {
+    setSplitMode(mode);
+    if (mode === "equal") {
+      const perPerson = total / splitCount;
+      setCustomAmounts(Array.from({ length: splitCount }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toFixed(2) })));
+    } else {
+      setCustomAmounts([
+        { method: "cash", amount: "" },
+        { method: "card", amount: "" },
+      ]);
+    }
+    setStep("split");
+  };
+
+  const paymentMethods: { id: PaymentMethod; label: string; icon: React.ReactNode }[] = [
+    { id: "cash", label: "Cash", icon: <Banknote className="w-5 h-5" /> },
+    { id: "card", label: "Card", icon: <CreditCard className="w-5 h-5" /> },
+    { id: "mobile", label: "Mobile", icon: <Smartphone className="w-5 h-5" /> },
+    { id: "transfer", label: "Transfer", icon: <ArrowRightLeft className="w-5 h-5" /> },
+  ];
+
+  return (
+    <Dialog open={open} onOpenChange={o => !o && handleClose()}>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        {step === "type" && !existingOrderId && (
+          <>
+            <DialogHeader>
+              <DialogTitle>New Order</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Order type */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Order Type</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["dine_in", "takeaway", "delivery"] as OrderType[]).map(type => (
+                    <button
+                      key={type}
+                      onClick={() => setSelectedOrderType(type)}
+                      className={`p-3 rounded-xl border text-center transition-all ${
+                        selectedOrderType === type ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <span className="text-sm font-medium capitalize">{type.replace("_", " ")}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {selectedOrderType === "dine_in" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Table Number</label>
+                  <Input value={tableNumber} onChange={e => setTableNumber(e.target.value)} placeholder="e.g. T-5" />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Customer Name (optional)</label>
+                <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Customer name" />
+              </div>
+
+              {/* Pay now / later */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setPayNow(true)}
+                  className={`p-3 rounded-xl border text-center transition-all ${payNow ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border"}`}
+                >
+                  <CreditCard className="w-5 h-5 mx-auto mb-1 text-primary" />
+                  <span className="text-sm font-medium">Pay Now</span>
+                </button>
+                <button
+                  onClick={() => setPayNow(false)}
+                  className={`p-3 rounded-xl border text-center transition-all ${!payNow ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border"}`}
+                >
+                  <Clock className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                  <span className="text-sm font-medium">Pay Later</span>
+                </button>
+              </div>
+
+              <Button onClick={handleProceedToPayment} className="w-full h-11">
+                {payNow ? `Pay $${total.toFixed(2)}` : "Create Order"}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {(step === "payment" || (step === "type" && existingOrderId)) && (
+          <>
+            <DialogHeader>
+              <DialogTitle>
+                {existingOrderId ? `Pay ${existingOrder?.orderNumber}` : "Payment"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-muted/30 rounded-xl">
+                <p className="text-sm text-muted-foreground">Amount Due</p>
+                <p className="text-3xl font-bold text-foreground">${total.toFixed(2)}</p>
+              </div>
+
+              <p className="text-sm font-medium">Payment Method</p>
+              <div className="grid grid-cols-2 gap-2">
+                {paymentMethods.map(pm => (
+                  <button
+                    key={pm.id}
+                    onClick={() => setPaymentMethod(pm.id)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${
+                      paymentMethod === pm.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    {pm.icon}
+                    <span className="text-sm font-medium">{pm.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <Button onClick={handleFullPayment} className="h-11">
+                  Full Payment
+                </Button>
+                <Button variant="outline" onClick={() => initSplit("custom")} className="h-11">
+                  <SplitSquareHorizontal className="w-4 h-4 mr-1" />
+                  Split
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === "split" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Split Payment</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-center p-3 bg-muted/30 rounded-xl">
+                <p className="text-sm text-muted-foreground">Total: <span className="font-bold text-foreground">${total.toFixed(2)}</span></p>
+              </div>
+
+              <Tabs defaultValue="custom" className="w-full">
+                <TabsList className="w-full">
+                  <TabsTrigger value="equal" className="flex-1" onClick={() => {
+                    const perPerson = total / splitCount;
+                    setCustomAmounts(Array.from({ length: splitCount }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toFixed(2) })));
+                  }}>Split Equally</TabsTrigger>
+                  <TabsTrigger value="custom" className="flex-1">By Amount</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="equal" className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm">Split between</label>
+                    <Input type="number" min={2} max={10} value={splitCount} onChange={e => {
+                      const n = parseInt(e.target.value) || 2;
+                      setSplitCount(n);
+                      const perPerson = total / n;
+                      setCustomAmounts(Array.from({ length: n }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toFixed(2) })));
+                    }} className="w-20 h-8" />
+                    <span className="text-sm">people</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">${(total / splitCount).toFixed(2)} each</p>
+                </TabsContent>
+
+                <TabsContent value="custom" className="space-y-3">
+                  {customAmounts.map((ca, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <select
+                        value={ca.method}
+                        onChange={e => {
+                          const next = [...customAmounts];
+                          next[i] = { ...next[i], method: e.target.value as PaymentMethod };
+                          setCustomAmounts(next);
+                        }}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      >
+                        {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.label}</option>)}
+                      </select>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={ca.amount}
+                        onChange={e => {
+                          const next = [...customAmounts];
+                          next[i] = { ...next[i], amount: e.target.value };
+                          setCustomAmounts(next);
+                        }}
+                        placeholder="Amount"
+                        className="h-9"
+                      />
+                      {customAmounts.length > 2 && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setCustomAmounts(prev => prev.filter((_, j) => j !== i))}>×</Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setCustomAmounts(prev => [...prev, { method: "cash", amount: "" }])}>
+                    + Add Split
+                  </Button>
+                </TabsContent>
+              </Tabs>
+
+              {(() => {
+                const splitTotal = customAmounts.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0);
+                const remaining = total - splitTotal;
+                return (
+                  <div className={`text-sm ${Math.abs(remaining) < 0.01 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                    {Math.abs(remaining) < 0.01 ? "✓ Amounts match" : remaining > 0 ? `$${remaining.toFixed(2)} remaining` : `$${Math.abs(remaining).toFixed(2)} over`}
+                  </div>
+                );
+              })()}
+
+              <Button
+                onClick={handleSplitPayment}
+                disabled={Math.abs(total - customAmounts.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0)) > 0.01}
+                className="w-full h-11"
+              >
+                Confirm Split Payment
+              </Button>
+            </div>
+          </>
+        )}
+
+        {step === "complete" && completedOrder && (
+          <div className="text-center py-6 space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[hsl(var(--success))]/10">
+              <CheckCircle2 className="w-8 h-8 text-[hsl(var(--success))]" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">
+              {payNow || existingOrderId ? "Payment Complete!" : "Order Created!"}
+            </h3>
+            <p className="text-muted-foreground">
+              Order {completedOrder.orderNumber} · ${completedOrder.total.toFixed(2)}
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" className="gap-2" onClick={() => window.print()}>
+                <Printer className="w-4 h-4" /> Print Receipt
+              </Button>
+              <Button onClick={handleClose}>Done</Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

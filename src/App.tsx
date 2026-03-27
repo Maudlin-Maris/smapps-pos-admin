@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { OutletProvider } from "@/contexts/OutletContext";
+import { POSProvider } from "@/contexts/POSContext";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
@@ -19,6 +20,7 @@ import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
 import CashierManagement from "@/pages/CashierManagement";
 import ServiceBookings from "@/pages/ServiceBookings";
+import POSMain from "@/pages/POS/POSMain";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,7 @@ const App = () => (
             <Route path="/cashiers" element={<AppLayout><CashierManagement /></AppLayout>} />
             <Route path="/subscription" element={<AppLayout><SubscriptionManagement /></AppLayout>} />
             <Route path="/appointments" element={<AppLayout><ServiceBookings /></AppLayout>} />
+            <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
