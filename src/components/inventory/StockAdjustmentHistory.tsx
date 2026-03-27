@@ -96,12 +96,16 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Please provide a reason for the adjustment");
       return;
     }
-    if (isAddType && batchCostPrice <= 0) {
+    if ((isAddType || isReturnType) && batchCostPrice <= 0) {
       toast.error("Please enter the cost per unit for this batch");
       return;
     }
     if (isBatchTracked && isAddType && !expiryDate) {
       toast.error("Please enter an expiry date for this batch");
+      return;
+    }
+    if (isBatchTracked && isReturnType && returnBatchId === "new" && !expiryDate) {
+      toast.error("Please select a batch to return to, or provide expiry date for a new batch");
       return;
     }
     if (!item) return;
