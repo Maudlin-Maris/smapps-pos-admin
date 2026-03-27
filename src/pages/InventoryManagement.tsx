@@ -77,33 +77,33 @@ const defaultItems: InventoryItem[] = [
   { id: "i21", name: "Shaving Cream", sku: "BR-004", categoryId: "4", unitId: "8", stock: 12, minStock: 5, costPrice: 3.0, status: "good", conversions: [], outletId: "outlet-6" },
   // Grocery (outlet-7)
   { id: "i22", name: "Tomatoes (Fresh)", sku: "GR-001", categoryId: "6", unitId: "1", stock: 60, minStock: 20, costPrice: 1.2, status: "good", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b22a", batchNumber: "GR-TM-001", expiryDate: "2026-04-05", quantity: 25 },
-    { id: "b22b", batchNumber: "GR-TM-002", expiryDate: "2026-04-20", quantity: 35 },
+    { id: "b22a", batchNumber: "GR-TM-001", expiryDate: "2026-04-05", quantity: 25, initialQuantity: 30, costPrice: 1.2, createdAt: "2026-03-01T07:00:00Z" },
+    { id: "b22b", batchNumber: "GR-TM-002", expiryDate: "2026-04-20", quantity: 35, initialQuantity: 35, costPrice: 1.15, createdAt: "2026-03-15T08:00:00Z" },
   ] },
   { id: "i23", name: "Onions", sku: "GR-002", categoryId: "6", unitId: "1", stock: 40, minStock: 15, costPrice: 0.8, status: "good", conversions: [], outletId: "outlet-7" },
   { id: "i24", name: "Palm Oil", sku: "GR-003", categoryId: "12", unitId: "3", stock: 25, minStock: 10, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b24a", batchNumber: "GR-B-2026-03", expiryDate: "2027-03-20", quantity: 25 },
+    { id: "b24a", batchNumber: "GR-B-2026-03", expiryDate: "2027-03-20", quantity: 25, initialQuantity: 25, costPrice: 3.5, createdAt: "2026-03-01T09:00:00Z" },
   ] },
   { id: "i25", name: "Basmati Rice 5kg", sku: "GR-004", categoryId: "12", unitId: "5", stock: 8, minStock: 15, costPrice: 8.0, status: "low", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b25a", batchNumber: "GR-B-2025-88", expiryDate: "2026-05-15", quantity: 3 },
-    { id: "b25b", batchNumber: "GR-B-2026-22", expiryDate: "2026-09-15", quantity: 5 },
+    { id: "b25a", batchNumber: "GR-B-2025-88", expiryDate: "2026-05-15", quantity: 3, initialQuantity: 10, costPrice: 7.8, createdAt: "2025-03-29T10:00:00Z" },
+    { id: "b25b", batchNumber: "GR-B-2026-22", expiryDate: "2026-09-15", quantity: 5, initialQuantity: 5, costPrice: 8.2, createdAt: "2026-01-22T11:00:00Z" },
   ] },
   { id: "i26", name: "Instant Noodles (Carton)", sku: "GR-005", categoryId: "12", unitId: "11", stock: 14, minStock: 5, costPrice: 12.0, status: "good", conversions: [{ id: "cv6", fromQuantity: 1, toQuantity: 40, toUnitId: "5" }], outletId: "outlet-7", batches: [
-    { id: "b26a", batchNumber: "GR-B-2026-12", expiryDate: "2026-06-10", quantity: 6 },
-    { id: "b26b", batchNumber: "GR-B-2026-30", expiryDate: "2027-01-10", quantity: 8 },
+    { id: "b26a", batchNumber: "GR-B-2026-12", expiryDate: "2026-06-10", quantity: 6, initialQuantity: 10, costPrice: 11.5, createdAt: "2026-01-12T12:00:00Z" },
+    { id: "b26b", batchNumber: "GR-B-2026-30", expiryDate: "2027-01-10", quantity: 8, initialQuantity: 8, costPrice: 12.0, createdAt: "2026-01-30T14:00:00Z" },
   ] },
   // Supermarket (outlet-8)
   { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8", batches: [
-    { id: "b27a", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12", quantity: 10 },
-    { id: "b27b", batchNumber: "SM-2026-C3", expiryDate: "2026-05-25", quantity: 20 },
+    { id: "b27a", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12", quantity: 10, initialQuantity: 20, costPrice: 1.8, createdAt: "2026-02-01T06:00:00Z" },
+    { id: "b27b", batchNumber: "SM-2026-C3", expiryDate: "2026-05-25", quantity: 20, initialQuantity: 20, costPrice: 1.85, createdAt: "2026-03-01T07:00:00Z" },
   ] },
   { id: "i28", name: "Cheddar Cheese Block", sku: "SM-002", categoryId: "7", unitId: "5", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-8", batches: [
-    { id: "b28a", batchNumber: "SM-2026-A2", expiryDate: "2026-04-30", quantity: 8 },
-    { id: "b28b", batchNumber: "SM-2026-D1", expiryDate: "2026-06-30", quantity: 10 },
+    { id: "b28a", batchNumber: "SM-2026-A2", expiryDate: "2026-04-30", quantity: 8, initialQuantity: 12, costPrice: 5.5, createdAt: "2026-01-15T09:00:00Z" },
+    { id: "b28b", batchNumber: "SM-2026-D1", expiryDate: "2026-06-30", quantity: 10, initialQuantity: 10, costPrice: 5.6, createdAt: "2026-03-10T10:00:00Z" },
   ] },
   { id: "i29", name: "Frozen Chicken Wings 1kg", sku: "SM-003", categoryId: "7", unitId: "10", stock: 12, minStock: 20, costPrice: 6.0, status: "low", conversions: [], outletId: "outlet-8", batches: [
-    { id: "b29a", batchNumber: "SM-2026-B1", expiryDate: "2026-05-15", quantity: 4 },
-    { id: "b29b", batchNumber: "SM-2026-B5", expiryDate: "2026-08-15", quantity: 8 },
+    { id: "b29a", batchNumber: "SM-2026-B1", expiryDate: "2026-05-15", quantity: 4, initialQuantity: 10, costPrice: 5.8, createdAt: "2026-02-01T08:00:00Z" },
+    { id: "b29b", batchNumber: "SM-2026-B5", expiryDate: "2026-08-15", quantity: 8, initialQuantity: 8, costPrice: 6.2, createdAt: "2026-03-05T09:00:00Z" },
   ] },
   { id: "i30", name: "Toilet Tissue (Pack 12)", sku: "SM-004", categoryId: "3", unitId: "10", stock: 45, minStock: 15, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-8" },
   { id: "i31", name: "Detergent 2kg", sku: "SM-005", categoryId: "3", unitId: "5", stock: 22, minStock: 10, costPrice: 3.2, status: "good", conversions: [], outletId: "outlet-8" },
