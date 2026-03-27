@@ -118,7 +118,7 @@ export function getBatchExpiryStats(batches?: ItemBatch[]) {
   return { expired, expiringSoon, valid, totalBatches: batches.length };
 }
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock, filterExpiryStatus }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
