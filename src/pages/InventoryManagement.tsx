@@ -231,9 +231,7 @@ export default function InventoryManagement() {
     let newAverageCost = item.costPrice;
     let updatedBatches = item.batches ? [...item.batches.map(b => ({ ...b }))] : undefined;
     
-    if (type === "set") {
-      newStock = quantity;
-    } else if (type === "add" || type === "returned") {
+    if (type === "add" || type === "returned") {
       newStock = previousStock + quantity;
       
       // Calculate Weighted Average Cost (WAC)
