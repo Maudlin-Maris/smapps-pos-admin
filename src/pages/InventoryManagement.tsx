@@ -85,8 +85,8 @@ const defaultItems: InventoryItem[] = [
     { id: "b24a", batchNumber: "2026-03-01 09:00", expiryDate: "2027-03-20", quantity: 25, initialQuantity: 25, costPrice: 3.5, createdAt: "2026-03-01T09:00:00Z" },
   ] },
   { id: "i25", name: "Basmati Rice 5kg", sku: "GR-004", categoryId: "12", unitId: "5", stock: 8, minStock: 15, costPrice: 8.0, status: "low", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b25a", batchNumber: "GR-B-2025-88", expiryDate: "2026-05-15", quantity: 3, initialQuantity: 10, costPrice: 7.8, createdAt: "2025-03-29T10:00:00Z" },
-    { id: "b25b", batchNumber: "GR-B-2026-22", expiryDate: "2026-09-15", quantity: 5, initialQuantity: 5, costPrice: 8.2, createdAt: "2026-01-22T11:00:00Z" },
+    { id: "b25a", batchNumber: "2025-03-29 10:00", expiryDate: "2026-05-15", quantity: 3, initialQuantity: 10, costPrice: 7.8, createdAt: "2025-03-29T10:00:00Z" },
+    { id: "b25b", batchNumber: "2026-01-22 11:00", expiryDate: "2026-09-15", quantity: 5, initialQuantity: 5, costPrice: 8.2, createdAt: "2026-01-22T11:00:00Z" },
   ] },
   { id: "i26", name: "Instant Noodles (Carton)", sku: "GR-005", categoryId: "12", unitId: "11", stock: 14, minStock: 5, costPrice: 12.0, status: "good", conversions: [{ id: "cv6", fromQuantity: 1, toQuantity: 40, toUnitId: "5" }], outletId: "outlet-7", batches: [
     { id: "b26a", batchNumber: "GR-B-2026-12", expiryDate: "2026-06-10", quantity: 6, initialQuantity: 10, costPrice: 11.5, createdAt: "2026-01-12T12:00:00Z" },
