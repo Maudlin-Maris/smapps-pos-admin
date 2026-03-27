@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount } from "@/data/posData";
 import { getFeatures } from "@/data/businessTypes";
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer,
   CheckCircle2, SplitSquareHorizontal, ArrowLeft, Percent, Tag, MapPin,
-  Heart
+  Heart, Search
 } from "lucide-react";
 
 interface Props {
@@ -29,6 +29,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
   const [selectedLocation, setSelectedLocation] = useState("");
+  const [locationSearch, setLocationSearch] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
@@ -192,7 +193,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                   {allowedOrderTypes.map(type => (
                     <button
                       key={type.id}
-                      onClick={() => { setSelectedOrderType(type.id); setSelectedLocation(""); }}
+                      onClick={() => { setSelectedOrderType(type.id); setSelectedLocation(""); setLocationSearch(""); }}
                       className={`p-3 rounded-xl border text-center transition-all ${
                         selectedOrderType === type.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
                       }`}
@@ -204,29 +205,53 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               </div>
 
               {/* Location picker for dine-in */}
-              {showLocationPicker && outletLocations.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <label className="text-sm font-medium">Select Location</label>
-                  </div>
-                  <ScrollArea className="max-h-32">
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {outletLocations.map(loc => (
-                        <button
-                          key={loc.id}
-                          onClick={() => setSelectedLocation(loc.name)}
-                          className={`p-2 rounded-lg border text-xs font-medium text-center transition-all ${
-                            selectedLocation === loc.name ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
-                          }`}
-                        >
-                          {loc.name}
-                        </button>
-                      ))}
+              {showLocationPicker && outletLocations.length > 0 && (() => {
+                const filtered = locationSearch
+                  ? outletLocations.filter(l => l.name.toLowerCase().includes(locationSearch.toLowerCase()))
+                  : outletLocations;
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <label className="text-sm font-medium">Select Location</label>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{outletLocations.length} locations</span>
                     </div>
-                  </ScrollArea>
-                </div>
-              )}
+                    {outletLocations.length > 12 && (
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                        <Input
+                          value={locationSearch}
+                          onChange={e => setLocationSearch(e.target.value)}
+                          placeholder="Search tables, rooms..."
+                          className="pl-8 h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                    <ScrollArea className="max-h-40">
+                      {filtered.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-3">No locations match "{locationSearch}"</p>
+                      ) : (
+                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-1.5">
+                          {filtered.map(loc => (
+                            <button
+                              key={loc.id}
+                              onClick={() => setSelectedLocation(loc.name)}
+                              className={`p-2 rounded-lg border text-xs font-medium text-center transition-all truncate ${
+                                selectedLocation === loc.name ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                              }`}
+                              title={loc.name}
+                            >
+                              {loc.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
+                );
+              })()}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Customer Name (optional)</label>
