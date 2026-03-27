@@ -224,6 +224,32 @@ export default function InventoryManagement() {
 
   const lowStockCount = outletItems.filter((i) => i.status === "low" || i.status === "critical").length;
 
+  const EXPIRY_SOON_DAYS = 90;
+  const now = new Date();
+  const soonDate = new Date(Date.now() + EXPIRY_SOON_DAYS * 24 * 60 * 60 * 1000);
+
+  const { expiredItemCount, expiringSoonItemCount } = useMemo(() => {
+    let expiredCount = 0;
+    let soonCount = 0;
+    for (const item of outletItems) {
+      if (item.batches && item.batches.length > 0) {
+        const hasExpired = item.batches.some(b => b.expiryDate && new Date(b.expiryDate) < now);
+        const hasExpiringSoon = item.batches.some(b => {
+          if (!b.expiryDate) return false;
+          const exp = new Date(b.expiryDate);
+          return exp >= now && exp < soonDate;
+        });
+        if (hasExpired) expiredCount++;
+        if (hasExpiringSoon) soonCount++;
+      } else if (item.expiryDate) {
+        const exp = new Date(item.expiryDate);
+        if (exp < now) expiredCount++;
+        else if (exp < soonDate) soonCount++;
+      }
+    }
+    return { expiredItemCount: expiredCount, expiringSoonItemCount: soonCount };
+  }, [outletItems]);
+
   const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string) => {
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
