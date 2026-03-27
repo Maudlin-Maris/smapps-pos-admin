@@ -97,9 +97,6 @@ export default function POSMain() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={lockScreen} title="Lock Screen">
             <Lock className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={switchProfile} title="Switch User">
-            <User className="w-4 h-4" />
-          </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={logout} title="Sign Out">
             <LogOut className="w-4 h-4" />
           </Button>
