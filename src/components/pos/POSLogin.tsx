@@ -3,6 +3,7 @@ import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, User, Eye, EyeOff, LogIn } from "lucide-react";
+import logoLight from "@/assets/logo-light.png";
 
 export default function POSLogin() {
   const { loginWithCredentials } = usePOS();
@@ -28,9 +29,7 @@ export default function POSLogin() {
       <div className="w-full max-w-md">
         {/* Logo area */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[hsl(var(--accent))]/20 mb-4">
-            <Lock className="w-8 h-8 text-[hsl(var(--accent))]" />
-          </div>
+          <img src={logoLight} alt="Smapps" className="h-8 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white font-heading">Point of Sale</h1>
           <p className="text-[hsl(210,3%,60%)] mt-1">Sign in to start your shift</p>
         </div>

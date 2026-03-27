@@ -17,6 +17,7 @@ import {
   Menu as MenuIcon
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import logoIconLight from "@/assets/logo-icon-light.png";
 
 type POSTab = "catalog" | "orders" | "kitchen";
 
@@ -50,6 +51,7 @@ export default function POSMain() {
     <div className="flex flex-col h-screen bg-background">
       {/* Top bar */}
       <header className="flex items-center gap-2 h-14 px-3 border-b border-border bg-card shrink-0">
+        <img src={logoIconLight} alt="Smapps" className="h-7 w-7 shrink-0" />
         {/* Outlet selector */}
         <Select value={currentOutlet?.id || ""} onValueChange={id => {
           const outlet = availableOutlets.find(o => o.id === id);
