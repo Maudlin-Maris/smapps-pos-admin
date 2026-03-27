@@ -257,7 +257,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
           </div>
 
           {/* Batch info for new stock additions or new-batch returns */}
-          {isBatchTracked && (isAddType || (isReturnType && returnBatchId === "new")) && (
+          {isBatchTracked && isAddType && (
             <div className="border-t pt-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Expiry Date</label>
