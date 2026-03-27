@@ -318,8 +318,9 @@ export default function InventoryManagement() {
           ? { 
               ...i, 
               stock: newStock, 
-              costPrice: newAverageCost, // Update with WAC
-              status: computeStatus(newStock, i.minStock) 
+              costPrice: newAverageCost,
+              status: computeStatus(newStock, i.minStock),
+              batches: updatedBatches,
             }
           : i
       )
