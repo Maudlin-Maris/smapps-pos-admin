@@ -109,7 +109,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
           </div>
 
           <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-            {"= ".repeat(20)}
+            {"- ".repeat(20)}
           </p>
 
           {/* Order info */}
@@ -126,7 +126,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
           </div>
 
           <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-            {"= ".repeat(20)}
+            {"- ".repeat(20)}
           </p>
 
           {/* Items — large and bold for kitchen readability */}
@@ -159,7 +159,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
           </div>
 
           <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-            {"= ".repeat(20)}
+            {"- ".repeat(20)}
           </p>
 
           <div className="text-center" style={{ fontSize: "10px", color: "#888" }}>

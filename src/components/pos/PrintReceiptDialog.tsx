@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Printer, Mail, ChefHat, Receipt } from "lucide-react";
 import { toast } from "sonner";
@@ -65,14 +64,13 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
       toast.error("Please enter customer email");
       return;
     }
-    // Mock email send
     toast.success(`Receipt sent to ${customerEmail}`);
     setCustomerEmail("");
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] p-0 gap-0">
+      <DialogContent className="max-w-lg p-0 gap-0">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="w-5 h-5" />
@@ -80,7 +78,7 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex flex-col flex-1 overflow-hidden">
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex flex-col">
           <TabsList className="mx-4 mt-3 grid grid-cols-2">
             <TabsTrigger value="receipt" className="gap-1.5 text-xs">
               <Receipt className="w-3.5 h-3.5" /> Receipt
@@ -91,14 +89,14 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
           </TabsList>
 
           {/* ===== RECEIPT TAB ===== */}
-          <TabsContent value="receipt" className="flex-1 overflow-hidden flex flex-col mt-0">
-            <ScrollArea className="flex-1 px-4 py-3">
+          <TabsContent value="receipt" className="mt-0">
+            <div className="px-4 py-3 max-h-[50vh] overflow-y-auto">
               <div className="flex justify-center">
                 <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                   <ThermalReceipt ref={receiptRef} order={order} outlet={currentOutlet} />
                 </div>
               </div>
-            </ScrollArea>
+            </div>
 
             <div className="border-t border-border p-4 space-y-3">
               <Button
@@ -124,32 +122,38 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
           </TabsContent>
 
           {/* ===== DOCKET TAB ===== */}
-          <TabsContent value="docket" className="flex-1 overflow-hidden flex flex-col mt-0">
-            <ScrollArea className="flex-1 px-4 py-3">
+          <TabsContent value="docket" className="mt-0">
+            <div className="px-4 py-3 max-h-[50vh] overflow-y-auto">
               <div className="space-y-4">
-                {docketGroups.map((group) => (
-                  <div key={group.departmentName} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className="gap-1 text-xs font-semibold">
-                        <ChefHat className="w-3 h-3" /> {group.departmentName}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {group.items.length} item{group.items.length > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="flex justify-center">
-                      <div className="border border-border rounded-lg overflow-hidden shadow-sm">
-                        <KitchenDocket
-                          order={order}
-                          outlet={currentOutlet}
-                          departmentFilter={group.departmentName}
-                        />
+                {docketGroups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No department dockets for this order
+                  </p>
+                ) : (
+                  docketGroups.map((group) => (
+                    <div key={group.departmentName} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="gap-1 text-xs font-semibold">
+                          <ChefHat className="w-3 h-3" /> {group.departmentName}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {group.items.length} item{group.items.length > 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <div className="flex justify-center">
+                        <div className="border border-border rounded-lg overflow-hidden shadow-sm">
+                          <KitchenDocket
+                            order={order}
+                            outlet={currentOutlet}
+                            departmentFilter={group.departmentName}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
-            </ScrollArea>
+            </div>
 
             <div className="border-t border-border p-4 space-y-2">
               <Button
