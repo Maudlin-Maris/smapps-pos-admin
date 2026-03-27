@@ -187,10 +187,8 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               <SelectContent>
                 <SelectItem value="add">Add Stock (New Batch)</SelectItem>
                 <SelectItem value="remove">Remove Stock</SelectItem>
-                <SelectItem value="set">Set Stock</SelectItem>
                 <SelectItem value="damaged">Damaged</SelectItem>
                 <SelectItem value="returned">Returned</SelectItem>
-                <SelectItem value="correction">Correction</SelectItem>
               </SelectContent>
             </Select>
           </div>
