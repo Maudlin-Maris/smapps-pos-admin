@@ -128,7 +128,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       quantity,
       reason,
       (isAddType || isReturnType) ? batchCostPrice : undefined,
-      isBatchTracked && (isAddType || isReturnType) ? (finalBatchNumber || `BT-${Date.now()}`) : undefined,
+      isBatchTracked && (isAddType || isReturnType) ? (finalBatchNumber || new Date().toISOString().slice(0, 16).replace("T", " ")) : undefined,
       isBatchTracked && (isAddType || isReturnType) ? finalExpiryDate : undefined
     );
     setType("add");
