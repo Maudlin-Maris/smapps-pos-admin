@@ -457,94 +457,63 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 <p className="text-sm text-muted-foreground">Total: <span className="font-bold text-foreground">{formatNaira(total)}</span></p>
               </div>
 
-              <Tabs defaultValue="custom" className="w-full">
-                <TabsList className="w-full">
-                  <TabsTrigger value="equal" className="flex-1" onClick={() => {
-                    const perPerson = Math.floor(total / splitCount);
-                    const remainder = total - perPerson * splitCount;
-                    setCustomAmounts(Array.from({ length: splitCount }, (_, i) => ({
-                      method: "cash" as PaymentMethod,
-                      amount: (i === splitCount - 1 ? perPerson + remainder : perPerson).toString()
-                    })));
-                  }}>Split Equally</TabsTrigger>
-                  <TabsTrigger value="custom" className="flex-1">By Amount</TabsTrigger>
-                </TabsList>
+              {/* Split equally shortcut */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium whitespace-nowrap">Split equally between</label>
+                <Input type="number" min={2} max={10} value={splitCount} onChange={e => {
+                  const n = Math.max(2, Math.min(10, parseInt(e.target.value) || 2));
+                  setSplitCount(n);
+                }} className="w-20 h-8" />
+                <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => {
+                  const perPerson = Math.floor(total / splitCount);
+                  const remainder = total - perPerson * splitCount;
+                  setCustomAmounts(Array.from({ length: splitCount }, (_, i) => ({
+                    method: "cash" as PaymentMethod,
+                    amount: (i === splitCount - 1 ? perPerson + remainder : perPerson).toString()
+                  })));
+                }}>
+                  Apply
+                </Button>
+              </div>
 
-                <TabsContent value="equal" className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm">Split between</label>
-                    <Input type="number" min={2} max={10} value={splitCount} onChange={e => {
-                      const n = Math.max(2, Math.min(10, parseInt(e.target.value) || 2));
-                      setSplitCount(n);
-                      const perPerson = Math.floor(total / n);
-                      const remainder = total - perPerson * n;
-                      setCustomAmounts(Array.from({ length: n }, (_, i) => ({
-                        method: "cash" as PaymentMethod,
-                        amount: (i === n - 1 ? perPerson + remainder : perPerson).toString()
-                      })));
-                    }} className="w-20 h-8" />
-                    <span className="text-sm">people</span>
+              {/* Split entries */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Payment splits</p>
+                {customAmounts.map((ca, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <span className="text-xs font-medium text-muted-foreground w-5 shrink-0">{i + 1}.</span>
+                    <select
+                      value={ca.method}
+                      onChange={e => {
+                        const next = [...customAmounts];
+                        next[i] = { ...next[i], method: e.target.value as PaymentMethod };
+                        setCustomAmounts(next);
+                      }}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                    >
+                      {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.label}</option>)}
+                    </select>
+                    <Input
+                      type="number"
+                      step="1"
+                      value={ca.amount}
+                      onChange={e => {
+                        const next = [...customAmounts];
+                        next[i] = { ...next[i], amount: e.target.value };
+                        setCustomAmounts(next);
+                      }}
+                      placeholder="Amount"
+                      className="h-9"
+                    />
+                    {customAmounts.length > 2 && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setCustomAmounts(prev => prev.filter((_, j) => j !== i))}>×</Button>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    {customAmounts.map((ca, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-muted-foreground">Person {i + 1}</span>
-                          <select
-                            value={ca.method}
-                            onChange={e => {
-                              const next = [...customAmounts];
-                              next[i] = { ...next[i], method: e.target.value as PaymentMethod };
-                              setCustomAmounts(next);
-                            }}
-                            className="h-8 rounded-md border border-input bg-background px-2 text-sm"
-                          >
-                            {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.label}</option>)}
-                          </select>
-                        </div>
-                        <span className="font-semibold text-foreground">{formatNaira(parseFloat(ca.amount) || 0)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-center text-muted-foreground">✓ {formatNaira(Math.floor(total / splitCount))} each</p>
-                </TabsContent>
-
-                <TabsContent value="custom" className="space-y-3">
-                  {customAmounts.map((ca, i) => (
-                    <div key={i} className="flex gap-2 items-center">
-                      <select
-                        value={ca.method}
-                        onChange={e => {
-                          const next = [...customAmounts];
-                          next[i] = { ...next[i], method: e.target.value as PaymentMethod };
-                          setCustomAmounts(next);
-                        }}
-                        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                      >
-                        {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.label}</option>)}
-                      </select>
-                      <Input
-                        type="number"
-                        step="1"
-                        value={ca.amount}
-                        onChange={e => {
-                          const next = [...customAmounts];
-                          next[i] = { ...next[i], amount: e.target.value };
-                          setCustomAmounts(next);
-                        }}
-                        placeholder="Amount"
-                        className="h-9"
-                      />
-                      {customAmounts.length > 2 && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setCustomAmounts(prev => prev.filter((_, j) => j !== i))}>×</Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={() => setCustomAmounts(prev => [...prev, { method: "cash", amount: "" }])}>
-                    + Add Split
-                  </Button>
-                </TabsContent>
-              </Tabs>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setCustomAmounts(prev => [...prev, { method: "cash", amount: "" }])}>
+                  + Add Split
+                </Button>
+              </div>
 
               {(() => {
                 const splitTotal = customAmounts.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0);
