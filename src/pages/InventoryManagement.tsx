@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, Eye } from "lucide-react";
+import { AlertTriangle, Eye, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
@@ -202,6 +202,8 @@ export default function InventoryManagement() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
+  const [showExpired, setShowExpired] = useState(false);
+  const [showExpiringSoon, setShowExpiringSoon] = useState(false);
 
   const isAllOutlets = selectedOutletId === "all";
 
@@ -221,6 +223,32 @@ export default function InventoryManagement() {
   );
 
   const lowStockCount = outletItems.filter((i) => i.status === "low" || i.status === "critical").length;
+
+  const EXPIRY_SOON_DAYS = 90;
+  const now = new Date();
+  const soonDate = new Date(Date.now() + EXPIRY_SOON_DAYS * 24 * 60 * 60 * 1000);
+
+  const { expiredItemCount, expiringSoonItemCount } = useMemo(() => {
+    let expiredCount = 0;
+    let soonCount = 0;
+    for (const item of outletItems) {
+      if (item.batches && item.batches.length > 0) {
+        const hasExpired = item.batches.some(b => b.expiryDate && new Date(b.expiryDate) < now);
+        const hasExpiringSoon = item.batches.some(b => {
+          if (!b.expiryDate) return false;
+          const exp = new Date(b.expiryDate);
+          return exp >= now && exp < soonDate;
+        });
+        if (hasExpired) expiredCount++;
+        if (hasExpiringSoon) soonCount++;
+      } else if (item.expiryDate) {
+        const exp = new Date(item.expiryDate);
+        if (exp < now) expiredCount++;
+        else if (exp < soonDate) soonCount++;
+      }
+    }
+    return { expiredItemCount: expiredCount, expiringSoonItemCount: soonCount };
+  }, [outletItems]);
 
   const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string) => {
     const item = items.find((i) => i.id === itemId);
@@ -386,31 +414,88 @@ export default function InventoryManagement() {
         </Select>
       </div>
 
-      {lowStockCount > 0 && (
-        <Card className="p-4 border-warning/30 bg-warning/5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
-              <div>
-                <p className="text-sm font-medium">{lowStockCount} items need restocking</p>
-                <p className="text-xs text-muted-foreground">Items below minimum threshold</p>
+      <div className="space-y-3">
+        {lowStockCount > 0 && (
+          <Card className="p-4 border-warning/30 bg-warning/5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">{lowStockCount} items need restocking</p>
+                  <p className="text-xs text-muted-foreground">Items below minimum threshold</p>
+                </div>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
+                onClick={() => {
+                  setTab("stock");
+                  setShowLowStock((prev) => !prev);
+                  if (!showLowStock) { setShowExpired(false); setShowExpiringSoon(false); }
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {showLowStock ? "Show All" : "View Items"}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0 gap-1.5 border-warning/30 text-warning hover:bg-warning/10 hover:text-warning"
-              onClick={() => {
-                setTab("stock");
-                setShowLowStock((prev) => !prev);
-              }}
-            >
-              <Eye className="h-3.5 w-3.5" />
-              {showLowStock ? "Show All" : "View Items"}
-            </Button>
-          </div>
-        </Card>
-      )}
+          </Card>
+        )}
+
+        {expiredItemCount > 0 && (
+          <Card className="p-4 border-destructive/30 bg-destructive/5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">{expiredItemCount} items have expired batches</p>
+                  <p className="text-xs text-muted-foreground">Items with batches past their expiry date</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => {
+                  setTab("stock");
+                  setShowExpired((prev) => !prev);
+                  if (!showExpired) { setShowLowStock(false); setShowExpiringSoon(false); }
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {showExpired ? "Show All" : "View Items"}
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {expiringSoonItemCount > 0 && (
+          <Card className="p-4 border-orange-400/30 bg-orange-50 dark:bg-orange-950/20">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-orange-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">{expiringSoonItemCount} items expiring soon</p>
+                  <p className="text-xs text-muted-foreground">Items with batches expiring within 90 days</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5 border-orange-400/30 text-orange-500 hover:bg-orange-100/50 hover:text-orange-600"
+                onClick={() => {
+                  setTab("stock");
+                  setShowExpiringSoon((prev) => !prev);
+                  if (!showExpiringSoon) { setShowLowStock(false); setShowExpired(false); }
+                }}
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {showExpiringSoon ? "Show All" : "View Items"}
+              </Button>
+            </div>
+          </Card>
+        )}
+      </div>
 
       <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit overflow-x-auto">
         {tabs.map((t) => (
@@ -437,6 +522,7 @@ export default function InventoryManagement() {
           readOnly={isAllOutlets}
           selectedOutletId={selectedOutletId}
           filterLowStock={showLowStock}
+          filterExpiryStatus={showExpired ? "expired" : showExpiringSoon ? "expiring" : undefined}
         />
       )}
       {tab === "adjustments" && (

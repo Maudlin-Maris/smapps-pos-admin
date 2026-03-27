@@ -70,6 +70,7 @@ interface Props {
   readOnly?: boolean;
   selectedOutletId?: string;
   filterLowStock?: boolean;
+  filterExpiryStatus?: "expired" | "expiring";
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
@@ -117,7 +118,7 @@ export function getBatchExpiryStats(batches?: ItemBatch[]) {
   return { expired, expiringSoon, valid, totalBatches: batches.length };
 }
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock, filterExpiryStatus }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
@@ -270,6 +271,13 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
     .filter((i) => filterCategory === "all" || i.categoryId === filterCategory)
     .filter((i) => !filterLowStock || i.status === "low" || i.status === "critical")
+    .filter((i) => {
+      if (!filterExpiryStatus) return true;
+      const stats = getBatchExpiryStats(i.batches);
+      if (filterExpiryStatus === "expired") return stats.expired > 0;
+      if (filterExpiryStatus === "expiring") return stats.expiringSoon > 0;
+      return true;
+    })
     .filter((i) => {
       if (filterExpiry === "all") return true;
       const stats = getBatchExpiryStats(i.batches);
