@@ -86,7 +86,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   });
 
   const handleSave = () => {
-    if (quantity <= 0 && type !== "set") {
+    if (quantity <= 0) {
       toast.error("Quantity must be greater than 0");
       return;
     }
