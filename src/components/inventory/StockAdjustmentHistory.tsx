@@ -92,10 +92,6 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Quantity must be greater than 0");
       return;
     }
-    if (!reason.trim()) {
-      toast.error("Please provide a reason for the adjustment");
-      return;
-    }
     if ((isAddType || isReturnType) && batchCostPrice <= 0) {
       toast.error("Please enter the cost per unit for this batch");
       return;
