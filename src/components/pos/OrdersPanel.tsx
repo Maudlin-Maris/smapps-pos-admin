@@ -31,6 +31,7 @@ export default function OrdersPanel() {
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
+  const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
 
   const filtered = orders.filter(o => {
     if (filter === "active") return !["paid", "voided"].includes(o.status);
