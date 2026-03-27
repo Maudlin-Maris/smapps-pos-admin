@@ -202,6 +202,8 @@ export default function InventoryManagement() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
+  const [showExpired, setShowExpired] = useState(false);
+  const [showExpiringSoon, setShowExpiringSoon] = useState(false);
 
   const isAllOutlets = selectedOutletId === "all";
 
