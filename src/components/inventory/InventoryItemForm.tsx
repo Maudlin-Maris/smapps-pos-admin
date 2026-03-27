@@ -266,7 +266,15 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const filtered = items
     .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
     .filter((i) => filterCategory === "all" || i.categoryId === filterCategory)
-    .filter((i) => !filterLowStock || i.status === "low" || i.status === "critical");
+    .filter((i) => !filterLowStock || i.status === "low" || i.status === "critical")
+    .filter((i) => {
+      if (filterExpiry === "all") return true;
+      const stats = getBatchExpiryStats(i.batches);
+      if (filterExpiry === "expired") return stats.expired > 0;
+      if (filterExpiry === "expiring_soon") return stats.expiringSoon > 0;
+      if (filterExpiry === "valid") return stats.expired === 0 && stats.expiringSoon === 0;
+      return true;
+    });
 
   const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
 
