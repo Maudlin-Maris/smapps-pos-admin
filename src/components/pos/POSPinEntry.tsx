@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, LogOut, Delete, LogIn, Users } from "lucide-react";
@@ -16,8 +16,15 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
   const [showUserList, setShowUserList] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   useEffect(() => {
     containerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -57,6 +64,12 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)] p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
+            <div className="text-5xl font-light text-white tracking-wide mb-1">
+              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="text-sm text-[hsl(210,3%,50%)] mb-6">
+              {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
             <img src={logoLight} alt="Smapps" className="h-6 mx-auto mb-6 opacity-60" />
             <h2 className="text-xl font-bold text-white">Switch User</h2>
             <p className="text-[hsl(210,3%,60%)] text-sm mt-1">Select a profile or sign in as someone else</p>
@@ -123,6 +136,12 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
       <div className="w-full max-w-sm">
         {/* Profile */}
         <div className="text-center mb-8">
+          <div className="text-5xl font-light text-white tracking-wide mb-1">
+            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+          <div className="text-sm text-[hsl(210,3%,50%)] mb-6">
+            {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
+          </div>
           <img src={logoLight} alt="Smapps" className="h-6 mx-auto mb-6 opacity-60" />
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[hsl(var(--accent))]/20 mb-4 text-2xl font-bold text-[hsl(var(--accent))]">
             {currentCashier?.name.charAt(0)}
