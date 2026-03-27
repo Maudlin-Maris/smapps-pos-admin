@@ -29,7 +29,7 @@ import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { outlets } from "@/data/outlets";
 
-export type AdjustmentType = "add" | "remove" | "set" | "damaged" | "returned" | "correction";
+export type AdjustmentType = "add" | "remove" | "damaged" | "returned";
 
 export interface StockAdjustment {
   id: string;
