@@ -130,7 +130,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground">Total ({item.quantity}x)</p>
-            <p className="text-xl font-bold text-foreground">${totalPrice.toFixed(2)}</p>
+            <p className="text-xl font-bold text-foreground">{formatNaira(totalPrice)}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="destructive" size="icon" onClick={handleRemove} className="h-11 w-11">

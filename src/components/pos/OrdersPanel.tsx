@@ -195,7 +195,7 @@ export default function OrdersPanel() {
                       {selectedOrder.payments.map((p, i) => (
                         <div key={i} className="flex justify-between text-sm">
                           <span className="capitalize">{p.method}</span>
-                          <span>${p.amount.toFixed(2)}</span>
+                          <span>{formatNaira(p.amount)}</span>
                         </div>
                       ))}
                     </div>
