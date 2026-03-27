@@ -364,6 +364,14 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{item.name}</p>
                     <div className="flex items-center gap-2 flex-wrap">
+                      {selectedOutletId === "all" && (() => {
+                        const outlet = outlets.find(o => o.id === item.outletId);
+                        return outlet ? (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary">
+                            {outlet.name}
+                          </Badge>
+                        ) : null;
+                      })()}
                       {category && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{category.name}</Badge>}
                       {hasBatches && (
                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
