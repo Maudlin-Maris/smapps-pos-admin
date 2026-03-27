@@ -173,7 +173,7 @@ export default function OrdersPanel() {
                             <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
                           )}
                         </div>
-                        <span className="font-medium shrink-0">${item.totalPrice.toFixed(2)}</span>
+                        <span className="font-medium shrink-0">{formatNaira(item.totalPrice)}</span>
                       </div>
                     ))}
                     <div className="flex justify-between pt-2 text-sm font-bold">
