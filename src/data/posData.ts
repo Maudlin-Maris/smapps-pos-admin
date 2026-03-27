@@ -126,17 +126,19 @@ export const posDiscounts: POSDiscount[] = [
 
 // --- Locations per outlet ---
 export const posLocations: POSLocation[] = [
-  // Restaurant locations
-  { id: "loc-1", name: "Table 1", outletId: "outlet-1" },
-  { id: "loc-2", name: "Table 2", outletId: "outlet-1" },
-  { id: "loc-3", name: "Table 3", outletId: "outlet-1" },
-  { id: "loc-4", name: "Table 4", outletId: "outlet-1" },
-  { id: "loc-5", name: "Table 5", outletId: "outlet-1" },
-  { id: "loc-6", name: "VIP Lounge 1", outletId: "outlet-1" },
-  { id: "loc-7", name: "VIP Lounge 2", outletId: "outlet-1" },
-  { id: "loc-8", name: "Outdoor A", outletId: "outlet-1" },
-  { id: "loc-9", name: "Outdoor B", outletId: "outlet-1" },
-  { id: "loc-10", name: "Bar Counter", outletId: "outlet-1" },
+  // Restaurant locations — Tables
+  ...Array.from({ length: 40 }, (_, i) => ({ id: `loc-t${i + 1}`, name: `Table ${i + 1}`, outletId: "outlet-1" })),
+  // Restaurant locations — VIP
+  ...Array.from({ length: 8 }, (_, i) => ({ id: `loc-v${i + 1}`, name: `VIP ${i + 1}`, outletId: "outlet-1" })),
+  // Restaurant locations — Outdoor
+  ...Array.from({ length: 10 }, (_, i) => ({ id: `loc-o${i + 1}`, name: `Outdoor ${i + 1}`, outletId: "outlet-1" })),
+  // Restaurant locations — Bar
+  { id: "loc-bar1", name: "Bar Counter 1", outletId: "outlet-1" },
+  { id: "loc-bar2", name: "Bar Counter 2", outletId: "outlet-1" },
+  // Restaurant locations — Rooftop
+  ...Array.from({ length: 10 }, (_, i) => ({ id: `loc-r${i + 1}`, name: `Rooftop ${i + 1}`, outletId: "outlet-1" })),
+  // Restaurant locations — Private Dining
+  ...Array.from({ length: 5 }, (_, i) => ({ id: `loc-pd${i + 1}`, name: `Private Dining ${i + 1}`, outletId: "outlet-1" })),
   // Airport kiosk
   { id: "loc-11", name: "Counter 1", outletId: "outlet-3" },
   { id: "loc-12", name: "Counter 2", outletId: "outlet-3" },
