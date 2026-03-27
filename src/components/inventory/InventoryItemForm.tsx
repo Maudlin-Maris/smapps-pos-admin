@@ -120,6 +120,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterExpiry, setFilterExpiry] = useState("all");
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
 
   const selectedOutlet = selectedOutletId && selectedOutletId !== "all" ? outlets.find(o => o.id === selectedOutletId) : null;
