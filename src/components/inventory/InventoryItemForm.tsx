@@ -259,6 +259,17 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     <p className="font-medium text-sm truncate">{item.name}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {category && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{category.name}</Badge>}
+                      {item.batchNumber && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Batch: {item.batchNumber}</Badge>}
+                      {item.expiryDate && (() => {
+                        const isExpired = new Date(item.expiryDate) < new Date();
+                        const isExpiringSoon = !isExpired && new Date(item.expiryDate) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+                        return (
+                          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", isExpired && "border-destructive/30 text-destructive", isExpiringSoon && "border-warning/30 text-warning")}>
+                            <Calendar className="h-2.5 w-2.5 mr-0.5" />
+                            Exp: {item.expiryDate}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     {item.conversions?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-1">
