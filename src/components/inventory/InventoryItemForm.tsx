@@ -272,6 +272,13 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     .filter((i) => filterCategory === "all" || i.categoryId === filterCategory)
     .filter((i) => !filterLowStock || i.status === "low" || i.status === "critical")
     .filter((i) => {
+      if (!filterExpiryStatus) return true;
+      const stats = getBatchExpiryStats(i.batches);
+      if (filterExpiryStatus === "expired") return stats.expired > 0;
+      if (filterExpiryStatus === "expiring") return stats.expiringSoon > 0;
+      return true;
+    })
+    .filter((i) => {
       if (filterExpiry === "all") return true;
       const stats = getBatchExpiryStats(i.batches);
       if (filterExpiry === "expired") return stats.expired > 0;
