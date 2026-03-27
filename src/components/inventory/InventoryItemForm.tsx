@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, ArrowRightLeft, ScanBarcode } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, ArrowRightLeft, ScanBarcode, Calendar } from "lucide-react";
+import { outlets } from "@/data/outlets";
 import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -45,6 +46,8 @@ export interface InventoryItem {
   status: "good" | "low" | "critical";
   conversions: ItemConversion[];
   outletId: string;
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 interface Props {
@@ -60,6 +63,8 @@ interface Props {
 
 type FormState = Omit<InventoryItem, "id" | "status">;
 
+const BATCH_EXPIRY_BUSINESS_TYPES = ["pharmacy", "grocery", "supermarket"];
+
 const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
   sku: "",
@@ -70,6 +75,8 @@ const emptyForm = (outletId: string = ""): FormState => ({
   costPrice: 0,
   conversions: [],
   outletId,
+  batchNumber: "",
+  expiryDate: "",
 });
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
@@ -86,6 +93,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+
+  const selectedOutlet = selectedOutletId && selectedOutletId !== "all" ? outlets.find(o => o.id === selectedOutletId) : null;
+  const showBatchExpiry = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
 
   const openNew = () => {
     setEditing(null);
@@ -105,6 +115,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       costPrice: item.costPrice,
       conversions: item.conversions || [],
       outletId: item.outletId,
+      batchNumber: item.batchNumber || "",
+      expiryDate: item.expiryDate || "",
     });
     setOpen(true);
   };
@@ -247,6 +259,17 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     <p className="font-medium text-sm truncate">{item.name}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {category && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{category.name}</Badge>}
+                      {item.batchNumber && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Batch: {item.batchNumber}</Badge>}
+                      {item.expiryDate && (() => {
+                        const isExpired = new Date(item.expiryDate) < new Date();
+                        const isExpiringSoon = !isExpired && new Date(item.expiryDate) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+                        return (
+                          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", isExpired && "border-destructive/30 text-destructive", isExpiringSoon && "border-warning/30 text-warning")}>
+                            <Calendar className="h-2.5 w-2.5 mr-0.5" />
+                            Exp: {item.expiryDate}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     {item.conversions?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-1">
@@ -364,7 +387,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
-            {/* Conversions Section */}
+            {/* Batch & Expiry (pharmacy, grocery, supermarket only) */}
+            {showBatchExpiry && (
+              <div className="grid sm:grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Batch Number</label>
+                  <Input value={form.batchNumber || ""} onChange={(e) => setForm({ ...form, batchNumber: e.target.value })} placeholder="e.g. BT-2026-001" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Expiry Date</label>
+                  <Input type="date" value={form.expiryDate || ""} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+                </div>
+              </div>
+            )}
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div>
