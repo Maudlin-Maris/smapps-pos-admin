@@ -46,23 +46,23 @@ const defaultItems: InventoryItem[] = [
   { id: "i10", name: "Napkins", sku: "NP-001", categoryId: "3", unitId: "5", stock: 500, minStock: 200, costPrice: 0.01, status: "good", conversions: [], outletId: "outlet-2" },
   // Pharmacy (outlet-4)
   { id: "i11", name: "Paracetamol 500mg", sku: "PH-001", categoryId: "5", unitId: "10", stock: 200, minStock: 50, costPrice: 0.15, status: "good", conversions: [{ id: "cv5", fromQuantity: 1, toQuantity: 12, toUnitId: "16" }], outletId: "outlet-4", batches: [
-    { id: "b11a", batchNumber: "BT-2025-090", expiryDate: "2026-04-15", quantity: 50 },
-    { id: "b11b", batchNumber: "BT-2026-001", expiryDate: "2027-06-15", quantity: 100 },
-    { id: "b11c", batchNumber: "BT-2026-044", expiryDate: "2028-01-10", quantity: 50 },
+    { id: "b11a", batchNumber: "BT-2025-090", expiryDate: "2026-04-15", quantity: 50, initialQuantity: 80, costPrice: 0.15, createdAt: "2025-09-01T10:00:00Z" },
+    { id: "b11b", batchNumber: "BT-2026-001", expiryDate: "2027-06-15", quantity: 100, initialQuantity: 100, costPrice: 0.14, createdAt: "2026-01-05T09:30:00Z" },
+    { id: "b11c", batchNumber: "BT-2026-044", expiryDate: "2028-01-10", quantity: 50, initialQuantity: 50, costPrice: 0.16, createdAt: "2026-02-14T14:00:00Z" },
   ] },
   { id: "i12", name: "Amoxicillin 250mg", sku: "PH-002", categoryId: "5", unitId: "10", stock: 80, minStock: 30, costPrice: 0.45, status: "good", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b12a", batchNumber: "BT-2025-180", expiryDate: "2026-05-01", quantity: 30 },
-    { id: "b12b", batchNumber: "BT-2026-002", expiryDate: "2026-12-01", quantity: 50 },
+    { id: "b12a", batchNumber: "BT-2025-180", expiryDate: "2026-05-01", quantity: 30, initialQuantity: 50, costPrice: 0.45, createdAt: "2025-06-30T08:00:00Z" },
+    { id: "b12b", batchNumber: "BT-2026-002", expiryDate: "2026-12-01", quantity: 50, initialQuantity: 50, costPrice: 0.44, createdAt: "2026-01-10T11:00:00Z" },
   ] },
   { id: "i13", name: "Vitamin C 1000mg", sku: "PH-003", categoryId: "5", unitId: "7", stock: 15, minStock: 20, costPrice: 3.5, status: "low", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b13a", batchNumber: "BT-2025-118", expiryDate: "2026-04-10", quantity: 5 },
-    { id: "b13b", batchNumber: "BT-2026-015", expiryDate: "2026-09-20", quantity: 10 },
+    { id: "b13a", batchNumber: "BT-2025-118", expiryDate: "2026-04-10", quantity: 5, initialQuantity: 20, costPrice: 3.5, createdAt: "2025-04-28T09:00:00Z" },
+    { id: "b13b", batchNumber: "BT-2026-015", expiryDate: "2026-09-20", quantity: 10, initialQuantity: 10, costPrice: 3.6, createdAt: "2026-01-15T13:00:00Z" },
   ] },
   { id: "i14", name: "Cough Syrup", sku: "PH-004", categoryId: "5", unitId: "7", stock: 40, minStock: 15, costPrice: 2.8, status: "good", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b14a", batchNumber: "BT-2026-045", expiryDate: "2028-01-30", quantity: 40 },
+    { id: "b14a", batchNumber: "BT-2026-045", expiryDate: "2028-01-30", quantity: 40, initialQuantity: 40, costPrice: 2.8, createdAt: "2026-02-14T10:00:00Z" },
   ] },
   { id: "i15", name: "First Aid Bandages", sku: "PH-005", categoryId: "5", unitId: "6", stock: 5, minStock: 10, costPrice: 4.0, status: "critical", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b15a", batchNumber: "BT-2025-200", expiryDate: "2026-02-15", quantity: 5 },
+    { id: "b15a", batchNumber: "BT-2025-200", expiryDate: "2026-02-15", quantity: 5, initialQuantity: 15, costPrice: 4.0, createdAt: "2025-07-19T08:30:00Z" },
   ] },
   // Salon (outlet-5)
   { id: "i6", name: "Shampoo (Professional)", sku: "SH-001", categoryId: "4", unitId: "7", stock: 3, minStock: 5, costPrice: 8.0, status: "critical", conversions: [], outletId: "outlet-5" },
