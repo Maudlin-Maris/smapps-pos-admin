@@ -271,7 +271,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
           )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Reason</label>
+            <label className="text-sm font-medium">Reason <span className="text-destructive">*</span></label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
