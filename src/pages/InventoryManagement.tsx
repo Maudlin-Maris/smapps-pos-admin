@@ -46,23 +46,23 @@ const defaultItems: InventoryItem[] = [
   { id: "i10", name: "Napkins", sku: "NP-001", categoryId: "3", unitId: "5", stock: 500, minStock: 200, costPrice: 0.01, status: "good", conversions: [], outletId: "outlet-2" },
   // Pharmacy (outlet-4)
   { id: "i11", name: "Paracetamol 500mg", sku: "PH-001", categoryId: "5", unitId: "10", stock: 200, minStock: 50, costPrice: 0.15, status: "good", conversions: [{ id: "cv5", fromQuantity: 1, toQuantity: 12, toUnitId: "16" }], outletId: "outlet-4", batches: [
-    { id: "b11a", batchNumber: "BT-2025-090", expiryDate: "2026-04-15", quantity: 50 },
-    { id: "b11b", batchNumber: "BT-2026-001", expiryDate: "2027-06-15", quantity: 100 },
-    { id: "b11c", batchNumber: "BT-2026-044", expiryDate: "2028-01-10", quantity: 50 },
+    { id: "b11a", batchNumber: "BT-2025-090", expiryDate: "2026-04-15", quantity: 50, initialQuantity: 80, costPrice: 0.15, createdAt: "2025-09-01T10:00:00Z" },
+    { id: "b11b", batchNumber: "BT-2026-001", expiryDate: "2027-06-15", quantity: 100, initialQuantity: 100, costPrice: 0.14, createdAt: "2026-01-05T09:30:00Z" },
+    { id: "b11c", batchNumber: "BT-2026-044", expiryDate: "2028-01-10", quantity: 50, initialQuantity: 50, costPrice: 0.16, createdAt: "2026-02-14T14:00:00Z" },
   ] },
   { id: "i12", name: "Amoxicillin 250mg", sku: "PH-002", categoryId: "5", unitId: "10", stock: 80, minStock: 30, costPrice: 0.45, status: "good", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b12a", batchNumber: "BT-2025-180", expiryDate: "2026-05-01", quantity: 30 },
-    { id: "b12b", batchNumber: "BT-2026-002", expiryDate: "2026-12-01", quantity: 50 },
+    { id: "b12a", batchNumber: "BT-2025-180", expiryDate: "2026-05-01", quantity: 30, initialQuantity: 50, costPrice: 0.45, createdAt: "2025-06-30T08:00:00Z" },
+    { id: "b12b", batchNumber: "BT-2026-002", expiryDate: "2026-12-01", quantity: 50, initialQuantity: 50, costPrice: 0.44, createdAt: "2026-01-10T11:00:00Z" },
   ] },
   { id: "i13", name: "Vitamin C 1000mg", sku: "PH-003", categoryId: "5", unitId: "7", stock: 15, minStock: 20, costPrice: 3.5, status: "low", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b13a", batchNumber: "BT-2025-118", expiryDate: "2026-04-10", quantity: 5 },
-    { id: "b13b", batchNumber: "BT-2026-015", expiryDate: "2026-09-20", quantity: 10 },
+    { id: "b13a", batchNumber: "BT-2025-118", expiryDate: "2026-04-10", quantity: 5, initialQuantity: 20, costPrice: 3.5, createdAt: "2025-04-28T09:00:00Z" },
+    { id: "b13b", batchNumber: "BT-2026-015", expiryDate: "2026-09-20", quantity: 10, initialQuantity: 10, costPrice: 3.6, createdAt: "2026-01-15T13:00:00Z" },
   ] },
   { id: "i14", name: "Cough Syrup", sku: "PH-004", categoryId: "5", unitId: "7", stock: 40, minStock: 15, costPrice: 2.8, status: "good", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b14a", batchNumber: "BT-2026-045", expiryDate: "2028-01-30", quantity: 40 },
+    { id: "b14a", batchNumber: "BT-2026-045", expiryDate: "2028-01-30", quantity: 40, initialQuantity: 40, costPrice: 2.8, createdAt: "2026-02-14T10:00:00Z" },
   ] },
   { id: "i15", name: "First Aid Bandages", sku: "PH-005", categoryId: "5", unitId: "6", stock: 5, minStock: 10, costPrice: 4.0, status: "critical", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b15a", batchNumber: "BT-2025-200", expiryDate: "2026-02-15", quantity: 5 },
+    { id: "b15a", batchNumber: "BT-2025-200", expiryDate: "2026-02-15", quantity: 5, initialQuantity: 15, costPrice: 4.0, createdAt: "2025-07-19T08:30:00Z" },
   ] },
   // Salon (outlet-5)
   { id: "i6", name: "Shampoo (Professional)", sku: "SH-001", categoryId: "4", unitId: "7", stock: 3, minStock: 5, costPrice: 8.0, status: "critical", conversions: [], outletId: "outlet-5" },
@@ -77,33 +77,33 @@ const defaultItems: InventoryItem[] = [
   { id: "i21", name: "Shaving Cream", sku: "BR-004", categoryId: "4", unitId: "8", stock: 12, minStock: 5, costPrice: 3.0, status: "good", conversions: [], outletId: "outlet-6" },
   // Grocery (outlet-7)
   { id: "i22", name: "Tomatoes (Fresh)", sku: "GR-001", categoryId: "6", unitId: "1", stock: 60, minStock: 20, costPrice: 1.2, status: "good", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b22a", batchNumber: "GR-TM-001", expiryDate: "2026-04-05", quantity: 25 },
-    { id: "b22b", batchNumber: "GR-TM-002", expiryDate: "2026-04-20", quantity: 35 },
+    { id: "b22a", batchNumber: "GR-TM-001", expiryDate: "2026-04-05", quantity: 25, initialQuantity: 30, costPrice: 1.2, createdAt: "2026-03-01T07:00:00Z" },
+    { id: "b22b", batchNumber: "GR-TM-002", expiryDate: "2026-04-20", quantity: 35, initialQuantity: 35, costPrice: 1.15, createdAt: "2026-03-15T08:00:00Z" },
   ] },
   { id: "i23", name: "Onions", sku: "GR-002", categoryId: "6", unitId: "1", stock: 40, minStock: 15, costPrice: 0.8, status: "good", conversions: [], outletId: "outlet-7" },
   { id: "i24", name: "Palm Oil", sku: "GR-003", categoryId: "12", unitId: "3", stock: 25, minStock: 10, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b24a", batchNumber: "GR-B-2026-03", expiryDate: "2027-03-20", quantity: 25 },
+    { id: "b24a", batchNumber: "GR-B-2026-03", expiryDate: "2027-03-20", quantity: 25, initialQuantity: 25, costPrice: 3.5, createdAt: "2026-03-01T09:00:00Z" },
   ] },
   { id: "i25", name: "Basmati Rice 5kg", sku: "GR-004", categoryId: "12", unitId: "5", stock: 8, minStock: 15, costPrice: 8.0, status: "low", conversions: [], outletId: "outlet-7", batches: [
-    { id: "b25a", batchNumber: "GR-B-2025-88", expiryDate: "2026-05-15", quantity: 3 },
-    { id: "b25b", batchNumber: "GR-B-2026-22", expiryDate: "2026-09-15", quantity: 5 },
+    { id: "b25a", batchNumber: "GR-B-2025-88", expiryDate: "2026-05-15", quantity: 3, initialQuantity: 10, costPrice: 7.8, createdAt: "2025-03-29T10:00:00Z" },
+    { id: "b25b", batchNumber: "GR-B-2026-22", expiryDate: "2026-09-15", quantity: 5, initialQuantity: 5, costPrice: 8.2, createdAt: "2026-01-22T11:00:00Z" },
   ] },
   { id: "i26", name: "Instant Noodles (Carton)", sku: "GR-005", categoryId: "12", unitId: "11", stock: 14, minStock: 5, costPrice: 12.0, status: "good", conversions: [{ id: "cv6", fromQuantity: 1, toQuantity: 40, toUnitId: "5" }], outletId: "outlet-7", batches: [
-    { id: "b26a", batchNumber: "GR-B-2026-12", expiryDate: "2026-06-10", quantity: 6 },
-    { id: "b26b", batchNumber: "GR-B-2026-30", expiryDate: "2027-01-10", quantity: 8 },
+    { id: "b26a", batchNumber: "GR-B-2026-12", expiryDate: "2026-06-10", quantity: 6, initialQuantity: 10, costPrice: 11.5, createdAt: "2026-01-12T12:00:00Z" },
+    { id: "b26b", batchNumber: "GR-B-2026-30", expiryDate: "2027-01-10", quantity: 8, initialQuantity: 8, costPrice: 12.0, createdAt: "2026-01-30T14:00:00Z" },
   ] },
   // Supermarket (outlet-8)
   { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8", batches: [
-    { id: "b27a", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12", quantity: 10 },
-    { id: "b27b", batchNumber: "SM-2026-C3", expiryDate: "2026-05-25", quantity: 20 },
+    { id: "b27a", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12", quantity: 10, initialQuantity: 20, costPrice: 1.8, createdAt: "2026-02-01T06:00:00Z" },
+    { id: "b27b", batchNumber: "SM-2026-C3", expiryDate: "2026-05-25", quantity: 20, initialQuantity: 20, costPrice: 1.85, createdAt: "2026-03-01T07:00:00Z" },
   ] },
   { id: "i28", name: "Cheddar Cheese Block", sku: "SM-002", categoryId: "7", unitId: "5", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-8", batches: [
-    { id: "b28a", batchNumber: "SM-2026-A2", expiryDate: "2026-04-30", quantity: 8 },
-    { id: "b28b", batchNumber: "SM-2026-D1", expiryDate: "2026-06-30", quantity: 10 },
+    { id: "b28a", batchNumber: "SM-2026-A2", expiryDate: "2026-04-30", quantity: 8, initialQuantity: 12, costPrice: 5.5, createdAt: "2026-01-15T09:00:00Z" },
+    { id: "b28b", batchNumber: "SM-2026-D1", expiryDate: "2026-06-30", quantity: 10, initialQuantity: 10, costPrice: 5.6, createdAt: "2026-03-10T10:00:00Z" },
   ] },
   { id: "i29", name: "Frozen Chicken Wings 1kg", sku: "SM-003", categoryId: "7", unitId: "10", stock: 12, minStock: 20, costPrice: 6.0, status: "low", conversions: [], outletId: "outlet-8", batches: [
-    { id: "b29a", batchNumber: "SM-2026-B1", expiryDate: "2026-05-15", quantity: 4 },
-    { id: "b29b", batchNumber: "SM-2026-B5", expiryDate: "2026-08-15", quantity: 8 },
+    { id: "b29a", batchNumber: "SM-2026-B1", expiryDate: "2026-05-15", quantity: 4, initialQuantity: 10, costPrice: 5.8, createdAt: "2026-02-01T08:00:00Z" },
+    { id: "b29b", batchNumber: "SM-2026-B5", expiryDate: "2026-08-15", quantity: 8, initialQuantity: 8, costPrice: 6.2, createdAt: "2026-03-05T09:00:00Z" },
   ] },
   { id: "i30", name: "Toilet Tissue (Pack 12)", sku: "SM-004", categoryId: "3", unitId: "10", stock: 45, minStock: 15, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-8" },
   { id: "i31", name: "Detergent 2kg", sku: "SM-005", categoryId: "3", unitId: "5", stock: 22, minStock: 10, costPrice: 3.2, status: "good", conversions: [], outletId: "outlet-8" },
@@ -255,6 +255,7 @@ export default function InventoryManagement() {
             batchNumber,
             expiryDate: expiryDate || "",
             quantity,
+            initialQuantity: quantity,
             costPrice: batchCostPrice,
             createdAt: new Date().toISOString(),
           });
@@ -266,6 +267,7 @@ export default function InventoryManagement() {
           batchNumber,
           expiryDate: expiryDate || "",
           quantity,
+          initialQuantity: quantity,
           costPrice: batchCostPrice,
           createdAt: new Date().toISOString(),
         });
@@ -275,6 +277,7 @@ export default function InventoryManagement() {
           batchNumber,
           expiryDate: expiryDate || "",
           quantity,
+          initialQuantity: quantity,
           costPrice: batchCostPrice,
           createdAt: new Date().toISOString(),
         }];
