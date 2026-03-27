@@ -1,24 +1,33 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
-import type { OrderType, PaymentMethod } from "@/data/posData";
+import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount } from "@/data/posData";
+import { getFeatures } from "@/data/businessTypes";
+import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer, CheckCircle2, SplitSquareHorizontal } from "lucide-react";
+import {
+  CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer,
+  CheckCircle2, SplitSquareHorizontal, ArrowLeft, Percent, Tag, MapPin,
+  Heart
+} from "lucide-react";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  existingOrderId?: string; // for paying existing orders
+  existingOrderId?: string;
 }
 
+type Step = "type" | "discount" | "payment" | "split" | "complete";
+
 export default function PaymentDialog({ open, onClose, existingOrderId }: Props) {
-  const { cartTotal, cart, createOrder, addPayment, orders, orderType, setOrderType } = usePOS();
-  const [step, setStep] = useState<"type" | "payment" | "split" | "complete">("type");
-  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(orderType);
-  const [tableNumber, setTableNumber] = useState("");
+  const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
+  const [step, setStep] = useState<Step>("type");
+  const [selectedOrderType, setSelectedOrderType] = useState<OrderType>("walk_in");
+  const [selectedLocation, setSelectedLocation] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
@@ -27,12 +36,59 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
   const [payNow, setPayNow] = useState(true);
 
+  // Discount state
+  const [selectedDiscount, setSelectedDiscount] = useState<POSDiscount | null>(null);
+  const [customDiscountAmount, setCustomDiscountAmount] = useState("");
+  const [customDiscountType, setCustomDiscountType] = useState<"percentage" | "fixed">("fixed");
+
+  // Tip state
+  const [tipAmount, setTipAmount] = useState("");
+  const [tipPreset, setTipPreset] = useState<number | null>(null);
+
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
-  const total = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
+  const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
+
+  const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
+  const allowedOrderTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
+  const outletLocations = currentOutlet ? posLocations.filter(l => l.outletId === currentOutlet.id) : [];
+  const showLocationPicker = features?.hasDineIn && selectedOrderType === "dine_in";
+
+  // Calculate discount
+  const discountAmount = useMemo(() => {
+    if (selectedDiscount) {
+      return selectedDiscount.type === "percentage"
+        ? Math.round(subtotal * selectedDiscount.value / 100)
+        : Math.min(selectedDiscount.value, subtotal);
+    }
+    if (customDiscountAmount) {
+      const val = parseFloat(customDiscountAmount) || 0;
+      return customDiscountType === "percentage"
+        ? Math.round(subtotal * val / 100)
+        : Math.min(val, subtotal);
+    }
+    return 0;
+  }, [selectedDiscount, customDiscountAmount, customDiscountType, subtotal]);
+
+  const discountName = selectedDiscount?.name || (customDiscountAmount ? "Custom Discount" : undefined);
+
+  // Calculate tip
+  const tipValue = useMemo(() => {
+    if (tipPreset !== null) return Math.round(subtotal * tipPreset / 100);
+    return parseFloat(tipAmount) || 0;
+  }, [tipPreset, tipAmount, subtotal]);
+
+  const total = subtotal - discountAmount + tipValue;
+
+  // Set default order type when outlet changes
+  useState(() => {
+    if (allowedOrderTypes.length > 0 && !allowedOrderTypes.find(t => t.id === selectedOrderType)) {
+      setSelectedOrderType(allowedOrderTypes[0].id);
+    }
+  });
 
   const reset = () => {
     setStep("type");
-    setTableNumber("");
+    setSelectedLocation("");
     setCustomerName("");
     setPaymentMethod("cash");
     setSplitMode(null);
@@ -40,17 +96,27 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     setCustomAmounts([]);
     setCompletedOrder(null);
     setPayNow(true);
+    setSelectedDiscount(null);
+    setCustomDiscountAmount("");
+    setTipAmount("");
+    setTipPreset(null);
+    if (allowedOrderTypes.length > 0) {
+      setSelectedOrderType(allowedOrderTypes[0].id);
+    }
   };
 
-  const handleClose = () => {
-    reset();
-    onClose();
+  const handleClose = () => { reset(); onClose(); };
+
+  const goBack = (to: Step) => setStep(to);
+
+  const handleProceedToDiscount = () => {
+    setStep("discount");
   };
 
   const handleProceedToPayment = () => {
     if (!payNow) {
-      // Pay later - create order without payment
-      const order = createOrder(selectedOrderType, tableNumber || undefined, customerName || undefined, false);
+      const locationName = selectedLocation || undefined;
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount });
       setStep("complete");
       return;
@@ -63,7 +129,8 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
       addPayment(existingOrderId, { method: paymentMethod, amount: total });
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total });
     } else {
-      const order = createOrder(selectedOrderType, tableNumber || undefined, customerName || undefined, true);
+      const locationName = selectedLocation || undefined;
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName);
       addPayment(order.id, { method: paymentMethod, amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total });
     }
@@ -74,14 +141,15 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     if (customAmounts.length === 0) return;
     if (existingOrderId) {
       customAmounts.forEach(ca => {
-        const amt = parseFloat(ca.amount);
+        const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(existingOrderId, { method: ca.method, amount: amt });
       });
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total });
     } else {
-      const order = createOrder(selectedOrderType, tableNumber || undefined, customerName || undefined, true);
+      const locationName = selectedLocation || undefined;
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName);
       customAmounts.forEach(ca => {
-        const amt = parseFloat(ca.amount);
+        const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
       });
       setCompletedOrder({ orderNumber: order.orderNumber, total });
@@ -89,17 +157,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     setStep("complete");
   };
 
-  const initSplit = (mode: "equal" | "custom") => {
-    setSplitMode(mode);
-    if (mode === "equal") {
-      const perPerson = total / splitCount;
-      setCustomAmounts(Array.from({ length: splitCount }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toFixed(2) })));
-    } else {
-      setCustomAmounts([
-        { method: "cash", amount: "" },
-        { method: "card", amount: "" },
-      ]);
-    }
+  const initSplit = () => {
+    setCustomAmounts([
+      { method: "cash", amount: "" },
+      { method: "card", amount: "" },
+    ]);
     setStep("split");
   };
 
@@ -110,9 +172,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     { id: "transfer", label: "Transfer", icon: <ArrowRightLeft className="w-5 h-5" /> },
   ];
 
+  const tipPresets = [5, 10, 15, 20];
+
   return (
     <Dialog open={open} onOpenChange={o => !o && handleClose()}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        {/* ===== STEP: ORDER TYPE ===== */}
         {step === "type" && !existingOrderId && (
           <>
             <DialogHeader>
@@ -122,25 +187,43 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               {/* Order type */}
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">Order Type</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["dine_in", "takeaway", "delivery"] as OrderType[]).map(type => (
+                <div className={`grid gap-2 ${allowedOrderTypes.length <= 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                  {allowedOrderTypes.map(type => (
                     <button
-                      key={type}
-                      onClick={() => setSelectedOrderType(type)}
+                      key={type.id}
+                      onClick={() => { setSelectedOrderType(type.id); setSelectedLocation(""); }}
                       className={`p-3 rounded-xl border text-center transition-all ${
-                        selectedOrderType === type ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                        selectedOrderType === type.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
                       }`}
                     >
-                      <span className="text-sm font-medium capitalize">{type.replace("_", " ")}</span>
+                      <span className="text-sm font-medium">{type.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {selectedOrderType === "dine_in" && (
+              {/* Location picker for dine-in */}
+              {showLocationPicker && outletLocations.length > 0 && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Table Number</label>
-                  <Input value={tableNumber} onChange={e => setTableNumber(e.target.value)} placeholder="e.g. T-5" />
+                  <div className="flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <label className="text-sm font-medium">Select Location</label>
+                  </div>
+                  <ScrollArea className="max-h-32">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {outletLocations.map(loc => (
+                        <button
+                          key={loc.id}
+                          onClick={() => setSelectedLocation(loc.name)}
+                          className={`p-2 rounded-lg border text-xs font-medium text-center transition-all ${
+                            selectedLocation === loc.name ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                          }`}
+                        >
+                          {loc.name}
+                        </button>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </div>
               )}
 
@@ -167,24 +250,166 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 </button>
               </div>
 
-              <Button onClick={handleProceedToPayment} className="w-full h-11">
-                {payNow ? `Pay $${total.toFixed(2)}` : "Create Order"}
+              <Button onClick={handleProceedToDiscount} className="w-full h-11">
+                Continue
               </Button>
             </div>
           </>
         )}
 
+        {/* ===== STEP: DISCOUNT & TIP ===== */}
+        {step === "discount" && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("type")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <DialogTitle>Discount & Tip</DialogTitle>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Order summary */}
+              <div className="text-center p-3 bg-muted/30 rounded-xl">
+                <p className="text-sm text-muted-foreground">Subtotal</p>
+                <p className="text-2xl font-bold text-foreground">{formatNaira(subtotal)}</p>
+              </div>
+
+              {/* Discounts */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Tag className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">Apply Discount</p>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {posDiscounts.map(d => (
+                    <button
+                      key={d.id}
+                      onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); }}
+                      className={`p-2.5 rounded-lg border text-left transition-all ${
+                        selectedDiscount?.id === d.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      <span className="text-xs font-medium block">{d.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {d.type === "percentage" ? `${d.value}% off` : formatNaira(d.value)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Custom discount */}
+                <div className="flex gap-2 items-center pt-1">
+                  <select
+                    value={customDiscountType}
+                    onChange={e => setCustomDiscountType(e.target.value as "percentage" | "fixed")}
+                    className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    <option value="fixed">₦ Amount</option>
+                    <option value="percentage">% Percent</option>
+                  </select>
+                  <Input
+                    type="number"
+                    value={customDiscountAmount}
+                    onChange={e => { setCustomDiscountAmount(e.target.value); setSelectedDiscount(null); }}
+                    placeholder="Custom discount"
+                    className="h-9"
+                  />
+                </div>
+                {discountAmount > 0 && (
+                  <p className="text-xs text-[hsl(var(--success))] font-medium">
+                    Discount: -{formatNaira(discountAmount)}
+                  </p>
+                )}
+              </div>
+
+              {/* Tips */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <Heart className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">Add Tip</p>
+                </div>
+                <div className="flex gap-1.5">
+                  {tipPresets.map(pct => (
+                    <button
+                      key={pct}
+                      onClick={() => { setTipPreset(tipPreset === pct ? null : pct); setTipAmount(""); }}
+                      className={`flex-1 p-2 rounded-lg border text-xs font-medium text-center transition-all ${
+                        tipPreset === pct ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+                <Input
+                  type="number"
+                  value={tipAmount}
+                  onChange={e => { setTipAmount(e.target.value); setTipPreset(null); }}
+                  placeholder="Custom tip amount (₦)"
+                  className="h-9"
+                />
+                {tipValue > 0 && (
+                  <p className="text-xs text-primary font-medium">Tip: +{formatNaira(tipValue)}</p>
+                )}
+              </div>
+
+              {/* Total breakdown */}
+              <div className="border-t border-border pt-3 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>{formatNaira(subtotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-sm text-[hsl(var(--success))]">
+                    <span>Discount ({discountName})</span>
+                    <span>-{formatNaira(discountAmount)}</span>
+                  </div>
+                )}
+                {tipValue > 0 && (
+                  <div className="flex justify-between text-sm text-primary">
+                    <span>Tip</span>
+                    <span>+{formatNaira(tipValue)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-base pt-1">
+                  <span>Total</span>
+                  <span>{formatNaira(total)}</span>
+                </div>
+              </div>
+
+              <Button onClick={handleProceedToPayment} className="w-full h-11">
+                {payNow ? `Pay ${formatNaira(total)}` : "Create Order"}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* ===== STEP: PAYMENT ===== */}
         {(step === "payment" || (step === "type" && existingOrderId)) && (
           <>
             <DialogHeader>
-              <DialogTitle>
-                {existingOrderId ? `Pay ${existingOrder?.orderNumber}` : "Payment"}
-              </DialogTitle>
+              <div className="flex items-center gap-2">
+                {!existingOrderId && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("discount")}>
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                <DialogTitle>
+                  {existingOrderId ? `Pay ${existingOrder?.orderNumber}` : "Payment"}
+                </DialogTitle>
+              </div>
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-center p-4 bg-muted/30 rounded-xl">
                 <p className="text-sm text-muted-foreground">Amount Due</p>
-                <p className="text-3xl font-bold text-foreground">${total.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-foreground">{formatNaira(total)}</p>
+                {discountAmount > 0 && (
+                  <p className="text-xs text-[hsl(var(--success))] mt-1">Discount applied: -{formatNaira(discountAmount)}</p>
+                )}
+                {tipValue > 0 && (
+                  <p className="text-xs text-primary mt-0.5">Includes tip: {formatNaira(tipValue)}</p>
+                )}
               </div>
 
               <p className="text-sm font-medium">Payment Method</p>
@@ -207,7 +432,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 <Button onClick={handleFullPayment} className="h-11">
                   Full Payment
                 </Button>
-                <Button variant="outline" onClick={() => initSplit("custom")} className="h-11">
+                <Button variant="outline" onClick={initSplit} className="h-11">
                   <SplitSquareHorizontal className="w-4 h-4 mr-1" />
                   Split
                 </Button>
@@ -216,21 +441,27 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
           </>
         )}
 
+        {/* ===== STEP: SPLIT ===== */}
         {step === "split" && (
           <>
             <DialogHeader>
-              <DialogTitle>Split Payment</DialogTitle>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("payment")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <DialogTitle>Split Payment</DialogTitle>
+              </div>
             </DialogHeader>
             <div className="space-y-4">
               <div className="text-center p-3 bg-muted/30 rounded-xl">
-                <p className="text-sm text-muted-foreground">Total: <span className="font-bold text-foreground">${total.toFixed(2)}</span></p>
+                <p className="text-sm text-muted-foreground">Total: <span className="font-bold text-foreground">{formatNaira(total)}</span></p>
               </div>
 
               <Tabs defaultValue="custom" className="w-full">
                 <TabsList className="w-full">
                   <TabsTrigger value="equal" className="flex-1" onClick={() => {
-                    const perPerson = total / splitCount;
-                    setCustomAmounts(Array.from({ length: splitCount }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toFixed(2) })));
+                    const perPerson = Math.round(total / splitCount);
+                    setCustomAmounts(Array.from({ length: splitCount }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toString() })));
                   }}>Split Equally</TabsTrigger>
                   <TabsTrigger value="custom" className="flex-1">By Amount</TabsTrigger>
                 </TabsList>
@@ -241,12 +472,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                     <Input type="number" min={2} max={10} value={splitCount} onChange={e => {
                       const n = parseInt(e.target.value) || 2;
                       setSplitCount(n);
-                      const perPerson = total / n;
-                      setCustomAmounts(Array.from({ length: n }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toFixed(2) })));
+                      const perPerson = Math.round(total / n);
+                      setCustomAmounts(Array.from({ length: n }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toString() })));
                     }} className="w-20 h-8" />
                     <span className="text-sm">people</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">${(total / splitCount).toFixed(2)} each</p>
+                  <p className="text-sm text-muted-foreground">{formatNaira(Math.round(total / splitCount))} each</p>
                 </TabsContent>
 
                 <TabsContent value="custom" className="space-y-3">
@@ -265,7 +496,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                       </select>
                       <Input
                         type="number"
-                        step="0.01"
+                        step="1"
                         value={ca.amount}
                         onChange={e => {
                           const next = [...customAmounts];
@@ -290,15 +521,15 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 const splitTotal = customAmounts.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0);
                 const remaining = total - splitTotal;
                 return (
-                  <div className={`text-sm ${Math.abs(remaining) < 0.01 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
-                    {Math.abs(remaining) < 0.01 ? "✓ Amounts match" : remaining > 0 ? `$${remaining.toFixed(2)} remaining` : `$${Math.abs(remaining).toFixed(2)} over`}
+                  <div className={`text-sm ${Math.abs(remaining) < 1 ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                    {Math.abs(remaining) < 1 ? "✓ Amounts match" : remaining > 0 ? `${formatNaira(remaining)} remaining` : `${formatNaira(Math.abs(remaining))} over`}
                   </div>
                 );
               })()}
 
               <Button
                 onClick={handleSplitPayment}
-                disabled={Math.abs(total - customAmounts.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0)) > 0.01}
+                disabled={Math.abs(total - customAmounts.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0)) > 1}
                 className="w-full h-11"
               >
                 Confirm Split Payment
@@ -307,6 +538,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
           </>
         )}
 
+        {/* ===== STEP: COMPLETE ===== */}
         {step === "complete" && completedOrder && (
           <div className="text-center py-6 space-y-4">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[hsl(var(--success))]/10">
@@ -316,8 +548,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               {payNow || existingOrderId ? "Payment Complete!" : "Order Created!"}
             </h3>
             <p className="text-muted-foreground">
-              Order {completedOrder.orderNumber} · ${completedOrder.total.toFixed(2)}
+              Order {completedOrder.orderNumber} · {formatNaira(completedOrder.total)}
             </p>
+            {tipValue > 0 && (
+              <p className="text-sm text-primary">Tip: {formatNaira(tipValue)}</p>
+            )}
             <div className="flex gap-2 justify-center">
               <Button variant="outline" className="gap-2" onClick={() => window.print()}>
                 <Printer className="w-4 h-4" /> Print Receipt

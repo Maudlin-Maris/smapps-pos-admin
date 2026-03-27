@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { formatNaira } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,6 @@ export default function POSCart({ onCheckout }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-border">
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm text-foreground">Cart</h3>
@@ -38,7 +38,6 @@ export default function POSCart({ onCheckout }: Props) {
         </Button>
       </div>
 
-      {/* Items */}
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {cart.map(item => (
@@ -58,13 +57,13 @@ export default function POSCart({ onCheckout }: Props) {
                   </p>
                 )}
                 <div className="flex items-center gap-1 mt-0.5">
-                  <p className="text-xs text-muted-foreground">${item.unitPrice.toFixed(2)} each</p>
+                  <p className="text-xs text-muted-foreground">{formatNaira(item.unitPrice)} each</p>
                   <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
 
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <p className="text-sm font-semibold text-foreground">${item.totalPrice.toFixed(2)}</p>
+                <p className="text-sm font-semibold text-foreground">{formatNaira(item.totalPrice)}</p>
                 <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                   <button onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
                     className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors">
@@ -82,14 +81,13 @@ export default function POSCart({ onCheckout }: Props) {
         </div>
       </ScrollArea>
 
-      {/* Total & checkout */}
       <div className="border-t border-border p-3 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Total</span>
-          <span className="text-xl font-bold text-foreground">${cartTotal.toFixed(2)}</span>
+          <span className="text-xl font-bold text-foreground">{formatNaira(cartTotal)}</span>
         </div>
         <Button onClick={onCheckout} className="w-full h-12 bg-primary text-primary-foreground text-base font-semibold">
-          Checkout · ${cartTotal.toFixed(2)}
+          Checkout · {formatNaira(cartTotal)}
         </Button>
       </div>
 

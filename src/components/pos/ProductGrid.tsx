@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { usePOS } from "@/contexts/POSContext";
-import { posProducts, posCategories, type POSProduct, type POSExtra } from "@/data/posData";
+import { posProducts, posCategories, type POSProduct } from "@/data/posData";
+import { formatNaira } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, ScanLine, X } from "lucide-react";
@@ -15,17 +15,19 @@ export default function ProductGrid() {
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
 
+  // Filter categories for current outlet
+  const outletCategories = posCategories.filter(c => !c.outletId || c.outletId === currentOutlet?.id);
+
+  // Filter products for current outlet
   const products = posProducts.filter(p => {
-    if (currentOutlet && p.outletId !== currentOutlet.id) {
-      // For demo, show all products
-    }
+    if (currentOutlet && p.outletId !== currentOutlet.id) return false;
     if (search) return p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search);
     if (!selectedCategory) return true;
     if (selectedSubcategory) return p.categoryId === selectedCategory && p.subcategoryId === selectedSubcategory;
     return p.categoryId === selectedCategory;
   });
 
-  const currentCategory = posCategories.find(c => c.id === selectedCategory);
+  const currentCategory = outletCategories.find(c => c.id === selectedCategory);
 
   const handleProductClick = (product: POSProduct) => {
     if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
@@ -64,10 +66,9 @@ export default function ProductGrid() {
     setDialogProduct(null);
   };
 
-  // Handle barcode scanner input
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && search) {
-      const found = posProducts.find(p => p.barcode === search);
+      const found = posProducts.find(p => p.barcode === search && (!currentOutlet || p.outletId === currentOutlet.id));
       if (found) {
         handleProductClick(found);
         setSearch("");
@@ -77,7 +78,6 @@ export default function ProductGrid() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search bar */}
       <div className="p-3 border-b border-border">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -98,7 +98,6 @@ export default function ProductGrid() {
         </div>
       </div>
 
-      {/* Categories */}
       <div className="border-b border-border">
         <div className="w-full overflow-x-auto">
           <div className="flex gap-1.5 p-2 pb-2">
@@ -110,7 +109,7 @@ export default function ProductGrid() {
             >
               All
             </button>
-            {posCategories.map(cat => (
+            {outletCategories.map(cat => (
               <button
                 key={cat.id}
                 onClick={() => { setSelectedCategory(cat.id); setSelectedSubcategory(null); }}
@@ -124,7 +123,6 @@ export default function ProductGrid() {
           </div>
         </div>
 
-        {/* Subcategories */}
         {currentCategory?.subcategories && (
           <div className="w-full overflow-x-auto">
             <div className="flex gap-1.5 px-2 pb-2">
@@ -152,7 +150,6 @@ export default function ProductGrid() {
         )}
       </div>
 
-      {/* Product grid */}
       <ScrollArea className="flex-1">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-3">
           {products.map(product => (
@@ -171,7 +168,7 @@ export default function ProductGrid() {
               )}
               <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
               <span className="text-xs text-muted-foreground mt-1">
-                {product.variants?.length ? `From $${Math.min(...product.variants.map(v => v.price)).toFixed(2)}` : `$${product.price.toFixed(2)}`}
+                {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
               </span>
               {product.variants && product.variants.length > 0 && (
                 <div className="flex gap-1 mt-1.5 flex-wrap">
@@ -191,7 +188,6 @@ export default function ProductGrid() {
         )}
       </ScrollArea>
 
-      {/* Variant/Extras dialog */}
       <VariantExtrasDialog
         product={dialogProduct}
         open={!!dialogProduct}

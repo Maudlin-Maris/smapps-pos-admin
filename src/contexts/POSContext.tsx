@@ -33,7 +33,7 @@ interface POSContextType {
 
   // Orders
   orders: POSOrder[];
-  createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean) => POSOrder;
+  createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string) => POSOrder;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   addItemsToOrder: (orderId: string, items: POSCartItem[]) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
@@ -69,7 +69,6 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const loginWithPin = useCallback((pin: string) => {
     if (currentCashier && currentCashier.pin === pin) {
       setAuthState("active");
-      // Auto-select first assigned outlet
       if (!currentOutlet) {
         const outlet = posOutlets.find(o => currentCashier.assignedOutlets.includes(o.id));
         if (outlet) setCurrentOutlet(outlet);
@@ -137,7 +136,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const cartTotal = cart.reduce((sum, i) => sum + i.totalPrice, 0);
 
-  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean) => {
+  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string) => {
     const num = orderCounter;
     setOrderCounter(n => n + 1);
     const order: POSOrder = {
@@ -147,10 +146,14 @@ export function POSProvider({ children }: { children: ReactNode }) {
       status: payNow ? "paid" : "open",
       type,
       tableNumber,
-      customerName: customerName || (type === "dine_in" && tableNumber ? `Table ${tableNumber}` : undefined),
+      locationName: tableNumber,
+      customerName: customerName || (type === "dine_in" && tableNumber ? tableNumber : undefined),
       payments: [],
-      totalAmount: cartTotal,
+      totalAmount: cartTotal - (discountAmount || 0),
       paidAmount: 0,
+      tipAmount,
+      discountAmount,
+      discountName,
       createdAt: new Date(),
       updatedAt: new Date(),
       outletId: currentOutlet?.id || "",
