@@ -49,6 +49,7 @@ const App = () => (
             <Route path="/subscription" element={<AppLayout><SubscriptionManagement /></AppLayout>} />
             <Route path="/appointments" element={<AppLayout><ServiceBookings /></AppLayout>} />
             <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
