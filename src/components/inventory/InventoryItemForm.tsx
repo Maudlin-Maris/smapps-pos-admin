@@ -94,6 +94,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
 
+  const selectedOutlet = selectedOutletId && selectedOutletId !== "all" ? outlets.find(o => o.id === selectedOutletId) : null;
+  const showBatchExpiry = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
+
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm(selectedOutletId));
