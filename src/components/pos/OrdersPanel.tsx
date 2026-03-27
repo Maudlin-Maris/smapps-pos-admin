@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
-  ChevronRight, Receipt
+  ChevronRight, Receipt, Printer, ChefHat
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
+import PrintReceiptDialog from "./PrintReceiptDialog";
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode }> = {
   open: { label: "Open", color: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]", icon: <Clock className="w-3 h-3" /> },
