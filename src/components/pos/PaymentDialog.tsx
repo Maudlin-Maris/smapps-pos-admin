@@ -460,8 +460,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               <Tabs defaultValue="custom" className="w-full">
                 <TabsList className="w-full">
                   <TabsTrigger value="equal" className="flex-1" onClick={() => {
-                    const perPerson = Math.round(total / splitCount);
-                    setCustomAmounts(Array.from({ length: splitCount }, () => ({ method: "cash" as PaymentMethod, amount: perPerson.toString() })));
+                    const perPerson = Math.floor(total / splitCount);
+                    const remainder = total - perPerson * splitCount;
+                    setCustomAmounts(Array.from({ length: splitCount }, (_, i) => ({
+                      method: "cash" as PaymentMethod,
+                      amount: (i === splitCount - 1 ? perPerson + remainder : perPerson).toString()
+                    })));
                   }}>Split Equally</TabsTrigger>
                   <TabsTrigger value="custom" className="flex-1">By Amount</TabsTrigger>
                 </TabsList>
