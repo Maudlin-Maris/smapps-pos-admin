@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, User, Store, ChevronDown,
+  ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
   Menu as MenuIcon
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
