@@ -147,7 +147,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(existingOrderId, { method: ca.method, amount: amt });
       });
-      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName);
