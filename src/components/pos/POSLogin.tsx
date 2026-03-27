@@ -3,6 +3,7 @@ import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, User, Eye, EyeOff, LogIn } from "lucide-react";
+import logoLight from "@/assets/logo-light.png";
 
 export default function POSLogin() {
   const { loginWithCredentials } = usePOS();
