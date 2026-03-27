@@ -52,6 +52,7 @@ const POSContext = createContext<POSContextType | null>(null);
 export function POSProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>("login");
   const [currentCashier, setCurrentCashier] = useState<POSCashier | null>(null);
+  const [signedInCashiers, setSignedInCashiers] = useState<POSCashier[]>([]);
   const [currentOutlet, setCurrentOutlet] = useState<POSOutlet | null>(null);
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [orders, setOrders] = useState<POSOrder[]>(mockOrders);
