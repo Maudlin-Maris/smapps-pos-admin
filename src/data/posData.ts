@@ -113,6 +113,9 @@ export interface POSOutlet {
   id: string;
   name: string;
   businessType: BusinessTypeId;
+  email?: string;
+  phone?: string;
+  address?: string;
 }
 
 // --- Preconfigured Discounts ---
