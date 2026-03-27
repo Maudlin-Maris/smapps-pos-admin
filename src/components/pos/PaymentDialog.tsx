@@ -50,7 +50,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
-  const allowedOrderTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
+  const allowedOrderTypes = allowedTypes;
   const outletLocations = currentOutlet ? posLocations.filter(l => l.outletId === currentOutlet.id) : [];
   const showLocationPicker = features?.hasDineIn && selectedOrderType === "dine_in";
 
