@@ -16,8 +16,15 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
   const [showUserList, setShowUserList] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [currentTime, setCurrentTime] = useState(new Date());
+
   useEffect(() => {
     containerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
