@@ -63,6 +63,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
     const cashier = posCashiers.find(c => c.username.toLowerCase() === username.toLowerCase());
     if (cashier) {
       setCurrentCashier(cashier);
+      setSignedInCashiers(prev => prev.some(c => c.id === cashier.id) ? prev : [...prev, cashier]);
       setAuthState("pin");
       return true;
     }
@@ -81,17 +82,24 @@ export function POSProvider({ children }: { children: ReactNode }) {
     return false;
   }, [currentCashier, currentOutlet]);
 
+  const selectCashier = useCallback((cashier: POSCashier) => {
+    setCurrentCashier(cashier);
+    setAuthState("locked");
+    setCart([]);
+  }, []);
+
   const lockScreen = useCallback(() => setAuthState("locked"), []);
   const switchProfile = useCallback(() => {
     setAuthState("pin");
     setCart([]);
   }, []);
   const logout = useCallback(() => {
+    setSignedInCashiers(prev => prev.filter(c => c.id !== currentCashier?.id));
     setAuthState("login");
     setCurrentCashier(null);
     setCurrentOutlet(null);
     setCart([]);
-  }, []);
+  }, [currentCashier]);
 
   const availableOutlets = currentCashier
     ? posOutlets.filter(o => currentCashier.assignedOutlets.includes(o.id))
