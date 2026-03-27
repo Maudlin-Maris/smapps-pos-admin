@@ -463,17 +463,14 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 <Input type="number" min={2} max={10} value={splitCount} onChange={e => {
                   const n = Math.max(2, Math.min(10, parseInt(e.target.value) || 2));
                   setSplitCount(n);
-                }} className="w-20 h-8" />
-                <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => {
-                  const perPerson = Math.floor(total / splitCount);
-                  const remainder = total - perPerson * splitCount;
-                  setCustomAmounts(Array.from({ length: splitCount }, (_, i) => ({
+                  const perPerson = Math.floor(total / n);
+                  const remainder = total - perPerson * n;
+                  setCustomAmounts(Array.from({ length: n }, (_, i) => ({
                     method: "cash" as PaymentMethod,
-                    amount: (i === splitCount - 1 ? perPerson + remainder : perPerson).toString()
+                    amount: (i === n - 1 ? perPerson + remainder : perPerson).toString()
                   })));
-                }}>
-                  Apply
-                </Button>
+                }} className="w-20 h-8" />
+                <span className="text-sm text-muted-foreground">people</span>
               </div>
 
               {/* Split entries */}
