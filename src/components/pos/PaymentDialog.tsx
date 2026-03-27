@@ -12,8 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer,
   CheckCircle2, SplitSquareHorizontal, ArrowLeft, Percent, Tag, MapPin,
-  Heart, Search
+  Heart, Search, ChefHat
 } from "lucide-react";
+import PrintReceiptDialog from "./PrintReceiptDialog";
 
 interface Props {
   open: boolean;
@@ -35,7 +36,8 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
   const [splitCount, setSplitCount] = useState(2);
   const [customAmounts, setCustomAmounts] = useState<{ method: PaymentMethod; amount: string }[]>([]);
-  const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
+  const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number; id: string } | null>(null);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [payNow, setPayNow] = useState(true);
 
   // Discount state
@@ -119,7 +121,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     if (!payNow) {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName);
-      setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount });
+      setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
       setStep("complete");
       return;
     }
@@ -129,12 +131,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const handleFullPayment = () => {
     if (existingOrderId) {
       addPayment(existingOrderId, { method: paymentMethod, amount: total });
-      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName);
       addPayment(order.id, { method: paymentMethod, amount: total });
-      setCompletedOrder({ orderNumber: order.orderNumber, total });
+      setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
     setStep("complete");
   };
@@ -146,7 +148,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(existingOrderId, { method: ca.method, amount: amt });
       });
-      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName);
@@ -154,7 +156,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
       });
-      setCompletedOrder({ orderNumber: order.orderNumber, total });
+      setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
     setStep("complete");
   };
@@ -611,14 +613,26 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
             {tipValue > 0 && (
               <p className="text-sm text-primary">Tip: {formatNaira(tipValue)}</p>
             )}
-            <div className="flex gap-2 justify-center">
-              <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-                <Printer className="w-4 h-4" /> Print Receipt
-              </Button>
-              <Button onClick={handleClose}>Done</Button>
+            <div className="flex flex-col gap-2 items-center">
+              <div className="flex gap-2">
+                <Button variant="outline" className="gap-2" onClick={() => setShowPrintDialog(true)}>
+                  <Printer className="w-4 h-4" /> Receipt
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => { setShowPrintDialog(true); }}>
+                  <ChefHat className="w-4 h-4" /> Dockets
+                </Button>
+              </div>
+              <Button onClick={handleClose} className="w-40">Done</Button>
             </div>
           </div>
         )}
+
+        {/* Print Receipt/Docket Dialog */}
+        <PrintReceiptDialog
+          open={showPrintDialog}
+          onClose={() => setShowPrintDialog(false)}
+          order={completedOrder ? orders.find(o => o.id === completedOrder.id) || null : null}
+        />
       </DialogContent>
     </Dialog>
   );

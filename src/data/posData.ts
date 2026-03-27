@@ -45,6 +45,7 @@ export interface POSCartItem {
   id: string;
   productId: string;
   productName: string;
+  categoryId?: string;
   variantId?: string;
   variantName?: string;
   extras: { id: string; name: string; price: number }[];
@@ -112,6 +113,9 @@ export interface POSOutlet {
   id: string;
   name: string;
   businessType: BusinessTypeId;
+  email?: string;
+  phone?: string;
+  address?: string;
 }
 
 // --- Preconfigured Discounts ---
@@ -414,12 +418,12 @@ export const mockOrders: POSOrder[] = [
 ];
 
 export const posOutlets: POSOutlet[] = [
-  { id: "outlet-1", name: "Downtown Flagship", businessType: "restaurant" },
-  { id: "outlet-2", name: "Mall Branch", businessType: "retail" },
-  { id: "outlet-3", name: "Airport Kiosk", businessType: "restaurant" },
-  { id: "outlet-4", name: "Suburban Pharmacy", businessType: "pharmacy" },
-  { id: "outlet-5", name: "Glow Beauty Salon", businessType: "salon" },
-  { id: "outlet-7", name: "FreshMart Grocery", businessType: "grocery" },
+  { id: "outlet-1", name: "Downtown Flagship", businessType: "restaurant", email: "downtown@flagship.ng", phone: "+234 801 234 5678", address: "12 Victoria Island Way, Lagos" },
+  { id: "outlet-2", name: "Mall Branch", businessType: "retail", email: "mall@branch.ng", phone: "+234 802 345 6789", address: "Shop 45, Ikeja City Mall, Lagos" },
+  { id: "outlet-3", name: "Airport Kiosk", businessType: "restaurant", email: "airport@kiosk.ng", phone: "+234 803 456 7890", address: "Terminal 2, MM Int'l Airport, Lagos" },
+  { id: "outlet-4", name: "Suburban Pharmacy", businessType: "pharmacy", email: "info@suburbanpharmacy.ng", phone: "+234 804 567 8901", address: "22 Lekki Phase 1, Lagos" },
+  { id: "outlet-5", name: "Glow Beauty Salon", businessType: "salon", email: "hello@glowbeauty.ng", phone: "+234 805 678 9012", address: "8 Admiralty Way, Lekki, Lagos" },
+  { id: "outlet-7", name: "FreshMart Grocery", businessType: "grocery", email: "orders@freshmart.ng", phone: "+234 806 789 0123", address: "Plot 5, Allen Avenue, Ikeja, Lagos" },
 ];
 
 /** Get allowed order types for a business */

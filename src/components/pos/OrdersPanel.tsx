@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
-  ChevronRight, Receipt
+  ChevronRight, Receipt, Printer, ChefHat
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
+import PrintReceiptDialog from "./PrintReceiptDialog";
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode }> = {
   open: { label: "Open", color: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]", icon: <Clock className="w-3 h-3" /> },
@@ -30,6 +31,7 @@ export default function OrdersPanel() {
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
+  const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
 
   const filtered = orders.filter(o => {
     if (filter === "active") return !["paid", "voided"].includes(o.status);
@@ -241,8 +243,11 @@ export default function OrdersPanel() {
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => window.print()}>
-                      <Receipt className="w-4 h-4 mr-1" /> Print
+                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                      <Printer className="w-4 h-4 mr-1" /> Receipt
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                      <ChefHat className="w-4 h-4 mr-1" /> Docket
                     </Button>
                   </div>
                 </div>
@@ -257,6 +262,9 @@ export default function OrdersPanel() {
 
       {/* Merge dialog */}
       <MergeOrderDialog open={showMerge} onClose={() => { setShowMerge(false); setMergeSourceId(null); }} sourceOrderId={mergeSourceId} />
+
+      {/* Print Receipt/Docket dialog */}
+      <PrintReceiptDialog open={!!printOrder} onClose={() => setPrintOrder(null)} order={printOrder} />
     </div>
   );
 }
