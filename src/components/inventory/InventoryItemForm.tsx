@@ -483,11 +483,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                               <span>Cost: ₦{batch.costPrice.toFixed(2)}/unit</span>
                             )}
                             {batch.initialQuantity !== undefined && (
-                              <span>Added: {batch.initialQuantity}</span>
-                            )}
-                            <span>Remaining: {batch.quantity}</span>
-                            {batch.createdAt && (
-                              <span>{new Date(batch.createdAt).toLocaleDateString()} {new Date(batch.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span>Added Qty: {batch.initialQuantity}</span>
                             )}
                           </div>
                         </div>
