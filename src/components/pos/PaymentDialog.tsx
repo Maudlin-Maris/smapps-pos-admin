@@ -35,7 +35,8 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
   const [splitCount, setSplitCount] = useState(2);
   const [customAmounts, setCustomAmounts] = useState<{ method: PaymentMethod; amount: string }[]>([]);
-  const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number } | null>(null);
+  const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number; id: string } | null>(null);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [payNow, setPayNow] = useState(true);
 
   // Discount state
