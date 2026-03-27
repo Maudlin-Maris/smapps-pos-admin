@@ -207,7 +207,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
     <POSContext.Provider value={{
       authState, currentCashier, loginWithCredentials, loginWithPin, lockScreen, switchProfile, logout,
       currentOutlet, setCurrentOutlet, availableOutlets,
-      cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart, cartTotal,
+      cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
       orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder,
       orderType, setOrderType,
     }}>

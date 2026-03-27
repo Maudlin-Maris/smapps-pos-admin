@@ -1,15 +1,19 @@
+import { useState } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart, Pencil } from "lucide-react";
+import { type POSCartItem } from "@/data/posData";
+import CartItemEditDialog from "./CartItemEditDialog";
 
 interface Props {
   onCheckout: () => void;
 }
 
 export default function POSCart({ onCheckout }: Props) {
-  const { cart, cartTotal, removeFromCart, updateCartItemQuantity, clearCart } = usePOS();
+  const { cart, cartTotal, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart } = usePOS();
+  const [editingItem, setEditingItem] = useState<POSCartItem | null>(null);
 
   if (cart.length === 0) {
     return (
@@ -38,7 +42,11 @@ export default function POSCart({ onCheckout }: Props) {
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {cart.map(item => (
-            <div key={item.id} className="flex gap-2 p-2 rounded-lg bg-muted/30 group">
+            <div
+              key={item.id}
+              className="flex gap-2 p-2 rounded-lg bg-muted/30 group cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => setEditingItem(item)}
+            >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
                   {item.productName}
@@ -49,12 +57,15 @@ export default function POSCart({ onCheckout }: Props) {
                     +{item.extras.map(e => e.name).join(", ")}
                   </p>
                 )}
-                <p className="text-xs text-muted-foreground mt-0.5">${item.unitPrice.toFixed(2)} each</p>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <p className="text-xs text-muted-foreground">${item.unitPrice.toFixed(2)} each</p>
+                  <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
               </div>
 
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <p className="text-sm font-semibold text-foreground">${item.totalPrice.toFixed(2)}</p>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                   <button onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
                     className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-colors">
                     {item.quantity === 1 ? <Trash2 className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
@@ -81,6 +92,14 @@ export default function POSCart({ onCheckout }: Props) {
           Checkout · ${cartTotal.toFixed(2)}
         </Button>
       </div>
+
+      <CartItemEditDialog
+        item={editingItem}
+        open={!!editingItem}
+        onClose={() => setEditingItem(null)}
+        onSave={(id, variantId, variantName, extras, unitPrice) => updateCartItem(id, variantId, variantName, extras, unitPrice)}
+        onRemove={(id) => removeFromCart(id)}
+      />
     </div>
   );
 }
