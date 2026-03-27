@@ -100,7 +100,7 @@ export default function OrdersPanel() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold">${order.totalAmount.toFixed(2)}</p>
+                    <p className="text-sm font-semibold">{formatNaira(order.totalAmount)}</p>
                     <p className="text-[10px] text-muted-foreground">{timeSince(order.createdAt)}</p>
                   </div>
                 </div>
