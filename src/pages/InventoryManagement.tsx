@@ -55,8 +55,8 @@ const defaultItems: InventoryItem[] = [
     { id: "b12b", batchNumber: "2026-01-10 11:00", expiryDate: "2026-12-01", quantity: 50, initialQuantity: 50, costPrice: 0.44, createdAt: "2026-01-10T11:00:00Z" },
   ] },
   { id: "i13", name: "Vitamin C 1000mg", sku: "PH-003", categoryId: "5", unitId: "7", stock: 15, minStock: 20, costPrice: 3.5, status: "low", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b13a", batchNumber: "BT-2025-118", expiryDate: "2026-04-10", quantity: 5, initialQuantity: 20, costPrice: 3.5, createdAt: "2025-04-28T09:00:00Z" },
-    { id: "b13b", batchNumber: "BT-2026-015", expiryDate: "2026-09-20", quantity: 10, initialQuantity: 10, costPrice: 3.6, createdAt: "2026-01-15T13:00:00Z" },
+    { id: "b13a", batchNumber: "2025-04-28 09:00", expiryDate: "2026-04-10", quantity: 5, initialQuantity: 20, costPrice: 3.5, createdAt: "2025-04-28T09:00:00Z" },
+    { id: "b13b", batchNumber: "2026-01-15 13:00", expiryDate: "2026-09-20", quantity: 10, initialQuantity: 10, costPrice: 3.6, createdAt: "2026-01-15T13:00:00Z" },
   ] },
   { id: "i14", name: "Cough Syrup", sku: "PH-004", categoryId: "5", unitId: "7", stock: 40, minStock: 15, costPrice: 2.8, status: "good", conversions: [], outletId: "outlet-4", batches: [
     { id: "b14a", batchNumber: "BT-2026-045", expiryDate: "2028-01-30", quantity: 40, initialQuantity: 40, costPrice: 2.8, createdAt: "2026-02-14T10:00:00Z" },
