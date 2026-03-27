@@ -62,7 +62,7 @@ const defaultItems: InventoryItem[] = [
     { id: "b14a", batchNumber: "2026-02-14 10:00", expiryDate: "2028-01-30", quantity: 40, initialQuantity: 40, costPrice: 2.8, createdAt: "2026-02-14T10:00:00Z" },
   ] },
   { id: "i15", name: "First Aid Bandages", sku: "PH-005", categoryId: "5", unitId: "6", stock: 5, minStock: 10, costPrice: 4.0, status: "critical", conversions: [], outletId: "outlet-4", batches: [
-    { id: "b15a", batchNumber: "BT-2025-200", expiryDate: "2026-02-15", quantity: 5, initialQuantity: 15, costPrice: 4.0, createdAt: "2025-07-19T08:30:00Z" },
+    { id: "b15a", batchNumber: "2025-07-19 08:30", expiryDate: "2026-02-15", quantity: 5, initialQuantity: 15, costPrice: 4.0, createdAt: "2025-07-19T08:30:00Z" },
   ] },
   // Salon (outlet-5)
   { id: "i6", name: "Shampoo (Professional)", sku: "SH-001", categoryId: "4", unitId: "7", stock: 3, minStock: 5, costPrice: 8.0, status: "critical", conversions: [], outletId: "outlet-5" },
