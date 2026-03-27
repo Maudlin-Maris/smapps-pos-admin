@@ -71,12 +71,14 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   const [batchNumber, setBatchNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState<string>("new");
+  const [returnBatchId, setReturnBatchId] = useState<string>("new");
 
   // Check if this item's outlet is batch-tracked
   const selectedOutlet = item ? outlets.find(o => o.id === item.outletId) : null;
   const isBatchTracked = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
   const hasBatches = item?.batches && item.batches.length > 0;
-  const isAddType = type === "add" || type === "returned";
+  const isAddType = type === "add";
+  const isReturnType = type === "returned";
   const isRemoveType = type === "remove" || type === "damaged";
 
   useState(() => {
