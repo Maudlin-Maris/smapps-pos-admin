@@ -17,6 +17,7 @@ import {
   Menu as MenuIcon
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import logoIconLight from "@/assets/logo-icon-light.png";
 
 type POSTab = "catalog" | "orders" | "kitchen";
 
