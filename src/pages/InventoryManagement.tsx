@@ -255,6 +255,8 @@ export default function InventoryManagement() {
             batchNumber,
             expiryDate: expiryDate || "",
             quantity,
+            costPrice: batchCostPrice,
+            createdAt: new Date().toISOString(),
           });
         }
       } else if (type === "add" && batchNumber && expiryDate && updatedBatches) {
