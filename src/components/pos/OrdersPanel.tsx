@@ -262,6 +262,9 @@ export default function OrdersPanel() {
 
       {/* Merge dialog */}
       <MergeOrderDialog open={showMerge} onClose={() => { setShowMerge(false); setMergeSourceId(null); }} sourceOrderId={mergeSourceId} />
+
+      {/* Print Receipt/Docket dialog */}
+      <PrintReceiptDialog open={!!printOrder} onClose={() => setPrintOrder(null)} order={printOrder} />
     </div>
   );
 }
