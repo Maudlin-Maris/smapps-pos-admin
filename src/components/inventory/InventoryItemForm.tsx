@@ -387,7 +387,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
-            {/* Conversions Section */}
+            {/* Batch & Expiry (pharmacy, grocery, supermarket only) */}
+            {showBatchExpiry && (
+              <div className="grid sm:grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Batch Number</label>
+                  <Input value={form.batchNumber || ""} onChange={(e) => setForm({ ...form, batchNumber: e.target.value })} placeholder="e.g. BT-2026-001" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Expiry Date</label>
+                  <Input type="date" value={form.expiryDate || ""} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
+                </div>
+              </div>
+            )}
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div>
