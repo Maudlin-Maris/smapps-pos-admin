@@ -155,7 +155,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
       });
-      setCompletedOrder({ orderNumber: order.orderNumber, total });
+      setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
     setStep("complete");
   };
