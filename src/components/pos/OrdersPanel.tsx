@@ -243,8 +243,11 @@ export default function OrdersPanel() {
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => window.print()}>
-                      <Receipt className="w-4 h-4 mr-1" /> Print
+                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                      <Printer className="w-4 h-4 mr-1" /> Receipt
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                      <ChefHat className="w-4 h-4 mr-1" /> Docket
                     </Button>
                   </div>
                 </div>
