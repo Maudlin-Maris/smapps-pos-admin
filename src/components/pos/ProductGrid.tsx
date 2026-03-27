@@ -57,6 +57,7 @@ export default function ProductGrid() {
     addToCart({
       productId: dialogProduct.id,
       productName: dialogProduct.name,
+      categoryId: dialogProduct.categoryId,
       variantId,
       variantName,
       extras: selectedExtras,
