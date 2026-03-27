@@ -352,7 +352,6 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
             <SelectItem value="set">Stock Set</SelectItem>
             <SelectItem value="damaged">Damaged</SelectItem>
             <SelectItem value="returned">Returned</SelectItem>
-            <SelectItem value="correction">Correction</SelectItem>
           </SelectContent>
         </Select>
       </div>
