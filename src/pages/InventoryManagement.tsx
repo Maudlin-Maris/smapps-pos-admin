@@ -76,11 +76,22 @@ const defaultItems: InventoryItem[] = [
   { id: "i20", name: "Razor Blades", sku: "BR-003", categoryId: "4", unitId: "10", stock: 10, minStock: 20, costPrice: 0.8, status: "low", conversions: [], outletId: "outlet-6" },
   { id: "i21", name: "Shaving Cream", sku: "BR-004", categoryId: "4", unitId: "8", stock: 12, minStock: 5, costPrice: 3.0, status: "good", conversions: [], outletId: "outlet-6" },
   // Grocery (outlet-7)
-  { id: "i22", name: "Tomatoes (Fresh)", sku: "GR-001", categoryId: "6", unitId: "1", stock: 60, minStock: 20, costPrice: 1.2, status: "good", conversions: [], outletId: "outlet-7", expiryDate: "2026-04-05" },
+  { id: "i22", name: "Tomatoes (Fresh)", sku: "GR-001", categoryId: "6", unitId: "1", stock: 60, minStock: 20, costPrice: 1.2, status: "good", conversions: [], outletId: "outlet-7", batches: [
+    { id: "b22a", batchNumber: "GR-TM-001", expiryDate: "2026-04-05", quantity: 25 },
+    { id: "b22b", batchNumber: "GR-TM-002", expiryDate: "2026-04-20", quantity: 35 },
+  ] },
   { id: "i23", name: "Onions", sku: "GR-002", categoryId: "6", unitId: "1", stock: 40, minStock: 15, costPrice: 0.8, status: "good", conversions: [], outletId: "outlet-7" },
-  { id: "i24", name: "Palm Oil", sku: "GR-003", categoryId: "12", unitId: "3", stock: 25, minStock: 10, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-7", batchNumber: "GR-B-2026-03", expiryDate: "2027-03-20" },
-  { id: "i25", name: "Basmati Rice 5kg", sku: "GR-004", categoryId: "12", unitId: "5", stock: 8, minStock: 15, costPrice: 8.0, status: "low", conversions: [], outletId: "outlet-7", batchNumber: "GR-B-2025-88", expiryDate: "2026-09-15" },
-  { id: "i26", name: "Instant Noodles (Carton)", sku: "GR-005", categoryId: "12", unitId: "11", stock: 14, minStock: 5, costPrice: 12.0, status: "good", conversions: [{ id: "cv6", fromQuantity: 1, toQuantity: 40, toUnitId: "5" }], outletId: "outlet-7", batchNumber: "GR-B-2026-12", expiryDate: "2027-01-10" },
+  { id: "i24", name: "Palm Oil", sku: "GR-003", categoryId: "12", unitId: "3", stock: 25, minStock: 10, costPrice: 3.5, status: "good", conversions: [], outletId: "outlet-7", batches: [
+    { id: "b24a", batchNumber: "GR-B-2026-03", expiryDate: "2027-03-20", quantity: 25 },
+  ] },
+  { id: "i25", name: "Basmati Rice 5kg", sku: "GR-004", categoryId: "12", unitId: "5", stock: 8, minStock: 15, costPrice: 8.0, status: "low", conversions: [], outletId: "outlet-7", batches: [
+    { id: "b25a", batchNumber: "GR-B-2025-88", expiryDate: "2026-05-15", quantity: 3 },
+    { id: "b25b", batchNumber: "GR-B-2026-22", expiryDate: "2026-09-15", quantity: 5 },
+  ] },
+  { id: "i26", name: "Instant Noodles (Carton)", sku: "GR-005", categoryId: "12", unitId: "11", stock: 14, minStock: 5, costPrice: 12.0, status: "good", conversions: [{ id: "cv6", fromQuantity: 1, toQuantity: 40, toUnitId: "5" }], outletId: "outlet-7", batches: [
+    { id: "b26a", batchNumber: "GR-B-2026-12", expiryDate: "2026-06-10", quantity: 6 },
+    { id: "b26b", batchNumber: "GR-B-2026-30", expiryDate: "2027-01-10", quantity: 8 },
+  ] },
   // Supermarket (outlet-8)
   { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12" },
   { id: "i28", name: "Cheddar Cheese Block", sku: "SM-002", categoryId: "7", unitId: "5", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-8", batchNumber: "SM-2026-A2", expiryDate: "2026-06-30" },
