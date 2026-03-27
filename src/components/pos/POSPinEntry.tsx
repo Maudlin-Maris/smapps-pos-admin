@@ -56,6 +56,7 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
       <div className="w-full max-w-sm">
         {/* Profile */}
         <div className="text-center mb-8">
+          <img src={logoLight} alt="Smapps" className="h-6 mx-auto mb-6 opacity-60" />
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-[hsl(var(--accent))]/20 mb-4 text-2xl font-bold text-[hsl(var(--accent))]">
             {currentCashier?.name.charAt(0)}
           </div>
