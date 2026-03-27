@@ -193,7 +193,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                   {allowedOrderTypes.map(type => (
                     <button
                       key={type.id}
-                      onClick={() => { setSelectedOrderType(type.id); setSelectedLocation(""); }}
+                      onClick={() => { setSelectedOrderType(type.id); setSelectedLocation(""); setLocationSearch(""); }}
                       className={`p-3 rounded-xl border text-center transition-all ${
                         selectedOrderType === type.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
                       }`}
