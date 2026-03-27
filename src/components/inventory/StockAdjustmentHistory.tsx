@@ -71,12 +71,14 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   const [batchNumber, setBatchNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [selectedBatchId, setSelectedBatchId] = useState<string>("new");
+  const [returnBatchId, setReturnBatchId] = useState<string>("new");
 
   // Check if this item's outlet is batch-tracked
   const selectedOutlet = item ? outlets.find(o => o.id === item.outletId) : null;
   const isBatchTracked = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
   const hasBatches = item?.batches && item.batches.length > 0;
-  const isAddType = type === "add" || type === "returned";
+  const isAddType = type === "add";
+  const isReturnType = type === "returned";
   const isRemoveType = type === "remove" || type === "damaged";
 
   useState(() => {
@@ -94,12 +96,16 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Please provide a reason for the adjustment");
       return;
     }
-    if (isAddType && batchCostPrice <= 0) {
+    if ((isAddType || isReturnType) && batchCostPrice <= 0) {
       toast.error("Please enter the cost per unit for this batch");
       return;
     }
     if (isBatchTracked && isAddType && !expiryDate) {
       toast.error("Please enter an expiry date for this batch");
+      return;
+    }
+    if (isBatchTracked && isReturnType && returnBatchId === "new" && !expiryDate) {
+      toast.error("Please select a batch to return to, or provide expiry date for a new batch");
       return;
     }
     if (!item) return;
@@ -113,14 +119,25 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       }
     }
 
+    // For returns to existing batch, pass that batch's info
+    let finalBatchNumber = batchNumber;
+    let finalExpiryDate = expiryDate;
+    if (isReturnType && isBatchTracked && returnBatchId !== "new" && hasBatches) {
+      const targetBatch = item.batches!.find(b => b.id === returnBatchId);
+      if (targetBatch) {
+        finalBatchNumber = targetBatch.batchNumber;
+        finalExpiryDate = targetBatch.expiryDate;
+      }
+    }
+
     onAdjust(
       item.id,
       type,
       quantity,
       reason,
-      isAddType ? batchCostPrice : undefined,
-      isBatchTracked && isAddType ? (batchNumber || `BT-${Date.now()}`) : undefined,
-      isBatchTracked && isAddType ? expiryDate : undefined
+      (isAddType || isReturnType) ? batchCostPrice : undefined,
+      isBatchTracked && (isAddType || isReturnType) ? (finalBatchNumber || `BT-${Date.now()}`) : undefined,
+      isBatchTracked && (isAddType || isReturnType) ? finalExpiryDate : undefined
     );
     setType("add");
     setQuantity(0);
@@ -129,13 +146,14 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
     setBatchNumber("");
     setExpiryDate("");
     setSelectedBatchId("new");
+    setReturnBatchId("new");
     onOpenChange(false);
   };
 
   const previewStock = item
     ? type === "set"
       ? quantity
-      : isAddType
+      : (isAddType || isReturnType)
         ? item.stock + quantity
         : item.stock - quantity
     : 0;
@@ -205,6 +223,24 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             </div>
           )}
 
+          {/* For returns, allow selecting which batch to return to */}
+          {isReturnType && isBatchTracked && hasBatches && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Return to batch</label>
+              <Select value={returnBatchId} onValueChange={setReturnBatchId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Create new batch</SelectItem>
+                  {item!.batches!.map(b => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.batchNumber} · {b.quantity} units · Exp: {b.expiryDate || "N/A"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Quantity</label>
@@ -216,7 +252,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               />
             </div>
             
-            {isAddType && (
+          {(isAddType || isReturnType) && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cost per unit (₦)</label>
                 <Input
@@ -230,8 +266,8 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             )}
           </div>
 
-          {/* Batch info for new stock additions on batch-tracked items */}
-          {isBatchTracked && isAddType && (
+          {/* Batch info for new stock additions or new-batch returns */}
+          {isBatchTracked && (isAddType || (isReturnType && returnBatchId === "new")) && (
             <div className="grid grid-cols-2 gap-4 border-t pt-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Batch Number</label>

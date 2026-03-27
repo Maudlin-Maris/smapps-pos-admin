@@ -243,8 +243,22 @@ export default function InventoryManagement() {
         newAverageCost = (currentTotalValue + newBatchValue) / newStock;
       }
 
-      // Add new batch entry if batch-tracked
-      if (batchNumber && expiryDate && updatedBatches) {
+      // For returns, try to add back to existing batch with matching batchNumber
+      if (type === "returned" && batchNumber && updatedBatches) {
+        const existingBatch = updatedBatches.find(b => b.batchNumber === batchNumber);
+        if (existingBatch) {
+          existingBatch.quantity += quantity;
+        } else {
+          // Batch was fully depleted or new batch - create entry
+          updatedBatches.push({
+            id: crypto.randomUUID(),
+            batchNumber,
+            expiryDate: expiryDate || "",
+            quantity,
+          });
+        }
+      } else if (type === "add" && batchNumber && expiryDate && updatedBatches) {
+        // Add stock always creates a new batch
         updatedBatches.push({
           id: crypto.randomUUID(),
           batchNumber,
