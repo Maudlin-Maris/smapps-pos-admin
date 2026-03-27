@@ -93,7 +93,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
                   }`}
                 >
                   <span className="text-sm font-medium">{v.name}</span>
-                  <span className="text-sm text-muted-foreground">${v.price.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">{formatNaira(v.price)}</span>
                 </button>
               ))}
             </div>
