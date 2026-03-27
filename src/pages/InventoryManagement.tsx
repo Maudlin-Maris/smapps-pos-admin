@@ -89,8 +89,8 @@ const defaultItems: InventoryItem[] = [
     { id: "b25b", batchNumber: "2026-01-22 11:00", expiryDate: "2026-09-15", quantity: 5, initialQuantity: 5, costPrice: 8.2, createdAt: "2026-01-22T11:00:00Z" },
   ] },
   { id: "i26", name: "Instant Noodles (Carton)", sku: "GR-005", categoryId: "12", unitId: "11", stock: 14, minStock: 5, costPrice: 12.0, status: "good", conversions: [{ id: "cv6", fromQuantity: 1, toQuantity: 40, toUnitId: "5" }], outletId: "outlet-7", batches: [
-    { id: "b26a", batchNumber: "GR-B-2026-12", expiryDate: "2026-06-10", quantity: 6, initialQuantity: 10, costPrice: 11.5, createdAt: "2026-01-12T12:00:00Z" },
-    { id: "b26b", batchNumber: "GR-B-2026-30", expiryDate: "2027-01-10", quantity: 8, initialQuantity: 8, costPrice: 12.0, createdAt: "2026-01-30T14:00:00Z" },
+    { id: "b26a", batchNumber: "2026-01-12 12:00", expiryDate: "2026-06-10", quantity: 6, initialQuantity: 10, costPrice: 11.5, createdAt: "2026-01-12T12:00:00Z" },
+    { id: "b26b", batchNumber: "2026-01-30 14:00", expiryDate: "2027-01-10", quantity: 8, initialQuantity: 8, costPrice: 12.0, createdAt: "2026-01-30T14:00:00Z" },
   ] },
   // Supermarket (outlet-8)
   { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8", batches: [
