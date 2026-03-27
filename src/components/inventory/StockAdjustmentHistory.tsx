@@ -90,8 +90,12 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Quantity must be greater than 0");
       return;
     }
-    if ((isAddType || isReturnType) && batchCostPrice <= 0) {
+    if (isAddType && batchCostPrice <= 0) {
       toast.error("Please enter the cost per unit for this batch");
+      return;
+    }
+    if (!reason.trim()) {
+      toast.error("Please provide a reason for this adjustment");
       return;
     }
     if (isBatchTracked && isReturnType && returnBatchId === "new" && !expiryDate) {
