@@ -223,6 +223,24 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             </div>
           )}
 
+          {/* For returns, allow selecting which batch to return to */}
+          {isReturnType && isBatchTracked && hasBatches && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Return to batch</label>
+              <Select value={returnBatchId} onValueChange={setReturnBatchId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Create new batch</SelectItem>
+                  {item!.batches!.map(b => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.batchNumber} · {b.quantity} units · Exp: {b.expiryDate || "N/A"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Quantity</label>
