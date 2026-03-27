@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { type POSCartItem, posProducts } from "@/data/posData";
+import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Check, Trash2 } from "lucide-react";
@@ -92,7 +93,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
                   }`}
                 >
                   <span className="text-sm font-medium">{v.name}</span>
-                  <span className="text-sm text-muted-foreground">${v.price.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">{formatNaira(v.price)}</span>
                 </button>
               ))}
             </div>
@@ -119,7 +120,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
                     {selectedExtras.has(extra.id) && <Check className="w-3 h-3 text-primary-foreground" />}
                   </div>
                   <span className="flex-1 text-sm text-left">{extra.name}</span>
-                  <span className="text-sm text-muted-foreground">+${extra.price.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">+{formatNaira(extra.price)}</span>
                 </button>
               ))}
             </div>
@@ -129,7 +130,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
         <div className="flex items-center justify-between pt-2 border-t border-border">
           <div>
             <p className="text-xs text-muted-foreground">Total ({item.quantity}x)</p>
-            <p className="text-xl font-bold text-foreground">${totalPrice.toFixed(2)}</p>
+            <p className="text-xl font-bold text-foreground">{formatNaira(totalPrice)}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="destructive" size="icon" onClick={handleRemove} className="h-11 w-11">

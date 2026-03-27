@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { formatNaira } from "@/lib/currency";
 import type { POSOrder, OrderStatus } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -99,7 +100,7 @@ export default function OrdersPanel() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold">${order.totalAmount.toFixed(2)}</p>
+                    <p className="text-sm font-semibold">{formatNaira(order.totalAmount)}</p>
                     <p className="text-[10px] text-muted-foreground">{timeSince(order.createdAt)}</p>
                   </div>
                 </div>
@@ -172,17 +173,17 @@ export default function OrdersPanel() {
                             <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
                           )}
                         </div>
-                        <span className="font-medium shrink-0">${item.totalPrice.toFixed(2)}</span>
+                        <span className="font-medium shrink-0">{formatNaira(item.totalPrice)}</span>
                       </div>
                     ))}
                     <div className="flex justify-between pt-2 text-sm font-bold">
                       <span>Total</span>
-                      <span>${selectedOrder.totalAmount.toFixed(2)}</span>
+                      <span>{formatNaira(selectedOrder.totalAmount)}</span>
                     </div>
                     {selectedOrder.paidAmount > 0 && (
                       <div className="flex justify-between text-sm text-[hsl(var(--success))]">
                         <span>Paid</span>
-                        <span>${selectedOrder.paidAmount.toFixed(2)}</span>
+                        <span>{formatNaira(selectedOrder.paidAmount)}</span>
                       </div>
                     )}
                   </div>
@@ -194,7 +195,7 @@ export default function OrdersPanel() {
                       {selectedOrder.payments.map((p, i) => (
                         <div key={i} className="flex justify-between text-sm">
                           <span className="capitalize">{p.method}</span>
-                          <span>${p.amount.toFixed(2)}</span>
+                          <span>{formatNaira(p.amount)}</span>
                         </div>
                       ))}
                     </div>
