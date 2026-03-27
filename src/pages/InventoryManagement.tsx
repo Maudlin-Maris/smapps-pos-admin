@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, Eye } from "lucide-react";
+import { AlertTriangle, Eye, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
