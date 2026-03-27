@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, ArrowRightLeft, ScanBarcode, Calendar } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { outlets } from "@/data/outlets";
 import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,13 @@ export interface ItemConversion {
   fromQuantity: number;
   toQuantity: number;
   toUnitId: string;
+}
+
+export interface ItemBatch {
+  id: string;
+  batchNumber: string;
+  expiryDate: string;
+  quantity: number;
 }
 
 export interface InventoryItem {
@@ -48,6 +55,7 @@ export interface InventoryItem {
   outletId: string;
   batchNumber?: string;
   expiryDate?: string;
+  batches?: ItemBatch[];
 }
 
 interface Props {
@@ -63,7 +71,9 @@ interface Props {
 
 type FormState = Omit<InventoryItem, "id" | "status">;
 
-const BATCH_EXPIRY_BUSINESS_TYPES = ["pharmacy", "grocery", "supermarket"];
+export const BATCH_EXPIRY_BUSINESS_TYPES = ["pharmacy", "grocery", "supermarket"];
+
+const EXPIRY_SOON_DAYS = 90;
 
 const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
@@ -77,6 +87,7 @@ const emptyForm = (outletId: string = ""): FormState => ({
   outletId,
   batchNumber: "",
   expiryDate: "",
+  batches: [],
 });
 
 function computeStatus(stock: number, min: number): InventoryItem["status"] {
@@ -85,7 +96,23 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
   return "good";
 }
 
-// No longer need MenuItemCombobox - conversions are now unit-to-unit
+/** Calculate expiry stats from batches */
+export function getBatchExpiryStats(batches?: ItemBatch[]) {
+  if (!batches || batches.length === 0) return { expired: 0, expiringSoon: 0, valid: 0, totalBatches: 0 };
+  const now = new Date();
+  const soonDate = new Date(Date.now() + EXPIRY_SOON_DAYS * 24 * 60 * 60 * 1000);
+  let expired = 0;
+  let expiringSoon = 0;
+  let valid = 0;
+  for (const b of batches) {
+    if (!b.expiryDate) { valid += b.quantity; continue; }
+    const exp = new Date(b.expiryDate);
+    if (exp < now) expired += b.quantity;
+    else if (exp < soonDate) expiringSoon += b.quantity;
+    else valid += b.quantity;
+  }
+  return { expired, expiringSoon, valid, totalBatches: batches.length };
+}
 
 export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock }: Props) {
   const [open, setOpen] = useState(false);
@@ -93,9 +120,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
 
   const selectedOutlet = selectedOutletId && selectedOutletId !== "all" ? outlets.find(o => o.id === selectedOutletId) : null;
   const showBatchExpiry = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
+
+  const toggleBatchExpand = (itemId: string) => {
+    setExpandedBatches(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -117,6 +154,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       outletId: item.outletId,
       batchNumber: item.batchNumber || "",
       expiryDate: item.expiryDate || "",
+      batches: item.batches || [],
     });
     setOpen(true);
   };
@@ -128,6 +166,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       name: `${item.name} (Copy)`,
       sku: `${item.sku}-COPY`,
       conversions: item.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
+      batches: item.batches?.map(b => ({ ...b, id: crypto.randomUUID() })),
     };
     setItems((prev) => [...prev, cloned]);
     toast.success("Item cloned");
@@ -151,14 +190,21 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       toast.error("Please complete all conversion fields");
       return;
     }
-    const status = computeStatus(form.stock, form.minStock);
+
+    // For batch-tracked items, stock = sum of batch quantities
+    const hasBatches = showBatchExpiry && form.batches && form.batches.length > 0;
+    const finalStock = hasBatches
+      ? form.batches!.reduce((sum, b) => sum + b.quantity, 0)
+      : form.stock;
+
+    const status = computeStatus(finalStock, form.minStock);
     if (editing) {
       setItems((prev) =>
-        prev.map((i) => (i.id === editing.id ? { ...i, ...form, status } : i))
+        prev.map((i) => (i.id === editing.id ? { ...i, ...form, stock: finalStock, status } : i))
       );
       toast.success("Item updated");
     } else {
-      setItems((prev) => [...prev, { id: crypto.randomUUID(), ...form, status }]);
+      setItems((prev) => [...prev, { id: crypto.randomUUID(), ...form, stock: finalStock, status }]);
       toast.success("Item registered");
     }
     setOpen(false);
@@ -191,6 +237,28 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     }));
   };
 
+  // Batch helpers
+  const addBatch = () => {
+    setForm((prev) => ({
+      ...prev,
+      batches: [...(prev.batches || []), { id: crypto.randomUUID(), batchNumber: "", expiryDate: "", quantity: 0 }],
+    }));
+  };
+
+  const updateBatch = (index: number, updates: Partial<ItemBatch>) => {
+    setForm((prev) => ({
+      ...prev,
+      batches: (prev.batches || []).map((b, i) => (i === index ? { ...b, ...updates } : b)),
+    }));
+  };
+
+  const removeBatch = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      batches: (prev.batches || []).filter((_, i) => i !== index),
+    }));
+  };
+
   const getUnit = (id: string) => units.find((u) => u.id === id);
   const getCategory = (id: string) => categories.find((c) => c.id === id);
 
@@ -200,6 +268,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     .filter((i) => !filterLowStock || i.status === "low" || i.status === "critical");
 
   const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
+
+  const batchStockTotal = (form.batches || []).reduce((sum, b) => sum + b.quantity, 0);
 
   return (
     <div className="space-y-4">
@@ -242,6 +312,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
         {paginatedItems.map((item) => {
           const unit = getUnit(item.unitId);
           const category = getCategory(item.categoryId);
+          const expiryStats = getBatchExpiryStats(item.batches);
+          const hasBatches = item.batches && item.batches.length > 0;
+          const isExpanded = expandedBatches.has(item.id);
           return (
             <Card key={item.id} className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -259,10 +332,30 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     <p className="font-medium text-sm truncate">{item.name}</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {category && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{category.name}</Badge>}
-                      {item.batchNumber && <Badge variant="outline" className="text-[10px] px-1.5 py-0">Batch: {item.batchNumber}</Badge>}
-                      {item.expiryDate && (() => {
+                      {hasBatches && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                          {expiryStats.totalBatches} batch{expiryStats.totalBatches !== 1 ? "es" : ""}
+                        </Badge>
+                      )}
+                      {expiryStats.expiringSoon > 0 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-warning/30 text-warning">
+                          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                          {expiryStats.expiringSoon} expiring soon
+                        </Badge>
+                      )}
+                      {expiryStats.expired > 0 && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-destructive/30 text-destructive">
+                          <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                          {expiryStats.expired} expired
+                        </Badge>
+                      )}
+                      {/* Fallback for legacy single-batch items without batches array */}
+                      {!hasBatches && item.batchNumber && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">Batch: {item.batchNumber}</Badge>
+                      )}
+                      {!hasBatches && item.expiryDate && (() => {
                         const isExpired = new Date(item.expiryDate) < new Date();
-                        const isExpiringSoon = !isExpired && new Date(item.expiryDate) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+                        const isExpiringSoon = !isExpired && new Date(item.expiryDate) < new Date(Date.now() + EXPIRY_SOON_DAYS * 24 * 60 * 60 * 1000);
                         return (
                           <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", isExpired && "border-destructive/30 text-destructive", isExpiringSoon && "border-warning/30 text-warning")}>
                             <Calendar className="h-2.5 w-2.5 mr-0.5" />
@@ -304,6 +397,11 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                   >
                     {item.status}
                   </Badge>
+                  {hasBatches && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleBatchExpand(item.id)} title="View batches">
+                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
                   {!readOnly && (
                     <div className="flex gap-1 shrink-0">
                       {onAdjustStock && (
@@ -324,6 +422,44 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                   )}
                 </div>
               </div>
+
+              {/* Expanded batch details */}
+              {hasBatches && isExpanded && (
+                <div className="mt-3 pt-3 border-t space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Batch Details</p>
+                  {item.batches!.map((batch) => {
+                    const now = new Date();
+                    const exp = batch.expiryDate ? new Date(batch.expiryDate) : null;
+                    const isExpired = exp ? exp < now : false;
+                    const isExpiringSoon = exp && !isExpired ? exp < new Date(Date.now() + EXPIRY_SOON_DAYS * 24 * 60 * 60 * 1000) : false;
+                    return (
+                      <div key={batch.id} className={cn(
+                        "flex items-center justify-between px-3 py-2 rounded-md text-xs",
+                        isExpired ? "bg-destructive/5 border border-destructive/20" :
+                        isExpiringSoon ? "bg-warning/5 border border-warning/20" :
+                        "bg-muted/50"
+                      )}>
+                        <div className="flex items-center gap-3">
+                          <span className="font-medium">{batch.batchNumber || "No batch #"}</span>
+                          {batch.expiryDate && (
+                            <span className={cn(
+                              "flex items-center gap-1",
+                              isExpired && "text-destructive",
+                              isExpiringSoon && "text-warning"
+                            )}>
+                              <Calendar className="h-3 w-3" />
+                              {isExpired ? "Expired" : "Exp"}: {batch.expiryDate}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-heading font-bold">
+                          {batch.quantity} <span className="font-normal text-muted-foreground">{unit?.abbreviation || ""}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </Card>
           );
         })}
@@ -371,35 +507,103 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Current Stock</label>
-                <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} />
+
+            {/* Stock fields: show only if NOT batch-tracked, or no batches yet */}
+            {(!showBatchExpiry || !(form.batches && form.batches.length > 0)) && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Current Stock</label>
+                  <Input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Min Stock</label>
+                  <Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min Stock</label>
-                <Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })} />
+            )}
+            {showBatchExpiry && form.batches && form.batches.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Total Stock (from batches)</label>
+                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                    {batchStockTotal}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Min Stock</label>
+                  <Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })} />
+                </div>
               </div>
-            </div>
+            )}
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Cost per Unit</label>
               <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. This updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
-            {/* Batch & Expiry (pharmacy, grocery, supermarket only) */}
+            {/* Multi-Batch Management (pharmacy, grocery, supermarket only) */}
             {showBatchExpiry && (
-              <div className="grid sm:grid-cols-2 gap-4 border-t pt-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Batch Number</label>
-                  <Input value={form.batchNumber || ""} onChange={(e) => setForm({ ...form, batchNumber: e.target.value })} placeholder="e.g. BT-2026-001" />
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Stock Batches</label>
+                    <p className="text-xs text-muted-foreground">Each purchase/shipment can have a different batch number and expiry date</p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addBatch} className="h-7 text-xs">
+                    <Plus className="h-3 w-3 mr-1" /> Add Batch
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Expiry Date</label>
-                  <Input type="date" value={form.expiryDate || ""} onChange={(e) => setForm({ ...form, expiryDate: e.target.value })} />
-                </div>
+
+                {(!form.batches || form.batches.length === 0) && (
+                  <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
+                    No batches added. Add a batch to track expiry dates per shipment.
+                  </p>
+                )}
+
+                {(form.batches || []).map((batch, idx) => (
+                  <Card key={batch.id} className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground">Batch {idx + 1}</p>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeBatch(idx)}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Batch #</label>
+                        <Input
+                          value={batch.batchNumber}
+                          onChange={(e) => updateBatch(idx, { batchNumber: e.target.value })}
+                          placeholder="BT-001"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Expiry Date</label>
+                        <Input
+                          type="date"
+                          value={batch.expiryDate}
+                          onChange={(e) => updateBatch(idx, { expiryDate: e.target.value })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={batch.quantity}
+                          onChange={(e) => updateBatch(idx, { quantity: Number(e.target.value) })}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             )}
+
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div>

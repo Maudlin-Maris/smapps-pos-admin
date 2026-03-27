@@ -20,12 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ArrowUpRight, ArrowDownRight, History, Filter } from "lucide-react";
+import { Search, ArrowUpRight, ArrowDownRight, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import type { InventoryItem } from "./InventoryItemForm";
+import type { InventoryItem, ItemBatch } from "./InventoryItemForm";
+import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
+import { outlets } from "@/data/outlets";
 
 export type AdjustmentType = "add" | "remove" | "set" | "damaged" | "returned" | "correction";
 
@@ -39,8 +41,10 @@ export interface StockAdjustment {
   reason: string;
   timestamp: Date;
   outletId: string;
-  costPrice: number; // cost per unit at time of adjustment
-  costTotal: number; // quantityChange * costPrice (for consumption tracking)
+  costPrice: number;
+  costTotal: number;
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 const adjustmentTypeLabels: Record<AdjustmentType, string> = {
@@ -56,7 +60,7 @@ interface AdjustDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
-  onAdjust: (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number) => void;
+  onAdjust: (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string) => void;
 }
 
 export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: AdjustDialogProps) {
@@ -64,10 +68,19 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   const [quantity, setQuantity] = useState(0);
   const [reason, setReason] = useState("");
   const [batchCostPrice, setBatchCostPrice] = useState<number>(0);
+  const [batchNumber, setBatchNumber] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("new");
 
-  // Update batch cost when item or type changes
+  // Check if this item's outlet is batch-tracked
+  const selectedOutlet = item ? outlets.find(o => o.id === item.outletId) : null;
+  const isBatchTracked = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
+  const hasBatches = item?.batches && item.batches.length > 0;
+  const isAddType = type === "add" || type === "returned";
+  const isRemoveType = type === "remove" || type === "damaged";
+
   useState(() => {
-    if (item && (type === "add" || type === "returned")) {
+    if (item && isAddType) {
       setBatchCostPrice(item.costPrice);
     }
   });
@@ -81,30 +94,55 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       toast.error("Please provide a reason for the adjustment");
       return;
     }
-    if ((type === "add" || type === "returned") && batchCostPrice <= 0) {
+    if (isAddType && batchCostPrice <= 0) {
       toast.error("Please enter the cost per unit for this batch");
       return;
     }
+    if (isBatchTracked && isAddType && !expiryDate) {
+      toast.error("Please enter an expiry date for this batch");
+      return;
+    }
     if (!item) return;
-    onAdjust(item.id, type, quantity, reason, type === "add" || type === "returned" ? batchCostPrice : undefined);
+
+    // For removals from specific batch, validate quantity
+    if (isRemoveType && hasBatches && selectedBatchId !== "new") {
+      const batch = item.batches!.find(b => b.id === selectedBatchId);
+      if (batch && quantity > batch.quantity) {
+        toast.error(`Cannot remove more than ${batch.quantity} from this batch`);
+        return;
+      }
+    }
+
+    onAdjust(
+      item.id,
+      type,
+      quantity,
+      reason,
+      isAddType ? batchCostPrice : undefined,
+      isBatchTracked && isAddType ? (batchNumber || `BT-${Date.now()}`) : undefined,
+      isBatchTracked && isAddType ? expiryDate : undefined
+    );
     setType("add");
     setQuantity(0);
     setReason("");
     setBatchCostPrice(0);
+    setBatchNumber("");
+    setExpiryDate("");
+    setSelectedBatchId("new");
     onOpenChange(false);
   };
 
   const previewStock = item
     ? type === "set"
       ? quantity
-      : type === "add" || type === "returned"
+      : isAddType
         ? item.stock + quantity
         : item.stock - quantity
     : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adjust Stock — {item?.name}</DialogTitle>
         </DialogHeader>
@@ -114,12 +152,32 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             <span className="font-heading font-bold">{item?.stock ?? 0}</span>
           </div>
 
+          {/* Show current batches for context */}
+          {hasBatches && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground">Current Batches</p>
+              {item!.batches!.map((b) => {
+                const exp = b.expiryDate ? new Date(b.expiryDate) : null;
+                const isExpired = exp ? exp < new Date() : false;
+                return (
+                  <div key={b.id} className={cn(
+                    "flex items-center justify-between px-3 py-1.5 rounded text-xs",
+                    isExpired ? "bg-destructive/5 text-destructive" : "bg-muted/50"
+                  )}>
+                    <span>{b.batchNumber} {b.expiryDate ? `· Exp: ${b.expiryDate}` : ""}</span>
+                    <span className="font-medium">{b.quantity}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Adjustment Type</label>
             <Select value={type} onValueChange={(v) => setType(v as AdjustmentType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="add">Add Stock</SelectItem>
+                <SelectItem value="add">Add Stock (New Batch)</SelectItem>
                 <SelectItem value="remove">Remove Stock</SelectItem>
                 <SelectItem value="set">Set Stock</SelectItem>
                 <SelectItem value="damaged">Damaged</SelectItem>
@@ -128,6 +186,24 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               </SelectContent>
             </Select>
           </div>
+
+          {/* For removals, allow selecting which batch to remove from */}
+          {isRemoveType && hasBatches && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Remove from batch</label>
+              <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">Oldest first (FEFO)</SelectItem>
+                  {item!.batches!.map(b => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.batchNumber} · {b.quantity} units · Exp: {b.expiryDate || "N/A"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -140,7 +216,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               />
             </div>
             
-            {(type === "add" || type === "returned") && (
+            {isAddType && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cost per unit (₦)</label>
                 <Input
@@ -153,6 +229,28 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               </div>
             )}
           </div>
+
+          {/* Batch info for new stock additions on batch-tracked items */}
+          {isBatchTracked && isAddType && (
+            <div className="grid grid-cols-2 gap-4 border-t pt-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Batch Number</label>
+                <Input
+                  value={batchNumber}
+                  onChange={(e) => setBatchNumber(e.target.value)}
+                  placeholder="e.g. BT-2026-001"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Expiry Date *</label>
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Reason *</label>
@@ -278,6 +376,9 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
                   <div className="min-w-0">
                     <p className="font-medium text-sm truncate">{getItemName(adj.inventoryItemId)}</p>
                     <p className="text-xs text-muted-foreground truncate">{adj.reason}</p>
+                    {adj.batchNumber && (
+                      <p className="text-[10px] text-muted-foreground">Batch: {adj.batchNumber} {adj.expiryDate ? `· Exp: ${adj.expiryDate}` : ""}</p>
+                    )}
                   </div>
                 </div>
 
