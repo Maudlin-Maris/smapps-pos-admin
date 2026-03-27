@@ -94,8 +94,8 @@ const defaultItems: InventoryItem[] = [
   ] },
   // Supermarket (outlet-8)
   { id: "i27", name: "Full Cream Milk 1L", sku: "SM-001", categoryId: "7", unitId: "11", stock: 30, minStock: 20, costPrice: 1.8, status: "good", conversions: [{ id: "cv7", fromQuantity: 1, toQuantity: 12, toUnitId: "5" }], outletId: "outlet-8", batches: [
-    { id: "b27a", batchNumber: "SM-2026-A1", expiryDate: "2026-04-12", quantity: 10, initialQuantity: 20, costPrice: 1.8, createdAt: "2026-02-01T06:00:00Z" },
-    { id: "b27b", batchNumber: "SM-2026-C3", expiryDate: "2026-05-25", quantity: 20, initialQuantity: 20, costPrice: 1.85, createdAt: "2026-03-01T07:00:00Z" },
+    { id: "b27a", batchNumber: "2026-02-01 06:00", expiryDate: "2026-04-12", quantity: 10, initialQuantity: 20, costPrice: 1.8, createdAt: "2026-02-01T06:00:00Z" },
+    { id: "b27b", batchNumber: "2026-03-01 07:00", expiryDate: "2026-05-25", quantity: 20, initialQuantity: 20, costPrice: 1.85, createdAt: "2026-03-01T07:00:00Z" },
   ] },
   { id: "i28", name: "Cheddar Cheese Block", sku: "SM-002", categoryId: "7", unitId: "5", stock: 18, minStock: 10, costPrice: 5.5, status: "good", conversions: [], outletId: "outlet-8", batches: [
     { id: "b28a", batchNumber: "SM-2026-A2", expiryDate: "2026-04-30", quantity: 8, initialQuantity: 12, costPrice: 5.5, createdAt: "2026-01-15T09:00:00Z" },
