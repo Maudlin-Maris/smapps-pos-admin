@@ -295,6 +295,24 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               </div>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Order info summary */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                  {allowedOrderTypes.find(t => t.id === selectedOrderType)?.label || selectedOrderType}
+                </button>
+                {selectedLocation && (
+                  <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors">
+                    <MapPin className="w-3 h-3" />
+                    {selectedLocation}
+                  </button>
+                )}
+                {customerName && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                    {customerName}
+                  </span>
+                )}
+              </div>
+
               {/* Order summary */}
               <div className="text-center p-3 bg-muted/30 rounded-xl">
                 <p className="text-sm text-muted-foreground">Subtotal</p>
@@ -427,6 +445,25 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               </div>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Order info summary */}
+              {!existingOrderId && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                    {allowedOrderTypes.find(t => t.id === selectedOrderType)?.label || selectedOrderType}
+                  </button>
+                  {selectedLocation && (
+                    <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors">
+                      <MapPin className="w-3 h-3" />
+                      {selectedLocation}
+                    </button>
+                  )}
+                  {customerName && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                      {customerName}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="text-center p-4 bg-muted/30 rounded-xl">
                 <p className="text-sm text-muted-foreground">Amount Due</p>
                 <p className="text-3xl font-bold text-foreground">{formatNaira(total)}</p>
