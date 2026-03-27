@@ -115,6 +115,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       costPrice: item.costPrice,
       conversions: item.conversions || [],
       outletId: item.outletId,
+      batchNumber: item.batchNumber || "",
+      expiryDate: item.expiryDate || "",
     });
     setOpen(true);
   };
