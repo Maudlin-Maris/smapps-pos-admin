@@ -95,8 +95,21 @@ export function POSProvider({ children }: { children: ReactNode }) {
     : [];
 
   const addToCart = useCallback((item: Omit<POSCartItem, "id">) => {
-    const id = `cart-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-    setCart(prev => [...prev, { ...item, id }]);
+    setCart(prev => {
+      const extrasKey = [...item.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => e.id).join(",");
+      const existing = prev.find(c => {
+        const cExtrasKey = [...c.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => e.id).join(",");
+        return c.productId === item.productId && c.variantId === item.variantId && cExtrasKey === extrasKey;
+      });
+      if (existing) {
+        return prev.map(c => c.id === existing.id
+          ? { ...c, quantity: c.quantity + item.quantity, totalPrice: (c.quantity + item.quantity) * c.unitPrice + (c.quantity + item.quantity) * c.extras.reduce((s, e) => s + e.price, 0) }
+          : c
+        );
+      }
+      const id = `cart-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      return [...prev, { ...item, id }];
+    });
   }, []);
 
   const removeFromCart = useCallback((itemId: string) => {
