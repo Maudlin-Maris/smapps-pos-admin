@@ -270,7 +270,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Expiry Date *</label>
+                <label className="text-sm font-medium">Expiry Date</label>
                 <Input
                   type="date"
                   value={expiryDate}
