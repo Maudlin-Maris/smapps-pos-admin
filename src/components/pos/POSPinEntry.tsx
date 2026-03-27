@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
 import { Lock, ArrowLeft, LogOut, Delete } from "lucide-react";
+import logoLight from "@/assets/logo-light.png";
 
 interface POSPinEntryProps {
   mode: "pin" | "locked";
