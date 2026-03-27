@@ -522,6 +522,7 @@ export default function InventoryManagement() {
           readOnly={isAllOutlets}
           selectedOutletId={selectedOutletId}
           filterLowStock={showLowStock}
+          filterExpiryStatus={showExpired ? "expired" : showExpiringSoon ? "expiring" : undefined}
         />
       )}
       {tab === "adjustments" && (
