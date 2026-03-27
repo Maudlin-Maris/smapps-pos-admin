@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer,
   CheckCircle2, SplitSquareHorizontal, ArrowLeft, Percent, Tag, MapPin,
-  Heart
+  Heart, Search
 } from "lucide-react";
 
 interface Props {
