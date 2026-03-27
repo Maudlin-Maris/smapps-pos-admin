@@ -222,13 +222,14 @@ export default function InventoryManagement() {
 
   const lowStockCount = outletItems.filter((i) => i.status === "low" || i.status === "critical").length;
 
-  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number) => {
+  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string) => {
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
 
     const previousStock = item.stock;
     let newStock: number;
     let newAverageCost = item.costPrice;
+    let updatedBatches = item.batches ? [...item.batches.map(b => ({ ...b }))] : undefined;
     
     if (type === "set") {
       newStock = quantity;
@@ -241,14 +242,48 @@ export default function InventoryManagement() {
         const newBatchValue = quantity * batchCostPrice;
         newAverageCost = (currentTotalValue + newBatchValue) / newStock;
       }
+
+      // Add new batch entry if batch-tracked
+      if (batchNumber && expiryDate && updatedBatches) {
+        updatedBatches.push({
+          id: crypto.randomUUID(),
+          batchNumber,
+          expiryDate,
+          quantity,
+        });
+      } else if (batchNumber && expiryDate && !updatedBatches) {
+        updatedBatches = [{
+          id: crypto.randomUUID(),
+          batchNumber,
+          expiryDate,
+          quantity,
+        }];
+      }
     } else {
       newStock = Math.max(0, previousStock - quantity);
+
+      // For removals, reduce from batches using FEFO (First Expiry, First Out)
+      if (updatedBatches && updatedBatches.length > 0) {
+        // Sort by expiry date ascending (earliest first)
+        updatedBatches.sort((a, b) => {
+          if (!a.expiryDate) return 1;
+          if (!b.expiryDate) return -1;
+          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
+        });
+        let remaining = quantity;
+        for (const batch of updatedBatches) {
+          if (remaining <= 0) break;
+          const deduct = Math.min(batch.quantity, remaining);
+          batch.quantity -= deduct;
+          remaining -= deduct;
+        }
+        // Remove empty batches
+        updatedBatches = updatedBatches.filter(b => b.quantity > 0);
+      }
     }
 
     const quantityChange = type === "set" ? Math.abs(newStock - previousStock) : quantity;
     
-    // For additions, use the new batch cost for the adjustment record.
-    // For consumptions, use the current average cost.
     const recordedCostPrice = (type === "add" || type === "returned") && batchCostPrice ? batchCostPrice : item.costPrice;
     const costTotal = quantityChange * recordedCostPrice;
 
@@ -264,6 +299,8 @@ export default function InventoryManagement() {
       outletId: item.outletId,
       costPrice: recordedCostPrice,
       costTotal,
+      batchNumber,
+      expiryDate,
     };
 
     setAdjustments((prev) => [adjustment, ...prev]);
