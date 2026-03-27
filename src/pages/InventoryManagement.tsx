@@ -231,9 +231,7 @@ export default function InventoryManagement() {
     let newAverageCost = item.costPrice;
     let updatedBatches = item.batches ? [...item.batches.map(b => ({ ...b }))] : undefined;
     
-    if (type === "set") {
-      newStock = quantity;
-    } else if (type === "add" || type === "returned") {
+    if (type === "add" || type === "returned") {
       newStock = previousStock + quantity;
       
       // Calculate Weighted Average Cost (WAC)
@@ -305,7 +303,7 @@ export default function InventoryManagement() {
       }
     }
 
-    const quantityChange = type === "set" ? Math.abs(newStock - previousStock) : quantity;
+    const quantityChange = quantity;
     
     const recordedCostPrice = (type === "add" || type === "returned") && batchCostPrice ? batchCostPrice : item.costPrice;
     const costTotal = quantityChange * recordedCostPrice;

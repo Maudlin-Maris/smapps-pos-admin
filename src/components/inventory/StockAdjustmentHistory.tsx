@@ -29,7 +29,7 @@ import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { outlets } from "@/data/outlets";
 
-export type AdjustmentType = "add" | "remove" | "set" | "damaged" | "returned" | "correction";
+export type AdjustmentType = "add" | "remove" | "damaged" | "returned";
 
 export interface StockAdjustment {
   id: string;
@@ -50,10 +50,8 @@ export interface StockAdjustment {
 const adjustmentTypeLabels: Record<AdjustmentType, string> = {
   add: "Stock Added",
   remove: "Stock Removed",
-  set: "Stock Set",
   damaged: "Damaged",
   returned: "Returned",
-  correction: "Correction",
 };
 
 interface AdjustDialogProps {
@@ -88,7 +86,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   });
 
   const handleSave = () => {
-    if (quantity <= 0 && type !== "set") {
+    if (quantity <= 0) {
       toast.error("Quantity must be greater than 0");
       return;
     }
@@ -143,9 +141,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   };
 
   const previewStock = item
-    ? type === "set"
-      ? quantity
-      : (isAddType || isReturnType)
+    ? (isAddType || isReturnType)
         ? item.stock + quantity
         : item.stock - quantity
     : 0;
@@ -189,10 +185,8 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               <SelectContent>
                 <SelectItem value="add">Add Stock (New Batch)</SelectItem>
                 <SelectItem value="remove">Remove Stock</SelectItem>
-                <SelectItem value="set">Set Stock</SelectItem>
                 <SelectItem value="damaged">Damaged</SelectItem>
                 <SelectItem value="returned">Returned</SelectItem>
-                <SelectItem value="correction">Correction</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -356,7 +350,6 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
             <SelectItem value="set">Stock Set</SelectItem>
             <SelectItem value="damaged">Damaged</SelectItem>
             <SelectItem value="returned">Returned</SelectItem>
-            <SelectItem value="correction">Correction</SelectItem>
           </SelectContent>
         </Select>
       </div>
