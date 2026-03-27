@@ -45,6 +45,8 @@ export interface InventoryItem {
   status: "good" | "low" | "critical";
   conversions: ItemConversion[];
   outletId: string;
+  batchNumber?: string;
+  expiryDate?: string;
 }
 
 interface Props {
