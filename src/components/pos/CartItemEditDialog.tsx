@@ -120,7 +120,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
                     {selectedExtras.has(extra.id) && <Check className="w-3 h-3 text-primary-foreground" />}
                   </div>
                   <span className="flex-1 text-sm text-left">{extra.name}</span>
-                  <span className="text-sm text-muted-foreground">+${extra.price.toFixed(2)}</span>
+                  <span className="text-sm text-muted-foreground">+{formatNaira(extra.price)}</span>
                 </button>
               ))}
             </div>
