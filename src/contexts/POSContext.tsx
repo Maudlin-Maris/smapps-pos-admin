@@ -270,7 +270,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentOutlet, setCurrentOutlet, availableOutlets,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
-      orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder,
+      orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder, transferOrder,
       orderType, setOrderType,
     }}>
       {children}
