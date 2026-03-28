@@ -275,7 +275,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
               </ScrollArea>
 
               {/* Bottom actions */}
-              <div className="p-4 border-t border-border flex gap-2">
+              <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setView("browse")}>
                   <Plus className="w-4 h-4 mr-1.5" /> Add More Items
                 </Button>
