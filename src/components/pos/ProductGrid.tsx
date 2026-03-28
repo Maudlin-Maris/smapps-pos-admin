@@ -225,6 +225,10 @@ export default function ProductGrid() {
             <ScanLine className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           )}
         </div>
+        <Button type="button" variant="outline" size="icon" onClick={startCamera} title="Scan with camera" className="shrink-0 h-10 w-10">
+          <Camera className="h-4 w-4" />
+        </Button>
+        </div>
       </div>
 
       <div className="border-b border-border">
