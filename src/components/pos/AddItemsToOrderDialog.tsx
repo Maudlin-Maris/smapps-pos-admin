@@ -7,25 +7,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, X, Plus, Minus, Trash2, ShoppingBag, ArrowLeft, Check } from "lucide-react";
+import { Search, X, Plus, Minus, Trash2, ShoppingBag, ArrowLeft, Check, Pencil } from "lucide-react";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onBackToOrder?: () => void;
   orderId: string;
 }
 
 type View = "order" | "browse";
 
-export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props) {
+export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, orderId }: Props) {
   const { currentOutlet, addItemsToOrder, removeItemFromOrder, orders } = usePOS();
   const [view, setView] = useState<View>("order");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
   const [pendingItems, setPendingItems] = useState<POSCartItem[]>([]);
+  const [editingItem, setEditingItem] = useState<{ item: POSCartItem; product: POSProduct } | null>(null);
 
   // Auth dialog state for removing existing items
   const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
@@ -83,22 +85,46 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
     selectedExtras: { id: string; name: string; price: number }[],
     unitPrice: number
   ) => {
-    if (!dialogProduct) return;
+    const product = editingItem ? editingItem.product : dialogProduct;
+    if (!product) return;
     const extrasWithQty = selectedExtras.map(e => ({ ...e, quantity: 1 }));
     const extrasTotal = extrasWithQty.reduce((s, e) => s + e.price * e.quantity, 0);
     const total = unitPrice + extrasTotal;
-    addPendingItem({
-      productId: dialogProduct.id,
-      productName: dialogProduct.name,
-      categoryId: dialogProduct.categoryId,
-      variantId,
-      variantName,
-      extras: extrasWithQty,
-      quantity: 1,
-      unitPrice: total,
-      totalPrice: total,
-    });
+
+    if (editingItem) {
+      // Replace the existing pending item
+      setPendingItems(prev => prev.map(i => i.id === editingItem.item.id ? {
+        ...i,
+        variantId,
+        variantName,
+        extras: extrasWithQty,
+        unitPrice: total,
+        totalPrice: total * i.quantity,
+      } : i));
+      setEditingItem(null);
+    } else {
+      addPendingItem({
+        productId: product.id,
+        productName: product.name,
+        categoryId: product.categoryId,
+        variantId,
+        variantName,
+        extras: extrasWithQty,
+        quantity: 1,
+        unitPrice: total,
+        totalPrice: total,
+      });
+    }
     setDialogProduct(null);
+  };
+
+  const handleEditPendingItem = (item: POSCartItem) => {
+    const product = posProducts.find(p => p.id === item.productId);
+    if (!product) return;
+    if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
+      setEditingItem({ item, product });
+      setDialogProduct(product);
+    }
   };
 
   const updatePendingQty = (itemId: string, delta: number) => {
@@ -214,30 +240,45 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
                         <Plus className="w-3 h-3" /> New Items
                       </p>
                       <div className="space-y-1">
-                        {pendingItems.map(item => (
-                          <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg border border-primary/20 bg-primary/5 text-sm gap-2">
-                            <div className="flex-1 min-w-0">
+                        {pendingItems.map(item => {
+                          const product = posProducts.find(p => p.id === item.productId);
+                          const canEdit = product && ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0));
+                          return (
+                          <div key={item.id} className="flex items-start justify-between py-2 px-3 rounded-lg border border-primary/20 bg-primary/5 text-sm gap-2">
+                            <button
+                              className={`flex-1 min-w-0 text-left ${canEdit ? 'hover:text-primary transition-colors' : ''}`}
+                              onClick={() => canEdit && handleEditPendingItem(item)}
+                              disabled={!canEdit}
+                            >
                               <span className="font-medium">{item.productName}</span>
                               {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
                               {item.extras.length > 0 && (
                                 <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
                               )}
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button onClick={() => updatePendingQty(item.id, -1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors">
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="w-5 text-center font-semibold text-xs">{item.quantity}</span>
-                              <button onClick={() => updatePendingQty(item.id, 1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors">
-                                <Plus className="w-3 h-3" />
-                              </button>
-                              <span className="font-medium ml-1 w-16 text-right text-sm">{formatNaira(item.totalPrice)}</span>
-                              <button onClick={() => setPendingItems(prev => prev.filter(i => i.id !== item.id))} className="p-1 rounded-md text-destructive hover:bg-destructive/10 transition-colors">
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                              {canEdit && (
+                                <p className="text-[10px] text-primary/60 flex items-center gap-0.5 mt-0.5">
+                                  <Pencil className="w-2.5 h-2.5" /> Tap to edit
+                                </p>
+                              )}
+                            </button>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => updatePendingQty(item.id, -1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors">
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="w-5 text-center font-semibold text-xs">{item.quantity}</span>
+                                <button onClick={() => updatePendingQty(item.id, 1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors">
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => setPendingItems(prev => prev.filter(i => i.id !== item.id))} className="w-6 h-6 rounded-md flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <span className="font-medium text-xs">{formatNaira(item.totalPrice)}</span>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -275,13 +316,20 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
               </ScrollArea>
 
               {/* Bottom actions */}
-              <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setView("browse")}>
-                  <Plus className="w-4 h-4 mr-1.5" /> Add More Items
-                </Button>
-                {pendingItems.length > 0 && (
-                  <Button className="flex-1" onClick={handleConfirmAll}>
-                    <Check className="w-4 h-4 mr-1.5" /> Confirm {pendingItems.length} New Item{pendingItems.length > 1 ? "s" : ""}
+              <div className="p-3 sm:p-4 border-t border-border flex flex-col gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setView("browse")}>
+                    <Plus className="w-4 h-4 mr-1.5" /> Add More Items
+                  </Button>
+                  {pendingItems.length > 0 && (
+                    <Button className="flex-1" onClick={handleConfirmAll}>
+                      <Check className="w-4 h-4 mr-1.5" /> Confirm {pendingItems.length} New Item{pendingItems.length > 1 ? "s" : ""}
+                    </Button>
+                  )}
+                </div>
+                {onBackToOrder && (
+                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { handleClose(); onBackToOrder(); }}>
+                    <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Order Details
                   </Button>
                 )}
               </div>
@@ -394,7 +442,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
       <VariantExtrasDialog
         product={dialogProduct}
         open={!!dialogProduct}
-        onClose={() => setDialogProduct(null)}
+        onClose={() => { setDialogProduct(null); setEditingItem(null); }}
         onConfirm={handleConfirmVariantExtras}
       />
 

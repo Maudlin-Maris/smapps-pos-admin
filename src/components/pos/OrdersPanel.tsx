@@ -512,17 +512,6 @@ export default function OrdersPanel() {
                             );
                           })()}
                           <span className="font-medium">{formatNaira(item.totalPrice)}</span>
-                          {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
-                            <button
-                              onClick={() => {
-                                setRemoveAuth({ orderId: selectedOrder.id, itemId: item.id, itemName: item.productName });
-                              }}
-                              className="text-destructive hover:text-destructive/80 p-0.5"
-                              title="Remove item (requires authorization)"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
                         </div>
                       </div>
                     ))}
@@ -671,6 +660,10 @@ export default function OrdersPanel() {
       <AddItemsToOrderDialog
         open={!!addItemsOrderId}
         onClose={() => setAddItemsOrderId(null)}
+        onBackToOrder={() => {
+          const order = orders.find(o => o.id === addItemsOrderId);
+          if (order) setSelectedOrder(order);
+        }}
         orderId={addItemsOrderId || ""}
       />
 
