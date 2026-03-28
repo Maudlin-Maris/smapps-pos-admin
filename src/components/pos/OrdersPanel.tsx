@@ -572,9 +572,20 @@ export default function OrdersPanel() {
                           <SelectContent>
                             {posCashiers
                               .filter(c => c.id !== selectedOrder.cashierId)
-                              .map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                              ))}
+                              .map(c => {
+                                const activeCount = orders.filter(o => 
+                                  !["paid", "voided"].includes(o.status) && 
+                                  (o.cashierId === c.id || o.transferredToCashierId === c.id)
+                                ).length;
+                                return (
+                                  <SelectItem key={c.id} value={c.id}>
+                                    <span className="flex items-center justify-between gap-2 w-full">
+                                      {c.name}
+                                      <Badge variant="secondary" className="h-4 min-w-[16px] px-1 text-[10px]">{activeCount}</Badge>
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
                           </SelectContent>
                         </Select>
                         <Button
