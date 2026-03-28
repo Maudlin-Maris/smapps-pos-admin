@@ -17,7 +17,10 @@ export default function ProductGrid() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const scannerRef = useRef<HTMLDivElement>(null);
+  const html5QrCodeRef = useRef<any>(null);
 
   // Barcode scan handler: finds product/variant by barcode/SKU and adds to cart directly
   const handleBarcodeScan = useCallback((barcode: string) => {
