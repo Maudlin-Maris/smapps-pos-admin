@@ -263,6 +263,16 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Customer name" />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notes / Allergies (optional)</label>
+                <Textarea
+                  value={customerNotes}
+                  onChange={e => setCustomerNotes(e.target.value)}
+                  placeholder="e.g. Nut allergy, no onions, birthday celebration..."
+                  className="h-16 text-sm resize-none"
+                />
+              </div>
+
               {/* Pay now / later */}
               <div className="grid grid-cols-2 gap-2">
                 <button
