@@ -261,6 +261,10 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "voided" as OrderStatus, updatedAt: new Date() } : o));
   }, []);
 
+  const transferOrder = useCallback((orderId: string, toCashierId: string) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, transferredToCashierId: toCashierId, updatedAt: new Date() } : o));
+  }, []);
+
   return (
     <POSContext.Provider value={{
       authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
