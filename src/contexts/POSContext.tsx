@@ -38,6 +38,7 @@ interface POSContextType {
   orders: POSOrder[];
   createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number) => POSOrder;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  updateItemStatus: (orderId: string, itemId: string, status: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: POSCartItem[]) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
