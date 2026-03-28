@@ -103,6 +103,7 @@ export interface POSOrder {
   updatedAt: Date;
   outletId: string;
   cashierId: string;
+  transferredToCashierId?: string;
   notes?: string;
 }
 
