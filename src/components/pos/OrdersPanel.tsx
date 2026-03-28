@@ -480,9 +480,16 @@ export default function OrdersPanel() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="open">Open</SelectItem>
-                          <SelectItem value="in_progress">Preparing</SelectItem>
-                          <SelectItem value="ready">Ready</SelectItem>
-                          <SelectItem value="served">Served</SelectItem>
+                          {hasKitchenStatuses && (
+                            <>
+                              <SelectItem value="in_progress">Preparing</SelectItem>
+                              <SelectItem value="ready">Ready</SelectItem>
+                              <SelectItem value="served">Served</SelectItem>
+                            </>
+                          )}
+                          {features?.hasAppointments && (
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
