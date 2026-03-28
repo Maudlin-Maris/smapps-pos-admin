@@ -515,17 +515,10 @@ export default function OrdersPanel() {
                           {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                             <button
                               onClick={() => {
-                                removeItemFromOrder(selectedOrder.id, item.id);
-                                const newItems = selectedOrder.items.filter(i => i.id !== item.id);
-                                if (newItems.length === 0) {
-                                  setSelectedOrder(null);
-                                } else {
-                                  const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (selectedOrder.discountAmount || 0) + (selectedOrder.feesTotal || 0);
-                                  setSelectedOrder(prev => prev ? { ...prev, items: newItems, totalAmount: newTotal } : null);
-                                }
+                                setRemoveAuth({ orderId: selectedOrder.id, itemId: item.id, itemName: item.productName });
                               }}
                               className="text-destructive hover:text-destructive/80 p-0.5"
-                              title="Remove item"
+                              title="Remove item (requires authorization)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
