@@ -309,11 +309,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Notes / Allergies (optional)</label>
+                <label className="text-sm font-medium">Notes & Special Instructions (optional)</label>
                 <Textarea
                   value={customerNotes}
                   onChange={e => setCustomerNotes(e.target.value)}
-                  placeholder="e.g. Nut allergy, no onions, birthday celebration..."
+                  placeholder={notesPlaceholder}
                   className="h-16 text-sm resize-none"
                 />
               </div>
