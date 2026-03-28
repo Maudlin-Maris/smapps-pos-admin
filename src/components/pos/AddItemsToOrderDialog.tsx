@@ -84,22 +84,46 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
     selectedExtras: { id: string; name: string; price: number }[],
     unitPrice: number
   ) => {
-    if (!dialogProduct) return;
+    const product = editingItem ? editingItem.product : dialogProduct;
+    if (!product) return;
     const extrasWithQty = selectedExtras.map(e => ({ ...e, quantity: 1 }));
     const extrasTotal = extrasWithQty.reduce((s, e) => s + e.price * e.quantity, 0);
     const total = unitPrice + extrasTotal;
-    addPendingItem({
-      productId: dialogProduct.id,
-      productName: dialogProduct.name,
-      categoryId: dialogProduct.categoryId,
-      variantId,
-      variantName,
-      extras: extrasWithQty,
-      quantity: 1,
-      unitPrice: total,
-      totalPrice: total,
-    });
+
+    if (editingItem) {
+      // Replace the existing pending item
+      setPendingItems(prev => prev.map(i => i.id === editingItem.item.id ? {
+        ...i,
+        variantId,
+        variantName,
+        extras: extrasWithQty,
+        unitPrice: total,
+        totalPrice: total * i.quantity,
+      } : i));
+      setEditingItem(null);
+    } else {
+      addPendingItem({
+        productId: product.id,
+        productName: product.name,
+        categoryId: product.categoryId,
+        variantId,
+        variantName,
+        extras: extrasWithQty,
+        quantity: 1,
+        unitPrice: total,
+        totalPrice: total,
+      });
+    }
     setDialogProduct(null);
+  };
+
+  const handleEditPendingItem = (item: POSCartItem) => {
+    const product = posProducts.find(p => p.id === item.productId);
+    if (!product) return;
+    if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
+      setEditingItem({ item, product });
+      setDialogProduct(product);
+    }
   };
 
   const updatePendingQty = (itemId: string, delta: number) => {
