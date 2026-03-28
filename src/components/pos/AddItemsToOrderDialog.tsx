@@ -434,7 +434,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
       <VariantExtrasDialog
         product={dialogProduct}
         open={!!dialogProduct}
-        onClose={() => setDialogProduct(null)}
+        onClose={() => { setDialogProduct(null); setEditingItem(null); }}
         onConfirm={handleConfirmVariantExtras}
       />
 
