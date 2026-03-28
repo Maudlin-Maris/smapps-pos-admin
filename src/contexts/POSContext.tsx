@@ -108,14 +108,14 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((item: Omit<POSCartItem, "id">) => {
     setCart(prev => {
-      const extrasKey = [...item.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => e.id).join(",");
+      const extrasKey = [...item.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => `${e.id}:${e.quantity}`).join(",");
       const existing = prev.find(c => {
-        const cExtrasKey = [...c.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => e.id).join(",");
+        const cExtrasKey = [...c.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => `${e.id}:${e.quantity}`).join(",");
         return c.productId === item.productId && c.variantId === item.variantId && cExtrasKey === extrasKey;
       });
       if (existing) {
         return prev.map(c => c.id === existing.id
-          ? { ...c, quantity: c.quantity + item.quantity, totalPrice: (c.quantity + item.quantity) * c.unitPrice + (c.quantity + item.quantity) * c.extras.reduce((s, e) => s + e.price, 0) }
+          ? { ...c, quantity: c.quantity + item.quantity, totalPrice: (c.quantity + item.quantity) * (c.unitPrice + c.extras.reduce((s, e) => s + e.price * e.quantity, 0)) }
           : c
         );
       }
