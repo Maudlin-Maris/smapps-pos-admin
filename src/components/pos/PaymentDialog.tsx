@@ -517,11 +517,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
 
               <div className="grid grid-cols-2 gap-2">
                 <Button onClick={handleFullPayment} className="h-11">
-                  Full Payment
+                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                  Confirm & Pay
                 </Button>
                 <Button variant="outline" onClick={initSplit} className="h-11">
                   <SplitSquareHorizontal className="w-4 h-4 mr-1" />
-                  Split
+                  Split Payment
                 </Button>
               </div>
             </div>
