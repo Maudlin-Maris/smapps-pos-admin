@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import AddItemsToOrderDialog from "./AddItemsToOrderDialog";
 import { formatNaira } from "@/lib/currency";
 import { getFeatures } from "@/data/businessTypes";
 import type { POSOrder, OrderStatus, ItemStatus } from "@/data/posData";
