@@ -40,6 +40,7 @@ interface POSContextType {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updateItemStatus: (orderId: string, itemId: string, status: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: POSCartItem[]) => void;
+  removeItemFromOrder: (orderId: string, itemId: string) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
   voidOrder: (orderId: string) => void;
