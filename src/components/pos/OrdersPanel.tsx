@@ -320,6 +320,8 @@ export default function OrdersPanel() {
                 : { label: "Unpaid", className: "bg-muted text-muted-foreground" };
               const cashierName = posCashiers.find(c => c.id === order.cashierId)?.name || "Unknown";
               const orderTypeLabel = order.type.replace("_", " ");
+              // Business-type-aware location label
+              const locationLabel = features?.hasAppointments ? "Station" : features?.hasDineIn ? "Table" : null;
               return (
                 <button
                   key={order.id}
@@ -336,6 +338,11 @@ export default function OrdersPanel() {
                         <Badge variant="outline" className="text-[10px] capitalize">
                           {orderTypeLabel}
                         </Badge>
+                        {hasKitchenStatuses && order.status !== "paid" && order.status !== "voided" && (
+                          <Badge variant="outline" className={`text-[10px] gap-1 ${statusConfig[order.status].color}`}>
+                            {statusConfig[order.status].icon} {statusConfig[order.status].label}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {order.customerName || orderTypeLabel}
@@ -353,7 +360,7 @@ export default function OrdersPanel() {
                     </span>
                     <span>·</span>
                     <span>{order.items.length} item{order.items.length > 1 ? "s" : ""}</span>
-                    {order.locationName && (
+                    {order.locationName && locationLabel && (
                       <>
                         <span>·</span>
                         <span className="flex items-center gap-0.5">
