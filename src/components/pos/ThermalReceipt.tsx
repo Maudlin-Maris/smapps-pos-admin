@@ -80,7 +80,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
                     color: "#555",
                   }}
                 >
-                  <span>{(e.quantity || 1) > 1 ? `${e.quantity}x` : "+"} {e.name}</span>
+                  <span>+ {(e.quantity || 1) > 1 ? `${e.quantity}x ` : ""}{e.name}</span>
                   <span>{formatNaira(e.price * (e.quantity || 1))}</span>
                 </div>
               ))}
