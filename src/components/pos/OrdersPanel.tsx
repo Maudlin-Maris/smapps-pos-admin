@@ -38,15 +38,17 @@ interface LocationSummary {
 }
 
 export default function OrdersPanel() {
-  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet } = usePOS();
+  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
+  const [transferTarget, setTransferTarget] = useState<string>("");
 
   const cashierId = currentCashier?.id || "";
 
