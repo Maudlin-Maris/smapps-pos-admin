@@ -32,9 +32,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
       </div>
 
       {/* Divider */}
-      <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-        {"- ".repeat(20)}
-      </p>
+      <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
       {/* Order info */}
       <div style={{ marginBottom: "4px" }}>
