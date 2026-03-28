@@ -338,11 +338,23 @@ export default function OrdersPanel() {
                         <Badge variant="outline" className="text-[10px] capitalize">
                           {orderTypeLabel}
                         </Badge>
-                        {hasKitchenStatuses && order.status !== "paid" && order.status !== "voided" && (
-                          <Badge variant="outline" className={`text-[10px] gap-1 ${statusConfig[order.status].color}`}>
-                            {statusConfig[order.status].icon} {statusConfig[order.status].label}
-                          </Badge>
-                        )}
+                        {hasKitchenStatuses && order.status !== "paid" && order.status !== "voided" && (() => {
+                          const items = order.items;
+                          const counts = {
+                            open: items.filter(i => (i.itemStatus || "open") === "open").length,
+                            in_progress: items.filter(i => i.itemStatus === "in_progress").length,
+                            ready: items.filter(i => i.itemStatus === "ready").length,
+                            served: items.filter(i => i.itemStatus === "served").length,
+                          };
+                          return (
+                            <span className="flex items-center gap-1">
+                              {counts.open > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]"><Bell className="w-2.5 h-2.5" />{counts.open}</span>}
+                              {counts.in_progress > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]"><CookingPot className="w-2.5 h-2.5" />{counts.in_progress}</span>}
+                              {counts.ready > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]"><CheckCircle2 className="w-2.5 h-2.5" />{counts.ready}</span>}
+                              {counts.served > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary"><UtensilsCrossed className="w-2.5 h-2.5" />{counts.served}</span>}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {order.customerName || orderTypeLabel}
