@@ -53,7 +53,7 @@ export default function POSCart({ onCheckout }: Props) {
                 </p>
                 {item.extras.length > 0 && (
                   <p className="text-[11px] text-muted-foreground truncate">
-                    +{item.extras.map(e => e.name).join(", ")}
+                    +{item.extras.map(e => e.quantity > 1 ? `${e.quantity}x ${e.name}` : e.name).join(", ")}
                   </p>
                 )}
                 <div className="flex items-center gap-1 mt-0.5">
