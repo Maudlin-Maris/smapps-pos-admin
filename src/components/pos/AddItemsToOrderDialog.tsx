@@ -148,7 +148,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
   return (
     <>
       <Dialog open={open} onOpenChange={o => !o && handleClose()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[95vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="p-4 pb-3 border-b border-border">
             <DialogTitle className="flex items-center gap-2 pr-8">
               <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -175,7 +175,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
           {view === "order" ? (
             /* ── ORDER VIEW ── */
             <div className="flex flex-col flex-1 min-h-0">
-              <ScrollArea className="flex-1 max-h-[55vh]">
+              <ScrollArea className="flex-1 max-h-[60vh] sm:max-h-[55vh]">
                 <div className="p-4 space-y-3">
                   {/* Existing items */}
                   <div>
@@ -275,7 +275,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
               </ScrollArea>
 
               {/* Bottom actions */}
-              <div className="p-4 border-t border-border flex gap-2">
+              <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setView("browse")}>
                   <Plus className="w-4 h-4 mr-1.5" /> Add More Items
                 </Button>
@@ -334,8 +334,8 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
               </div>
 
               {/* Product grid */}
-              <ScrollArea className="flex-1 min-h-0 max-h-[35vh]">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4 pt-1">
+              <ScrollArea className="flex-1 min-h-0 max-h-[45vh] sm:max-h-[35vh]">
+                <div className="grid grid-cols-2 gap-2 p-3 sm:p-4 pt-1">
                   {products.map(product => (
                     <button
                       key={product.id}
@@ -366,12 +366,12 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
               </ScrollArea>
 
               {/* Pending items mini-bar at bottom of browse view */}
-              <div className="border-t border-border p-3 flex items-center justify-between gap-3">
+              <div className="border-t border-border p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm">
                   {pendingItems.length > 0 ? (
                     <>
                       <Badge className="bg-primary text-primary-foreground">{pendingItems.length}</Badge>
-                      <span className="font-medium">{formatNaira(pendingTotal)} in new items</span>
+                      <span className="font-medium text-xs sm:text-sm">{formatNaira(pendingTotal)} in new items</span>
                     </>
                   ) : (
                     <span className="text-muted-foreground text-xs">Select products to add</span>
@@ -381,8 +381,9 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
                   size="sm"
                   onClick={() => setView("order")}
                   variant={pendingItems.length > 0 ? "default" : "outline"}
+                  className="w-full sm:w-auto"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Order
+                  <ShoppingBag className="w-3.5 h-3.5 mr-1.5" /> View Order Details
                 </Button>
               </div>
             </div>
