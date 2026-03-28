@@ -641,11 +641,9 @@ export default function OrdersPanel() {
                             <CreditCard className="w-4 h-4 mr-1" /> Pay
                           </Button>
                         )}
-                        {cart.length > 0 && (
-                          <Button size="sm" variant="outline" onClick={() => handleAddItemsToOrder(selectedOrder.id)}>
-                            <Plus className="w-4 h-4 mr-1" /> Add Cart Items
-                          </Button>
-                        )}
+                        <Button size="sm" variant="outline" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
+                          <Plus className="w-4 h-4 mr-1" /> Add Items
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); setSelectedOrder(null); }}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
                         </Button>
