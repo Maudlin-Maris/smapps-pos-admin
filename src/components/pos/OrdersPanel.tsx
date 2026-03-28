@@ -223,35 +223,29 @@ export default function OrdersPanel() {
       <ScrollArea className="flex-1">
         {showLocationCards ? (
           /* Location summary cards */
-          <div className="p-2 space-y-1.5">
+          <div className="p-2 grid grid-cols-2 gap-2">
             {locationSummaries.map(loc => (
               <button
                 key={loc.locationName}
                 onClick={() => setSelectedLocationName(loc.locationName)}
-                className="w-full text-left p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
+                className="text-left p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary shrink-0" />
-                      <span className="font-semibold text-sm text-foreground">{loc.locationName}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-                      <Users className="w-3 h-3" />
-                      <span>{loc.staffNames.join(", ")}</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold">{formatNaira(loc.totalValue)}</p>
-                    <Badge variant="secondary" className="text-[10px] mt-1">
-                      {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
-                    </Badge>
-                  </div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="font-semibold text-xs text-foreground truncate">{loc.locationName}</span>
+                </div>
+                <p className="text-base font-bold text-foreground">{formatNaira(loc.totalValue)}</p>
+                <Badge variant="secondary" className="text-[10px] mt-1.5">
+                  {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
+                </Badge>
+                <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
+                  <Users className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{loc.staffNames.join(", ")}</span>
                 </div>
               </button>
             ))}
             {locationSummaries.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="col-span-2 text-center py-12 text-muted-foreground">
                 <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No orders at any location</p>
               </div>
