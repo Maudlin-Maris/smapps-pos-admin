@@ -21,6 +21,7 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
   const { currentOutlet } = usePOS();
   const receiptRef = useRef<HTMLDivElement>(null);
   const docketRef = useRef<HTMLDivElement>(null);
+  const docketRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedTab, setSelectedTab] = useState("receipt");
 
@@ -28,15 +29,13 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
 
   const docketGroups = groupItemsByDepartment(order.items, order.outletId);
 
-  const handlePrint = (ref: React.RefObject<HTMLDivElement>, title: string) => {
-    if (!ref.current) return;
+  const printElement = (element: HTMLElement, title: string) => {
     const printWindow = window.open("", "_blank", "width=320,height=600");
     if (!printWindow) {
       toast.error("Please allow popups to print");
       return;
     }
-    // Clone the element's full HTML including inline styles
-    const content = ref.current.outerHTML;
+    const content = element.outerHTML;
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -70,6 +69,17 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
       printWindow.print();
       printWindow.close();
     }, 250);
+  };
+
+  const handlePrint = (ref: React.RefObject<HTMLDivElement>, title: string) => {
+    if (!ref.current) return;
+    printElement(ref.current, title);
+  };
+
+  const handlePrintDepartment = (departmentName: string) => {
+    const el = docketRefs.current.get(departmentName);
+    if (!el) return;
+    printElement(el, `Docket-${departmentName}-${order.orderNumber}`);
   };
 
   const handleEmailReceipt = () => {
@@ -149,13 +159,26 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
                         <Badge variant="outline" className="gap-1 text-xs font-semibold">
                           <ChefHat className="w-3 h-3" /> {group.departmentName}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">
-                          {group.items.length} item{group.items.length > 1 ? "s" : ""}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {group.items.length} item{group.items.length > 1 ? "s" : ""}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 gap-1 text-xs"
+                            onClick={() => handlePrintDepartment(group.departmentName)}
+                          >
+                            <Printer className="w-3 h-3" /> Print
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex justify-center">
                         <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                           <KitchenDocket
+                            ref={(el: HTMLDivElement | null) => {
+                              if (el) docketRefs.current.set(group.departmentName, el);
+                            }}
                             order={order}
                             outlet={currentOutlet}
                             departmentFilter={group.departmentName}

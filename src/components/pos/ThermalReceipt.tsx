@@ -47,6 +47,11 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
           {order.locationName && <span>{order.locationName}</span>}
         </div>
         {order.customerName && <p>Customer: {order.customerName}</p>}
+        {order.notes && (
+          <p style={{ fontSize: "10px", fontStyle: "italic", marginTop: "2px" }}>
+            Notes: {order.notes}
+          </p>
+        )}
       </div>
 
       <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
@@ -80,7 +85,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
                     color: "#555",
                   }}
                 >
-                  <span>{(e.quantity || 1) > 1 ? `${e.quantity}x` : "+"} {e.name}</span>
+                  <span>+ {(e.quantity || 1) > 1 ? `${e.quantity}x ` : ""}{e.name}</span>
                   <span>{formatNaira(e.price * (e.quantity || 1))}</span>
                 </div>
               ))}

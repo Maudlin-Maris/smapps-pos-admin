@@ -121,6 +121,11 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
               {order.locationName && <span style={{ fontWeight: 600 }}>{order.locationName}</span>}
             </div>
             {order.customerName && <p>Customer: {order.customerName}</p>}
+            {order.notes && (
+              <p style={{ fontSize: "12px", fontWeight: 700, fontStyle: "italic", marginTop: "2px", color: "#c00" }}>
+                ⚠ {order.notes}
+              </p>
+            )}
           </div>
 
           <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
@@ -142,7 +147,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
                     key={e.id}
                     style={{ paddingLeft: "16px", fontSize: "12px", fontWeight: 600 }}
                   >
-                    {(e.quantity || 1) > 1 ? `${e.quantity}x` : "+"} {e.name}
+                    + {(e.quantity || 1) > 1 ? `${e.quantity}x ` : ""}{e.name}
                   </p>
                 ))}
                 {item.notes && (

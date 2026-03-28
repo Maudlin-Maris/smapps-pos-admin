@@ -6,6 +6,7 @@ import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,6 +49,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   // Tip state
   const [tipAmount, setTipAmount] = useState("");
   const [tipPreset, setTipPreset] = useState<number | null>(null);
+  const [customerNotes, setCustomerNotes] = useState("");
 
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
@@ -104,6 +106,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     setCustomDiscountAmount("");
     setTipAmount("");
     setTipPreset(null);
+    setCustomerNotes("");
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
     }
@@ -120,7 +123,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const handleProceedToPayment = () => {
     if (!payNow) {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
       setStep("complete");
       return;
@@ -134,7 +137,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined);
       addPayment(order.id, { method: paymentMethod, amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
@@ -151,7 +154,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
@@ -260,6 +263,16 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Customer name" />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Notes / Allergies (optional)</label>
+                <Textarea
+                  value={customerNotes}
+                  onChange={e => setCustomerNotes(e.target.value)}
+                  placeholder="e.g. Nut allergy, no onions, birthday celebration..."
+                  className="h-16 text-sm resize-none"
+                />
+              </div>
+
               {/* Pay now / later */}
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -315,6 +328,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 {customerName && (
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
                     {customerName}
+                  </span>
+                )}
+                {customerNotes && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-medium truncate max-w-[200px]" title={customerNotes}>
+                    ⚠ {customerNotes}
                   </span>
                 )}
               </div>
