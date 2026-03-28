@@ -444,14 +444,46 @@ export default function OrdersPanel() {
                     <p className="text-sm font-semibold">Items</p>
                     {selectedOrder.items.map(item => (
                       <div key={item.id} className="flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0">
-                        <div>
+                        <div className="flex-1">
                           <span>{item.quantity}× {item.productName}</span>
                           {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
                           {item.extras.length > 0 && (
                             <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
                           )}
                         </div>
-                        <span className="font-medium shrink-0">{formatNaira(item.totalPrice)}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
+                            const status: ItemStatus = item.itemStatus || "open";
+                            const cfg = statusConfig[status as OrderStatus];
+                            const statusFlow: ItemStatus[] = ["open", "in_progress", "ready", "served"];
+                            const idx = statusFlow.indexOf(status);
+                            const canAdvance = idx >= 0 && idx < statusFlow.length - 1;
+                            return (
+                              <div className="flex items-center gap-1">
+                                <Badge variant="outline" className={`text-[9px] gap-0.5 ${cfg?.color || ""}`}>
+                                  {cfg?.icon} {cfg?.label}
+                                </Badge>
+                                {canAdvance && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0"
+                                    onClick={() => {
+                                      updateItemStatus(selectedOrder.id, item.id, statusFlow[idx + 1]);
+                                      setSelectedOrder(prev => prev ? {
+                                        ...prev,
+                                        items: prev.items.map(i => i.id === item.id ? { ...i, itemStatus: statusFlow[idx + 1] } : i)
+                                      } : null);
+                                    }}
+                                  >
+                                    <ArrowRight className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })()}
+                          <span className="font-medium">{formatNaira(item.totalPrice)}</span>
+                        </div>
                       </div>
                     ))}
                     <div className="flex justify-between pt-2 text-sm font-bold">
