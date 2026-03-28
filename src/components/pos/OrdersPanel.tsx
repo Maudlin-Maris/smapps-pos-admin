@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
 import type { POSOrder, OrderStatus } from "@/data/posData";
-import { posLocations } from "@/data/posData";
+import { posLocations, posCashiers } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
