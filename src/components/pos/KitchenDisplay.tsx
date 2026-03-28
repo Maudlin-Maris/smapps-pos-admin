@@ -109,34 +109,30 @@ export default function KitchenDisplay() {
                 {order.customerName && <span> · {order.customerName}</span>}
               </div>
 
-              {/* Bulk advance button */}
-              {(() => {
-                const allStatuses = order.items.map(i => i.itemStatus || "open");
-                const canBulk = allStatuses.some(s => itemStatusFlow.indexOf(s) < itemStatusFlow.length - 1);
-                if (!canBulk) return null;
-                const nextLabel = allStatuses.every(s => s === "open") ? "Start All"
-                  : allStatuses.every(s => s === "in_progress") ? "All Ready"
-                  : allStatuses.every(s => s === "ready") ? "All Served"
-                  : "Advance All";
-                return (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full h-7 text-xs gap-1 mb-1"
-                    onClick={() => {
-                      order.items.forEach(item => {
-                        const s = item.itemStatus || "open";
-                        const idx = itemStatusFlow.indexOf(s);
-                        if (idx >= 0 && idx < itemStatusFlow.length - 1) {
-                          updateItemStatus(order.id, item.id, itemStatusFlow[idx + 1]);
-                        }
-                      });
-                    }}
-                  >
-                    <ArrowRight className="w-3 h-3" /> {nextLabel}
-                  </Button>
-                );
-              })()}
+              {/* Bulk status selector */}
+              <Select
+                onValueChange={(val: string) => {
+                  order.items.forEach(item => {
+                    updateItemStatus(order.id, item.id, val as ItemStatus);
+                  });
+                }}
+              >
+                <SelectTrigger className="h-7 text-xs w-full mb-1">
+                  <SelectValue placeholder="Set all items to..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {itemStatusFlow.map(s => {
+                    const cfg = itemStatusConfig[s];
+                    return (
+                      <SelectItem key={s} value={s} className="text-xs">
+                        <span className={`flex items-center gap-1.5 ${cfg.color}`}>
+                          {cfg.icon} {cfg.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
 
               {/* Items with individual status */}
               <div className="space-y-2">

@@ -441,44 +441,31 @@ export default function OrdersPanel() {
 
                   {/* Items */}
                   <div className="space-y-1">
-                    {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
-                      const allStatuses = selectedOrder.items.map(i => i.itemStatus || "open");
-                      const statusFlow: ItemStatus[] = ["open", "in_progress", "ready", "served"];
-                      const canBulkAdvance = allStatuses.some(s => statusFlow.indexOf(s) < statusFlow.length - 1);
-                      if (!canBulkAdvance) return null;
-                      const nextLabel = allStatuses.every(s => s === "open") ? "Start All"
-                        : allStatuses.every(s => s === "in_progress") ? "All Ready"
-                        : allStatuses.every(s => s === "ready") ? "All Served"
-                        : "Advance All";
-                      return (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full h-7 text-xs gap-1 mb-1"
-                          onClick={() => {
+                    {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                      <div className="flex gap-1 mb-1">
+                        <Select
+                          onValueChange={(val: ItemStatus) => {
                             selectedOrder.items.forEach(item => {
-                              const s = item.itemStatus || "open";
-                              const idx = statusFlow.indexOf(s);
-                              if (idx >= 0 && idx < statusFlow.length - 1) {
-                                updateItemStatus(selectedOrder.id, item.id, statusFlow[idx + 1]);
-                              }
+                              updateItemStatus(selectedOrder.id, item.id, val);
                             });
                             setSelectedOrder(prev => prev ? {
                               ...prev,
-                              items: prev.items.map(i => {
-                                const s = i.itemStatus || "open";
-                                const idx = statusFlow.indexOf(s);
-                                return idx >= 0 && idx < statusFlow.length - 1
-                                  ? { ...i, itemStatus: statusFlow[idx + 1] }
-                                  : i;
-                              })
+                              items: prev.items.map(i => ({ ...i, itemStatus: val }))
                             } : null);
                           }}
                         >
-                          <ArrowRight className="w-3 h-3" /> {nextLabel}
-                        </Button>
-                      );
-                    })()}
+                          <SelectTrigger className="h-7 text-xs flex-1">
+                            <SelectValue placeholder="Set all items to..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(["open", "in_progress", "ready", "served"] as ItemStatus[]).map(s => {
+                              const cfg = { open: "New", in_progress: "Preparing", ready: "Ready", served: "Served" };
+                              return <SelectItem key={s} value={s} className="text-xs">{cfg[s]}</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <p className="text-sm font-semibold">Items</p>
                     {selectedOrder.items.map(item => (
                       <div key={item.id} className="flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0">
