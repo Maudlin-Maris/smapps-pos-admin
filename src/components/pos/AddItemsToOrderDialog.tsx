@@ -448,6 +448,8 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         open={!!dialogProduct}
         onClose={() => { setDialogProduct(null); setEditingItem(null); }}
         onConfirm={handleConfirmVariantExtras}
+        initialVariantId={editingItem?.item.variantId}
+        initialExtras={editInitialExtras}
       />
 
       <RemoveItemAuthDialog
