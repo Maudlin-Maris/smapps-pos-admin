@@ -16,6 +16,7 @@ import {
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
   ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight, Trash2
 } from "lucide-react";
+import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
 import PrintReceiptDialog from "./PrintReceiptDialog";
