@@ -54,7 +54,11 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const [authState, setAuthState] = useState<AuthState>("login");
   const [currentCashier, setCurrentCashier] = useState<POSCashier | null>(null);
   const [signedInCashiers, setSignedInCashiers] = useState<POSCashier[]>([]);
-  const [currentOutlet, setCurrentOutlet] = useState<POSOutlet | null>(null);
+  const [currentOutlet, setCurrentOutletState] = useState<POSOutlet | null>(null);
+  const setCurrentOutlet = useCallback((outlet: POSOutlet) => {
+    setCurrentOutletState(outlet);
+    setCart([]);
+  }, []);
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [orders, setOrders] = useState<POSOrder[]>(mockOrders);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
