@@ -156,6 +156,46 @@ export default function ProductGrid() {
     setDialogProduct(null);
   };
 
+  // Camera barcode scanner
+  const startCamera = () => setCameraOpen(true);
+  const stopCamera = () => {
+    if (html5QrCodeRef.current) {
+      html5QrCodeRef.current.stop().catch(() => {});
+      html5QrCodeRef.current = null;
+    }
+    setCameraOpen(false);
+  };
+
+  useEffect(() => {
+    if (!cameraOpen || !scannerRef.current) return;
+    let scanner: any = null;
+    const initScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        scanner = new Html5Qrcode("pos-barcode-reader");
+        html5QrCodeRef.current = scanner;
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 150 } },
+          (decodedText: string) => {
+            handleBarcodeScan(decodedText);
+            scanner.stop().catch(() => {});
+            setCameraOpen(false);
+          },
+          () => {}
+        );
+      } catch {
+        toast.error("Camera access denied or not available");
+        setCameraOpen(false);
+      }
+    };
+    const timer = setTimeout(initScanner, 300);
+    return () => {
+      clearTimeout(timer);
+      if (scanner) scanner.stop().catch(() => {});
+    };
+  }, [cameraOpen, handleBarcodeScan]);
+
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && search) {
       if (handleBarcodeScan(search)) {
