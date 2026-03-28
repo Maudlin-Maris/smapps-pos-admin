@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, X, Plus, Minus, Trash2 } from "lucide-react";
+import { Search, X, Plus, Minus, Trash2, ShoppingBag, ArrowLeft, Check } from "lucide-react";
 import VariantExtrasDialog from "./VariantExtrasDialog";
+import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 
 interface Props {
   open: boolean;
@@ -16,12 +17,20 @@ interface Props {
   orderId: string;
 }
 
+type View = "order" | "browse";
+
 export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props) {
-  const { currentOutlet, addItemsToOrder } = usePOS();
+  const { currentOutlet, addItemsToOrder, removeItemFromOrder, orders } = usePOS();
+  const [view, setView] = useState<View>("order");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
   const [pendingItems, setPendingItems] = useState<POSCartItem[]>([]);
+
+  // Auth dialog state for removing existing items
+  const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
+
+  const order = orders.find(o => o.id === orderId);
 
   const outletCategories = posCategories.filter(c => !c.outletId || c.outletId === currentOutlet?.id);
 
@@ -104,6 +113,8 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
   };
 
   const pendingTotal = pendingItems.reduce((s, i) => s + i.totalPrice, 0);
+  const existingTotal = order ? order.items.reduce((s, i) => s + i.totalPrice, 0) : 0;
+  const projectedTotal = existingTotal + pendingTotal - (order?.discountAmount || 0) + (order?.feesTotal || 0);
 
   const handleConfirmAll = () => {
     if (pendingItems.length === 0) return;
@@ -111,139 +122,268 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
     setPendingItems([]);
     setSearch("");
     setSelectedCategory(null);
-    onClose();
+    setView("order");
   };
 
   const handleClose = () => {
     setPendingItems([]);
     setSearch("");
     setSelectedCategory(null);
+    setView("order");
     onClose();
   };
+
+  const handleRemoveExistingItem = (itemId: string, itemName: string) => {
+    setRemoveAuth({ orderId, itemId, itemName });
+  };
+
+  const handleRemoveAuthorized = () => {
+    if (!removeAuth) return;
+    removeItemFromOrder(removeAuth.orderId, removeAuth.itemId);
+    setRemoveAuth(null);
+  };
+
+  if (!order) return null;
 
   return (
     <>
       <Dialog open={open} onOpenChange={o => !o && handleClose()}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="p-4 pb-3 border-b border-border">
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add Items to Order
+            <DialogTitle className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {view === "browse" && (
+                  <button onClick={() => setView("order")} className="p-1 rounded-md hover:bg-muted transition-colors">
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                )}
+                <ShoppingBag className="w-4 h-4" />
+                <span>{order.orderNumber}</span>
+                <Badge variant="outline" className="text-[10px]">{order.items.length + pendingItems.length} items</Badge>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold">{formatNaira(projectedTotal)}</p>
+                {pendingItems.length > 0 && (
+                  <p className="text-[10px] text-muted-foreground font-normal">
+                    was {formatNaira(order.totalAmount)}
+                  </p>
+                )}
+              </div>
             </DialogTitle>
           </DialogHeader>
 
-          {/* Search */}
-          <div className="px-4 pt-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Search products..."
-                className="pl-10 pr-10 h-9"
-              />
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Categories */}
-          <div className="overflow-x-auto">
-            <div className="flex gap-1.5 px-4 py-2">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  !selectedCategory ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                All
-              </button>
-              {outletCategories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
-                    selectedCategory === cat.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Product grid */}
-          <ScrollArea className="flex-1 min-h-0 max-h-[35vh]">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4 pt-1">
-              {products.map(product => (
-                <button
-                  key={product.id}
-                  onClick={() => product.inStock && handleProductClick(product)}
-                  disabled={!product.inStock}
-                  className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] ${
-                    product.inStock
-                      ? "bg-card border-border hover:border-primary/30 hover:shadow-sm"
-                      : "bg-muted/50 border-border/50 opacity-60 cursor-not-allowed"
-                  }`}
-                >
-                  {!product.inStock && (
-                    <Badge variant="destructive" className="absolute top-1.5 right-1.5 text-[9px]">Out</Badge>
-                  )}
-                  <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
-                  <span className="text-[11px] text-muted-foreground mt-0.5">
-                    {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
-                  </span>
-                </button>
-              ))}
-              {products.length === 0 && (
-                <div className="col-span-full text-center py-8 text-muted-foreground">
-                  <Search className="w-6 h-6 mx-auto mb-1 opacity-30" />
-                  <p className="text-xs">No products found</p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-
-          {/* Pending items summary */}
-          {pendingItems.length > 0 && (
-            <div className="border-t border-border p-4 space-y-2">
-              <p className="text-xs font-semibold text-foreground">Items to add ({pendingItems.length})</p>
-              <div className="space-y-1 max-h-[120px] overflow-y-auto">
-                {pendingItems.map(item => (
-                  <div key={item.id} className="flex items-center justify-between text-xs gap-2">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium">{item.productName}</span>
-                      {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
-                      {item.extras.length > 0 && (
-                        <span className="text-muted-foreground"> +{item.extras.map(e => e.name).join(", ")}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => updatePendingQty(item.id, -1)} className="w-5 h-5 rounded bg-muted flex items-center justify-center hover:bg-destructive/10">
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="w-4 text-center font-semibold">{item.quantity}</span>
-                      <button onClick={() => updatePendingQty(item.id, 1)} className="w-5 h-5 rounded bg-muted flex items-center justify-center hover:bg-primary/10">
-                        <Plus className="w-3 h-3" />
-                      </button>
-                      <span className="font-medium ml-1 w-16 text-right">{formatNaira(item.totalPrice)}</span>
-                      <button onClick={() => setPendingItems(prev => prev.filter(i => i.id !== item.id))} className="ml-1 text-destructive hover:text-destructive/80">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+          {view === "order" ? (
+            /* ── ORDER VIEW ── */
+            <div className="flex flex-col flex-1 min-h-0">
+              <ScrollArea className="flex-1 max-h-[55vh]">
+                <div className="p-4 space-y-3">
+                  {/* Existing items */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Current Items</p>
+                    <div className="space-y-1">
+                      {order.items.map(item => (
+                        <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30 text-sm gap-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{item.quantity}× {item.productName}</span>
+                            {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
+                            {item.extras.length > 0 && (
+                              <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-medium text-sm">{formatNaira(item.totalPrice)}</span>
+                            {order.status !== "paid" && order.status !== "voided" && (
+                              <button
+                                onClick={() => handleRemoveExistingItem(item.id, item.productName)}
+                                className="p-1 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+                                title="Remove item (requires authorization)"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <span className="text-sm font-bold">{formatNaira(pendingTotal)}</span>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setPendingItems([])}>Clear</Button>
-                  <Button size="sm" onClick={handleConfirmAll}>
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Add {pendingItems.length} Item{pendingItems.length > 1 ? "s" : ""} to Order
-                  </Button>
+
+                  {/* Pending new items */}
+                  {pendingItems.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Plus className="w-3 h-3" /> New Items
+                      </p>
+                      <div className="space-y-1">
+                        {pendingItems.map(item => (
+                          <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg border border-primary/20 bg-primary/5 text-sm gap-2">
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium">{item.productName}</span>
+                              {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
+                              {item.extras.length > 0 && (
+                                <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button onClick={() => updatePendingQty(item.id, -1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors">
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-5 text-center font-semibold text-xs">{item.quantity}</span>
+                              <button onClick={() => updatePendingQty(item.id, 1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors">
+                                <Plus className="w-3 h-3" />
+                              </button>
+                              <span className="font-medium ml-1 w-16 text-right text-sm">{formatNaira(item.totalPrice)}</span>
+                              <button onClick={() => setPendingItems(prev => prev.filter(i => i.id !== item.id))} className="p-1 rounded-md text-destructive hover:bg-destructive/10 transition-colors">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order summary */}
+                  <div className="border-t border-border pt-3 space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Existing items subtotal</span>
+                      <span>{formatNaira(existingTotal)}</span>
+                    </div>
+                    {pendingItems.length > 0 && (
+                      <div className="flex justify-between text-xs text-primary font-medium">
+                        <span>New items subtotal</span>
+                        <span>+{formatNaira(pendingTotal)}</span>
+                      </div>
+                    )}
+                    {(order.discountAmount || 0) > 0 && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Discount{order.discountName ? ` (${order.discountName})` : ""}</span>
+                        <span>-{formatNaira(order.discountAmount || 0)}</span>
+                      </div>
+                    )}
+                    {(order.feesTotal || 0) > 0 && (
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Fees</span>
+                        <span>+{formatNaira(order.feesTotal || 0)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-bold pt-1 border-t border-border">
+                      <span>Updated Total</span>
+                      <span>{formatNaira(projectedTotal)}</span>
+                    </div>
+                  </div>
                 </div>
+              </ScrollArea>
+
+              {/* Bottom actions */}
+              <div className="p-4 border-t border-border flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setView("browse")}>
+                  <Plus className="w-4 h-4 mr-1.5" /> Add More Items
+                </Button>
+                {pendingItems.length > 0 && (
+                  <Button className="flex-1" onClick={handleConfirmAll}>
+                    <Check className="w-4 h-4 mr-1.5" /> Confirm {pendingItems.length} New Item{pendingItems.length > 1 ? "s" : ""}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* ── BROWSE / PRODUCT SELECTION VIEW ── */
+            <div className="flex flex-col flex-1 min-h-0">
+              {/* Search */}
+              <div className="px-4 pt-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search products..."
+                    className="pl-10 pr-10 h-9"
+                    autoFocus
+                  />
+                  {search && (
+                    <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div className="overflow-x-auto">
+                <div className="flex gap-1.5 px-4 py-2">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      !selectedCategory ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {outletCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                        selectedCategory === cat.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Product grid */}
+              <ScrollArea className="flex-1 min-h-0 max-h-[35vh]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4 pt-1">
+                  {products.map(product => (
+                    <button
+                      key={product.id}
+                      onClick={() => product.inStock && handleProductClick(product)}
+                      disabled={!product.inStock}
+                      className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] ${
+                        product.inStock
+                          ? "bg-card border-border hover:border-primary/30 hover:shadow-sm"
+                          : "bg-muted/50 border-border/50 opacity-60 cursor-not-allowed"
+                      }`}
+                    >
+                      {!product.inStock && (
+                        <Badge variant="destructive" className="absolute top-1.5 right-1.5 text-[9px]">Out</Badge>
+                      )}
+                      <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
+                      <span className="text-[11px] text-muted-foreground mt-0.5">
+                        {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
+                      </span>
+                    </button>
+                  ))}
+                  {products.length === 0 && (
+                    <div className="col-span-full text-center py-8 text-muted-foreground">
+                      <Search className="w-6 h-6 mx-auto mb-1 opacity-30" />
+                      <p className="text-xs">No products found</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+
+              {/* Pending items mini-bar at bottom of browse view */}
+              <div className="border-t border-border p-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  {pendingItems.length > 0 ? (
+                    <>
+                      <Badge className="bg-primary text-primary-foreground">{pendingItems.length}</Badge>
+                      <span className="font-medium">{formatNaira(pendingTotal)} in new items</span>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">Select products to add</span>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setView("order")}
+                  variant={pendingItems.length > 0 ? "default" : "outline"}
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Order
+                </Button>
               </div>
             </div>
           )}
@@ -255,6 +395,13 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
         open={!!dialogProduct}
         onClose={() => setDialogProduct(null)}
         onConfirm={handleConfirmVariantExtras}
+      />
+
+      <RemoveItemAuthDialog
+        open={!!removeAuth}
+        onClose={() => setRemoveAuth(null)}
+        onAuthorized={handleRemoveAuthorized}
+        itemName={removeAuth?.itemName || ""}
       />
     </>
   );

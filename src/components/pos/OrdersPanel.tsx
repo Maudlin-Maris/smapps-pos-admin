@@ -16,6 +16,7 @@ import {
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
   ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight, Trash2
 } from "lucide-react";
+import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
 import PrintReceiptDialog from "./PrintReceiptDialog";
@@ -55,6 +56,7 @@ export default function OrdersPanel() {
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
   const [transferTarget, setTransferTarget] = useState<string>("");
   const [addItemsOrderId, setAddItemsOrderId] = useState<string | null>(null);
+  const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
   const cashierId = currentCashier?.id || "";
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const hasLocations = features?.hasDineIn || features?.hasAppointments;
@@ -513,17 +515,10 @@ export default function OrdersPanel() {
                           {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                             <button
                               onClick={() => {
-                                removeItemFromOrder(selectedOrder.id, item.id);
-                                const newItems = selectedOrder.items.filter(i => i.id !== item.id);
-                                if (newItems.length === 0) {
-                                  setSelectedOrder(null);
-                                } else {
-                                  const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (selectedOrder.discountAmount || 0) + (selectedOrder.feesTotal || 0);
-                                  setSelectedOrder(prev => prev ? { ...prev, items: newItems, totalAmount: newTotal } : null);
-                                }
+                                setRemoveAuth({ orderId: selectedOrder.id, itemId: item.id, itemName: item.productName });
                               }}
                               className="text-destructive hover:text-destructive/80 p-0.5"
-                              title="Remove item"
+                              title="Remove item (requires authorization)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -642,7 +637,7 @@ export default function OrdersPanel() {
                           </Button>
                         )}
                         <Button size="sm" variant="outline" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
-                          <Plus className="w-4 h-4 mr-1" /> Add Items
+                          <Plus className="w-4 h-4 mr-1" /> Add / Remove Items
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); setSelectedOrder(null); }}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
@@ -677,6 +672,26 @@ export default function OrdersPanel() {
         open={!!addItemsOrderId}
         onClose={() => setAddItemsOrderId(null)}
         orderId={addItemsOrderId || ""}
+      />
+
+      {/* Auth dialog for removing items from order detail */}
+      <RemoveItemAuthDialog
+        open={!!removeAuth}
+        onClose={() => setRemoveAuth(null)}
+        onAuthorized={() => {
+          if (!removeAuth) return;
+          removeItemFromOrder(removeAuth.orderId, removeAuth.itemId);
+          // Update selectedOrder state
+          setSelectedOrder(prev => {
+            if (!prev) return null;
+            const newItems = prev.items.filter(i => i.id !== removeAuth.itemId);
+            if (newItems.length === 0) return null;
+            const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (prev.discountAmount || 0) + (prev.feesTotal || 0);
+            return { ...prev, items: newItems, totalAmount: newTotal };
+          });
+          setRemoveAuth(null);
+        }}
+        itemName={removeAuth?.itemName || ""}
       />
     </div>
   );
