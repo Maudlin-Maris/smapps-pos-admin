@@ -426,7 +426,7 @@ export const mockOrders: POSOrder[] = [
   },
   {
     id: "ord-2", orderNumber: "#002", status: "in_progress", type: "dine_in", tableNumber: "VIP Lounge 1",
-    locationName: "VIP Lounge 1", customerName: "VIP Lounge 1", outletId: "outlet-1", cashierId: "c2",
+    locationName: "VIP Lounge 1", customerName: "VIP Lounge 1", outletId: "outlet-1", cashierId: "c2", transferredToCashierId: "c1",
     items: [
       { id: "ci-4", productId: "p6", productName: "Margherita Pizza", variantId: "v6c", variantName: "Large 16\"", extras: [], quantity: 1, unitPrice: 11000, totalPrice: 11000 },
       { id: "ci-5", productId: "p7", productName: "Pepperoni Pizza", variantId: "v7b", variantName: "Medium 12\"", extras: [], quantity: 1, unitPrice: 8500, totalPrice: 8500 },
