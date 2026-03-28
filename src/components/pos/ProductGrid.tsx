@@ -174,6 +174,18 @@ export default function ProductGrid() {
     let scanner: any = null;
     const initScanner = async () => {
       try {
+        // Check if camera is available before starting
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          toast.error("Camera not supported in this browser or context. Try opening the app directly in a browser tab.");
+          setCameraOpen(false);
+          return;
+        }
+        // Test camera access first
+        const testStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: isMobile ? "environment" : "user" } 
+        });
+        testStream.getTracks().forEach(t => t.stop());
+
         const { Html5Qrcode } = await import("html5-qrcode");
         scanner = new Html5Qrcode("pos-barcode-reader");
         html5QrCodeRef.current = scanner;
@@ -183,24 +195,28 @@ export default function ProductGrid() {
           {
             fps: 15,
             qrbox: { width: 280, height: 160 },
-            formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
           },
           (decodedText: string) => {
-            // Populate search field and trigger scan (mimics typing + Enter)
             setSearch(decodedText);
             const found = handleBarcodeScan(decodedText);
             if (!found) {
               toast.info(`Scanned: ${decodedText} — no matching product found`);
             }
-            // Clear search after processing
             setTimeout(() => setSearch(""), 300);
             scanner.stop().catch(() => {});
             setCameraOpen(false);
           },
           () => {}
         );
-      } catch {
-        toast.error("Camera access denied or not available");
+      } catch (err: any) {
+        const msg = err?.message || "";
+        if (msg.includes("Permission") || msg.includes("NotAllowed")) {
+          toast.error("Camera permission denied. Please allow camera access.");
+        } else if (msg.includes("NotFound") || msg.includes("DevicesNotFound")) {
+          toast.error("No camera found on this device.");
+        } else {
+          toast.error("Camera not available. Try opening the app in a new browser tab (not an iframe).");
+        }
         setCameraOpen(false);
       }
     };
