@@ -109,6 +109,15 @@ export interface POSCashier {
   role: "cashier" | "manager";
 }
 
+export interface OutletFee {
+  id: string;
+  name: string;
+  type: "percentage" | "fixed";
+  value: number;
+  appliesTo?: OrderType[]; // if set, only apply for these order types
+  enabled: boolean;
+}
+
 export interface POSOutlet {
   id: string;
   name: string;
@@ -116,6 +125,7 @@ export interface POSOutlet {
   email?: string;
   phone?: string;
   address?: string;
+  fees?: OutletFee[];
 }
 
 // --- Preconfigured Discounts ---
