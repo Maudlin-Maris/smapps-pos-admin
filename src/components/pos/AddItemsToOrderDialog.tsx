@@ -366,12 +366,12 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
               </ScrollArea>
 
               {/* Pending items mini-bar at bottom of browse view */}
-              <div className="border-t border-border p-3 flex items-center justify-between gap-3">
+              <div className="border-t border-border p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm">
                   {pendingItems.length > 0 ? (
                     <>
                       <Badge className="bg-primary text-primary-foreground">{pendingItems.length}</Badge>
-                      <span className="font-medium">{formatNaira(pendingTotal)} in new items</span>
+                      <span className="font-medium text-xs sm:text-sm">{formatNaira(pendingTotal)} in new items</span>
                     </>
                   ) : (
                     <span className="text-muted-foreground text-xs">Select products to add</span>
@@ -381,8 +381,9 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
                   size="sm"
                   onClick={() => setView("order")}
                   variant={pendingItems.length > 0 ? "default" : "outline"}
+                  className="w-full sm:w-auto"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Order
+                  <ShoppingBag className="w-3.5 h-3.5 mr-1.5" /> View Order Details
                 </Button>
               </div>
             </div>
