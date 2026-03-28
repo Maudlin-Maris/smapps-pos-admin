@@ -95,7 +95,7 @@ export default function POSCart({ onCheckout }: Props) {
         item={editingItem}
         open={!!editingItem}
         onClose={() => setEditingItem(null)}
-        onSave={(id, variantId, variantName, extras, unitPrice) => updateCartItem(id, variantId, variantName, extras.map(e => ({ ...e, quantity: (e as any).quantity || 1 })), unitPrice)}
+        onSave={(id, variantId, variantName, extras, unitPrice) => updateCartItem(id, variantId, variantName, extras, unitPrice)}
         onRemove={(id) => removeFromCart(id)}
       />
     </div>
