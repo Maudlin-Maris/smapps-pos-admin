@@ -511,8 +511,8 @@ export default function OrdersPanel() {
                     </div>
                   )}
 
-                  {/* Status change */}
-                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                  {/* Status change — only for non-kitchen business types (status is auto-derived for restaurants) */}
+                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && !hasKitchenStatuses && (
                     <div className="space-y-2">
                       <p className="text-sm font-semibold">Update Status</p>
                       <Select value={selectedOrder.status} onValueChange={v => {
@@ -524,13 +524,6 @@ export default function OrdersPanel() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="open">Open</SelectItem>
-                          {hasKitchenStatuses && (
-                            <>
-                              <SelectItem value="in_progress">Preparing</SelectItem>
-                              <SelectItem value="ready">Ready</SelectItem>
-                              <SelectItem value="served">Served</SelectItem>
-                            </>
-                          )}
                           {features?.hasAppointments && (
                             <SelectItem value="in_progress">In Progress</SelectItem>
                           )}
