@@ -42,7 +42,7 @@ interface LocationSummary {
 }
 
 export default function OrdersPanel() {
-  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
+  const { orders, updateOrderStatus, updateItemStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
