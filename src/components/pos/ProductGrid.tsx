@@ -127,6 +127,30 @@ export default function ProductGrid() {
     }
   };
 
+  const handleConfirmVariantExtras = (
+    variantId: string | undefined,
+    variantName: string | undefined,
+    selectedExtras: { id: string; name: string; price: number }[],
+    unitPrice: number
+  ) => {
+    if (!dialogProduct) return;
+    const extrasWithQty = selectedExtras.map(e => ({ ...e, quantity: 1 }));
+    const extrasTotal = extrasWithQty.reduce((s, e) => s + e.price * e.quantity, 0);
+    const total = unitPrice + extrasTotal;
+    addToCart({
+      productId: dialogProduct.id,
+      productName: dialogProduct.name,
+      categoryId: dialogProduct.categoryId,
+      variantId,
+      variantName,
+      extras: extrasWithQty,
+      quantity: 1,
+      unitPrice: total,
+      totalPrice: total,
+    });
+    setDialogProduct(null);
+  };
+
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && search) {
       if (handleBarcodeScan(search)) {
