@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,11 +10,26 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number }[], unitPrice: number) => void;
+  initialVariantId?: string;
+  initialExtras?: { id: string; quantity: number }[];
 }
 
-export default function VariantExtrasDialog({ product, open, onClose, onConfirm }: Props) {
+export default function VariantExtrasDialog({ product, open, onClose, onConfirm, initialVariantId, initialExtras }: Props) {
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (open && product) {
+      setSelectedVariant(initialVariantId || null);
+      if (initialExtras && initialExtras.length > 0) {
+        const map: Record<string, number> = {};
+        initialExtras.forEach(e => { map[e.id] = e.quantity; });
+        setExtraQuantities(map);
+      } else {
+        setExtraQuantities({});
+      }
+    }
+  }, [open, product, initialVariantId, initialExtras]);
 
   if (!product) return null;
 
@@ -64,8 +79,6 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm 
 
   const handleOpenChange = (o: boolean) => {
     if (!o) {
-      setSelectedVariant(null);
-      setExtraQuantities({});
       onClose();
     }
   };

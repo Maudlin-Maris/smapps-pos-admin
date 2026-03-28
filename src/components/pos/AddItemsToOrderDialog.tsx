@@ -79,6 +79,10 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
     });
   };
 
+  const editInitialExtras = editingItem
+    ? editingItem.item.extras.map(e => ({ id: e.id, quantity: e.quantity }))
+    : undefined;
+
   const handleConfirmVariantExtras = (
     variantId: string | undefined,
     variantName: string | undefined,
@@ -444,6 +448,8 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         open={!!dialogProduct}
         onClose={() => { setDialogProduct(null); setEditingItem(null); }}
         onConfirm={handleConfirmVariantExtras}
+        initialVariantId={editingItem?.item.variantId}
+        initialExtras={editInitialExtras}
       />
 
       <RemoveItemAuthDialog
