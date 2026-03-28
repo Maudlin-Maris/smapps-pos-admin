@@ -148,7 +148,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const cartTotal = cart.reduce((sum, i) => sum + i.totalPrice, 0);
 
-  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string) => {
+  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string) => {
     const num = orderCounter;
     setOrderCounter(n => n + 1);
     const order: POSOrder = {
@@ -166,6 +166,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       tipAmount,
       discountAmount,
       discountName,
+      notes,
       createdAt: new Date(),
       updatedAt: new Date(),
       outletId: currentOutlet?.id || "",
