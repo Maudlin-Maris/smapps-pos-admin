@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 
 import {
   type POSCashier, type POSOrder, type POSCartItem, type POSOutlet,
-  type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee,
+  type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee, type ItemStatus,
   posCashiers, mockOrders, posOutlets,
 } from "@/data/posData";
 
