@@ -136,8 +136,9 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setSignedInCashiers(prev => prev.filter(c => c.id !== currentCashier?.id));
     setAuthState("login");
     setCurrentCashier(null);
-    setCurrentOutlet(null);
+    setCurrentOutletState(null);
     setCart([]);
+    sessionStorage.removeItem("pos_session");
   }, [currentCashier]);
 
   const availableOutlets = currentCashier
