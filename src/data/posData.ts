@@ -77,6 +77,11 @@ export interface POSLocation {
   outletId: string;
 }
 
+export interface AppliedFee {
+  name: string;
+  amount: number;
+}
+
 export interface POSOrder {
   id: string;
   orderNumber: string;
@@ -92,6 +97,8 @@ export interface POSOrder {
   tipAmount?: number;
   discountAmount?: number;
   discountName?: string;
+  appliedFees?: AppliedFee[];
+  feesTotal?: number;
   createdAt: Date;
   updatedAt: Date;
   outletId: string;
