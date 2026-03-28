@@ -441,6 +441,44 @@ export default function OrdersPanel() {
 
                   {/* Items */}
                   <div className="space-y-1">
+                    {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
+                      const allStatuses = selectedOrder.items.map(i => i.itemStatus || "open");
+                      const statusFlow: ItemStatus[] = ["open", "in_progress", "ready", "served"];
+                      const canBulkAdvance = allStatuses.some(s => statusFlow.indexOf(s) < statusFlow.length - 1);
+                      if (!canBulkAdvance) return null;
+                      const nextLabel = allStatuses.every(s => s === "open") ? "Start All"
+                        : allStatuses.every(s => s === "in_progress") ? "All Ready"
+                        : allStatuses.every(s => s === "ready") ? "All Served"
+                        : "Advance All";
+                      return (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full h-7 text-xs gap-1 mb-1"
+                          onClick={() => {
+                            selectedOrder.items.forEach(item => {
+                              const s = item.itemStatus || "open";
+                              const idx = statusFlow.indexOf(s);
+                              if (idx >= 0 && idx < statusFlow.length - 1) {
+                                updateItemStatus(selectedOrder.id, item.id, statusFlow[idx + 1]);
+                              }
+                            });
+                            setSelectedOrder(prev => prev ? {
+                              ...prev,
+                              items: prev.items.map(i => {
+                                const s = i.itemStatus || "open";
+                                const idx = statusFlow.indexOf(s);
+                                return idx >= 0 && idx < statusFlow.length - 1
+                                  ? { ...i, itemStatus: statusFlow[idx + 1] }
+                                  : i;
+                              })
+                            } : null);
+                          }}
+                        >
+                          <ArrowRight className="w-3 h-3" /> {nextLabel}
+                        </Button>
+                      );
+                    })()}
                     <p className="text-sm font-semibold">Items</p>
                     {selectedOrder.items.map(item => (
                       <div key={item.id} className="flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0">
@@ -454,32 +492,33 @@ export default function OrdersPanel() {
                         <div className="flex items-center gap-2 shrink-0">
                           {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
                             const status: ItemStatus = item.itemStatus || "open";
-                            const cfg = statusConfig[status as OrderStatus];
-                            const statusFlow: ItemStatus[] = ["open", "in_progress", "ready", "served"];
-                            const idx = statusFlow.indexOf(status);
-                            const canAdvance = idx >= 0 && idx < statusFlow.length - 1;
                             return (
-                              <div className="flex items-center gap-1">
-                                <Badge variant="outline" className={`text-[9px] gap-0.5 ${cfg?.color || ""}`}>
-                                  {cfg?.icon} {cfg?.label}
-                                </Badge>
-                                {canAdvance && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-5 w-5 p-0"
-                                    onClick={() => {
-                                      updateItemStatus(selectedOrder.id, item.id, statusFlow[idx + 1]);
-                                      setSelectedOrder(prev => prev ? {
-                                        ...prev,
-                                        items: prev.items.map(i => i.id === item.id ? { ...i, itemStatus: statusFlow[idx + 1] } : i)
-                                      } : null);
-                                    }}
-                                  >
-                                    <ArrowRight className="w-3 h-3" />
-                                  </Button>
-                                )}
-                              </div>
+                              <Select
+                                value={status}
+                                onValueChange={(val: ItemStatus) => {
+                                  updateItemStatus(selectedOrder.id, item.id, val);
+                                  setSelectedOrder(prev => prev ? {
+                                    ...prev,
+                                    items: prev.items.map(i => i.id === item.id ? { ...i, itemStatus: val } : i)
+                                  } : null);
+                                }}
+                              >
+                                <SelectTrigger className="h-6 w-[100px] text-[10px] px-2 gap-1">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(["open", "in_progress", "ready", "served"] as ItemStatus[]).map(s => {
+                                    const cfg = statusConfig[s as OrderStatus];
+                                    return (
+                                      <SelectItem key={s} value={s} className="text-xs">
+                                        <span className={`flex items-center gap-1.5 ${cfg?.color || ""}`}>
+                                          {cfg?.icon} {cfg?.label}
+                                        </span>
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
                             );
                           })()}
                           <span className="font-medium">{formatNaira(item.totalPrice)}</span>
