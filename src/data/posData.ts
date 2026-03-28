@@ -41,6 +41,8 @@ export interface POSProduct {
   outletId: string;
 }
 
+export type ItemStatus = "open" | "in_progress" | "ready" | "served";
+
 export interface POSCartItem {
   id: string;
   productId: string;
@@ -53,6 +55,7 @@ export interface POSCartItem {
   unitPrice: number;
   totalPrice: number;
   notes?: string;
+  itemStatus?: ItemStatus;
 }
 
 export type OrderStatus = "open" | "in_progress" | "ready" | "served" | "paid" | "voided";
