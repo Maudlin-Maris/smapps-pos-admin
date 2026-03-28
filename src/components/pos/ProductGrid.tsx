@@ -352,14 +352,19 @@ export default function ProductGrid() {
               Scan Barcode
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div
-              id="pos-barcode-reader"
-              ref={scannerRef}
-              className="w-full min-h-[250px] rounded-lg overflow-hidden bg-muted"
-            />
+          <div className="space-y-3">
+            <div className="relative">
+              <div
+                id="pos-barcode-reader"
+                ref={scannerRef}
+                className="w-full min-h-[300px] rounded-lg overflow-hidden bg-black [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[280px] h-[160px] border-2 border-primary/60 rounded-lg" />
+              </div>
+            </div>
             <p className="text-sm text-muted-foreground text-center">
-              Point your camera at the barcode
+              {isMobile ? "Point your back camera at the barcode" : "Hold the barcode up to your camera"}
             </p>
             <Button variant="outline" className="w-full" onClick={stopCamera}>
               Cancel
