@@ -146,9 +146,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
       )}
 
       {/* Footer */}
-      <p style={{ textAlign: "center", margin: "12px 0 4px", letterSpacing: "2px" }}>
-        {"- ".repeat(20)}
-      </p>
+      <p style={{ textAlign: "center", margin: "12px 0 4px", borderTop: "1px dashed #999" }} />
       <div className="text-center" style={{ fontSize: "10px" }}>
         <p>Thank you for your patronage!</p>
         <p style={{ marginTop: "2px", color: "#888" }}>
