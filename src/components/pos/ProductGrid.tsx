@@ -3,9 +3,11 @@ import { usePOS } from "@/contexts/POSContext";
 import { posProducts, posCategories, type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ScanLine, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, ScanLine, Camera, X } from "lucide-react";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 
