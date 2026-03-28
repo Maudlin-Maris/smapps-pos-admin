@@ -156,6 +156,9 @@ export default function ProductGrid() {
     setDialogProduct(null);
   };
 
+  // Detect mobile device for camera facing mode
+  const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
   // Camera barcode scanner
   const startCamera = () => setCameraOpen(true);
   const stopCamera = () => {
@@ -174,11 +177,23 @@ export default function ProductGrid() {
         const { Html5Qrcode } = await import("html5-qrcode");
         scanner = new Html5Qrcode("pos-barcode-reader");
         html5QrCodeRef.current = scanner;
+        const facingMode = isMobile ? "environment" : "user";
         await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 150 } },
+          { facingMode },
+          {
+            fps: 15,
+            qrbox: { width: 280, height: 160 },
+            formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+          },
           (decodedText: string) => {
-            handleBarcodeScan(decodedText);
+            // Populate search field and trigger scan (mimics typing + Enter)
+            setSearch(decodedText);
+            const found = handleBarcodeScan(decodedText);
+            if (!found) {
+              toast.info(`Scanned: ${decodedText} — no matching product found`);
+            }
+            // Clear search after processing
+            setTimeout(() => setSearch(""), 300);
             scanner.stop().catch(() => {});
             setCameraOpen(false);
           },
@@ -194,7 +209,7 @@ export default function ProductGrid() {
       clearTimeout(timer);
       if (scanner) scanner.stop().catch(() => {});
     };
-  }, [cameraOpen, handleBarcodeScan]);
+  }, [cameraOpen, handleBarcodeScan, isMobile]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && search) {
@@ -337,14 +352,19 @@ export default function ProductGrid() {
               Scan Barcode
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div
-              id="pos-barcode-reader"
-              ref={scannerRef}
-              className="w-full min-h-[250px] rounded-lg overflow-hidden bg-muted"
-            />
+          <div className="space-y-3">
+            <div className="relative">
+              <div
+                id="pos-barcode-reader"
+                ref={scannerRef}
+                className="w-full min-h-[300px] rounded-lg overflow-hidden bg-black [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[280px] h-[160px] border-2 border-primary/60 rounded-lg" />
+              </div>
+            </div>
             <p className="text-sm text-muted-foreground text-center">
-              Point your camera at the barcode
+              {isMobile ? "Point your back camera at the barcode" : "Hold the barcode up to your camera"}
             </p>
             <Button variant="outline" className="w-full" onClick={stopCamera}>
               Cancel
