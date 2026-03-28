@@ -182,19 +182,41 @@ export default function OrdersPanel() {
           </button>
         )}
 
-        {/* Search (hidden on location cards view) */}
+        {/* Search & payment filter (hidden on location cards view) */}
         {!showLocationCards && (
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search order #..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="h-8 pl-8 text-xs"
-              />
+          <>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search order #..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
             </div>
-          </div>
+            <div className="flex gap-1">
+              {([
+                { id: "all", label: "All" },
+                { id: "paid", label: "Paid" },
+                { id: "unpaid", label: "Unpaid" },
+                { id: "incomplete", label: "Incomplete" },
+              ] as { id: PaymentFilter; label: string }[]).map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setPaymentFilter(f.id)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    paymentFilter === f.id
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
