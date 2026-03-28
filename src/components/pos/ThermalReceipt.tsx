@@ -54,7 +54,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
       {/* Items */}
       <div style={{ marginBottom: "4px" }}>
         {order.items.map((item) => {
-          const extrasTotal = item.extras.reduce((s, e) => s + e.price, 0) * item.quantity;
+          const extrasTotal = item.extras.reduce((s, e) => s + e.price * (e.quantity || 1), 0) * item.quantity;
           const baseTotal = item.unitPrice * item.quantity;
           return (
             <div key={item.id} style={{ marginBottom: "4px" }}>
