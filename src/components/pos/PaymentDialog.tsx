@@ -642,7 +642,8 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 disabled={Math.abs(total - customAmounts.reduce((s, ca) => s + (parseFloat(ca.amount) || 0), 0)) > 1}
                 className="w-full h-11"
               >
-                Confirm Split Payment
+                <CheckCircle2 className="w-4 h-4 mr-1" />
+                Confirm & Process Order
               </Button>
             </div>
           </>
