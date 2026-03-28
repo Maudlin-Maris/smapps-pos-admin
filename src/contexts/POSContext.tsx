@@ -224,6 +224,26 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, updatedAt: new Date() } : o));
   }, []);
 
+  // Derive order status from item statuses
+  const deriveOrderStatus = (items: POSCartItem[]): OrderStatus => {
+    const statuses = items.map(i => i.itemStatus || "open");
+    if (statuses.every(s => s === "served")) return "served";
+    if (statuses.every(s => s === "ready" || s === "served")) return "ready";
+    if (statuses.some(s => s === "in_progress" || s === "ready" || s === "served")) return "in_progress";
+    return "open";
+  };
+
+  const updateItemStatus = useCallback((orderId: string, itemId: string, status: ItemStatus) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const updatedItems = o.items.map(i => i.id === itemId ? { ...i, itemStatus: status } : i);
+      const derivedStatus = deriveOrderStatus(updatedItems);
+      // Only auto-derive if order isn't paid/voided
+      const newOrderStatus = (o.status === "paid" || o.status === "voided") ? o.status : derivedStatus;
+      return { ...o, items: updatedItems, status: newOrderStatus, updatedAt: new Date() };
+    }));
+  }, []);
+
   const addItemsToOrder = useCallback((orderId: string, items: POSCartItem[]) => {
     setOrders(prev => prev.map(o => {
       if (o.id !== orderId) return o;
