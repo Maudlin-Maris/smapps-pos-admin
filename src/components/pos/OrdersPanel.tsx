@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
+import { getFeatures } from "@/data/businessTypes";
 import type { POSOrder, OrderStatus } from "@/data/posData";
 import { posLocations, posCashiers } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
-  ChevronLeft, Users, ArrowRightLeft, Filter
+  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
