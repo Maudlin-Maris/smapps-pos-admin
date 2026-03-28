@@ -142,7 +142,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
                     key={e.id}
                     style={{ paddingLeft: "16px", fontSize: "12px", fontWeight: 600 }}
                   >
-                    {(e.quantity || 1) > 1 ? `${e.quantity}x` : "+"} {e.name}
+                    + {(e.quantity || 1) > 1 ? `${e.quantity}x ` : ""}{e.name}
                   </p>
                 ))}
                 {item.notes && (
