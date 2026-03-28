@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, X, Plus, Minus, Trash2, ShoppingBag, ArrowLeft, Check } from "lucide-react";
+import { Search, X, Plus, Minus, Trash2, ShoppingBag, ArrowLeft, Check, Pencil } from "lucide-react";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 
