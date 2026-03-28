@@ -102,9 +102,17 @@ export default function OrdersPanel() {
     }
   }, [group, myOrders, transferredOrders, queuedOrders, orders, selectedLocationName]);
 
-  // Apply search filter
+  // Apply search + payment filter
   const filtered = useMemo(() => {
     let list = baseList;
+    // Payment filter
+    if (paymentFilter === "paid") {
+      list = list.filter(o => o.status === "paid");
+    } else if (paymentFilter === "unpaid") {
+      list = list.filter(o => o.paidAmount === 0 && o.status !== "paid" && o.status !== "voided");
+    } else if (paymentFilter === "incomplete") {
+      list = list.filter(o => o.paidAmount > 0 && o.paidAmount < o.totalAmount && o.status !== "paid");
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter(o =>
@@ -113,7 +121,7 @@ export default function OrdersPanel() {
       );
     }
     return list;
-  }, [baseList, searchQuery]);
+  }, [baseList, searchQuery, paymentFilter]);
 
   const handleAddItemsToOrder = (orderId: string) => {
     if (cart.length === 0) return;
