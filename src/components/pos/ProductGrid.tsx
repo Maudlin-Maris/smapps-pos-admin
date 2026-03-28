@@ -156,6 +156,9 @@ export default function ProductGrid() {
     setDialogProduct(null);
   };
 
+  // Detect mobile device for camera facing mode
+  const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
   // Camera barcode scanner
   const startCamera = () => setCameraOpen(true);
   const stopCamera = () => {
@@ -174,11 +177,23 @@ export default function ProductGrid() {
         const { Html5Qrcode } = await import("html5-qrcode");
         scanner = new Html5Qrcode("pos-barcode-reader");
         html5QrCodeRef.current = scanner;
+        const facingMode = isMobile ? "environment" : "user";
         await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 150 } },
+          { facingMode },
+          {
+            fps: 15,
+            qrbox: { width: 280, height: 160 },
+            formatsToSupport: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+          },
           (decodedText: string) => {
-            handleBarcodeScan(decodedText);
+            // Populate search field and trigger scan (mimics typing + Enter)
+            setSearch(decodedText);
+            const found = handleBarcodeScan(decodedText);
+            if (!found) {
+              toast.info(`Scanned: ${decodedText} — no matching product found`);
+            }
+            // Clear search after processing
+            setTimeout(() => setSearch(""), 300);
             scanner.stop().catch(() => {});
             setCameraOpen(false);
           },
@@ -194,7 +209,7 @@ export default function ProductGrid() {
       clearTimeout(timer);
       if (scanner) scanner.stop().catch(() => {});
     };
-  }, [cameraOpen, handleBarcodeScan]);
+  }, [cameraOpen, handleBarcodeScan, isMobile]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && search) {
