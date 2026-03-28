@@ -546,18 +546,45 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
 
               {/* Split equally shortcut */}
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium whitespace-nowrap">Split equally between</label>
-                <Input type="number" min={2} max={10} value={splitCount} onChange={e => {
-                  const n = Math.max(2, Math.min(10, parseInt(e.target.value) || 2));
-                  setSplitCount(n);
-                  const perPerson = Math.floor(total / n);
-                  const remainder = total - perPerson * n;
-                  setCustomAmounts(Array.from({ length: n }, (_, i) => ({
-                    method: "cash" as PaymentMethod,
-                    amount: (i === n - 1 ? perPerson + remainder : perPerson).toString()
-                  })));
-                }} className="w-20 h-8" />
-                <span className="text-sm text-muted-foreground">people</span>
+                <label className="text-sm font-medium whitespace-nowrap">Split into</label>
+                <div className="flex items-center gap-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-r-none"
+                    onClick={() => {
+                      const n = Math.max(2, splitCount - 1);
+                      setSplitCount(n);
+                      const per = Math.floor(total / n);
+                      const remainder = total - per * n;
+                      setCustomAmounts(Array.from({ length: n }, (_, i) => ({
+                        method: "cash" as PaymentMethod,
+                        amount: (i === n - 1 ? per + remainder : per).toString()
+                      })));
+                    }}
+                    disabled={splitCount <= 2}
+                  >−</Button>
+                  <div className="h-9 w-10 flex items-center justify-center border-y border-input bg-background text-sm font-medium">
+                    {splitCount}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 rounded-l-none"
+                    onClick={() => {
+                      const n = Math.min(10, splitCount + 1);
+                      setSplitCount(n);
+                      const per = Math.floor(total / n);
+                      const remainder = total - per * n;
+                      setCustomAmounts(Array.from({ length: n }, (_, i) => ({
+                        method: "cash" as PaymentMethod,
+                        amount: (i === n - 1 ? per + remainder : per).toString()
+                      })));
+                    }}
+                    disabled={splitCount >= 10}
+                  >+</Button>
+                </div>
+                <span className="text-sm text-muted-foreground">methods</span>
               </div>
 
               {/* Split entries */}
