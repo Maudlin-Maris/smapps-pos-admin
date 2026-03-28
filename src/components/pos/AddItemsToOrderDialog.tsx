@@ -175,7 +175,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
           {view === "order" ? (
             /* ── ORDER VIEW ── */
             <div className="flex flex-col flex-1 min-h-0">
-              <ScrollArea className="flex-1 max-h-[55vh]">
+              <ScrollArea className="flex-1 max-h-[60vh] sm:max-h-[55vh]">
                 <div className="p-4 space-y-3">
                   {/* Existing items */}
                   <div>
