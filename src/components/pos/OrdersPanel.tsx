@@ -671,6 +671,13 @@ export default function OrdersPanel() {
 
       {/* Print Receipt/Docket dialog */}
       <PrintReceiptDialog open={!!printOrder} onClose={() => setPrintOrder(null)} order={printOrder} />
+
+      {/* Add items to order dialog */}
+      <AddItemsToOrderDialog
+        open={!!addItemsOrderId}
+        onClose={() => setAddItemsOrderId(null)}
+        orderId={addItemsOrderId || ""}
+      />
     </div>
   );
 }
