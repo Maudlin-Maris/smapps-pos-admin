@@ -328,6 +328,30 @@ export default function ProductGrid() {
         onClose={() => setDialogProduct(null)}
         onConfirm={handleConfirmVariantExtras}
       />
+
+      <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-accent" />
+              Scan Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div
+              id="pos-barcode-reader"
+              ref={scannerRef}
+              className="w-full min-h-[250px] rounded-lg overflow-hidden bg-muted"
+            />
+            <p className="text-sm text-muted-foreground text-center">
+              Point your camera at the barcode
+            </p>
+            <Button variant="outline" className="w-full" onClick={stopCamera}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
