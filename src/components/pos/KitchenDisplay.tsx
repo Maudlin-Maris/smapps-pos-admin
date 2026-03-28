@@ -4,6 +4,7 @@ import type { ItemStatus } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clock, CheckCircle2, CookingPot, UtensilsCrossed, Bell, ArrowRight } from "lucide-react";
 
 const itemStatusFlow: ItemStatus[] = ["open", "in_progress", "ready", "served"];
