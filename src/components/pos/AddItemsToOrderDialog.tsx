@@ -150,18 +150,18 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
       <Dialog open={open} onOpenChange={o => !o && handleClose()}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
           <DialogHeader className="p-4 pb-3 border-b border-border">
-            <DialogTitle className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 pr-8">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 {view === "browse" && (
                   <button onClick={() => setView("order")} className="p-1 rounded-md hover:bg-muted transition-colors">
                     <ArrowLeft className="w-4 h-4" />
                   </button>
                 )}
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-4 h-4 shrink-0" />
                 <span>{order.orderNumber}</span>
                 <Badge variant="outline" className="text-[10px]">{order.items.length + pendingItems.length} items</Badge>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <p className="text-sm font-bold">{formatNaira(projectedTotal)}</p>
                 {pendingItems.length > 0 && (
                   <p className="text-[10px] text-muted-foreground font-normal">
