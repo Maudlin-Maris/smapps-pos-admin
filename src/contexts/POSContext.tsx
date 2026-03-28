@@ -30,7 +30,7 @@ interface POSContextType {
   addToCart: (item: Omit<POSCartItem, "id">) => void;
   removeFromCart: (itemId: string) => void;
   updateCartItemQuantity: (itemId: string, quantity: number) => void;
-  updateCartItem: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number }[], unitPrice: number) => void;
+  updateCartItem: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
   clearCart: () => void;
   cartTotal: number;
 
@@ -108,14 +108,14 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((item: Omit<POSCartItem, "id">) => {
     setCart(prev => {
-      const extrasKey = [...item.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => e.id).join(",");
+      const extrasKey = [...item.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => `${e.id}:${e.quantity}`).join(",");
       const existing = prev.find(c => {
-        const cExtrasKey = [...c.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => e.id).join(",");
+        const cExtrasKey = [...c.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => `${e.id}:${e.quantity}`).join(",");
         return c.productId === item.productId && c.variantId === item.variantId && cExtrasKey === extrasKey;
       });
       if (existing) {
         return prev.map(c => c.id === existing.id
-          ? { ...c, quantity: c.quantity + item.quantity, totalPrice: (c.quantity + item.quantity) * c.unitPrice + (c.quantity + item.quantity) * c.extras.reduce((s, e) => s + e.price, 0) }
+          ? { ...c, quantity: c.quantity + item.quantity, totalPrice: (c.quantity + item.quantity) * (c.unitPrice + c.extras.reduce((s, e) => s + e.price * e.quantity, 0)) }
           : c
         );
       }
@@ -132,16 +132,16 @@ export function POSProvider({ children }: { children: ReactNode }) {
     if (quantity <= 0) {
       setCart(prev => prev.filter(i => i.id !== itemId));
     } else {
-      setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity, totalPrice: i.unitPrice * quantity } : i));
+      setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity, totalPrice: (i.unitPrice + i.extras.reduce((s, e) => s + e.price * e.quantity, 0)) * quantity } : i));
     }
   }, []);
 
   const clearCart = useCallback(() => setCart([]), []);
 
-  const updateCartItem = useCallback((itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number }[], unitPrice: number) => {
+  const updateCartItem = useCallback((itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => {
     setCart(prev => prev.map(i => {
       if (i.id !== itemId) return i;
-      const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
+      const extrasTotal = extras.reduce((s, e) => s + e.price * e.quantity, 0);
       return { ...i, variantId, variantName, extras, unitPrice, totalPrice: (unitPrice + extrasTotal) * i.quantity };
     }));
   }, []);

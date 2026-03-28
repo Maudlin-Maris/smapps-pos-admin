@@ -3,7 +3,7 @@ import { type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, Minus, Plus } from "lucide-react";
 
 interface Props {
   product: POSProduct | null;
@@ -14,7 +14,7 @@ interface Props {
 
 export default function VariantExtrasDialog({ product, open, onClose, onConfirm }: Props) {
   const [selectedVariant, setSelectedVariant] = useState<string | null>(null);
-  const [selectedExtras, setSelectedExtras] = useState<Set<string>>(new Set());
+  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
 
   if (!product) return null;
 
@@ -22,15 +22,32 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm 
   const hasExtras = product.extras && product.extras.length > 0;
   const variant = product.variants?.find(v => v.id === selectedVariant);
   const basePrice = variant?.price ?? product.price;
-  const extras = product.extras?.filter(e => selectedExtras.has(e.id)) ?? [];
-  const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
+  const selectedExtras = product.extras?.filter(e => (extraQuantities[e.id] || 0) > 0) ?? [];
+  const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * (extraQuantities[e.id] || 1), 0);
   const totalPrice = basePrice + extrasTotal;
 
   const toggleExtra = (id: string) => {
-    setSelectedExtras(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+    setExtraQuantities(prev => {
+      const current = prev[id] || 0;
+      if (current > 0) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: 1 };
+    });
+  };
+
+  const adjustExtraQty = (id: string, delta: number) => {
+    setExtraQuantities(prev => {
+      const current = prev[id] || 0;
+      const next = current + delta;
+      if (next <= 0) {
+        const copy = { ...prev };
+        delete copy[id];
+        return copy;
+      }
+      return { ...prev, [id]: next };
     });
   };
 
@@ -38,17 +55,17 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm 
     onConfirm(
       variant?.id,
       variant?.name,
-      extras.map(e => ({ id: e.id, name: e.name, price: e.price })),
+      selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price })),
       basePrice
     );
     setSelectedVariant(null);
-    setSelectedExtras(new Set());
+    setExtraQuantities({});
   };
 
   const handleOpenChange = (o: boolean) => {
     if (!o) {
       setSelectedVariant(null);
-      setSelectedExtras(new Set());
+      setExtraQuantities({});
       onClose();
     }
   };
@@ -93,25 +110,50 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm 
           <div key={category} className="space-y-2">
             <p className="text-sm font-semibold text-foreground">{category}</p>
             <div className="space-y-1">
-              {catExtras!.map(extra => (
-                <button
-                  key={extra.id}
-                  onClick={() => toggleExtra(extra.id)}
-                  className={`flex items-center w-full gap-3 p-2.5 rounded-lg border transition-all ${
-                    selectedExtras.has(extra.id)
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
-                    selectedExtras.has(extra.id) ? "bg-primary border-primary" : "border-input"
-                  }`}>
-                    {selectedExtras.has(extra.id) && <Check className="w-3 h-3 text-primary-foreground" />}
+              {catExtras!.map(extra => {
+                const qty = extraQuantities[extra.id] || 0;
+                const isSelected = qty > 0;
+                return (
+                  <div
+                    key={extra.id}
+                    className={`flex items-center w-full gap-3 p-2.5 rounded-lg border transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <button
+                      onClick={() => toggleExtra(extra.id)}
+                      className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
+                        isSelected ? "bg-primary border-primary" : "border-input"
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                    </button>
+                    <span className="flex-1 text-sm text-left">{extra.name}</span>
+                    {isSelected && (
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => adjustExtraQty(extra.id, -1)}
+                          className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-xs font-semibold w-5 text-center">{qty}</span>
+                        <button
+                          onClick={() => adjustExtraQty(extra.id, 1)}
+                          className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                    <span className="text-sm text-muted-foreground shrink-0">
+                      +{formatNaira(extra.price * Math.max(qty, 1))}
+                    </span>
                   </div>
-                  <span className="flex-1 text-sm text-left">{extra.name}</span>
-                  <span className="text-sm text-muted-foreground">+{formatNaira(extra.price)}</span>
-                </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}

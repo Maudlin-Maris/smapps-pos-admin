@@ -54,7 +54,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
       {/* Items */}
       <div style={{ marginBottom: "4px" }}>
         {order.items.map((item) => {
-          const extrasTotal = item.extras.reduce((s, e) => s + e.price, 0) * item.quantity;
+          const extrasTotal = item.extras.reduce((s, e) => s + e.price * (e.quantity || 1), 0) * item.quantity;
           const baseTotal = item.unitPrice * item.quantity;
           return (
             <div key={item.id} style={{ marginBottom: "4px" }}>
@@ -80,8 +80,8 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
                     color: "#555",
                   }}
                 >
-                  <span>+ {e.name}</span>
-                  <span>{formatNaira(e.price)}</span>
+                  <span>{(e.quantity || 1) > 1 ? `${e.quantity}x` : "+"} {e.name}</span>
+                  <span>{formatNaira(e.price * (e.quantity || 1))}</span>
                 </div>
               ))}
             </div>

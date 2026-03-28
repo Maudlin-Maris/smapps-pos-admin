@@ -48,7 +48,7 @@ export interface POSCartItem {
   categoryId?: string;
   variantId?: string;
   variantName?: string;
-  extras: { id: string; name: string; price: number }[];
+  extras: { id: string; name: string; price: number; quantity: number }[];
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -387,7 +387,7 @@ export const mockOrders: POSOrder[] = [
     id: "ord-1", orderNumber: "#001", status: "open", type: "dine_in", tableNumber: "Table 5",
     locationName: "Table 5", customerName: "Table 5", outletId: "outlet-1", cashierId: "c1",
     items: [
-      { id: "ci-1", productId: "p1", productName: "Classic Beef Burger", variantId: "v1b", variantName: "Double", extras: [{ id: "ex-1", name: "Extra Cheese", price: 500 }], quantity: 2, unitPrice: 9000, totalPrice: 18000 },
+      { id: "ci-1", productId: "p1", productName: "Classic Beef Burger", variantId: "v1b", variantName: "Double", extras: [{ id: "ex-1", name: "Extra Cheese", price: 500, quantity: 1 }], quantity: 2, unitPrice: 9000, totalPrice: 18000 },
       { id: "ci-2", productId: "p12", productName: "French Fries", variantId: "v12b", variantName: "Large", extras: [], quantity: 2, unitPrice: 3800, totalPrice: 7600 },
       { id: "ci-3", productId: "p16", productName: "Coca-Cola", extras: [], quantity: 2, unitPrice: 800, totalPrice: 1600 },
     ],
@@ -409,7 +409,7 @@ export const mockOrders: POSOrder[] = [
     id: "ord-3", orderNumber: "#003", status: "ready", type: "takeaway",
     customerName: "James W.", outletId: "outlet-1", cashierId: "c1",
     items: [
-      { id: "ci-7", productId: "p2", productName: "Chicken Burger", variantId: "v2b", variantName: "Spicy", extras: [{ id: "ex-2", name: "Bacon", price: 800 }], quantity: 1, unitPrice: 6000, totalPrice: 6000 },
+      { id: "ci-7", productId: "p2", productName: "Chicken Burger", variantId: "v2b", variantName: "Spicy", extras: [{ id: "ex-2", name: "Bacon", price: 800, quantity: 1 }], quantity: 1, unitPrice: 6000, totalPrice: 6000 },
       { id: "ci-8", productId: "p13", productName: "Sweet Potato Fries", extras: [], quantity: 1, unitPrice: 3200, totalPrice: 3200 },
     ],
     payments: [{ method: "card", amount: 9200 }], totalAmount: 9200, paidAmount: 9200,
