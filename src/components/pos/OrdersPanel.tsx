@@ -55,6 +55,9 @@ export default function OrdersPanel() {
   const [transferTarget, setTransferTarget] = useState<string>("");
 
   const cashierId = currentCashier?.id || "";
+  const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
+  const hasLocations = features?.hasDineIn || features?.hasAppointments;
+  const hasKitchenStatuses = features?.hasMenu || features?.hasDineIn;
 
   // Compute groups
   const myOrders = useMemo(() => orders.filter(o => o.cashierId === cashierId), [orders, cashierId]);
