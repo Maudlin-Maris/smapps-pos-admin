@@ -14,6 +14,7 @@ import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 interface Props {
   open: boolean;
   onClose: () => void;
+  onBackToOrder?: () => void;
   orderId: string;
 }
 
