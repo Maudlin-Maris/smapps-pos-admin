@@ -109,6 +109,35 @@ export default function KitchenDisplay() {
                 {order.customerName && <span> · {order.customerName}</span>}
               </div>
 
+              {/* Bulk advance button */}
+              {(() => {
+                const allStatuses = order.items.map(i => i.itemStatus || "open");
+                const canBulk = allStatuses.some(s => itemStatusFlow.indexOf(s) < itemStatusFlow.length - 1);
+                if (!canBulk) return null;
+                const nextLabel = allStatuses.every(s => s === "open") ? "Start All"
+                  : allStatuses.every(s => s === "in_progress") ? "All Ready"
+                  : allStatuses.every(s => s === "ready") ? "All Served"
+                  : "Advance All";
+                return (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full h-7 text-xs gap-1 mb-1"
+                    onClick={() => {
+                      order.items.forEach(item => {
+                        const s = item.itemStatus || "open";
+                        const idx = itemStatusFlow.indexOf(s);
+                        if (idx >= 0 && idx < itemStatusFlow.length - 1) {
+                          updateItemStatus(order.id, item.id, itemStatusFlow[idx + 1]);
+                        }
+                      });
+                    }}
+                  >
+                    <ArrowRight className="w-3 h-3" /> {nextLabel}
+                  </Button>
+                );
+              })()}
+
               {/* Items with individual status */}
               <div className="space-y-2">
                 {order.items.map(item => {
@@ -127,9 +156,26 @@ export default function KitchenDisplay() {
                             )}
                           </div>
                         </div>
-                        <Badge variant="outline" className={`text-[10px] gap-0.5 shrink-0 ${cfg.color}`}>
-                          {cfg.icon} {cfg.label}
-                        </Badge>
+                        <Select
+                          value={status}
+                          onValueChange={(val: string) => updateItemStatus(order.id, item.id, val as ItemStatus)}
+                        >
+                          <SelectTrigger className={`h-6 w-[100px] text-[10px] px-2 gap-1 ${cfg.color}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {itemStatusFlow.map(s => {
+                              const c = itemStatusConfig[s];
+                              return (
+                                <SelectItem key={s} value={s} className="text-xs">
+                                  <span className={`flex items-center gap-1.5 ${c.color}`}>
+                                    {c.icon} {c.label}
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
                       </div>
                       {cfg.nextLabel && (
                         <Button
