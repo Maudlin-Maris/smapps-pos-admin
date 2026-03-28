@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
 import { getFeatures } from "@/data/businessTypes";
-import type { POSOrder, OrderStatus } from "@/data/posData";
+import type { POSOrder, OrderStatus, ItemStatus } from "@/data/posData";
 import { posLocations, posCashiers } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
-  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill
+  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
@@ -42,7 +42,7 @@ interface LocationSummary {
 }
 
 export default function OrdersPanel() {
-  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
+  const { orders, updateOrderStatus, updateItemStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
@@ -338,11 +338,23 @@ export default function OrdersPanel() {
                         <Badge variant="outline" className="text-[10px] capitalize">
                           {orderTypeLabel}
                         </Badge>
-                        {hasKitchenStatuses && order.status !== "paid" && order.status !== "voided" && (
-                          <Badge variant="outline" className={`text-[10px] gap-1 ${statusConfig[order.status].color}`}>
-                            {statusConfig[order.status].icon} {statusConfig[order.status].label}
-                          </Badge>
-                        )}
+                        {hasKitchenStatuses && order.status !== "paid" && order.status !== "voided" && (() => {
+                          const items = order.items;
+                          const counts = {
+                            open: items.filter(i => (i.itemStatus || "open") === "open").length,
+                            in_progress: items.filter(i => i.itemStatus === "in_progress").length,
+                            ready: items.filter(i => i.itemStatus === "ready").length,
+                            served: items.filter(i => i.itemStatus === "served").length,
+                          };
+                          return (
+                            <span className="flex items-center gap-1">
+                              {counts.open > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]"><Bell className="w-2.5 h-2.5" />{counts.open}</span>}
+                              {counts.in_progress > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]"><CookingPot className="w-2.5 h-2.5" />{counts.in_progress}</span>}
+                              {counts.ready > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]"><CheckCircle2 className="w-2.5 h-2.5" />{counts.ready}</span>}
+                              {counts.served > 0 && <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary"><UtensilsCrossed className="w-2.5 h-2.5" />{counts.served}</span>}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {order.customerName || orderTypeLabel}
@@ -432,14 +444,46 @@ export default function OrdersPanel() {
                     <p className="text-sm font-semibold">Items</p>
                     {selectedOrder.items.map(item => (
                       <div key={item.id} className="flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0">
-                        <div>
+                        <div className="flex-1">
                           <span>{item.quantity}× {item.productName}</span>
                           {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
                           {item.extras.length > 0 && (
                             <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
                           )}
                         </div>
-                        <span className="font-medium shrink-0">{formatNaira(item.totalPrice)}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
+                            const status: ItemStatus = item.itemStatus || "open";
+                            const cfg = statusConfig[status as OrderStatus];
+                            const statusFlow: ItemStatus[] = ["open", "in_progress", "ready", "served"];
+                            const idx = statusFlow.indexOf(status);
+                            const canAdvance = idx >= 0 && idx < statusFlow.length - 1;
+                            return (
+                              <div className="flex items-center gap-1">
+                                <Badge variant="outline" className={`text-[9px] gap-0.5 ${cfg?.color || ""}`}>
+                                  {cfg?.icon} {cfg?.label}
+                                </Badge>
+                                {canAdvance && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0"
+                                    onClick={() => {
+                                      updateItemStatus(selectedOrder.id, item.id, statusFlow[idx + 1]);
+                                      setSelectedOrder(prev => prev ? {
+                                        ...prev,
+                                        items: prev.items.map(i => i.id === item.id ? { ...i, itemStatus: statusFlow[idx + 1] } : i)
+                                      } : null);
+                                    }}
+                                  >
+                                    <ArrowRight className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })()}
+                          <span className="font-medium">{formatNaira(item.totalPrice)}</span>
+                        </div>
                       </div>
                     ))}
                     <div className="flex justify-between pt-2 text-sm font-bold">
@@ -467,8 +511,8 @@ export default function OrdersPanel() {
                     </div>
                   )}
 
-                  {/* Status change */}
-                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                  {/* Status change — only for non-kitchen business types (status is auto-derived for restaurants) */}
+                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && !hasKitchenStatuses && (
                     <div className="space-y-2">
                       <p className="text-sm font-semibold">Update Status</p>
                       <Select value={selectedOrder.status} onValueChange={v => {
@@ -480,13 +524,6 @@ export default function OrdersPanel() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="open">Open</SelectItem>
-                          {hasKitchenStatuses && (
-                            <>
-                              <SelectItem value="in_progress">Preparing</SelectItem>
-                              <SelectItem value="ready">Ready</SelectItem>
-                              <SelectItem value="served">Served</SelectItem>
-                            </>
-                          )}
                           {features?.hasAppointments && (
                             <SelectItem value="in_progress">In Progress</SelectItem>
                           )}

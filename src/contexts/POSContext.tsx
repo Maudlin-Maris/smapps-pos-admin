@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 
 import {
   type POSCashier, type POSOrder, type POSCartItem, type POSOutlet,
-  type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee,
+  type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee, type ItemStatus,
   posCashiers, mockOrders, posOutlets,
 } from "@/data/posData";
 
@@ -38,6 +38,7 @@ interface POSContextType {
   orders: POSOrder[];
   createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number) => POSOrder;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
+  updateItemStatus: (orderId: string, itemId: string, status: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: POSCartItem[]) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
@@ -223,6 +224,26 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status, updatedAt: new Date() } : o));
   }, []);
 
+  // Derive order status from item statuses
+  const deriveOrderStatus = (items: POSCartItem[]): OrderStatus => {
+    const statuses = items.map(i => i.itemStatus || "open");
+    if (statuses.every(s => s === "served")) return "served";
+    if (statuses.every(s => s === "ready" || s === "served")) return "ready";
+    if (statuses.some(s => s === "in_progress" || s === "ready" || s === "served")) return "in_progress";
+    return "open";
+  };
+
+  const updateItemStatus = useCallback((orderId: string, itemId: string, status: ItemStatus) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const updatedItems = o.items.map(i => i.id === itemId ? { ...i, itemStatus: status } : i);
+      const derivedStatus = deriveOrderStatus(updatedItems);
+      // Only auto-derive if order isn't paid/voided
+      const newOrderStatus = (o.status === "paid" || o.status === "voided") ? o.status : derivedStatus;
+      return { ...o, items: updatedItems, status: newOrderStatus, updatedAt: new Date() };
+    }));
+  }, []);
+
   const addItemsToOrder = useCallback((orderId: string, items: POSCartItem[]) => {
     setOrders(prev => prev.map(o => {
       if (o.id !== orderId) return o;
@@ -270,7 +291,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentOutlet, setCurrentOutlet, availableOutlets,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
-      orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder, transferOrder,
+      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder, transferOrder,
       orderType, setOrderType,
     }}>
       {children}
