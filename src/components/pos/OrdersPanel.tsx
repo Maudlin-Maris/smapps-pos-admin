@@ -54,7 +54,7 @@ export default function OrdersPanel() {
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
   const [transferTarget, setTransferTarget] = useState<string>("");
-
+  const [addItemsOrderId, setAddItemsOrderId] = useState<string | null>(null);
   const cashierId = currentCashier?.id || "";
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const hasLocations = features?.hasDineIn || features?.hasAppointments;
