@@ -105,6 +105,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     setCustomDiscountAmount("");
     setTipAmount("");
     setTipPreset(null);
+    setCustomerNotes("");
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
     }
