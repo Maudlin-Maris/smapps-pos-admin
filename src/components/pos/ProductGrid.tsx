@@ -15,6 +15,87 @@ export default function ProductGrid() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Barcode scan handler: finds product/variant by barcode/SKU and adds to cart directly
+  const handleBarcodeScan = useCallback((barcode: string) => {
+    const outletProducts = posProducts.filter(p => !currentOutlet || p.outletId === currentOutlet.id);
+
+    // First check variant SKUs
+    for (const product of outletProducts) {
+      if (!product.inStock) continue;
+      if (product.variants) {
+        const matchedVariant = product.variants.find(v => v.sku === barcode);
+        if (matchedVariant) {
+          addToCart({
+            productId: product.id,
+            productName: product.name,
+            categoryId: product.categoryId,
+            variantId: matchedVariant.id,
+            variantName: matchedVariant.name,
+            extras: [],
+            quantity: 1,
+            unitPrice: matchedVariant.price,
+            totalPrice: matchedVariant.price,
+          });
+          toast.success(`Added ${product.name} - ${matchedVariant.name}`);
+          return true;
+        }
+      }
+    }
+
+    // Then check product barcode
+    const found = outletProducts.find(p => p.barcode === barcode && p.inStock);
+    if (found) {
+      if ((found.variants && found.variants.length > 0) || (found.extras && found.extras.length > 0)) {
+        setDialogProduct(found);
+      } else {
+        addToCart({
+          productId: found.id,
+          productName: found.name,
+          categoryId: found.categoryId,
+          extras: [],
+          quantity: 1,
+          unitPrice: found.price,
+          totalPrice: found.price,
+        });
+        toast.success(`Added ${found.name}`);
+      }
+      return true;
+    }
+
+    return false;
+  }, [currentOutlet, addToCart]);
+
+  // Hardware barcode scanner listener (rapid keystrokes ending with Enter)
+  const bufferRef = useRef("");
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const active = document.activeElement as HTMLElement;
+      if (active && active !== searchInputRef.current && active.tagName === "INPUT") return;
+
+      if (e.key === "Enter" && bufferRef.current.length >= 4) {
+        const scanned = bufferRef.current;
+        bufferRef.current = "";
+        if (handleBarcodeScan(scanned)) {
+          setSearch("");
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (e.key.length === 1) {
+        bufferRef.current += e.key;
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => { bufferRef.current = ""; }, 100);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleBarcodeScan]);
 
   // Filter categories for current outlet
   const outletCategories = posCategories.filter(c => !c.outletId || c.outletId === currentOutlet?.id);
@@ -46,35 +127,9 @@ export default function ProductGrid() {
     }
   };
 
-  const handleConfirmVariantExtras = (
-    variantId: string | undefined,
-    variantName: string | undefined,
-    selectedExtras: { id: string; name: string; price: number }[],
-    unitPrice: number
-  ) => {
-    if (!dialogProduct) return;
-    const extrasWithQty = selectedExtras.map(e => ({ ...e, quantity: 1 }));
-    const extrasTotal = extrasWithQty.reduce((s, e) => s + e.price * e.quantity, 0);
-    const total = unitPrice + extrasTotal;
-    addToCart({
-      productId: dialogProduct.id,
-      productName: dialogProduct.name,
-      categoryId: dialogProduct.categoryId,
-      variantId,
-      variantName,
-      extras: extrasWithQty,
-      quantity: 1,
-      unitPrice: total,
-      totalPrice: total,
-    });
-    setDialogProduct(null);
-  };
-
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && search) {
-      const found = posProducts.find(p => p.barcode === search && (!currentOutlet || p.outletId === currentOutlet.id));
-      if (found) {
-        handleProductClick(found);
+      if (handleBarcodeScan(search)) {
         setSearch("");
       }
     }
