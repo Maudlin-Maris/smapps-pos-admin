@@ -42,6 +42,7 @@ interface POSContextType {
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
   voidOrder: (orderId: string) => void;
+  transferOrder: (orderId: string, toCashierId: string) => void;
 
   // UI state
   orderType: OrderType;
