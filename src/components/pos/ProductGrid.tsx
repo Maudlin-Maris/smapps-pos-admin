@@ -52,7 +52,8 @@ export default function ProductGrid() {
     unitPrice: number
   ) => {
     if (!dialogProduct) return;
-    const extrasTotal = selectedExtras.reduce((s, e) => s + e.price, 0);
+    const extrasWithQty = selectedExtras.map(e => ({ ...e, quantity: 1 }));
+    const extrasTotal = extrasWithQty.reduce((s, e) => s + e.price * e.quantity, 0);
     const total = unitPrice + extrasTotal;
     addToCart({
       productId: dialogProduct.id,
@@ -60,7 +61,7 @@ export default function ProductGrid() {
       categoryId: dialogProduct.categoryId,
       variantId,
       variantName,
-      extras: selectedExtras,
+      extras: extrasWithQty,
       quantity: 1,
       unitPrice: total,
       totalPrice: total,
