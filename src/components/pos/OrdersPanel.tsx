@@ -30,11 +30,14 @@ const statusConfig: Record<OrderStatus, { label: string; color: string; icon: Re
 type OrderGroup = "my_orders" | "transferred" | "queued" | "all" | "by_location";
 type PaymentFilter = "all" | "paid" | "unpaid" | "incomplete";
 
+type LocationPaymentStatus = "paid" | "unpaid" | "partial";
+
 interface LocationSummary {
   locationName: string;
   orderCount: number;
   totalValue: number;
   staffNames: string[];
+  paymentStatus: LocationPaymentStatus;
 }
 
 export default function OrdersPanel() {
