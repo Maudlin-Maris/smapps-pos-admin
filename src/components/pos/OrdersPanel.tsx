@@ -222,30 +222,36 @@ export default function OrdersPanel() {
 
       <ScrollArea className="flex-1">
         {showLocationCards ? (
-          /* Location summary cards */
-          <div className="p-2 grid grid-cols-2 gap-2">
+          /* Location summary cards - responsive grid */
+          <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {locationSummaries.map(loc => (
               <button
                 key={loc.locationName}
                 onClick={() => setSelectedLocationName(loc.locationName)}
-                className="text-left p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
+                className="text-left p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all group"
               >
-                <div className="flex items-center gap-1.5 mb-2">
-                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span className="font-semibold text-xs text-foreground truncate">{loc.locationName}</span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <MapPin className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="font-semibold text-xs text-foreground truncate">{loc.locationName}</span>
+                  </div>
                 </div>
-                <p className="text-base font-bold text-foreground">{formatNaira(loc.totalValue)}</p>
-                <Badge variant="secondary" className="text-[10px] mt-1.5">
-                  {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
-                </Badge>
-                <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
+                <p className="text-lg font-bold text-foreground mb-1">{formatNaira(loc.totalValue)}</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="secondary" className="text-[10px]">
+                    {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <Users className="w-3 h-3 shrink-0" />
                   <span className="truncate">{loc.staffNames.join(", ")}</span>
                 </div>
               </button>
             ))}
             {locationSummaries.length === 0 && (
-              <div className="col-span-2 text-center py-12 text-muted-foreground">
+              <div className="col-span-full text-center py-12 text-muted-foreground">
                 <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No orders at any location</p>
               </div>
@@ -255,7 +261,15 @@ export default function OrdersPanel() {
           /* Order list */
           <div className="p-2 space-y-1.5">
             {filtered.map(order => {
-              const sc = statusConfig[order.status];
+              const paymentStatus = order.status === "voided"
+                ? { label: "Voided", className: "bg-destructive/10 text-destructive" }
+                : order.paidAmount >= order.totalAmount || order.status === "paid"
+                ? { label: "Paid", className: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" }
+                : order.paidAmount > 0
+                ? { label: "Partial", className: "bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]" }
+                : { label: "Unpaid", className: "bg-muted text-muted-foreground" };
+              const cashierName = posCashiers.find(c => c.id === order.cashierId)?.name || "Unknown";
+              const orderTypeLabel = order.type.replace("_", " ");
               return (
                 <button
                   key={order.id}
@@ -264,14 +278,17 @@ export default function OrdersPanel() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-sm text-foreground">{order.orderNumber}</span>
-                        <Badge variant="outline" className={`text-[10px] gap-1 ${sc.color}`}>
-                          {sc.icon} {sc.label}
+                        <Badge variant="outline" className={`text-[10px] gap-1 ${paymentStatus.className}`}>
+                          <CreditCard className="w-2.5 h-2.5" /> {paymentStatus.label}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {orderTypeLabel}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {order.customerName || order.type.replace("_", " ")}
+                        {order.customerName || orderTypeLabel}
                         {order.tableNumber && ` · ${order.tableNumber}`}
                       </p>
                     </div>
@@ -280,15 +297,19 @@ export default function OrdersPanel() {
                       <p className="text-[10px] text-muted-foreground">{timeSince(order.createdAt)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-0.5">
+                      <User className="w-3 h-3" /> {cashierName}
+                    </span>
+                    <span>·</span>
                     <span>{order.items.length} item{order.items.length > 1 ? "s" : ""}</span>
                     {order.locationName && (
-                      <span className="flex items-center gap-0.5 ml-1">
-                        <MapPin className="w-3 h-3" /> {order.locationName}
-                      </span>
-                    )}
-                    {order.paidAmount > 0 && order.paidAmount < order.totalAmount && (
-                      <Badge variant="outline" className="text-[10px] text-[hsl(var(--warning))]">Partial</Badge>
+                      <>
+                        <span>·</span>
+                        <span className="flex items-center gap-0.5">
+                          <MapPin className="w-3 h-3" /> {order.locationName}
+                        </span>
+                      </>
                     )}
                   </div>
                 </button>
