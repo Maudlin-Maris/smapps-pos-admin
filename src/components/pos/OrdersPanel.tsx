@@ -156,7 +156,7 @@ export default function OrdersPanel() {
     { id: "my_orders", label: "My Orders", icon: <User className="w-3.5 h-3.5" /> },
     { id: "transferred", label: "Transferred", icon: <ArrowDownLeft className="w-3.5 h-3.5" /> },
     { id: "queued", label: "Queued", icon: <ListOrdered className="w-3.5 h-3.5" /> },
-    { id: "by_location", label: "By Location", icon: <MapPin className="w-3.5 h-3.5" /> },
+    ...(hasLocations ? [{ id: "by_location" as OrderGroup, label: "By Location", icon: <MapPin className="w-3.5 h-3.5" /> }] : []),
     { id: "all", label: "All Orders", icon: <LayoutList className="w-3.5 h-3.5" /> },
   ];
 
