@@ -660,6 +660,10 @@ export default function OrdersPanel() {
       <AddItemsToOrderDialog
         open={!!addItemsOrderId}
         onClose={() => setAddItemsOrderId(null)}
+        onBackToOrder={() => {
+          const order = orders.find(o => o.id === addItemsOrderId);
+          if (order) setSelectedOrder(order);
+        }}
         orderId={addItemsOrderId || ""}
       />
 

@@ -316,13 +316,20 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
               </ScrollArea>
 
               {/* Bottom actions */}
-              <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setView("browse")}>
-                  <Plus className="w-4 h-4 mr-1.5" /> Add More Items
-                </Button>
-                {pendingItems.length > 0 && (
-                  <Button className="flex-1" onClick={handleConfirmAll}>
-                    <Check className="w-4 h-4 mr-1.5" /> Confirm {pendingItems.length} New Item{pendingItems.length > 1 ? "s" : ""}
+              <div className="p-3 sm:p-4 border-t border-border flex flex-col gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setView("browse")}>
+                    <Plus className="w-4 h-4 mr-1.5" /> Add More Items
+                  </Button>
+                  {pendingItems.length > 0 && (
+                    <Button className="flex-1" onClick={handleConfirmAll}>
+                      <Check className="w-4 h-4 mr-1.5" /> Confirm {pendingItems.length} New Item{pendingItems.length > 1 ? "s" : ""}
+                    </Button>
+                  )}
+                </div>
+                {onBackToOrder && (
+                  <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { handleClose(); onBackToOrder(); }}>
+                    <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Order Details
                   </Button>
                 )}
               </div>
