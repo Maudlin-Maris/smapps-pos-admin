@@ -48,6 +48,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   // Tip state
   const [tipAmount, setTipAmount] = useState("");
   const [tipPreset, setTipPreset] = useState<number | null>(null);
+  const [customerNotes, setCustomerNotes] = useState("");
 
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
