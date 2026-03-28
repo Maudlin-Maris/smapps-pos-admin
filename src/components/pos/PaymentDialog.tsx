@@ -278,8 +278,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 </button>
               </div>
 
-              <Button onClick={handleProceedToDiscount} className="w-full h-11">
-                Continue
+              <Button
+                onClick={handleProceedToDiscount}
+                className="w-full h-11"
+                disabled={showLocationPicker && outletLocations.length > 0 && !selectedLocation}
+              >
+                {showLocationPicker && outletLocations.length > 0 && !selectedLocation ? "Select a Location" : "Continue"}
               </Button>
             </div>
           </>

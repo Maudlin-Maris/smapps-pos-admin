@@ -48,7 +48,7 @@ export interface POSCartItem {
   categoryId?: string;
   variantId?: string;
   variantName?: string;
-  extras: { id: string; name: string; price: number }[];
+  extras: { id: string; name: string; price: number; quantity: number }[];
   quantity: number;
   unitPrice: number;
   totalPrice: number;
