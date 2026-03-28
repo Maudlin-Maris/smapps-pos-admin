@@ -103,6 +103,7 @@ export interface POSOrder {
   updatedAt: Date;
   outletId: string;
   cashierId: string;
+  transferredToCashierId?: string;
   notes?: string;
 }
 
@@ -425,7 +426,7 @@ export const mockOrders: POSOrder[] = [
   },
   {
     id: "ord-2", orderNumber: "#002", status: "in_progress", type: "dine_in", tableNumber: "VIP Lounge 1",
-    locationName: "VIP Lounge 1", customerName: "VIP Lounge 1", outletId: "outlet-1", cashierId: "c2",
+    locationName: "VIP Lounge 1", customerName: "VIP Lounge 1", outletId: "outlet-1", cashierId: "c2", transferredToCashierId: "c1",
     items: [
       { id: "ci-4", productId: "p6", productName: "Margherita Pizza", variantId: "v6c", variantName: "Large 16\"", extras: [], quantity: 1, unitPrice: 11000, totalPrice: 11000 },
       { id: "ci-5", productId: "p7", productName: "Pepperoni Pizza", variantId: "v7b", variantName: "Medium 12\"", extras: [], quantity: 1, unitPrice: 8500, totalPrice: 8500 },
@@ -443,6 +444,15 @@ export const mockOrders: POSOrder[] = [
     ],
     payments: [{ method: "card", amount: 9200 }], totalAmount: 9200, paidAmount: 9200,
     createdAt: new Date(Date.now() - 15 * 60000), updatedAt: new Date(Date.now() - 5 * 60000),
+  },
+  {
+    id: "ord-4", orderNumber: "#004", status: "open", type: "dine_in", tableNumber: "Table 12",
+    locationName: "Table 12", customerName: "Table 12", outletId: "outlet-1", cashierId: "c3",
+    items: [
+      { id: "ci-9", productId: "p27", productName: "Mojito", extras: [], quantity: 2, unitPrice: 6500, totalPrice: 13000 },
+    ],
+    payments: [], totalAmount: 13000, paidAmount: 0,
+    createdAt: new Date(Date.now() - 10 * 60000), updatedAt: new Date(Date.now() - 10 * 60000),
   },
 ];
 

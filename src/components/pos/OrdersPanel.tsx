@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
 import type { POSOrder, OrderStatus } from "@/data/posData";
+import { posLocations } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
-  ChevronRight, Receipt, Printer, ChefHat
+  Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
@@ -24,21 +26,64 @@ const statusConfig: Record<OrderStatus, { label: string; color: string; icon: Re
   voided: { label: "Voided", color: "bg-destructive/10 text-destructive", icon: <XCircle className="w-3 h-3" /> },
 };
 
+type OrderGroup = "my_orders" | "transferred" | "queued" | "all";
+
 export default function OrdersPanel() {
-  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart } = usePOS();
-  const [filter, setFilter] = useState<string>("active");
+  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet } = usePOS();
+  const [group, setGroup] = useState<OrderGroup>("my_orders");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [locationFilter, setLocationFilter] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
 
-  const filtered = orders.filter(o => {
-    if (filter === "active") return !["paid", "voided"].includes(o.status);
-    if (filter === "paid") return o.status === "paid";
-    if (filter === "unpaid") return o.status !== "paid" && o.status !== "voided" && o.paidAmount < o.totalAmount;
-    return true;
-  });
+  const cashierId = currentCashier?.id || "";
+
+  // Get locations for current outlet
+  const outletLocations = useMemo(() => {
+    if (!currentOutlet) return [];
+    return posLocations.filter(l => l.outletId === currentOutlet.id);
+  }, [currentOutlet]);
+
+  // Compute groups
+  const myOrders = useMemo(() => orders.filter(o => o.cashierId === cashierId), [orders, cashierId]);
+  const transferredOrders = useMemo(() => orders.filter(o => o.transferredToCashierId === cashierId && o.cashierId !== cashierId), [orders, cashierId]);
+  const queuedOrders = useMemo(() => orders.filter(o => o.status === "open" && o.cashierId !== cashierId && o.transferredToCashierId !== cashierId), [orders, cashierId]);
+
+  const groupCounts: Record<OrderGroup, number> = {
+    my_orders: myOrders.length,
+    transferred: transferredOrders.length,
+    queued: queuedOrders.length,
+    all: orders.length,
+  };
+
+  // Get base list for selected group
+  const baseList = useMemo(() => {
+    switch (group) {
+      case "my_orders": return myOrders;
+      case "transferred": return transferredOrders;
+      case "queued": return queuedOrders;
+      case "all": return orders;
+    }
+  }, [group, myOrders, transferredOrders, queuedOrders, orders]);
+
+  // Apply filters
+  const filtered = useMemo(() => {
+    let list = baseList;
+    if (locationFilter !== "all") {
+      list = list.filter(o => o.locationName === locationFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(o =>
+        o.orderNumber.toLowerCase().includes(q) ||
+        (o.customerName && o.customerName.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [baseList, locationFilter, searchQuery]);
 
   const handleAddItemsToOrder = (orderId: string) => {
     if (cart.length === 0) return;
@@ -54,27 +99,62 @@ export default function OrdersPanel() {
     return `${Math.floor(mins / 60)}h ${mins % 60}m ago`;
   };
 
+  const groups: { id: OrderGroup; label: string; icon: React.ReactNode }[] = [
+    { id: "my_orders", label: "My Orders", icon: <User className="w-3.5 h-3.5" /> },
+    { id: "transferred", label: "Transferred", icon: <ArrowDownLeft className="w-3.5 h-3.5" /> },
+    { id: "queued", label: "Queued", icon: <ListOrdered className="w-3.5 h-3.5" /> },
+    { id: "all", label: "All Orders", icon: <LayoutList className="w-3.5 h-3.5" /> },
+  ];
+
   return (
     <div className="flex flex-col h-full">
-      {/* Filter */}
-      <div className="p-3 border-b border-border">
-        <div className="flex gap-1.5">
-          {[
-            { id: "active", label: "Active" },
-            { id: "unpaid", label: "Unpaid" },
-            { id: "paid", label: "Paid" },
-            { id: "all", label: "All" },
-          ].map(f => (
+      {/* Group tabs */}
+      <div className="p-3 border-b border-border space-y-2.5">
+        <div className="flex gap-1 overflow-x-auto">
+          {groups.map(g => (
             <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                filter === f.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              key={g.id}
+              onClick={() => setGroup(g.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                group === g.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {f.label}
+              {g.icon}
+              {g.label}
+              <Badge variant="secondary" className={`ml-0.5 h-4 min-w-[16px] px-1 text-[10px] font-bold ${
+                group === g.id ? "bg-primary-foreground/20 text-primary-foreground" : "bg-background"
+              }`}>
+                {groupCounts[g.id]}
+              </Badge>
             </button>
           ))}
+        </div>
+
+        {/* Search & location filter */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search order #..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="h-8 pl-8 text-xs"
+            />
+          </div>
+          {outletLocations.length > 0 && (
+            <Select value={locationFilter} onValueChange={setLocationFilter}>
+              <SelectTrigger className="h-8 w-auto max-w-[140px] text-xs gap-1">
+                <MapPin className="w-3 h-3 shrink-0" />
+                <SelectValue placeholder="Location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {outletLocations.map(loc => (
+                  <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
@@ -108,6 +188,11 @@ export default function OrdersPanel() {
                 </div>
                 <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                   <span>{order.items.length} item{order.items.length > 1 ? "s" : ""}</span>
+                  {order.locationName && (
+                    <span className="flex items-center gap-0.5 ml-1">
+                      <MapPin className="w-3 h-3" /> {order.locationName}
+                    </span>
+                  )}
                   {order.paidAmount > 0 && order.paidAmount < order.totalAmount && (
                     <Badge variant="outline" className="text-[10px] text-[hsl(var(--warning))]">Partial</Badge>
                   )}
@@ -161,6 +246,12 @@ export default function OrdersPanel() {
                       <p className="text-muted-foreground text-xs">Created</p>
                       <p className="font-medium">{timeSince(selectedOrder.createdAt)}</p>
                     </div>
+                    {selectedOrder.locationName && (
+                      <div>
+                        <p className="text-muted-foreground text-xs">Location</p>
+                        <p className="font-medium">{selectedOrder.locationName}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Items */}
