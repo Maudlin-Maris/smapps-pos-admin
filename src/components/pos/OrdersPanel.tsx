@@ -62,24 +62,32 @@ export default function OrdersPanel() {
 
   // Location summaries — only locations with orders
   const locationSummaries = useMemo<LocationSummary[]>(() => {
-    const map = new Map<string, { orderCount: number; totalValue: number; cashierIds: Set<string> }>();
+    const map = new Map<string, { orderCount: number; totalValue: number; totalPaid: number; cashierIds: Set<string> }>();
     orders.forEach(o => {
       const loc = o.locationName || "No Location";
-      if (!map.has(loc)) map.set(loc, { orderCount: 0, totalValue: 0, cashierIds: new Set() });
+      if (!map.has(loc)) map.set(loc, { orderCount: 0, totalValue: 0, totalPaid: 0, cashierIds: new Set() });
       const entry = map.get(loc)!;
       entry.orderCount++;
       entry.totalValue += o.totalAmount;
+      entry.totalPaid += o.paidAmount;
       entry.cashierIds.add(o.cashierId);
     });
-    return Array.from(map.entries()).map(([locationName, data]) => ({
-      locationName,
-      orderCount: data.orderCount,
-      totalValue: data.totalValue,
-      staffNames: Array.from(data.cashierIds).map(id => {
-        const c = posCashiers.find(c => c.id === id);
-        return c ? c.name : "Unknown";
-      }),
-    })).sort((a, b) => b.totalValue - a.totalValue);
+    return Array.from(map.entries()).map(([locationName, data]) => {
+      const paymentStatus: LocationPaymentStatus =
+        data.totalPaid >= data.totalValue ? "paid"
+        : data.totalPaid > 0 ? "partial"
+        : "unpaid";
+      return {
+        locationName,
+        orderCount: data.orderCount,
+        totalValue: data.totalValue,
+        staffNames: Array.from(data.cashierIds).map(id => {
+          const c = posCashiers.find(c => c.id === id);
+          return c ? c.name : "Unknown";
+        }),
+        paymentStatus,
+      };
+    }).sort((a, b) => b.totalValue - a.totalValue);
   }, [orders]);
 
   const groupCounts: Record<OrderGroup, number> = {
