@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
+import { getFeatures } from "@/data/businessTypes";
 import type { POSOrder, OrderStatus } from "@/data/posData";
 import { posLocations, posCashiers } from "@/data/posData";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
-  ChevronLeft, Users, ArrowRightLeft, Filter
+  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
@@ -54,6 +55,9 @@ export default function OrdersPanel() {
   const [transferTarget, setTransferTarget] = useState<string>("");
 
   const cashierId = currentCashier?.id || "";
+  const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
+  const hasLocations = features?.hasDineIn || features?.hasAppointments;
+  const hasKitchenStatuses = features?.hasMenu || features?.hasDineIn;
 
   // Compute groups
   const myOrders = useMemo(() => orders.filter(o => o.cashierId === cashierId), [orders, cashierId]);
@@ -152,7 +156,7 @@ export default function OrdersPanel() {
     { id: "my_orders", label: "My Orders", icon: <User className="w-3.5 h-3.5" /> },
     { id: "transferred", label: "Transferred", icon: <ArrowDownLeft className="w-3.5 h-3.5" /> },
     { id: "queued", label: "Queued", icon: <ListOrdered className="w-3.5 h-3.5" /> },
-    { id: "by_location", label: "By Location", icon: <MapPin className="w-3.5 h-3.5" /> },
+    ...(hasLocations ? [{ id: "by_location" as OrderGroup, label: "By Location", icon: <MapPin className="w-3.5 h-3.5" /> }] : []),
     { id: "all", label: "All Orders", icon: <LayoutList className="w-3.5 h-3.5" /> },
   ];
 
@@ -316,6 +320,8 @@ export default function OrdersPanel() {
                 : { label: "Unpaid", className: "bg-muted text-muted-foreground" };
               const cashierName = posCashiers.find(c => c.id === order.cashierId)?.name || "Unknown";
               const orderTypeLabel = order.type.replace("_", " ");
+              // Business-type-aware location label
+              const locationLabel = features?.hasAppointments ? "Station" : features?.hasDineIn ? "Table" : null;
               return (
                 <button
                   key={order.id}
@@ -332,6 +338,11 @@ export default function OrdersPanel() {
                         <Badge variant="outline" className="text-[10px] capitalize">
                           {orderTypeLabel}
                         </Badge>
+                        {hasKitchenStatuses && order.status !== "paid" && order.status !== "voided" && (
+                          <Badge variant="outline" className={`text-[10px] gap-1 ${statusConfig[order.status].color}`}>
+                            {statusConfig[order.status].icon} {statusConfig[order.status].label}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {order.customerName || orderTypeLabel}
@@ -349,7 +360,7 @@ export default function OrdersPanel() {
                     </span>
                     <span>·</span>
                     <span>{order.items.length} item{order.items.length > 1 ? "s" : ""}</span>
-                    {order.locationName && (
+                    {order.locationName && locationLabel && (
                       <>
                         <span>·</span>
                         <span className="flex items-center gap-0.5">
@@ -392,7 +403,7 @@ export default function OrdersPanel() {
                       <p className="text-muted-foreground text-xs">Type</p>
                       <p className="font-medium capitalize">{selectedOrder.type.replace("_", " ")}</p>
                     </div>
-                    {selectedOrder.tableNumber && (
+                    {selectedOrder.tableNumber && features?.hasDineIn && (
                       <div>
                         <p className="text-muted-foreground text-xs">Table</p>
                         <p className="font-medium">{selectedOrder.tableNumber}</p>
@@ -408,9 +419,9 @@ export default function OrdersPanel() {
                       <p className="text-muted-foreground text-xs">Created</p>
                       <p className="font-medium">{timeSince(selectedOrder.createdAt)}</p>
                     </div>
-                    {selectedOrder.locationName && (
+                    {selectedOrder.locationName && hasLocations && (
                       <div>
-                        <p className="text-muted-foreground text-xs">Location</p>
+                        <p className="text-muted-foreground text-xs">{features?.hasAppointments ? "Station" : "Location"}</p>
                         <p className="font-medium">{selectedOrder.locationName}</p>
                       </div>
                     )}
@@ -469,9 +480,16 @@ export default function OrdersPanel() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="open">Open</SelectItem>
-                          <SelectItem value="in_progress">Preparing</SelectItem>
-                          <SelectItem value="ready">Ready</SelectItem>
-                          <SelectItem value="served">Served</SelectItem>
+                          {hasKitchenStatuses && (
+                            <>
+                              <SelectItem value="in_progress">Preparing</SelectItem>
+                              <SelectItem value="ready">Ready</SelectItem>
+                              <SelectItem value="served">Served</SelectItem>
+                            </>
+                          )}
+                          {features?.hasAppointments && (
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

@@ -534,6 +534,157 @@ export const mockOrders: POSOrder[] = [
     payments: [], totalAmount: 23800, paidAmount: 0,
     createdAt: new Date(Date.now() - 18 * 60000), updatedAt: new Date(Date.now() - 14 * 60000),
   },
+  // ==================== RETAIL ORDERS (outlet-2) ====================
+  {
+    id: "ord-r1", orderNumber: "R-001", status: "open", type: "walk_in",
+    customerName: "Walk-in Customer", outletId: "outlet-2", cashierId: "c4",
+    items: [
+      { id: "ci-r1", productId: "rt1", productName: "iPhone 15 Case", extras: [], quantity: 1, unitPrice: 12000, totalPrice: 12000 },
+      { id: "ci-r2", productId: "rt2", productName: "USB-C Cable 1m", extras: [], quantity: 2, unitPrice: 3500, totalPrice: 7000 },
+    ],
+    payments: [], totalAmount: 19000, paidAmount: 0,
+    createdAt: new Date(Date.now() - 10 * 60000), updatedAt: new Date(Date.now() - 10 * 60000),
+  },
+  {
+    id: "ord-r2", orderNumber: "R-002", status: "paid", type: "walk_in",
+    customerName: "Chioma N.", outletId: "outlet-2", cashierId: "c4",
+    items: [
+      { id: "ci-r3", productId: "rt6", productName: "Cotton T-Shirt", variantId: "rtv6b", variantName: "Medium", extras: [], quantity: 3, unitPrice: 8500, totalPrice: 25500 },
+      { id: "ci-r4", productId: "rt7", productName: "Jeans", variantId: "rtv7b", variantName: "Size 32", extras: [], quantity: 1, unitPrice: 22000, totalPrice: 22000 },
+    ],
+    payments: [{ method: "card", amount: 47500 }], totalAmount: 47500, paidAmount: 47500,
+    createdAt: new Date(Date.now() - 45 * 60000), updatedAt: new Date(Date.now() - 40 * 60000),
+  },
+  {
+    id: "ord-r3", orderNumber: "R-003", status: "open", type: "pickup",
+    customerName: "Tunde K.", outletId: "outlet-2", cashierId: "c1",
+    items: [
+      { id: "ci-r5", productId: "rt3", productName: "Wireless Earbuds", variantId: "rtv3b", variantName: "Pro", extras: [], quantity: 1, unitPrice: 45000, totalPrice: 45000 },
+      { id: "ci-r6", productId: "rt5", productName: "Power Bank 20000mAh", extras: [], quantity: 1, unitPrice: 18000, totalPrice: 18000 },
+    ],
+    payments: [{ method: "transfer", amount: 30000 }], totalAmount: 63000, paidAmount: 30000,
+    createdAt: new Date(Date.now() - 25 * 60000), updatedAt: new Date(Date.now() - 20 * 60000),
+  },
+  {
+    id: "ord-r4", orderNumber: "R-004", status: "paid", type: "delivery",
+    customerName: "Ada M.", outletId: "outlet-2", cashierId: "c4",
+    items: [
+      { id: "ci-r7", productId: "rt12", productName: "Samsung Galaxy S24", extras: [], quantity: 1, unitPrice: 650000, totalPrice: 650000 },
+      { id: "ci-r8", productId: "rt11", productName: "Screen Protector", extras: [], quantity: 1, unitPrice: 5000, totalPrice: 5000 },
+    ],
+    payments: [{ method: "transfer", amount: 655000 }], totalAmount: 655000, paidAmount: 655000,
+    createdAt: new Date(Date.now() - 120 * 60000), updatedAt: new Date(Date.now() - 110 * 60000),
+  },
+
+  // ==================== PHARMACY ORDERS (outlet-4) ====================
+  {
+    id: "ord-p1", orderNumber: "PH-001", status: "paid", type: "walk_in",
+    customerName: "Mrs. Adebayo", outletId: "outlet-4", cashierId: "c4",
+    items: [
+      { id: "ci-p1", productId: "ph1", productName: "Paracetamol 500mg", extras: [], quantity: 2, unitPrice: 350, totalPrice: 700 },
+      { id: "ci-p2", productId: "ph5", productName: "Cough Syrup 100ml", extras: [], quantity: 1, unitPrice: 1800, totalPrice: 1800 },
+      { id: "ci-p3", productId: "ph6", productName: "Vitamin C 1000mg", variantId: "phv6a", variantName: "30 Tabs", extras: [], quantity: 1, unitPrice: 4500, totalPrice: 4500 },
+    ],
+    payments: [{ method: "cash", amount: 7000 }], totalAmount: 7000, paidAmount: 7000,
+    createdAt: new Date(Date.now() - 60 * 60000), updatedAt: new Date(Date.now() - 55 * 60000),
+  },
+  {
+    id: "ord-p2", orderNumber: "PH-002", status: "open", type: "walk_in",
+    customerName: "Mr. Okafor", outletId: "outlet-4", cashierId: "c1",
+    items: [
+      { id: "ci-p4", productId: "ph3", productName: "Amoxicillin 250mg", extras: [], quantity: 1, unitPrice: 2800, totalPrice: 2800 },
+      { id: "ci-p5", productId: "ph10", productName: "Antiseptic Solution", extras: [], quantity: 1, unitPrice: 2200, totalPrice: 2200 },
+    ],
+    payments: [], totalAmount: 5000, paidAmount: 0,
+    createdAt: new Date(Date.now() - 5 * 60000), updatedAt: new Date(Date.now() - 5 * 60000),
+  },
+  {
+    id: "ord-p3", orderNumber: "PH-003", status: "open", type: "delivery",
+    customerName: "Ngozi E.", outletId: "outlet-4", cashierId: "c4",
+    items: [
+      { id: "ci-p6", productId: "ph11", productName: "Baby Diapers (Pack)", variantId: "phv11b", variantName: "Medium (20pcs)", extras: [], quantity: 2, unitPrice: 7500, totalPrice: 15000 },
+      { id: "ci-p7", productId: "ph12", productName: "Baby Formula 400g", extras: [], quantity: 1, unitPrice: 15000, totalPrice: 15000 },
+    ],
+    payments: [{ method: "transfer", amount: 15000 }], totalAmount: 30000, paidAmount: 15000,
+    createdAt: new Date(Date.now() - 15 * 60000), updatedAt: new Date(Date.now() - 12 * 60000),
+  },
+
+  // ==================== SALON ORDERS (outlet-5) ====================
+  {
+    id: "ord-s1", orderNumber: "S-001", status: "in_progress", type: "walk_in",
+    locationName: "Station 1", customerName: "Grace A.", outletId: "outlet-5", cashierId: "c3",
+    items: [
+      { id: "ci-s1", productId: "sl1", productName: "Women's Haircut", variantId: "slv1b", variantName: "Styled Cut", extras: [], quantity: 1, unitPrice: 12000, totalPrice: 12000 },
+      { id: "ci-s2", productId: "sl2", productName: "Hair Coloring", variantId: "slv2b", variantName: "Highlights", extras: [], quantity: 1, unitPrice: 35000, totalPrice: 35000 },
+    ],
+    payments: [], totalAmount: 47000, paidAmount: 0,
+    createdAt: new Date(Date.now() - 90 * 60000), updatedAt: new Date(Date.now() - 30 * 60000),
+  },
+  {
+    id: "ord-s2", orderNumber: "S-002", status: "paid", type: "walk_in",
+    locationName: "Station 2", customerName: "Blessing O.", outletId: "outlet-5", cashierId: "c1",
+    items: [
+      { id: "ci-s3", productId: "sl6", productName: "Manicure", variantId: "slv6b", variantName: "Gel Polish", extras: [], quantity: 1, unitPrice: 8000, totalPrice: 8000 },
+      { id: "ci-s4", productId: "sl7", productName: "Pedicure", variantId: "slv7b", variantName: "Spa Pedicure", extras: [], quantity: 1, unitPrice: 10000, totalPrice: 10000 },
+    ],
+    payments: [{ method: "card", amount: 18000 }], totalAmount: 18000, paidAmount: 18000,
+    createdAt: new Date(Date.now() - 120 * 60000), updatedAt: new Date(Date.now() - 90 * 60000),
+  },
+  {
+    id: "ord-s3", orderNumber: "S-003", status: "open", type: "walk_in",
+    locationName: "Station 3", customerName: "Fatima M.", outletId: "outlet-5", cashierId: "c3",
+    items: [
+      { id: "ci-s5", productId: "sl5", productName: "Braiding", variantId: "slv5a", variantName: "Box Braids", extras: [], quantity: 1, unitPrice: 20000, totalPrice: 20000 },
+      { id: "ci-s6", productId: "sl9", productName: "Shampoo & Conditioner Set", extras: [], quantity: 1, unitPrice: 8500, totalPrice: 8500 },
+    ],
+    payments: [], totalAmount: 28500, paidAmount: 0,
+    createdAt: new Date(Date.now() - 40 * 60000), updatedAt: new Date(Date.now() - 35 * 60000),
+  },
+  {
+    id: "ord-s4", orderNumber: "S-004", status: "in_progress", type: "walk_in",
+    locationName: "Wash Basin", customerName: "Aisha I.", outletId: "outlet-5", cashierId: "c1",
+    items: [
+      { id: "ci-s7", productId: "sl4", productName: "Hair Treatment", variantId: "slv4b", variantName: "Keratin Treatment", extras: [], quantity: 1, unitPrice: 35000, totalPrice: 35000 },
+    ],
+    payments: [{ method: "cash", amount: 20000 }], totalAmount: 35000, paidAmount: 20000,
+    createdAt: new Date(Date.now() - 60 * 60000), updatedAt: new Date(Date.now() - 45 * 60000),
+  },
+
+  // ==================== GROCERY ORDERS (outlet-7) ====================
+  {
+    id: "ord-g1", orderNumber: "G-001", status: "paid", type: "walk_in",
+    customerName: "Mrs. Ojo", outletId: "outlet-7", cashierId: "c3",
+    items: [
+      { id: "ci-g1", productId: "gr1", productName: "Fresh Tomatoes (1kg)", extras: [], quantity: 3, unitPrice: 1500, totalPrice: 4500 },
+      { id: "ci-g2", productId: "gr2", productName: "Onions (1kg)", extras: [], quantity: 2, unitPrice: 1200, totalPrice: 2400 },
+      { id: "ci-g3", productId: "gr14", productName: "Rice 5kg", extras: [], quantity: 1, unitPrice: 12500, totalPrice: 12500 },
+      { id: "ci-g4", productId: "gr15", productName: "Vegetable Oil 3L", extras: [], quantity: 1, unitPrice: 8500, totalPrice: 8500 },
+    ],
+    payments: [{ method: "cash", amount: 27900 }], totalAmount: 27900, paidAmount: 27900,
+    createdAt: new Date(Date.now() - 30 * 60000), updatedAt: new Date(Date.now() - 25 * 60000),
+  },
+  {
+    id: "ord-g2", orderNumber: "G-002", status: "open", type: "walk_in",
+    customerName: "Emeka U.", outletId: "outlet-7", cashierId: "c1",
+    items: [
+      { id: "ci-g5", productId: "gr5", productName: "Chicken Breast (1kg)", extras: [], quantity: 2, unitPrice: 5500, totalPrice: 11000 },
+      { id: "ci-g6", productId: "gr9", productName: "Eggs (Crate of 30)", extras: [], quantity: 1, unitPrice: 4500, totalPrice: 4500 },
+      { id: "ci-g7", productId: "gr7", productName: "Fresh Milk 1L", extras: [], quantity: 3, unitPrice: 2200, totalPrice: 6600 },
+    ],
+    payments: [], totalAmount: 22100, paidAmount: 0,
+    createdAt: new Date(Date.now() - 8 * 60000), updatedAt: new Date(Date.now() - 8 * 60000),
+  },
+  {
+    id: "ord-g3", orderNumber: "G-003", status: "open", type: "delivery",
+    customerName: "Sandra K.", outletId: "outlet-7", cashierId: "c3",
+    items: [
+      { id: "ci-g8", productId: "gr12", productName: "Sliced Bread", extras: [], quantity: 2, unitPrice: 1800, totalPrice: 3600 },
+      { id: "ci-g9", productId: "gr8", productName: "Butter 250g", extras: [], quantity: 1, unitPrice: 3500, totalPrice: 3500 },
+      { id: "ci-g10", productId: "gr13", productName: "Croissants (4pcs)", extras: [], quantity: 1, unitPrice: 3500, totalPrice: 3500 },
+    ],
+    payments: [{ method: "mobile", amount: 5000 }], totalAmount: 10600, paidAmount: 5000,
+    createdAt: new Date(Date.now() - 20 * 60000), updatedAt: new Date(Date.now() - 18 * 60000),
+  },
 ];
 
 export const posOutlets: POSOutlet[] = [
