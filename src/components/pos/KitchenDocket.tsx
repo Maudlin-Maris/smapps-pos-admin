@@ -108,9 +108,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
             <p style={{ fontSize: "10px", color: "#666" }}>DOCKET</p>
           </div>
 
-          <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-            {"- ".repeat(20)}
-          </p>
+          <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
           {/* Order info */}
           <div style={{ marginBottom: "4px" }}>
@@ -125,9 +123,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
             {order.customerName && <p>Customer: {order.customerName}</p>}
           </div>
 
-          <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-            {"- ".repeat(20)}
-          </p>
+          <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
           {/* Items — large and bold for kitchen readability */}
           <div style={{ marginBottom: "4px" }}>
@@ -158,9 +154,7 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
             ))}
           </div>
 
-          <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-            {"- ".repeat(20)}
-          </p>
+          <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
           <div className="text-center" style={{ fontSize: "10px", color: "#888" }}>
             <p>{outlet?.name || "Store"} · {format(new Date(order.createdAt), "dd/MM/yy HH:mm")}</p>

@@ -32,9 +32,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
       </div>
 
       {/* Divider */}
-      <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-        {"- ".repeat(20)}
-      </p>
+      <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
       {/* Order info */}
       <div style={{ marginBottom: "4px" }}>
@@ -51,9 +49,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
         {order.customerName && <p>Customer: {order.customerName}</p>}
       </div>
 
-      <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-        {"- ".repeat(20)}
-      </p>
+      <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
       {/* Items */}
       <div style={{ marginBottom: "4px" }}>
@@ -93,9 +89,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
         })}
       </div>
 
-      <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-        {"- ".repeat(20)}
-      </p>
+      <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
       {/* Totals */}
       <div>
@@ -132,9 +126,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
       {/* Payments */}
       {order.payments.length > 0 && (
         <>
-          <p style={{ textAlign: "center", margin: "4px 0", letterSpacing: "2px" }}>
-            {"- ".repeat(20)}
-          </p>
+          <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
           <div>
             <p style={{ fontWeight: 600, marginBottom: "2px" }}>Payment</p>
             {order.payments.map((p, i) => (
@@ -154,9 +146,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
       )}
 
       {/* Footer */}
-      <p style={{ textAlign: "center", margin: "12px 0 4px", letterSpacing: "2px" }}>
-        {"- ".repeat(20)}
-      </p>
+      <p style={{ textAlign: "center", margin: "12px 0 4px", borderTop: "1px dashed #999" }} />
       <div className="text-center" style={{ fontSize: "10px" }}>
         <p>Thank you for your patronage!</p>
         <p style={{ marginTop: "2px", color: "#888" }}>

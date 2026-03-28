@@ -35,6 +35,8 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
       toast.error("Please allow popups to print");
       return;
     }
+    // Clone the element's full HTML including inline styles
+    const content = ref.current.outerHTML;
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -42,14 +44,25 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
         <title>${title}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Courier New', monospace; }
+          body {
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            width: 80mm;
+            margin: 0 auto;
+          }
+          body > div {
+            width: 302px;
+            margin: 0 auto;
+          }
+          .text-center { text-align: center; }
           @media print {
             @page { margin: 0; size: 80mm auto; }
             body { width: 80mm; }
           }
         </style>
       </head>
-      <body>${ref.current.innerHTML}</body>
+      <body>${content}</body>
       </html>
     `);
     printWindow.document.close();
