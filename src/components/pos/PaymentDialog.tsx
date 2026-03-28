@@ -55,9 +55,53 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
+  const businessType = currentOutlet ? getBusinessType(currentOutlet.businessType) : null;
   const allowedOrderTypes = allowedTypes;
   const outletLocations = currentOutlet ? posLocations.filter(l => l.outletId === currentOutlet.id) : [];
   const showLocationPicker = features?.hasDineIn && selectedOrderType === "dine_in";
+
+  // Dynamic notes placeholder based on business type
+  const notesPlaceholder = useMemo(() => {
+    if (!currentOutlet) return "Add any special instructions or notes...";
+    switch (currentOutlet.businessType) {
+      case "restaurant": return "e.g. Nut allergy, no onions, birthday celebration...";
+      case "pharmacy": return "e.g. Prescription notes, dosage instructions, patient info...";
+      case "salon": case "barber": return "e.g. Preferred stylist, hair type, skin sensitivity...";
+      case "grocery": case "supermarket": return "e.g. Ripe produce only, substitute preferences...";
+      case "clothing": case "hair_seller": return "e.g. Gift wrap requested, size exchange policy...";
+      case "electronics": return "e.g. Warranty registration, setup assistance needed...";
+      case "wine_store": return "e.g. Gift packaging, temperature notes...";
+      default: return "Add any special instructions or notes...";
+    }
+  }, [currentOutlet]);
+
+  // Calculate applicable fees
+  const applicableFees = useMemo((): AppliedFee[] => {
+    if (!currentOutlet?.fees) return [];
+    const afterDiscount = subtotal - ((() => {
+      if (selectedDiscount) {
+        return selectedDiscount.type === "percentage"
+          ? Math.round(subtotal * selectedDiscount.value / 100)
+          : Math.min(selectedDiscount.value, subtotal);
+      }
+      if (customDiscountAmount) {
+        const val = parseFloat(customDiscountAmount) || 0;
+        return customDiscountType === "percentage"
+          ? Math.round(subtotal * val / 100)
+          : Math.min(val, subtotal);
+      }
+      return 0;
+    })());
+    return currentOutlet.fees
+      .filter(f => f.enabled)
+      .filter(f => !f.appliesTo || f.appliesTo.includes(selectedOrderType))
+      .map(f => ({
+        name: f.name,
+        amount: f.type === "percentage" ? Math.round(afterDiscount * f.value / 100) : f.value,
+      }));
+  }, [currentOutlet, selectedOrderType, subtotal, selectedDiscount, customDiscountAmount, customDiscountType]);
+
+  const feesTotal = applicableFees.reduce((s, f) => s + f.amount, 0);
 
   // Calculate discount
   const discountAmount = useMemo(() => {
@@ -83,14 +127,15 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     return parseFloat(tipAmount) || 0;
   }, [tipPreset, tipAmount, subtotal]);
 
-  const total = subtotal - discountAmount + tipValue;
+  const total = subtotal - discountAmount + feesTotal + tipValue;
 
-  // Set default order type when outlet changes
-  useState(() => {
-    if (allowedOrderTypes.length > 0 && !allowedOrderTypes.find(t => t.id === selectedOrderType)) {
-      setSelectedOrderType(allowedOrderTypes[0].id);
+  // Auto-select first order type
+  const initializedRef = useMemo(() => {
+    if (allowedOrderTypes.length > 0) {
+      return allowedOrderTypes[0].id;
     }
-  });
+    return "walk_in";
+  }, [allowedOrderTypes]);
 
   const reset = () => {
     setStep("type");
