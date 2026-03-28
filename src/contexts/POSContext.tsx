@@ -51,10 +51,30 @@ interface POSContextType {
 const POSContext = createContext<POSContextType | null>(null);
 
 export function POSProvider({ children }: { children: ReactNode }) {
-  const [authState, setAuthState] = useState<AuthState>("login");
-  const [currentCashier, setCurrentCashier] = useState<POSCashier | null>(null);
-  const [signedInCashiers, setSignedInCashiers] = useState<POSCashier[]>([]);
-  const [currentOutlet, setCurrentOutletState] = useState<POSOutlet | null>(null);
+  // Restore session from sessionStorage
+  const saved = (() => {
+    try {
+      const raw = sessionStorage.getItem("pos_session");
+      if (!raw) return null;
+      return JSON.parse(raw) as {
+        authState: AuthState;
+        cashierId: string;
+        signedInCashierIds: string[];
+        outletId: string | null;
+      };
+    } catch { return null; }
+  })();
+
+  const restoredCashier = saved ? posCashiers.find(c => c.id === saved.cashierId) || null : null;
+  const restoredSignedIn = saved ? posCashiers.filter(c => saved.signedInCashierIds.includes(c.id)) : [];
+  const restoredOutlet = saved?.outletId ? posOutlets.find(o => o.id === saved.outletId) || null : null;
+
+  const [authState, setAuthState] = useState<AuthState>(
+    saved ? (saved.authState === "active" ? "locked" : saved.authState) : "login"
+  );
+  const [currentCashier, setCurrentCashier] = useState<POSCashier | null>(restoredCashier);
+  const [signedInCashiers, setSignedInCashiers] = useState<POSCashier[]>(restoredSignedIn);
+  const [currentOutlet, setCurrentOutletState] = useState<POSOutlet | null>(restoredOutlet);
   const setCurrentOutlet = useCallback((outlet: POSOutlet) => {
     setCurrentOutletState(outlet);
     setCart([]);
@@ -63,6 +83,20 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<POSOrder[]>(mockOrders);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [orderCounter, setOrderCounter] = useState(5);
+
+  // Persist session to sessionStorage
+  useEffect(() => {
+    if (authState === "login") {
+      sessionStorage.removeItem("pos_session");
+    } else {
+      sessionStorage.setItem("pos_session", JSON.stringify({
+        authState,
+        cashierId: currentCashier?.id || null,
+        signedInCashierIds: signedInCashiers.map(c => c.id),
+        outletId: currentOutlet?.id || null,
+      }));
+    }
+  }, [authState, currentCashier, signedInCashiers, currentOutlet]);
 
   const loginWithCredentials = useCallback((username: string, _password: string) => {
     const cashier = posCashiers.find(c => c.username.toLowerCase() === username.toLowerCase());
