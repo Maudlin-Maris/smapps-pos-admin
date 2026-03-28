@@ -403,7 +403,7 @@ export default function OrdersPanel() {
                       <p className="text-muted-foreground text-xs">Type</p>
                       <p className="font-medium capitalize">{selectedOrder.type.replace("_", " ")}</p>
                     </div>
-                    {selectedOrder.tableNumber && (
+                    {selectedOrder.tableNumber && features?.hasDineIn && (
                       <div>
                         <p className="text-muted-foreground text-xs">Table</p>
                         <p className="font-medium">{selectedOrder.tableNumber}</p>
@@ -419,9 +419,9 @@ export default function OrdersPanel() {
                       <p className="text-muted-foreground text-xs">Created</p>
                       <p className="font-medium">{timeSince(selectedOrder.createdAt)}</p>
                     </div>
-                    {selectedOrder.locationName && (
+                    {selectedOrder.locationName && hasLocations && (
                       <div>
-                        <p className="text-muted-foreground text-xs">Location</p>
+                        <p className="text-muted-foreground text-xs">{features?.hasAppointments ? "Station" : "Location"}</p>
                         <p className="font-medium">{selectedOrder.locationName}</p>
                       </div>
                     )}
