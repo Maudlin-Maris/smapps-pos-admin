@@ -387,7 +387,7 @@ export const mockOrders: POSOrder[] = [
     id: "ord-1", orderNumber: "#001", status: "open", type: "dine_in", tableNumber: "Table 5",
     locationName: "Table 5", customerName: "Table 5", outletId: "outlet-1", cashierId: "c1",
     items: [
-      { id: "ci-1", productId: "p1", productName: "Classic Beef Burger", variantId: "v1b", variantName: "Double", extras: [{ id: "ex-1", name: "Extra Cheese", price: 500 }], quantity: 2, unitPrice: 9000, totalPrice: 18000 },
+      { id: "ci-1", productId: "p1", productName: "Classic Beef Burger", variantId: "v1b", variantName: "Double", extras: [{ id: "ex-1", name: "Extra Cheese", price: 500, quantity: 1 }], quantity: 2, unitPrice: 9000, totalPrice: 18000 },
       { id: "ci-2", productId: "p12", productName: "French Fries", variantId: "v12b", variantName: "Large", extras: [], quantity: 2, unitPrice: 3800, totalPrice: 7600 },
       { id: "ci-3", productId: "p16", productName: "Coca-Cola", extras: [], quantity: 2, unitPrice: 800, totalPrice: 1600 },
     ],
