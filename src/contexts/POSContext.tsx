@@ -254,6 +254,16 @@ export function POSProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const removeItemFromOrder = useCallback((orderId: string, itemId: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const newItems = o.items.filter(i => i.id !== itemId);
+      if (newItems.length === 0) return { ...o, items: newItems, totalAmount: 0, status: "voided" as OrderStatus, updatedAt: new Date() };
+      const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (o.discountAmount || 0) + (o.feesTotal || 0);
+      return { ...o, items: newItems, totalAmount: newTotal, updatedAt: new Date() };
+    }));
+  }, []);
+
   const mergeOrders = useCallback((sourceId: string, targetId: string) => {
     setOrders(prev => {
       const source = prev.find(o => o.id === sourceId);
