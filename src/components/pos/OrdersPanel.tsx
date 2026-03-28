@@ -510,6 +510,24 @@ export default function OrdersPanel() {
                             );
                           })()}
                           <span className="font-medium">{formatNaira(item.totalPrice)}</span>
+                          {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                            <button
+                              onClick={() => {
+                                removeItemFromOrder(selectedOrder.id, item.id);
+                                const newItems = selectedOrder.items.filter(i => i.id !== item.id);
+                                if (newItems.length === 0) {
+                                  setSelectedOrder(null);
+                                } else {
+                                  const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (selectedOrder.discountAmount || 0) + (selectedOrder.feesTotal || 0);
+                                  setSelectedOrder(prev => prev ? { ...prev, items: newItems, totalAmount: newTotal } : null);
+                                }
+                              }}
+                              className="text-destructive hover:text-destructive/80 p-0.5"
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
