@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
-  ChevronLeft, Users
+  ChevronLeft, Users, ArrowRightLeft, Filter
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
