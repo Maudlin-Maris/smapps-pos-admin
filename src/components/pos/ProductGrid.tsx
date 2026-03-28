@@ -3,9 +3,11 @@ import { usePOS } from "@/contexts/POSContext";
 import { posProducts, posCategories, type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ScanLine, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, ScanLine, Camera, X } from "lucide-react";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 
@@ -15,7 +17,10 @@ export default function ProductGrid() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const scannerRef = useRef<HTMLDivElement>(null);
+  const html5QrCodeRef = useRef<any>(null);
 
   // Barcode scan handler: finds product/variant by barcode/SKU and adds to cart directly
   const handleBarcodeScan = useCallback((barcode: string) => {
@@ -151,6 +156,46 @@ export default function ProductGrid() {
     setDialogProduct(null);
   };
 
+  // Camera barcode scanner
+  const startCamera = () => setCameraOpen(true);
+  const stopCamera = () => {
+    if (html5QrCodeRef.current) {
+      html5QrCodeRef.current.stop().catch(() => {});
+      html5QrCodeRef.current = null;
+    }
+    setCameraOpen(false);
+  };
+
+  useEffect(() => {
+    if (!cameraOpen || !scannerRef.current) return;
+    let scanner: any = null;
+    const initScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        scanner = new Html5Qrcode("pos-barcode-reader");
+        html5QrCodeRef.current = scanner;
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 150 } },
+          (decodedText: string) => {
+            handleBarcodeScan(decodedText);
+            scanner.stop().catch(() => {});
+            setCameraOpen(false);
+          },
+          () => {}
+        );
+      } catch {
+        toast.error("Camera access denied or not available");
+        setCameraOpen(false);
+      }
+    };
+    const timer = setTimeout(initScanner, 300);
+    return () => {
+      clearTimeout(timer);
+      if (scanner) scanner.stop().catch(() => {});
+    };
+  }, [cameraOpen, handleBarcodeScan]);
+
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && search) {
       if (handleBarcodeScan(search)) {
@@ -162,7 +207,8 @@ export default function ProductGrid() {
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-border">
-        <div className="relative">
+        <div className="flex gap-2">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             ref={searchInputRef}
@@ -179,6 +225,10 @@ export default function ProductGrid() {
           ) : (
             <ScanLine className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           )}
+        </div>
+        <Button type="button" variant="outline" size="icon" onClick={startCamera} title="Scan with camera" className="shrink-0 h-10 w-10">
+          <Camera className="h-4 w-4" />
+        </Button>
         </div>
       </div>
 
@@ -278,6 +328,30 @@ export default function ProductGrid() {
         onClose={() => setDialogProduct(null)}
         onConfirm={handleConfirmVariantExtras}
       />
+
+      <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Camera className="h-5 w-5 text-accent" />
+              Scan Barcode
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div
+              id="pos-barcode-reader"
+              ref={scannerRef}
+              className="w-full min-h-[250px] rounded-lg overflow-hidden bg-muted"
+            />
+            <p className="text-sm text-muted-foreground text-center">
+              Point your camera at the barcode
+            </p>
+            <Button variant="outline" className="w-full" onClick={stopCamera}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
