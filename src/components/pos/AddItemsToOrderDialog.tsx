@@ -239,30 +239,45 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
                         <Plus className="w-3 h-3" /> New Items
                       </p>
                       <div className="space-y-1">
-                        {pendingItems.map(item => (
-                          <div key={item.id} className="flex items-center justify-between py-2 px-3 rounded-lg border border-primary/20 bg-primary/5 text-sm gap-2">
-                            <div className="flex-1 min-w-0">
+                        {pendingItems.map(item => {
+                          const product = posProducts.find(p => p.id === item.productId);
+                          const canEdit = product && ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0));
+                          return (
+                          <div key={item.id} className="flex items-start justify-between py-2 px-3 rounded-lg border border-primary/20 bg-primary/5 text-sm gap-2">
+                            <button
+                              className={`flex-1 min-w-0 text-left ${canEdit ? 'hover:text-primary transition-colors' : ''}`}
+                              onClick={() => canEdit && handleEditPendingItem(item)}
+                              disabled={!canEdit}
+                            >
                               <span className="font-medium">{item.productName}</span>
                               {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
                               {item.extras.length > 0 && (
                                 <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
                               )}
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button onClick={() => updatePendingQty(item.id, -1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors">
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="w-5 text-center font-semibold text-xs">{item.quantity}</span>
-                              <button onClick={() => updatePendingQty(item.id, 1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors">
-                                <Plus className="w-3 h-3" />
-                              </button>
-                              <span className="font-medium ml-1 w-16 text-right text-sm">{formatNaira(item.totalPrice)}</span>
-                              <button onClick={() => setPendingItems(prev => prev.filter(i => i.id !== item.id))} className="p-1 rounded-md text-destructive hover:bg-destructive/10 transition-colors">
-                                <Trash2 className="w-3 h-3" />
-                              </button>
+                              {canEdit && (
+                                <p className="text-[10px] text-primary/60 flex items-center gap-0.5 mt-0.5">
+                                  <Pencil className="w-2.5 h-2.5" /> Tap to edit
+                                </p>
+                              )}
+                            </button>
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <div className="flex items-center gap-1.5">
+                                <button onClick={() => updatePendingQty(item.id, -1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors">
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="w-5 text-center font-semibold text-xs">{item.quantity}</span>
+                                <button onClick={() => updatePendingQty(item.id, 1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors">
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => setPendingItems(prev => prev.filter(i => i.id !== item.id))} className="w-6 h-6 rounded-md flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                              <span className="font-medium text-xs">{formatNaira(item.totalPrice)}</span>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
