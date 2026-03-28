@@ -334,8 +334,8 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
               </div>
 
               {/* Product grid */}
-              <ScrollArea className="flex-1 min-h-0 max-h-[35vh]">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-4 pt-1">
+              <ScrollArea className="flex-1 min-h-0 max-h-[45vh] sm:max-h-[35vh]">
+                <div className="grid grid-cols-2 gap-2 p-3 sm:p-4 pt-1">
                   {products.map(product => (
                     <button
                       key={product.id}
