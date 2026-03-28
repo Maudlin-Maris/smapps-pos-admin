@@ -40,6 +40,7 @@ interface POSContextType {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updateItemStatus: (orderId: string, itemId: string, status: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: POSCartItem[]) => void;
+  removeItemFromOrder: (orderId: string, itemId: string) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
   voidOrder: (orderId: string) => void;
@@ -253,6 +254,16 @@ export function POSProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const removeItemFromOrder = useCallback((orderId: string, itemId: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      const newItems = o.items.filter(i => i.id !== itemId);
+      if (newItems.length === 0) return { ...o, items: newItems, totalAmount: 0, status: "voided" as OrderStatus, updatedAt: new Date() };
+      const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (o.discountAmount || 0) + (o.feesTotal || 0);
+      return { ...o, items: newItems, totalAmount: newTotal, updatedAt: new Date() };
+    }));
+  }, []);
+
   const mergeOrders = useCallback((sourceId: string, targetId: string) => {
     setOrders(prev => {
       const source = prev.find(o => o.id === sourceId);
@@ -291,7 +302,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentOutlet, setCurrentOutlet, availableOutlets,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
-      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder, transferOrder,
+      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder,
       orderType, setOrderType,
     }}>
       {children}

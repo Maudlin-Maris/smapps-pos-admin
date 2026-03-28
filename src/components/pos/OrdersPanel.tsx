@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import AddItemsToOrderDialog from "./AddItemsToOrderDialog";
 import { formatNaira } from "@/lib/currency";
 import { getFeatures } from "@/data/businessTypes";
 import type { POSOrder, OrderStatus, ItemStatus } from "@/data/posData";
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
-  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight
+  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight, Trash2
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
@@ -42,7 +43,7 @@ interface LocationSummary {
 }
 
 export default function OrdersPanel() {
-  const { orders, updateOrderStatus, updateItemStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
+  const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
@@ -53,7 +54,7 @@ export default function OrdersPanel() {
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
   const [transferTarget, setTransferTarget] = useState<string>("");
-
+  const [addItemsOrderId, setAddItemsOrderId] = useState<string | null>(null);
   const cashierId = currentCashier?.id || "";
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const hasLocations = features?.hasDineIn || features?.hasAppointments;
@@ -509,6 +510,24 @@ export default function OrdersPanel() {
                             );
                           })()}
                           <span className="font-medium">{formatNaira(item.totalPrice)}</span>
+                          {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                            <button
+                              onClick={() => {
+                                removeItemFromOrder(selectedOrder.id, item.id);
+                                const newItems = selectedOrder.items.filter(i => i.id !== item.id);
+                                if (newItems.length === 0) {
+                                  setSelectedOrder(null);
+                                } else {
+                                  const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (selectedOrder.discountAmount || 0) + (selectedOrder.feesTotal || 0);
+                                  setSelectedOrder(prev => prev ? { ...prev, items: newItems, totalAmount: newTotal } : null);
+                                }
+                              }}
+                              className="text-destructive hover:text-destructive/80 p-0.5"
+                              title="Remove item"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -622,11 +641,9 @@ export default function OrdersPanel() {
                             <CreditCard className="w-4 h-4 mr-1" /> Pay
                           </Button>
                         )}
-                        {cart.length > 0 && (
-                          <Button size="sm" variant="outline" onClick={() => handleAddItemsToOrder(selectedOrder.id)}>
-                            <Plus className="w-4 h-4 mr-1" /> Add Cart Items
-                          </Button>
-                        )}
+                        <Button size="sm" variant="outline" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
+                          <Plus className="w-4 h-4 mr-1" /> Add Items
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); setSelectedOrder(null); }}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
                         </Button>
@@ -654,6 +671,13 @@ export default function OrdersPanel() {
 
       {/* Print Receipt/Docket dialog */}
       <PrintReceiptDialog open={!!printOrder} onClose={() => setPrintOrder(null)} order={printOrder} />
+
+      {/* Add items to order dialog */}
+      <AddItemsToOrderDialog
+        open={!!addItemsOrderId}
+        onClose={() => setAddItemsOrderId(null)}
+        orderId={addItemsOrderId || ""}
+      />
     </div>
   );
 }
