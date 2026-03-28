@@ -174,27 +174,31 @@ export default function ProductGrid() {
     let scanner: any = null;
     const initScanner = async () => {
       try {
-        // Check if camera is available before starting
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          toast.error("Camera not supported in this browser or context. Try opening the app directly in a browser tab.");
+          toast.error("Camera not supported in this browser. Try opening the app directly in a browser tab.");
           setCameraOpen(false);
           return;
         }
-        // Test camera access first
-        const testStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: isMobile ? "environment" : "user" } 
-        });
-        testStream.getTracks().forEach(t => t.stop());
 
         const { Html5Qrcode } = await import("html5-qrcode");
+        
+        // Ensure the DOM element exists
+        const readerEl = document.getElementById("pos-barcode-reader");
+        if (!readerEl) {
+          toast.error("Scanner element not ready. Please try again.");
+          setCameraOpen(false);
+          return;
+        }
+
         scanner = new Html5Qrcode("pos-barcode-reader");
         html5QrCodeRef.current = scanner;
-        const facingMode = isMobile ? "environment" : "user";
+        
         await scanner.start(
-          { facingMode },
+          { facingMode: isMobile ? "environment" : "user" },
           {
-            fps: 15,
-            qrbox: { width: 280, height: 160 },
+            fps: 10,
+            qrbox: { width: 250, height: 150 },
+            aspectRatio: 1.0,
           },
           (decodedText: string) => {
             setSearch(decodedText);
@@ -203,24 +207,27 @@ export default function ProductGrid() {
               toast.info(`Scanned: ${decodedText} — no matching product found`);
             }
             setTimeout(() => setSearch(""), 300);
-            scanner.stop().catch(() => {});
+            scanner?.stop().catch(() => {});
             setCameraOpen(false);
           },
           () => {}
         );
       } catch (err: any) {
-        const msg = err?.message || "";
+        console.error("Camera scanner error:", err);
+        const msg = String(err?.message || err || "");
         if (msg.includes("Permission") || msg.includes("NotAllowed")) {
-          toast.error("Camera permission denied. Please allow camera access.");
-        } else if (msg.includes("NotFound") || msg.includes("DevicesNotFound")) {
+          toast.error("Camera permission denied. Please allow camera access in your browser settings.");
+        } else if (msg.includes("NotFound") || msg.includes("DevicesNotFound") || msg.includes("Requested device not found")) {
           toast.error("No camera found on this device.");
+        } else if (msg.includes("NotReadableError") || msg.includes("Could not start video source")) {
+          toast.error("Camera is in use by another app. Close other camera apps and try again.");
         } else {
-          toast.error("Camera not available. Try opening the app in a new browser tab (not an iframe).");
+          toast.error(`Camera error: ${msg.slice(0, 100)}`);
         }
         setCameraOpen(false);
       }
     };
-    const timer = setTimeout(initScanner, 300);
+    const timer = setTimeout(initScanner, 500);
     return () => {
       clearTimeout(timer);
       if (scanner) scanner.stop().catch(() => {});
