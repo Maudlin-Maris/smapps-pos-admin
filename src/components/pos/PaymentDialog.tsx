@@ -199,7 +199,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
