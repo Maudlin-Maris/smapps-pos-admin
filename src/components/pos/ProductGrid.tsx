@@ -11,6 +11,8 @@ import { Search, ScanLine, Camera, X } from "lucide-react";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 
+const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
+
 export default function ProductGrid() {
   const { currentOutlet, addToCart } = usePOS();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -21,6 +23,7 @@ export default function ProductGrid() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<any>(null);
+  const permissionPrimedRef = useRef(false);
 
   // Barcode scan handler: finds product/variant by barcode/SKU and adds to cart directly
   const handleBarcodeScan = useCallback((barcode: string) => {
@@ -159,8 +162,37 @@ export default function ProductGrid() {
   // Detect mobile device for camera facing mode
   const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  // Camera barcode scanner
-  const startCamera = () => setCameraOpen(true);
+  const primeCameraPermission = useCallback(async () => {
+    if (permissionPrimedRef.current) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("Camera not supported in this browser. Try opening the app directly in a browser tab.");
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: isMobile
+        ? { facingMode: { ideal: "environment" } }
+        : true,
+      audio: false,
+    });
+
+    stream.getTracks().forEach((track) => track.stop());
+    permissionPrimedRef.current = true;
+  }, [isMobile]);
+
+  const startCamera = useCallback(async () => {
+    try {
+      await primeCameraPermission();
+      setCameraOpen(true);
+    } catch (err: any) {
+      const msg = String(err?.message || err || "");
+      if (msg.includes("Permission") || msg.includes("NotAllowed")) {
+        toast.error("Camera permission denied. Please allow camera access in Chrome settings.");
+      } else {
+        toast.error(msg || "Unable to access the camera.");
+      }
+    }
+  }, [primeCameraPermission]);
+
   const stopCamera = () => {
     if (html5QrCodeRef.current) {
       html5QrCodeRef.current.stop().catch(() => {});
@@ -193,25 +225,42 @@ export default function ProductGrid() {
         scanner = new Html5Qrcode("pos-barcode-reader");
         html5QrCodeRef.current = scanner;
         
-        await scanner.start(
-          { facingMode: isMobile ? "environment" : "user" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 150 },
-            aspectRatio: 1.0,
-          },
-          (decodedText: string) => {
-            setSearch(decodedText);
-            const found = handleBarcodeScan(decodedText);
-            if (!found) {
-              toast.info(`Scanned: ${decodedText} — no matching product found`);
-            }
-            setTimeout(() => setSearch(""), 300);
-            scanner?.stop().catch(() => {});
-            setCameraOpen(false);
-          },
-          () => {}
-        );
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 150 },
+          aspectRatio: 1.0,
+          disableFlip: false,
+          videoConstraints: isMobile
+            ? { facingMode: { ideal: "environment" } }
+            : { facingMode: { ideal: "user" } },
+        };
+
+        const onScanSuccess = (decodedText: string) => {
+          setSearch(decodedText);
+          const found = handleBarcodeScan(decodedText);
+          if (!found) {
+            toast.info(`Scanned: ${decodedText} — no matching product found`);
+          }
+          setTimeout(() => setSearch(""), 300);
+          scanner?.stop().catch(() => {});
+          setCameraOpen(false);
+        };
+
+        const cameras = await Html5Qrcode.getCameras().catch(() => []);
+        const preferredCamera = isMobile
+          ? cameras.find((camera: { label?: string }) => MOBILE_REAR_CAMERA_REGEX.test(camera.label ?? "")) ?? cameras[cameras.length - 1]
+          : cameras[0];
+
+        if (preferredCamera?.id) {
+          await scanner.start(preferredCamera.id, config, onScanSuccess, () => {});
+        } else {
+          await scanner.start(
+            isMobile ? { facingMode: { ideal: "environment" } } : { facingMode: { ideal: "user" } },
+            config,
+            onScanSuccess,
+            () => {}
+          );
+        }
       } catch (err: any) {
         console.error("Camera scanner error:", err);
         const msg = String(err?.message || err || "");
@@ -227,7 +276,7 @@ export default function ProductGrid() {
         setCameraOpen(false);
       }
     };
-    const timer = setTimeout(initScanner, 500);
+    const timer = setTimeout(initScanner, 150);
     return () => {
       clearTimeout(timer);
       if (scanner) scanner.stop().catch(() => {});
