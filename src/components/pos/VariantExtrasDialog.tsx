@@ -79,8 +79,6 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm,
 
   const handleOpenChange = (o: boolean) => {
     if (!o) {
-      setSelectedVariant(null);
-      setExtraQuantities({});
       onClose();
     }
   };
