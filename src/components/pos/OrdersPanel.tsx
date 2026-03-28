@@ -673,6 +673,26 @@ export default function OrdersPanel() {
         onClose={() => setAddItemsOrderId(null)}
         orderId={addItemsOrderId || ""}
       />
+
+      {/* Auth dialog for removing items from order detail */}
+      <RemoveItemAuthDialog
+        open={!!removeAuth}
+        onClose={() => setRemoveAuth(null)}
+        onAuthorized={() => {
+          if (!removeAuth) return;
+          removeItemFromOrder(removeAuth.orderId, removeAuth.itemId);
+          // Update selectedOrder state
+          setSelectedOrder(prev => {
+            if (!prev) return null;
+            const newItems = prev.items.filter(i => i.id !== removeAuth.itemId);
+            if (newItems.length === 0) return null;
+            const newTotal = newItems.reduce((s, i) => s + i.totalPrice, 0) - (prev.discountAmount || 0) + (prev.feesTotal || 0);
+            return { ...prev, items: newItems, totalAmount: newTotal };
+          });
+          setRemoveAuth(null);
+        }}
+        itemName={removeAuth?.itemName || ""}
+      />
     </div>
   );
 }
