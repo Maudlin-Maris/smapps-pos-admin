@@ -543,7 +543,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 <p className="text-sm text-muted-foreground">Amount Due</p>
                 <p className="text-3xl font-bold text-foreground">{formatNaira(total)}</p>
                 {discountAmount > 0 && (
-                  <p className="text-xs text-[hsl(var(--success))] mt-1">Discount applied: -{formatNaira(discountAmount)}</p>
+                  <p className="text-xs text-[hsl(var(--success))] mt-1">Discount: -{formatNaira(discountAmount)}</p>
+                )}
+                {feesTotal > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Fees: {applicableFees.map(f => `${f.name} ${formatNaira(f.amount)}`).join(", ")}
+                  </p>
                 )}
                 {tipValue > 0 && (
                   <p className="text-xs text-primary mt-0.5">Includes tip: {formatNaira(tipValue)}</p>
