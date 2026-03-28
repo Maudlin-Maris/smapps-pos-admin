@@ -330,6 +330,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                     {customerName}
                   </span>
                 )}
+                {customerNotes && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-medium truncate max-w-[200px]" title={customerNotes}>
+                    ⚠ {customerNotes}
+                  </span>
+                )}
               </div>
 
               {/* Order summary */}
