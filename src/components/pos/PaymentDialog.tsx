@@ -479,6 +479,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                     <span>-{formatNaira(discountAmount)}</span>
                   </div>
                 )}
+                {applicableFees.map((fee, i) => (
+                  <div key={i} className="flex justify-between text-sm text-muted-foreground">
+                    <span>{fee.name}</span>
+                    <span>+{formatNaira(fee.amount)}</span>
+                  </div>
+                ))}
                 {tipValue > 0 && (
                   <div className="flex justify-between text-sm text-primary">
                     <span>Tip</span>
