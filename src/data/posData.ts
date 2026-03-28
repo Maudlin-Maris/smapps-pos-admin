@@ -317,6 +317,7 @@ const restaurantProducts: POSProduct[] = [
     variants: [{ id: "v26a", name: "Glass", price: 4500, sku: "WINE-RED-G" }, { id: "v26b", name: "Bottle", price: 18000, sku: "WINE-RED-B" }] },
   { id: "p27", name: "Mojito", price: 6500, categoryId: "rcat-7", subcategoryId: "rsub-7c", barcode: "CKTL-MOJ", inStock: true, outletId: "outlet-1" },
   { id: "p28", name: "Margarita", price: 7000, categoryId: "rcat-7", subcategoryId: "rsub-7c", barcode: "CKTL-MARG", inStock: true, outletId: "outlet-1" },
+];
 
 // Pharmacy products (outlet-4)
 const pharmacyProducts: POSProduct[] = [
