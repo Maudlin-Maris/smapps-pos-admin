@@ -234,39 +234,74 @@ export default function OrdersPanel() {
       <ScrollArea className="flex-1">
         {showLocationCards ? (
           /* Location summary cards - responsive grid */
-          <div className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {locationSummaries.map(loc => (
-              <button
-                key={loc.locationName}
-                onClick={() => setSelectedLocationName(loc.locationName)}
-                className="text-left p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all group"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <MapPin className="w-4 h-4 text-primary" />
+          <div className="p-3 space-y-3">
+            {/* Color legend */}
+            <div className="flex items-center gap-4 text-[11px] text-muted-foreground px-1">
+              <span className="font-medium text-foreground text-xs">Legend:</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--success))]" />
+                Paid
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--warning))]" />
+                Incomplete
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-destructive" />
+                Unpaid
+              </span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {locationSummaries.map(loc => {
+                const borderColor = loc.paymentStatus === "paid"
+                  ? "border-l-[hsl(var(--success))] hover:border-[hsl(var(--success))]/40"
+                  : loc.paymentStatus === "partial"
+                  ? "border-l-[hsl(var(--warning))] hover:border-[hsl(var(--warning))]/40"
+                  : "border-l-destructive hover:border-destructive/40";
+                const iconBg = loc.paymentStatus === "paid"
+                  ? "bg-[hsl(var(--success))]/10"
+                  : loc.paymentStatus === "partial"
+                  ? "bg-[hsl(var(--warning))]/10"
+                  : "bg-destructive/10";
+                const iconColor = loc.paymentStatus === "paid"
+                  ? "text-[hsl(var(--success))]"
+                  : loc.paymentStatus === "partial"
+                  ? "text-[hsl(var(--warning))]"
+                  : "text-destructive";
+                return (
+                  <button
+                    key={loc.locationName}
+                    onClick={() => setSelectedLocationName(loc.locationName)}
+                    className={`text-left p-4 rounded-xl border border-border border-l-4 bg-card hover:shadow-md transition-all ${borderColor}`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+                          <MapPin className={`w-4 h-4 ${iconColor}`} />
+                        </div>
+                        <span className="font-semibold text-xs text-foreground truncate">{loc.locationName}</span>
+                      </div>
                     </div>
-                    <span className="font-semibold text-xs text-foreground truncate">{loc.locationName}</span>
-                  </div>
+                    <p className="text-lg font-bold text-foreground mb-1">{formatNaira(loc.totalValue)}</p>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary" className="text-[10px]">
+                        {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <Users className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{loc.staffNames.join(", ")}</span>
+                    </div>
+                  </button>
+                );
+              })}
+              {locationSummaries.length === 0 && (
+                <div className="col-span-full text-center py-12 text-muted-foreground">
+                  <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No orders at any location</p>
                 </div>
-                <p className="text-lg font-bold text-foreground mb-1">{formatNaira(loc.totalValue)}</p>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary" className="text-[10px]">
-                    {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <Users className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{loc.staffNames.join(", ")}</span>
-                </div>
-              </button>
-            ))}
-            {locationSummaries.length === 0 && (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
-                <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">No orders at any location</p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         ) : (
           /* Order list */
