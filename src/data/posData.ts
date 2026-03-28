@@ -268,44 +268,55 @@ const drinkExtras: POSExtra[] = [
 
 // Restaurant products (outlet-1)
 const restaurantProducts: POSProduct[] = [
+  // Scenario: variants WITH extras AND product barcode
   { id: "p1", name: "Classic Beef Burger", price: 5500, categoryId: "rcat-1", subcategoryId: "rsub-1a", barcode: "1234567890", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v1a", name: "Single", price: 5500 }, { id: "v1b", name: "Double", price: 8500 }], extras: burgerExtras },
+    variants: [{ id: "v1a", name: "Single", price: 5500, sku: "BRG-CLASSIC-S" }, { id: "v1b", name: "Double", price: 8500, sku: "BRG-CLASSIC-D" }], extras: burgerExtras },
+  // Scenario: variants WITH extras, product barcode
   { id: "p2", name: "Chicken Burger", price: 4800, categoryId: "rcat-1", subcategoryId: "rsub-1a", barcode: "1234567891", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v2a", name: "Regular", price: 4800 }, { id: "v2b", name: "Spicy", price: 5200 }], extras: burgerExtras },
-  { id: "p3", name: "Wagyu Burger", price: 15000, categoryId: "rcat-1", subcategoryId: "rsub-1b", inStock: true, outletId: "outlet-1", extras: burgerExtras },
-  { id: "p4", name: "Truffle Burger", price: 12500, categoryId: "rcat-1", subcategoryId: "rsub-1b", inStock: true, outletId: "outlet-1", extras: burgerExtras },
-  { id: "p6", name: "Margherita Pizza", price: 7500, categoryId: "rcat-2", subcategoryId: "rsub-2a", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v6a", name: "Small 10\"", price: 5500 }, { id: "v6b", name: "Medium 12\"", price: 7500 }, { id: "v6c", name: "Large 16\"", price: 11000 }] },
+    variants: [{ id: "v2a", name: "Regular", price: 4800, sku: "BRG-CHKN-R" }, { id: "v2b", name: "Spicy", price: 5200, sku: "BRG-CHKN-S" }], extras: burgerExtras },
+  // Scenario: no variants, only extras
+  { id: "p3", name: "Wagyu Burger", price: 15000, categoryId: "rcat-1", subcategoryId: "rsub-1b", barcode: "BRG-WAGYU", inStock: true, outletId: "outlet-1", extras: burgerExtras },
+  { id: "p4", name: "Truffle Burger", price: 12500, categoryId: "rcat-1", subcategoryId: "rsub-1b", barcode: "BRG-TRFL", inStock: true, outletId: "outlet-1", extras: burgerExtras },
+  // Scenario: variants only (no extras), with product barcode
+  { id: "p6", name: "Margherita Pizza", price: 7500, categoryId: "rcat-2", subcategoryId: "rsub-2a", barcode: "PZZ-MARG", inStock: true, outletId: "outlet-1",
+    variants: [{ id: "v6a", name: "Small 10\"", price: 5500, sku: "PZZ-MARG-S" }, { id: "v6b", name: "Medium 12\"", price: 7500, sku: "PZZ-MARG-M" }, { id: "v6c", name: "Large 16\"", price: 11000, sku: "PZZ-MARG-L" }] },
   { id: "p7", name: "Pepperoni Pizza", price: 8500, categoryId: "rcat-2", subcategoryId: "rsub-2a", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v7a", name: "Small 10\"", price: 6500 }, { id: "v7b", name: "Medium 12\"", price: 8500 }, { id: "v7c", name: "Large 16\"", price: 12500 }] },
-  { id: "p8", name: "BBQ Chicken Pizza", price: 9500, categoryId: "rcat-2", subcategoryId: "rsub-2b", inStock: true, outletId: "outlet-1" },
-  { id: "p9", name: "Truffle Mushroom Pizza", price: 11000, categoryId: "rcat-2", subcategoryId: "rsub-2b", inStock: false, outletId: "outlet-1" },
+    variants: [{ id: "v7a", name: "Small 10\"", price: 6500, sku: "PZZ-PEP-S" }, { id: "v7b", name: "Medium 12\"", price: 8500, sku: "PZZ-PEP-M" }, { id: "v7c", name: "Large 16\"", price: 12500, sku: "PZZ-PEP-L" }] },
+  // Scenario: no variants, no extras, with barcode
+  { id: "p8", name: "BBQ Chicken Pizza", price: 9500, categoryId: "rcat-2", subcategoryId: "rsub-2b", barcode: "PZZ-BBQ", inStock: true, outletId: "outlet-1" },
+  // Scenario: out of stock (should not be scannable)
+  { id: "p9", name: "Truffle Mushroom Pizza", price: 11000, categoryId: "rcat-2", subcategoryId: "rsub-2b", barcode: "PZZ-TRFL", inStock: false, outletId: "outlet-1" },
+  // Scenario: variants only, no barcode on product
   { id: "p10", name: "Caesar Salad", price: 4500, categoryId: "rcat-3", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v10a", name: "Regular", price: 4500 }, { id: "v10b", name: "Large", price: 6500 }] },
+    variants: [{ id: "v10a", name: "Regular", price: 4500, sku: "SAL-CAES-R" }, { id: "v10b", name: "Large", price: 6500, sku: "SAL-CAES-L" }] },
+  // Scenario: no variants, no extras, no barcode
   { id: "p11", name: "Greek Salad", price: 5000, categoryId: "rcat-3", inStock: true, outletId: "outlet-1" },
-  { id: "p12", name: "French Fries", price: 2500, categoryId: "rcat-4", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v12a", name: "Regular", price: 2500 }, { id: "v12b", name: "Large", price: 3800 }] },
-  { id: "p13", name: "Sweet Potato Fries", price: 3200, categoryId: "rcat-4", inStock: true, outletId: "outlet-1" },
-  { id: "p14", name: "Mozzarella Sticks", price: 4200, categoryId: "rcat-4", inStock: true, outletId: "outlet-1" },
+  { id: "p12", name: "French Fries", price: 2500, categoryId: "rcat-4", barcode: "FRIES-001", inStock: true, outletId: "outlet-1",
+    variants: [{ id: "v12a", name: "Regular", price: 2500, sku: "FRIES-R" }, { id: "v12b", name: "Large", price: 3800, sku: "FRIES-L" }] },
+  { id: "p13", name: "Sweet Potato Fries", price: 3200, categoryId: "rcat-4", barcode: "FRIES-SP", inStock: true, outletId: "outlet-1" },
+  { id: "p14", name: "Mozzarella Sticks", price: 4200, categoryId: "rcat-4", barcode: "MOZ-STK", inStock: true, outletId: "outlet-1" },
   { id: "p15", name: "Chicken Wings", price: 5500, categoryId: "rcat-4", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v15a", name: "6pc", price: 5500 }, { id: "v15b", name: "12pc", price: 9800 }] },
+    variants: [{ id: "v15a", name: "6pc", price: 5500, sku: "WINGS-6" }, { id: "v15b", name: "12pc", price: 9800, sku: "WINGS-12" }] },
+  // Scenario: simple product with barcode, no variants/extras
   { id: "p16", name: "Coca-Cola", price: 800, categoryId: "rcat-5", subcategoryId: "rsub-5a", barcode: "5449000000996", inStock: true, outletId: "outlet-1" },
-  { id: "p17", name: "Fresh Lemonade", price: 2500, categoryId: "rcat-5", subcategoryId: "rsub-5a", inStock: true, outletId: "outlet-1" },
-  { id: "p18", name: "Espresso", price: 2000, categoryId: "rcat-5", subcategoryId: "rsub-5b", inStock: true, outletId: "outlet-1", extras: drinkExtras },
-  { id: "p19", name: "Cappuccino", price: 2800, categoryId: "rcat-5", subcategoryId: "rsub-5b", inStock: true, outletId: "outlet-1", extras: drinkExtras,
-    variants: [{ id: "v19a", name: "Small", price: 2000 }, { id: "v19b", name: "Regular", price: 2800 }, { id: "v19c", name: "Large", price: 3500 }] },
-  { id: "p20", name: "Mango Smoothie", price: 3500, categoryId: "rcat-5", subcategoryId: "rsub-5a", inStock: true, outletId: "outlet-1" },
-  { id: "p21", name: "Chocolate Cake", price: 4000, categoryId: "rcat-6", inStock: true, outletId: "outlet-1" },
-  { id: "p22", name: "Cheesecake", price: 4500, categoryId: "rcat-6", inStock: true, outletId: "outlet-1" },
+  { id: "p17", name: "Fresh Lemonade", price: 2500, categoryId: "rcat-5", subcategoryId: "rsub-5a", barcode: "LEMON-001", inStock: true, outletId: "outlet-1" },
+  // Scenario: extras only (no variants)
+  { id: "p18", name: "Espresso", price: 2000, categoryId: "rcat-5", subcategoryId: "rsub-5b", barcode: "ESP-001", inStock: true, outletId: "outlet-1", extras: drinkExtras },
+  // Scenario: variants AND extras
+  { id: "p19", name: "Cappuccino", price: 2800, categoryId: "rcat-5", subcategoryId: "rsub-5b", barcode: "CAP-001", inStock: true, outletId: "outlet-1", extras: drinkExtras,
+    variants: [{ id: "v19a", name: "Small", price: 2000, sku: "CAP-S" }, { id: "v19b", name: "Regular", price: 2800, sku: "CAP-R" }, { id: "v19c", name: "Large", price: 3500, sku: "CAP-L" }] },
+  { id: "p20", name: "Mango Smoothie", price: 3500, categoryId: "rcat-5", subcategoryId: "rsub-5a", barcode: "SMOOTH-MNG", inStock: true, outletId: "outlet-1" },
+  { id: "p21", name: "Chocolate Cake", price: 4000, categoryId: "rcat-6", barcode: "CAKE-CHOC", inStock: true, outletId: "outlet-1" },
+  { id: "p22", name: "Cheesecake", price: 4500, categoryId: "rcat-6", barcode: "CAKE-CHSE", inStock: true, outletId: "outlet-1" },
+  // Scenario: many variants, no extras
   { id: "p23", name: "Ice Cream Sundae", price: 3500, categoryId: "rcat-6", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v23a", name: "Single Scoop", price: 2500 }, { id: "v23b", name: "Double Scoop", price: 3500 }, { id: "v23c", name: "Triple Scoop", price: 4500 }] },
-  { id: "p24", name: "House Lager", price: 2500, categoryId: "rcat-7", subcategoryId: "rsub-7a", inStock: true, outletId: "outlet-1" },
-  { id: "p25", name: "IPA Draft", price: 3500, categoryId: "rcat-7", subcategoryId: "rsub-7a", inStock: true, outletId: "outlet-1" },
+    variants: [{ id: "v23a", name: "Single Scoop", price: 2500, sku: "ICE-1" }, { id: "v23b", name: "Double Scoop", price: 3500, sku: "ICE-2" }, { id: "v23c", name: "Triple Scoop", price: 4500, sku: "ICE-3" }] },
+  { id: "p24", name: "House Lager", price: 2500, categoryId: "rcat-7", subcategoryId: "rsub-7a", barcode: "BEER-LAGER", inStock: true, outletId: "outlet-1" },
+  { id: "p25", name: "IPA Draft", price: 3500, categoryId: "rcat-7", subcategoryId: "rsub-7a", barcode: "BEER-IPA", inStock: true, outletId: "outlet-1" },
   { id: "p26", name: "House Red Wine", price: 4500, categoryId: "rcat-7", subcategoryId: "rsub-7b", inStock: true, outletId: "outlet-1",
-    variants: [{ id: "v26a", name: "Glass", price: 4500 }, { id: "v26b", name: "Bottle", price: 18000 }] },
-  { id: "p27", name: "Mojito", price: 6500, categoryId: "rcat-7", subcategoryId: "rsub-7c", inStock: true, outletId: "outlet-1" },
-  { id: "p28", name: "Margarita", price: 7000, categoryId: "rcat-7", subcategoryId: "rsub-7c", inStock: true, outletId: "outlet-1" },
-];
+    variants: [{ id: "v26a", name: "Glass", price: 4500, sku: "WINE-RED-G" }, { id: "v26b", name: "Bottle", price: 18000, sku: "WINE-RED-B" }] },
+  { id: "p27", name: "Mojito", price: 6500, categoryId: "rcat-7", subcategoryId: "rsub-7c", barcode: "CKTL-MOJ", inStock: true, outletId: "outlet-1" },
+  { id: "p28", name: "Margarita", price: 7000, categoryId: "rcat-7", subcategoryId: "rsub-7c", barcode: "CKTL-MARG", inStock: true, outletId: "outlet-1" },
 
 // Pharmacy products (outlet-4)
 const pharmacyProducts: POSProduct[] = [
