@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { posProducts, posCategories, type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, ScanLine, X } from "lucide-react";
+import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 
 export default function ProductGrid() {
