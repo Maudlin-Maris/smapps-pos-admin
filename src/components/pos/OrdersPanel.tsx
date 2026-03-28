@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
-  Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList
+  Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
+  ChevronLeft, Users
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
