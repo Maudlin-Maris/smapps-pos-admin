@@ -20,7 +20,7 @@ interface Props {
 
 type View = "order" | "browse";
 
-export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props) {
+export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, orderId }: Props) {
   const { currentOutlet, addItemsToOrder, removeItemFromOrder, orders } = usePOS();
   const [view, setView] = useState<View>("order");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
