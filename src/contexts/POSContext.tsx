@@ -132,7 +132,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
     if (quantity <= 0) {
       setCart(prev => prev.filter(i => i.id !== itemId));
     } else {
-      setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity, totalPrice: i.unitPrice * quantity } : i));
+      setCart(prev => prev.map(i => i.id === itemId ? { ...i, quantity, totalPrice: (i.unitPrice + i.extras.reduce((s, e) => s + e.price * e.quantity, 0)) * quantity } : i));
     }
   }, []);
 
