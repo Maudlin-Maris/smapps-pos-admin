@@ -426,7 +426,7 @@ export const mockOrders: POSOrder[] = [
   },
   {
     id: "ord-2", orderNumber: "#002", status: "in_progress", type: "dine_in", tableNumber: "VIP Lounge 1",
-    locationName: "VIP Lounge 1", customerName: "VIP Lounge 1", outletId: "outlet-1", cashierId: "c2", transferredToCashierId: "c1",
+    locationName: "VIP 1", customerName: "VIP Lounge 1", outletId: "outlet-1", cashierId: "c2", transferredToCashierId: "c1",
     items: [
       { id: "ci-4", productId: "p6", productName: "Margherita Pizza", variantId: "v6c", variantName: "Large 16\"", extras: [], quantity: 1, unitPrice: 11000, totalPrice: 11000 },
       { id: "ci-5", productId: "p7", productName: "Pepperoni Pizza", variantId: "v7b", variantName: "Medium 12\"", extras: [], quantity: 1, unitPrice: 8500, totalPrice: 8500 },
@@ -453,6 +453,86 @@ export const mockOrders: POSOrder[] = [
     ],
     payments: [], totalAmount: 13000, paidAmount: 0,
     createdAt: new Date(Date.now() - 10 * 60000), updatedAt: new Date(Date.now() - 10 * 60000),
+  },
+  {
+    id: "ord-5", orderNumber: "#005", status: "served", type: "dine_in", tableNumber: "Outdoor 3",
+    locationName: "Outdoor 3", customerName: "Outdoor 3", outletId: "outlet-1", cashierId: "c1",
+    items: [
+      { id: "ci-10", productId: "p3", productName: "Wagyu Burger", extras: [], quantity: 1, unitPrice: 15000, totalPrice: 15000 },
+      { id: "ci-11", productId: "p26", productName: "House Red Wine", variantId: "v26b", variantName: "Bottle", extras: [], quantity: 1, unitPrice: 18000, totalPrice: 18000 },
+    ],
+    payments: [{ method: "card", amount: 20000 }], totalAmount: 33000, paidAmount: 20000,
+    createdAt: new Date(Date.now() - 60 * 60000), updatedAt: new Date(Date.now() - 25 * 60000),
+  },
+  {
+    id: "ord-6", orderNumber: "#006", status: "paid", type: "takeaway",
+    customerName: "Emeka O.", outletId: "outlet-1", cashierId: "c2",
+    items: [
+      { id: "ci-12", productId: "p8", productName: "BBQ Chicken Pizza", extras: [], quantity: 1, unitPrice: 9500, totalPrice: 9500 },
+      { id: "ci-13", productId: "p17", productName: "Fresh Lemonade", extras: [], quantity: 1, unitPrice: 2500, totalPrice: 2500 },
+    ],
+    payments: [{ method: "cash", amount: 12000 }], totalAmount: 12000, paidAmount: 12000,
+    createdAt: new Date(Date.now() - 90 * 60000), updatedAt: new Date(Date.now() - 80 * 60000),
+  },
+  {
+    id: "ord-7", orderNumber: "#007", status: "in_progress", type: "dine_in", tableNumber: "Rooftop 2",
+    locationName: "Rooftop 2", customerName: "Rooftop 2", outletId: "outlet-1", cashierId: "c3",
+    items: [
+      { id: "ci-14", productId: "p19", productName: "Cappuccino", variantId: "v19c", variantName: "Large", extras: [{ id: "ex-d1", name: "Extra Shot", price: 500, quantity: 1 }], quantity: 2, unitPrice: 4000, totalPrice: 8000 },
+      { id: "ci-15", productId: "p21", productName: "Chocolate Cake", extras: [], quantity: 1, unitPrice: 4000, totalPrice: 4000 },
+    ],
+    payments: [], totalAmount: 12000, paidAmount: 0,
+    createdAt: new Date(Date.now() - 20 * 60000), updatedAt: new Date(Date.now() - 12 * 60000),
+  },
+  {
+    id: "ord-8", orderNumber: "#008", status: "open", type: "dine_in", tableNumber: "Bar Counter 1",
+    locationName: "Bar Counter 1", customerName: "Bar Counter 1", outletId: "outlet-1", cashierId: "c1",
+    items: [
+      { id: "ci-16", productId: "p24", productName: "House Lager", extras: [], quantity: 3, unitPrice: 2500, totalPrice: 7500 },
+      { id: "ci-17", productId: "p28", productName: "Margarita", extras: [], quantity: 1, unitPrice: 7000, totalPrice: 7000 },
+    ],
+    payments: [], totalAmount: 14500, paidAmount: 0,
+    createdAt: new Date(Date.now() - 8 * 60000), updatedAt: new Date(Date.now() - 8 * 60000),
+  },
+  {
+    id: "ord-9", orderNumber: "#009", status: "open", type: "delivery",
+    customerName: "Funke A.", outletId: "outlet-1", cashierId: "c2", transferredToCashierId: "c1",
+    items: [
+      { id: "ci-18", productId: "p1", productName: "Classic Beef Burger", variantId: "v1a", variantName: "Single", extras: [{ id: "ex-3", name: "Avocado", price: 1000, quantity: 1 }], quantity: 1, unitPrice: 6500, totalPrice: 6500 },
+      { id: "ci-19", productId: "p20", productName: "Mango Smoothie", extras: [], quantity: 1, unitPrice: 3500, totalPrice: 3500 },
+    ],
+    payments: [{ method: "transfer", amount: 5000 }], totalAmount: 10000, paidAmount: 5000,
+    createdAt: new Date(Date.now() - 35 * 60000), updatedAt: new Date(Date.now() - 30 * 60000),
+  },
+  {
+    id: "ord-10", orderNumber: "#010", status: "paid", type: "dine_in", tableNumber: "Private Dining 1",
+    locationName: "Private Dining 1", customerName: "Private Dining 1", outletId: "outlet-1", cashierId: "c1",
+    items: [
+      { id: "ci-20", productId: "p4", productName: "Truffle Burger", extras: [{ id: "ex-1", name: "Extra Cheese", price: 500, quantity: 1 }], quantity: 2, unitPrice: 13000, totalPrice: 26000 },
+      { id: "ci-21", productId: "p10", productName: "Caesar Salad", variantId: "v10b", variantName: "Large", extras: [], quantity: 2, unitPrice: 6500, totalPrice: 13000 },
+      { id: "ci-22", productId: "p26", productName: "House Red Wine", variantId: "v26b", variantName: "Bottle", extras: [], quantity: 2, unitPrice: 18000, totalPrice: 36000 },
+    ],
+    payments: [{ method: "card", amount: 75000 }], totalAmount: 75000, paidAmount: 75000,
+    createdAt: new Date(Date.now() - 120 * 60000), updatedAt: new Date(Date.now() - 100 * 60000),
+  },
+  {
+    id: "ord-11", orderNumber: "#011", status: "open", type: "dine_in", tableNumber: "VIP 3",
+    locationName: "VIP 3", customerName: "VIP 3", outletId: "outlet-1", cashierId: "c3", transferredToCashierId: "c1",
+    items: [
+      { id: "ci-23", productId: "p23", productName: "Ice Cream Sundae", variantId: "v23c", variantName: "Triple Scoop", extras: [], quantity: 3, unitPrice: 4500, totalPrice: 13500 },
+    ],
+    payments: [], totalAmount: 13500, paidAmount: 0,
+    createdAt: new Date(Date.now() - 5 * 60000), updatedAt: new Date(Date.now() - 5 * 60000),
+  },
+  {
+    id: "ord-12", orderNumber: "#012", status: "in_progress", type: "dine_in", tableNumber: "Table 20",
+    locationName: "Table 20", customerName: "Table 20", outletId: "outlet-1", cashierId: "c2",
+    items: [
+      { id: "ci-24", productId: "p15", productName: "Chicken Wings", variantId: "v15b", variantName: "12pc", extras: [], quantity: 2, unitPrice: 9800, totalPrice: 19600 },
+      { id: "ci-25", productId: "p14", productName: "Mozzarella Sticks", extras: [], quantity: 1, unitPrice: 4200, totalPrice: 4200 },
+    ],
+    payments: [], totalAmount: 23800, paidAmount: 0,
+    createdAt: new Date(Date.now() - 18 * 60000), updatedAt: new Date(Date.now() - 14 * 60000),
   },
 ];
 
