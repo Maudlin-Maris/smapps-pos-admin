@@ -77,6 +77,11 @@ export interface POSLocation {
   outletId: string;
 }
 
+export interface AppliedFee {
+  name: string;
+  amount: number;
+}
+
 export interface POSOrder {
   id: string;
   orderNumber: string;
@@ -92,6 +97,8 @@ export interface POSOrder {
   tipAmount?: number;
   discountAmount?: number;
   discountName?: string;
+  appliedFees?: AppliedFee[];
+  feesTotal?: number;
   createdAt: Date;
   updatedAt: Date;
   outletId: string;
@@ -109,6 +116,15 @@ export interface POSCashier {
   role: "cashier" | "manager";
 }
 
+export interface OutletFee {
+  id: string;
+  name: string;
+  type: "percentage" | "fixed";
+  value: number;
+  appliesTo?: OrderType[]; // if set, only apply for these order types
+  enabled: boolean;
+}
+
 export interface POSOutlet {
   id: string;
   name: string;
@@ -116,6 +132,7 @@ export interface POSOutlet {
   email?: string;
   phone?: string;
   address?: string;
+  fees?: OutletFee[];
 }
 
 // --- Preconfigured Discounts ---
@@ -418,12 +435,53 @@ export const mockOrders: POSOrder[] = [
 ];
 
 export const posOutlets: POSOutlet[] = [
-  { id: "outlet-1", name: "Downtown Flagship", businessType: "restaurant", email: "downtown@flagship.ng", phone: "+234 801 234 5678", address: "12 Victoria Island Way, Lagos" },
-  { id: "outlet-2", name: "Mall Branch", businessType: "retail", email: "mall@branch.ng", phone: "+234 802 345 6789", address: "Shop 45, Ikeja City Mall, Lagos" },
-  { id: "outlet-3", name: "Airport Kiosk", businessType: "restaurant", email: "airport@kiosk.ng", phone: "+234 803 456 7890", address: "Terminal 2, MM Int'l Airport, Lagos" },
-  { id: "outlet-4", name: "Suburban Pharmacy", businessType: "pharmacy", email: "info@suburbanpharmacy.ng", phone: "+234 804 567 8901", address: "22 Lekki Phase 1, Lagos" },
-  { id: "outlet-5", name: "Glow Beauty Salon", businessType: "salon", email: "hello@glowbeauty.ng", phone: "+234 805 678 9012", address: "8 Admiralty Way, Lekki, Lagos" },
-  { id: "outlet-7", name: "FreshMart Grocery", businessType: "grocery", email: "orders@freshmart.ng", phone: "+234 806 789 0123", address: "Plot 5, Allen Avenue, Ikeja, Lagos" },
+  {
+    id: "outlet-1", name: "Downtown Flagship", businessType: "restaurant",
+    email: "downtown@flagship.ng", phone: "+234 801 234 5678", address: "12 Victoria Island Way, Lagos",
+    fees: [
+      { id: "fee-vat", name: "VAT", type: "percentage", value: 7.5, enabled: true },
+      { id: "fee-svc", name: "Service Charge", type: "percentage", value: 10, appliesTo: ["dine_in"], enabled: true },
+      { id: "fee-del", name: "Delivery Fee", type: "fixed", value: 1500, appliesTo: ["delivery"], enabled: true },
+    ],
+  },
+  {
+    id: "outlet-2", name: "Mall Branch", businessType: "retail",
+    email: "mall@branch.ng", phone: "+234 802 345 6789", address: "Shop 45, Ikeja City Mall, Lagos",
+    fees: [
+      { id: "fee-vat2", name: "VAT", type: "percentage", value: 7.5, enabled: true },
+      { id: "fee-del2", name: "Delivery Fee", type: "fixed", value: 2000, appliesTo: ["delivery"], enabled: true },
+    ],
+  },
+  {
+    id: "outlet-3", name: "Airport Kiosk", businessType: "restaurant",
+    email: "airport@kiosk.ng", phone: "+234 803 456 7890", address: "Terminal 2, MM Int'l Airport, Lagos",
+    fees: [
+      { id: "fee-vat3", name: "VAT", type: "percentage", value: 7.5, enabled: true },
+      { id: "fee-svc3", name: "Service Charge", type: "percentage", value: 5, appliesTo: ["dine_in"], enabled: true },
+    ],
+  },
+  {
+    id: "outlet-4", name: "Suburban Pharmacy", businessType: "pharmacy",
+    email: "info@suburbanpharmacy.ng", phone: "+234 804 567 8901", address: "22 Lekki Phase 1, Lagos",
+    fees: [
+      { id: "fee-del4", name: "Delivery Fee", type: "fixed", value: 1000, appliesTo: ["delivery"], enabled: true },
+    ],
+  },
+  {
+    id: "outlet-5", name: "Glow Beauty Salon", businessType: "salon",
+    email: "hello@glowbeauty.ng", phone: "+234 805 678 9012", address: "8 Admiralty Way, Lekki, Lagos",
+    fees: [
+      { id: "fee-vat5", name: "VAT", type: "percentage", value: 7.5, enabled: true },
+    ],
+  },
+  {
+    id: "outlet-7", name: "FreshMart Grocery", businessType: "grocery",
+    email: "orders@freshmart.ng", phone: "+234 806 789 0123", address: "Plot 5, Allen Avenue, Ikeja, Lagos",
+    fees: [
+      { id: "fee-del7", name: "Delivery Fee", type: "fixed", value: 1500, appliesTo: ["delivery"], enabled: true },
+      { id: "fee-bag", name: "Bag Charge", type: "fixed", value: 100, enabled: true },
+    ],
+  },
 ];
 
 /** Get allowed order types for a business */

@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 
 import {
   type POSCashier, type POSOrder, type POSCartItem, type POSOutlet,
-  type OrderType, type PaymentEntry, type OrderStatus,
+  type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee,
   posCashiers, mockOrders, posOutlets,
 } from "@/data/posData";
 
@@ -36,7 +36,7 @@ interface POSContextType {
 
   // Orders
   orders: POSOrder[];
-  createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string) => POSOrder;
+  createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number) => POSOrder;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   addItemsToOrder: (orderId: string, items: POSCartItem[]) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
@@ -148,7 +148,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const cartTotal = cart.reduce((sum, i) => sum + i.totalPrice, 0);
 
-  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string) => {
+  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number) => {
     const num = orderCounter;
     setOrderCounter(n => n + 1);
     const order: POSOrder = {
@@ -161,11 +161,13 @@ export function POSProvider({ children }: { children: ReactNode }) {
       locationName: tableNumber,
       customerName: customerName || (type === "dine_in" && tableNumber ? tableNumber : undefined),
       payments: [],
-      totalAmount: cartTotal - (discountAmount || 0),
+      totalAmount: cartTotal - (discountAmount || 0) + (feesTotal || 0),
       paidAmount: 0,
       tipAmount,
       discountAmount,
       discountName,
+      appliedFees,
+      feesTotal,
       notes,
       createdAt: new Date(),
       updatedAt: new Date(),

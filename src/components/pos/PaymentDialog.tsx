@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
-import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount } from "@/data/posData";
-import { getFeatures } from "@/data/businessTypes";
+import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
+import { getFeatures, getBusinessType } from "@/data/businessTypes";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -55,9 +55,53 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
+  const businessType = currentOutlet ? getBusinessType(currentOutlet.businessType) : null;
   const allowedOrderTypes = allowedTypes;
   const outletLocations = currentOutlet ? posLocations.filter(l => l.outletId === currentOutlet.id) : [];
   const showLocationPicker = features?.hasDineIn && selectedOrderType === "dine_in";
+
+  // Dynamic notes placeholder based on business type
+  const notesPlaceholder = useMemo(() => {
+    if (!currentOutlet) return "Add any special instructions or notes...";
+    switch (currentOutlet.businessType) {
+      case "restaurant": return "e.g. Nut allergy, no onions, birthday celebration...";
+      case "pharmacy": return "e.g. Prescription notes, dosage instructions, patient info...";
+      case "salon": case "barber": return "e.g. Preferred stylist, hair type, skin sensitivity...";
+      case "grocery": case "supermarket": return "e.g. Ripe produce only, substitute preferences...";
+      case "clothing": case "hair_seller": return "e.g. Gift wrap requested, size exchange policy...";
+      case "electronics": return "e.g. Warranty registration, setup assistance needed...";
+      case "wine_store": return "e.g. Gift packaging, temperature notes...";
+      default: return "Add any special instructions or notes...";
+    }
+  }, [currentOutlet]);
+
+  // Calculate applicable fees
+  const applicableFees = useMemo((): AppliedFee[] => {
+    if (!currentOutlet?.fees) return [];
+    const afterDiscount = subtotal - ((() => {
+      if (selectedDiscount) {
+        return selectedDiscount.type === "percentage"
+          ? Math.round(subtotal * selectedDiscount.value / 100)
+          : Math.min(selectedDiscount.value, subtotal);
+      }
+      if (customDiscountAmount) {
+        const val = parseFloat(customDiscountAmount) || 0;
+        return customDiscountType === "percentage"
+          ? Math.round(subtotal * val / 100)
+          : Math.min(val, subtotal);
+      }
+      return 0;
+    })());
+    return currentOutlet.fees
+      .filter(f => f.enabled)
+      .filter(f => !f.appliesTo || f.appliesTo.includes(selectedOrderType))
+      .map(f => ({
+        name: f.name,
+        amount: f.type === "percentage" ? Math.round(afterDiscount * f.value / 100) : f.value,
+      }));
+  }, [currentOutlet, selectedOrderType, subtotal, selectedDiscount, customDiscountAmount, customDiscountType]);
+
+  const feesTotal = applicableFees.reduce((s, f) => s + f.amount, 0);
 
   // Calculate discount
   const discountAmount = useMemo(() => {
@@ -83,14 +127,15 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
     return parseFloat(tipAmount) || 0;
   }, [tipPreset, tipAmount, subtotal]);
 
-  const total = subtotal - discountAmount + tipValue;
+  const total = subtotal - discountAmount + feesTotal + tipValue;
 
-  // Set default order type when outlet changes
-  useState(() => {
-    if (allowedOrderTypes.length > 0 && !allowedOrderTypes.find(t => t.id === selectedOrderType)) {
-      setSelectedOrderType(allowedOrderTypes[0].id);
+  // Auto-select first order type
+  const initializedRef = useMemo(() => {
+    if (allowedOrderTypes.length > 0) {
+      return allowedOrderTypes[0].id;
     }
-  });
+    return "walk_in";
+  }, [allowedOrderTypes]);
 
   const reset = () => {
     setStep("type");
@@ -123,7 +168,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
   const handleProceedToPayment = () => {
     if (!payNow) {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
       setStep("complete");
       return;
@@ -137,7 +182,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
       addPayment(order.id, { method: paymentMethod, amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
@@ -154,7 +199,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
@@ -264,11 +309,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Notes / Allergies (optional)</label>
+                <label className="text-sm font-medium">Notes & Special Instructions (optional)</label>
                 <Textarea
                   value={customerNotes}
                   onChange={e => setCustomerNotes(e.target.value)}
-                  placeholder="e.g. Nut allergy, no onions, birthday celebration..."
+                  placeholder={notesPlaceholder}
                   className="h-16 text-sm resize-none"
                 />
               </div>
@@ -434,6 +479,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                     <span>-{formatNaira(discountAmount)}</span>
                   </div>
                 )}
+                {applicableFees.map((fee, i) => (
+                  <div key={i} className="flex justify-between text-sm text-muted-foreground">
+                    <span>{fee.name}</span>
+                    <span>+{formatNaira(fee.amount)}</span>
+                  </div>
+                ))}
                 {tipValue > 0 && (
                   <div className="flex justify-between text-sm text-primary">
                     <span>Tip</span>
@@ -492,7 +543,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
                 <p className="text-sm text-muted-foreground">Amount Due</p>
                 <p className="text-3xl font-bold text-foreground">{formatNaira(total)}</p>
                 {discountAmount > 0 && (
-                  <p className="text-xs text-[hsl(var(--success))] mt-1">Discount applied: -{formatNaira(discountAmount)}</p>
+                  <p className="text-xs text-[hsl(var(--success))] mt-1">Discount: -{formatNaira(discountAmount)}</p>
+                )}
+                {feesTotal > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Fees: {applicableFees.map(f => `${f.name} ${formatNaira(f.amount)}`).join(", ")}
+                  </p>
                 )}
                 {tipValue > 0 && (
                   <p className="text-xs text-primary mt-0.5">Includes tip: {formatNaira(tipValue)}</p>

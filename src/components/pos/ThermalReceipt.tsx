@@ -108,6 +108,12 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
             <span>-{formatNaira(discount)}</span>
           </div>
         )}
+        {order.appliedFees && order.appliedFees.map((fee, i) => (
+          <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>{fee.name}</span>
+            <span>{formatNaira(fee.amount)}</span>
+          </div>
+        ))}
         {tip > 0 && (
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>Tip</span>
