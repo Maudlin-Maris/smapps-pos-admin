@@ -410,7 +410,49 @@ export default function OrdersPanel() {
                     </div>
                   )}
 
-                  {/* Actions */}
+                  {/* Transfer to another cashier */}
+                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold flex items-center gap-1.5">
+                        <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer Order
+                      </p>
+                      <div className="flex gap-2">
+                        <Select value={transferTarget} onValueChange={setTransferTarget}>
+                          <SelectTrigger className="h-9 flex-1">
+                            <SelectValue placeholder="Select cashier..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {posCashiers
+                              .filter(c => c.id !== selectedOrder.cashierId)
+                              .map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!transferTarget}
+                          onClick={() => {
+                            if (transferTarget) {
+                              transferOrder(selectedOrder.id, transferTarget);
+                              setSelectedOrder({ ...selectedOrder, transferredToCashierId: transferTarget });
+                              setTransferTarget("");
+                            }
+                          }}
+                        >
+                          Transfer
+                        </Button>
+                      </div>
+                      {selectedOrder.transferredToCashierId && (
+                        <p className="text-xs text-muted-foreground">
+                          Currently transferred to: <span className="font-medium text-foreground">
+                            {posCashiers.find(c => c.id === selectedOrder.transferredToCashierId)?.name || "Unknown"}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  )
                   <div className="flex flex-wrap gap-2">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
