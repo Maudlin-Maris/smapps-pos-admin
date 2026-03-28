@@ -445,6 +445,15 @@ export const mockOrders: POSOrder[] = [
     payments: [{ method: "card", amount: 9200 }], totalAmount: 9200, paidAmount: 9200,
     createdAt: new Date(Date.now() - 15 * 60000), updatedAt: new Date(Date.now() - 5 * 60000),
   },
+  {
+    id: "ord-4", orderNumber: "#004", status: "open", type: "dine_in", tableNumber: "Table 12",
+    locationName: "Table 12", customerName: "Table 12", outletId: "outlet-1", cashierId: "c3",
+    items: [
+      { id: "ci-9", productId: "p27", productName: "Mojito", extras: [], quantity: 2, unitPrice: 6500, totalPrice: 13000 },
+    ],
+    payments: [], totalAmount: 13000, paidAmount: 0,
+    createdAt: new Date(Date.now() - 10 * 60000), updatedAt: new Date(Date.now() - 10 * 60000),
+  },
 ];
 
 export const posOutlets: POSOutlet[] = [
