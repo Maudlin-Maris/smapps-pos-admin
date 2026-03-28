@@ -42,6 +42,7 @@ interface POSContextType {
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
   voidOrder: (orderId: string) => void;
+  transferOrder: (orderId: string, toCashierId: string) => void;
 
   // UI state
   orderType: OrderType;
@@ -260,12 +261,16 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "voided" as OrderStatus, updatedAt: new Date() } : o));
   }, []);
 
+  const transferOrder = useCallback((orderId: string, toCashierId: string) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, transferredToCashierId: toCashierId, updatedAt: new Date() } : o));
+  }, []);
+
   return (
     <POSContext.Provider value={{
       authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentOutlet, setCurrentOutlet, availableOutlets,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
-      orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder,
+      orders, createOrder, updateOrderStatus, addItemsToOrder, mergeOrders, addPayment, voidOrder, transferOrder,
       orderType, setOrderType,
     }}>
       {children}

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
-  ChevronLeft, Users
+  ChevronLeft, Users, ArrowRightLeft, Filter
 } from "lucide-react";
 import PaymentDialog from "./PaymentDialog";
 import MergeOrderDialog from "./MergeOrderDialog";
@@ -28,6 +28,7 @@ const statusConfig: Record<OrderStatus, { label: string; color: string; icon: Re
 };
 
 type OrderGroup = "my_orders" | "transferred" | "queued" | "all" | "by_location";
+type PaymentFilter = "all" | "paid" | "unpaid" | "incomplete";
 
 interface LocationSummary {
   locationName: string;
@@ -37,15 +38,17 @@ interface LocationSummary {
 }
 
 export default function OrdersPanel() {
-  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet } = usePOS();
+  const { orders, updateOrderStatus, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
+  const [transferTarget, setTransferTarget] = useState<string>("");
 
   const cashierId = currentCashier?.id || "";
 
@@ -99,9 +102,17 @@ export default function OrdersPanel() {
     }
   }, [group, myOrders, transferredOrders, queuedOrders, orders, selectedLocationName]);
 
-  // Apply search filter
+  // Apply search + payment filter
   const filtered = useMemo(() => {
     let list = baseList;
+    // Payment filter
+    if (paymentFilter === "paid") {
+      list = list.filter(o => o.status === "paid");
+    } else if (paymentFilter === "unpaid") {
+      list = list.filter(o => o.paidAmount === 0 && o.status !== "paid" && o.status !== "voided");
+    } else if (paymentFilter === "incomplete") {
+      list = list.filter(o => o.paidAmount > 0 && o.paidAmount < o.totalAmount && o.status !== "paid");
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       list = list.filter(o =>
@@ -110,7 +121,7 @@ export default function OrdersPanel() {
       );
     }
     return list;
-  }, [baseList, searchQuery]);
+  }, [baseList, searchQuery, paymentFilter]);
 
   const handleAddItemsToOrder = (orderId: string) => {
     if (cart.length === 0) return;
@@ -144,7 +155,7 @@ export default function OrdersPanel() {
           {groups.map(g => (
             <button
               key={g.id}
-              onClick={() => { setGroup(g.id); setSelectedLocationName(null); }}
+              onClick={() => { setGroup(g.id); setSelectedLocationName(null); setPaymentFilter("all"); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                 group === g.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
@@ -171,54 +182,70 @@ export default function OrdersPanel() {
           </button>
         )}
 
-        {/* Search (hidden on location cards view) */}
+        {/* Search & payment filter (hidden on location cards view) */}
         {!showLocationCards && (
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search order #..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="h-8 pl-8 text-xs"
-              />
+          <>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search order #..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
             </div>
-          </div>
+            <div className="flex gap-1">
+              {([
+                { id: "all", label: "All" },
+                { id: "paid", label: "Paid" },
+                { id: "unpaid", label: "Unpaid" },
+                { id: "incomplete", label: "Incomplete" },
+              ] as { id: PaymentFilter; label: string }[]).map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setPaymentFilter(f.id)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                    paymentFilter === f.id
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       <ScrollArea className="flex-1">
         {showLocationCards ? (
           /* Location summary cards */
-          <div className="p-2 space-y-1.5">
+          <div className="p-2 grid grid-cols-2 gap-2">
             {locationSummaries.map(loc => (
               <button
                 key={loc.locationName}
                 onClick={() => setSelectedLocationName(loc.locationName)}
-                className="w-full text-left p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
+                className="text-left p-3 rounded-xl border border-border bg-card hover:border-primary/30 transition-all"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-primary shrink-0" />
-                      <span className="font-semibold text-sm text-foreground">{loc.locationName}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
-                      <Users className="w-3 h-3" />
-                      <span>{loc.staffNames.join(", ")}</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold">{formatNaira(loc.totalValue)}</p>
-                    <Badge variant="secondary" className="text-[10px] mt-1">
-                      {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
-                    </Badge>
-                  </div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="font-semibold text-xs text-foreground truncate">{loc.locationName}</span>
+                </div>
+                <p className="text-base font-bold text-foreground">{formatNaira(loc.totalValue)}</p>
+                <Badge variant="secondary" className="text-[10px] mt-1.5">
+                  {loc.orderCount} order{loc.orderCount !== 1 ? "s" : ""}
+                </Badge>
+                <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
+                  <Users className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{loc.staffNames.join(", ")}</span>
                 </div>
               </button>
             ))}
             {locationSummaries.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="col-span-2 text-center py-12 text-muted-foreground">
                 <MapPin className="w-8 h-8 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">No orders at any location</p>
               </div>
@@ -380,6 +407,50 @@ export default function OrdersPanel() {
                           <SelectItem value="served">Served</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                  )}
+
+                  {/* Transfer to another cashier */}
+                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold flex items-center gap-1.5">
+                        <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer Order
+                      </p>
+                      <div className="flex gap-2">
+                        <Select value={transferTarget} onValueChange={setTransferTarget}>
+                          <SelectTrigger className="h-9 flex-1">
+                            <SelectValue placeholder="Select cashier..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {posCashiers
+                              .filter(c => c.id !== selectedOrder.cashierId)
+                              .map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!transferTarget}
+                          onClick={() => {
+                            if (transferTarget) {
+                              transferOrder(selectedOrder.id, transferTarget);
+                              setSelectedOrder({ ...selectedOrder, transferredToCashierId: transferTarget });
+                              setTransferTarget("");
+                            }
+                          }}
+                        >
+                          Transfer
+                        </Button>
+                      </div>
+                      {selectedOrder.transferredToCashierId && (
+                        <p className="text-xs text-muted-foreground">
+                          Currently transferred to: <span className="font-medium text-foreground">
+                            {posCashiers.find(c => c.id === selectedOrder.transferredToCashierId)?.name || "Unknown"}
+                          </span>
+                        </p>
+                      )}
                     </div>
                   )}
 
