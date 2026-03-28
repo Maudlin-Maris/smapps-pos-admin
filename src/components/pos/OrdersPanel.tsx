@@ -452,7 +452,9 @@ export default function OrdersPanel() {
                         </p>
                       )}
                     </div>
-                  )
+                  )}
+
+                  {/* Actions */}
                   <div className="flex flex-wrap gap-2">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
