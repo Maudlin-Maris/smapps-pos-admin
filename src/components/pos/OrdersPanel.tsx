@@ -28,6 +28,7 @@ const statusConfig: Record<OrderStatus, { label: string; color: string; icon: Re
 };
 
 type OrderGroup = "my_orders" | "transferred" | "queued" | "all" | "by_location";
+type PaymentFilter = "all" | "paid" | "unpaid" | "incomplete";
 
 interface LocationSummary {
   locationName: string;
