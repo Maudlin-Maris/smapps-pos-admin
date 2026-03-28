@@ -26,6 +26,7 @@ export default function AddItemsToOrderDialog({ open, onClose, orderId }: Props)
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
   const [pendingItems, setPendingItems] = useState<POSCartItem[]>([]);
+  const [editingItem, setEditingItem] = useState<{ item: POSCartItem; product: POSProduct } | null>(null);
 
   // Auth dialog state for removing existing items
   const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
