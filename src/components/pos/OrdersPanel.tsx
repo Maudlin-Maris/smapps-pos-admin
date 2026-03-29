@@ -51,11 +51,15 @@ export default function OrdersPanel() {
   const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
 
-  // Keep selectedOrder in sync with live orders data
-  const syncedSelectedOrder = useMemo(() => {
-    if (!selectedOrder) return null;
-    return orders.find(o => o.id === selectedOrder.id) || null;
-  }, [orders, selectedOrder?.id]);
+  // Keep selectedOrder synced with live orders data (for merge/edit updates)
+  useEffect(() => {
+    if (selectedOrder) {
+      const updated = orders.find(o => o.id === selectedOrder.id);
+      if (updated && updated !== selectedOrder) setSelectedOrder(updated);
+      else if (!updated) setSelectedOrder(null);
+    }
+  }, [orders]);
+
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
