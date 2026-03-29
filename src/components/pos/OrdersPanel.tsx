@@ -476,7 +476,7 @@ export default function OrdersPanel() {
                           <span>{item.quantity}× {item.productName}</span>
                           {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
                           {item.extras.length > 0 && (
-                            <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
+                            <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
