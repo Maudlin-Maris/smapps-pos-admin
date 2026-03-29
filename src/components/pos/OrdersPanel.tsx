@@ -628,7 +628,7 @@ export default function OrdersPanel() {
                         <Button size="sm" variant="outline" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
                           <Plus className="w-4 h-4 mr-1" /> Add / Remove Items
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); setSelectedOrder(null); }}>
+                        <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); }}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
                         </Button>
                       </>
