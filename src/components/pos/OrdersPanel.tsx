@@ -657,8 +657,16 @@ export default function OrdersPanel() {
           setShowMerge(false);
           setMergeSourceId(null);
           if (mergedOrderId) {
-            const updated = orders.find(o => o.id === mergedOrderId);
-            if (updated) setSelectedOrder(updated);
+            // Use setTimeout to let state updates propagate
+            setTimeout(() => {
+              setSelectedOrder(prev => {
+                if (prev?.id === mergedOrderId) {
+                  const updated = orders.find(o => o.id === mergedOrderId);
+                  return updated || prev;
+                }
+                return prev;
+              });
+            }, 50);
           }
         }}
         targetOrderId={mergeSourceId}
