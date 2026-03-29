@@ -663,21 +663,9 @@ export default function OrdersPanel() {
       {/* Merge dialog */}
       <MergeOrderDialog
         open={showMerge}
-        onClose={(mergedOrderId) => {
+        onClose={() => {
           setShowMerge(false);
           setMergeSourceId(null);
-          if (mergedOrderId) {
-            // Use setTimeout to let state updates propagate
-            setTimeout(() => {
-              setSelectedOrder(prev => {
-                if (prev?.id === mergedOrderId) {
-                  const updated = orders.find(o => o.id === mergedOrderId);
-                  return updated || prev;
-                }
-                return prev;
-              });
-            }, 50);
-          }
         }}
         targetOrderId={mergeSourceId}
       />
