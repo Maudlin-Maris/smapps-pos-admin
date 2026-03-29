@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import { formatNaira } from "@/lib/currency";
-import { Merge, ChevronLeft, Minus, Plus } from "lucide-react";
+import { Merge, ChevronLeft, Minus, Plus, AlertTriangle, Check } from "lucide-react";
 import type { POSCartItem } from "@/data/posData";
 
 interface Props {
