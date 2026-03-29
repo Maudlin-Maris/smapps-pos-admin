@@ -195,6 +195,71 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
               </div>
             </ScrollArea>
           </>
+        ) : showConfirmation ? (
+          // Step 3: Confirm merge
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleBack}>
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                Confirm merge
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-1">
+              <div className="flex items-center gap-2 text-sm">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                <span className="text-muted-foreground">
+                  {totalQtySelected} item{totalQtySelected !== 1 ? "s" : ""} will be moved from{" "}
+                  <span className="font-semibold text-foreground">{sourceOrder?.orderNumber}</span> to{" "}
+                  <span className="font-semibold text-foreground">{targetOrder?.orderNumber}</span>
+                </span>
+              </div>
+            </div>
+
+            <ScrollArea className="max-h-[300px]">
+              <div className="space-y-1">
+                {selectedItems.map(sel => {
+                  const item = sourceOrder?.items.find(i => i.id === sel.itemId);
+                  if (!item) return null;
+                  const unitPrice = item.totalPrice / item.quantity;
+                  return (
+                    <div key={sel.itemId} className="flex items-center justify-between p-3 rounded-xl border border-border">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{item.productName}</p>
+                        {item.variantName && (
+                          <p className="text-xs text-muted-foreground">{item.variantName}</p>
+                        )}
+                        {item.extras.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <p className="text-sm font-semibold">×{sel.quantity}</p>
+                        <p className="text-xs text-muted-foreground">{formatNaira(unitPrice * sel.quantity)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Total</span>
+                <span className="font-semibold">{formatNaira(mergeTotal)}</span>
+              </div>
+              <Button className="w-full" onClick={handleMerge}>
+                <Check className="w-4 h-4 mr-2" />
+                Confirm merge into {targetOrder?.orderNumber}
+              </Button>
+            </div>
+          </>
         ) : (
           // Step 2: Pick items from source order
           <>
@@ -248,7 +313,6 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
                         </p>
                       </div>
 
-                      {/* Quantity selector (only when selected) */}
                       {isSelected && (
                         <div className="flex items-center gap-1 shrink-0">
                           <Button
@@ -278,26 +342,19 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
               </div>
             </ScrollArea>
 
-            {/* Summary + Confirm */}
+            {/* Summary + Review */}
             <div className="border-t border-border pt-3 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{selectedItems.length} item(s) selected</span>
-                <span className="font-semibold">
-                  {formatNaira(selectedItems.reduce((sum, sel) => {
-                    const item = sourceOrder?.items.find(i => i.id === sel.itemId);
-                    if (!item) return sum;
-                    const unitTotal = item.totalPrice / item.quantity;
-                    return sum + unitTotal * sel.quantity;
-                  }, 0))}
-                </span>
+                <span className="font-semibold">{formatNaira(mergeTotal)}</span>
               </div>
               <Button
                 className="w-full"
                 disabled={selectedItems.length === 0}
-                onClick={handleMerge}
+                onClick={handleProceedToConfirm}
               >
                 <Merge className="w-4 h-4 mr-2" />
-                Merge {selectedItems.length} item(s) into {targetOrder?.orderNumber}
+                Review merge
               </Button>
             </div>
           </>
