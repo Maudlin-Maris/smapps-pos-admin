@@ -138,12 +138,11 @@ export default function ProductGrid() {
   const handleConfirmVariantExtras = (
     variantId: string | undefined,
     variantName: string | undefined,
-    selectedExtras: { id: string; name: string; price: number }[],
+    selectedExtras: { id: string; name: string; price: number; quantity: number }[],
     unitPrice: number
   ) => {
     if (!dialogProduct) return;
-    const extrasWithQty = selectedExtras.map(e => ({ ...e, quantity: 1 }));
-    const extrasTotal = extrasWithQty.reduce((s, e) => s + e.price * e.quantity, 0);
+    const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * e.quantity, 0);
     const total = unitPrice + extrasTotal;
     addToCart({
       productId: dialogProduct.id,
@@ -151,7 +150,7 @@ export default function ProductGrid() {
       categoryId: dialogProduct.categoryId,
       variantId,
       variantName,
-      extras: extrasWithQty,
+      extras: selectedExtras,
       quantity: 1,
       unitPrice: total,
       totalPrice: total,

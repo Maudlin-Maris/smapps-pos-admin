@@ -9,7 +9,7 @@ interface Props {
   product: POSProduct | null;
   open: boolean;
   onClose: () => void;
-  onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number }[], unitPrice: number) => void;
+  onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
   initialVariantId?: string;
   initialExtras?: { id: string; quantity: number }[];
 }
@@ -70,7 +70,7 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm,
     onConfirm(
       variant?.id,
       variant?.name,
-      selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price })),
+      selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price, quantity: extraQuantities[e.id] || 1 })),
       basePrice
     );
     setSelectedVariant(null);
