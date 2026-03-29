@@ -50,6 +50,12 @@ export default function OrdersPanel() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
+
+  // Keep selectedOrder in sync with live orders data
+  const syncedSelectedOrder = useMemo(() => {
+    if (!selectedOrder) return null;
+    return orders.find(o => o.id === selectedOrder.id) || null;
+  }, [orders, selectedOrder?.id]);
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
