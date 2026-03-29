@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import AddItemsToOrderDialog from "./AddItemsToOrderDialog";
 import { formatNaira } from "@/lib/currency";
@@ -50,6 +50,16 @@ export default function OrdersPanel() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
+
+  // Keep selectedOrder synced with live orders data (for merge/edit updates)
+  useEffect(() => {
+    if (selectedOrder) {
+      const updated = orders.find(o => o.id === selectedOrder.id);
+      if (updated && updated !== selectedOrder) setSelectedOrder(updated);
+      else if (!updated) setSelectedOrder(null);
+    }
+  }, [orders]);
+
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMerge, setShowMerge] = useState(false);
   const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
@@ -628,7 +638,7 @@ export default function OrdersPanel() {
                         <Button size="sm" variant="outline" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
                           <Plus className="w-4 h-4 mr-1" /> Add / Remove Items
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); setSelectedOrder(null); }}>
+                        <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); }}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
                         </Button>
                       </>
@@ -651,7 +661,14 @@ export default function OrdersPanel() {
       <PaymentDialog open={!!payOrderId} onClose={() => setPayOrderId(null)} existingOrderId={payOrderId || undefined} />
 
       {/* Merge dialog */}
-      <MergeOrderDialog open={showMerge} onClose={() => { setShowMerge(false); setMergeSourceId(null); }} sourceOrderId={mergeSourceId} />
+      <MergeOrderDialog
+        open={showMerge}
+        onClose={() => {
+          setShowMerge(false);
+          setMergeSourceId(null);
+        }}
+        targetOrderId={mergeSourceId}
+      />
 
       {/* Print Receipt/Docket dialog */}
       <PrintReceiptDialog open={!!printOrder} onClose={() => setPrintOrder(null)} order={printOrder} />
