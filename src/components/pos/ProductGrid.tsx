@@ -150,7 +150,7 @@ export default function ProductGrid() {
       categoryId: dialogProduct.categoryId,
       variantId,
       variantName,
-      extras: extrasWithQty,
+      extras: selectedExtras,
       quantity: 1,
       unitPrice: total,
       totalPrice: total,

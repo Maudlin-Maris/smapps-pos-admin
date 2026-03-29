@@ -112,7 +112,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         categoryId: product.categoryId,
         variantId,
         variantName,
-        extras: extrasWithQty,
+        extras: selectedExtras,
         quantity: 1,
         unitPrice: total,
         totalPrice: total,
