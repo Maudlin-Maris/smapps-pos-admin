@@ -139,8 +139,18 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
 
     setSourceOrderId(null);
     setSelectedItems([]);
+    setShowConfirmation(false);
     onClose(targetOrderId);
   };
+
+  const mergeTotal = selectedItems.reduce((sum, sel) => {
+    const item = sourceOrder?.items.find(i => i.id === sel.itemId);
+    if (!item) return sum;
+    const unitTotal = item.totalPrice / item.quantity;
+    return sum + unitTotal * sel.quantity;
+  }, 0);
+
+  const totalQtySelected = selectedItems.reduce((sum, s) => sum + s.quantity, 0);
 
   const allSelected = sourceOrder ? selectedItems.length === sourceOrder.items.length : false;
 
