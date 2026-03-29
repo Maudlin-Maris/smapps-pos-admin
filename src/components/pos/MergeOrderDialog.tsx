@@ -119,6 +119,11 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
 
     if (itemsToMerge.length > 0) {
       addItemsToOrder(targetOrderId, itemsToMerge);
+      const totalQty = selectedItems.reduce((sum, s) => sum + s.quantity, 0);
+      toast({
+        title: "Order merged",
+        description: `${totalQty} item${totalQty !== 1 ? "s" : ""} merged into ${targetOrder?.orderNumber}`,
+      });
     }
 
     setSourceOrderId(null);
