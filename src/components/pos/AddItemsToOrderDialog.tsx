@@ -100,7 +100,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         ...i,
         variantId,
         variantName,
-        extras: extrasWithQty,
+        extras: selectedExtras,
         unitPrice: total,
         totalPrice: total * i.quantity,
       } : i));
