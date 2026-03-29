@@ -27,6 +27,7 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
   const { orders, addItemsToOrder, removeItemFromOrder } = usePOS();
   const [sourceOrderId, setSourceOrderId] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const targetOrder = orders.find(o => o.id === targetOrderId);
   const sourceOrder = orders.find(o => o.id === sourceOrderId);
