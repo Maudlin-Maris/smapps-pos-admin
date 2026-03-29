@@ -9,7 +9,7 @@ interface Props {
   product: POSProduct | null;
   open: boolean;
   onClose: () => void;
-  onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number }[], unitPrice: number) => void;
+  onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
   initialVariantId?: string;
   initialExtras?: { id: string; quantity: number }[];
 }
