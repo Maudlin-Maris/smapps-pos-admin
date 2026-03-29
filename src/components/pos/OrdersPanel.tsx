@@ -651,7 +651,18 @@ export default function OrdersPanel() {
       <PaymentDialog open={!!payOrderId} onClose={() => setPayOrderId(null)} existingOrderId={payOrderId || undefined} />
 
       {/* Merge dialog */}
-      <MergeOrderDialog open={showMerge} onClose={() => { setShowMerge(false); setMergeSourceId(null); }} sourceOrderId={mergeSourceId} />
+      <MergeOrderDialog
+        open={showMerge}
+        onClose={(mergedOrderId) => {
+          setShowMerge(false);
+          setMergeSourceId(null);
+          if (mergedOrderId) {
+            const updated = orders.find(o => o.id === mergedOrderId);
+            if (updated) setSelectedOrder(updated);
+          }
+        }}
+        targetOrderId={mergeSourceId}
+      />
 
       {/* Print Receipt/Docket dialog */}
       <PrintReceiptDialog open={!!printOrder} onClose={() => setPrintOrder(null)} order={printOrder} />
