@@ -256,7 +256,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
                               <span className="font-medium">{item.productName}</span>
                               {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
                               {item.extras.length > 0 && (
-                                <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
+                              <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
                               )}
                               {canEdit && (
                                 <p className="text-[10px] text-primary/60 flex items-center gap-0.5 mt-0.5">
