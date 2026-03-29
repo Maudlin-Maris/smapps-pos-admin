@@ -70,7 +70,7 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm,
     onConfirm(
       variant?.id,
       variant?.name,
-      selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price })),
+      selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price, quantity: extraQuantities[e.id] || 1 })),
       basePrice
     );
     setSelectedVariant(null);

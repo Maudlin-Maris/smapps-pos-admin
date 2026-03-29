@@ -86,13 +86,12 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
   const handleConfirmVariantExtras = (
     variantId: string | undefined,
     variantName: string | undefined,
-    selectedExtras: { id: string; name: string; price: number }[],
+    selectedExtras: { id: string; name: string; price: number; quantity: number }[],
     unitPrice: number
   ) => {
     const product = editingItem ? editingItem.product : dialogProduct;
     if (!product) return;
-    const extrasWithQty = selectedExtras.map(e => ({ ...e, quantity: 1 }));
-    const extrasTotal = extrasWithQty.reduce((s, e) => s + e.price * e.quantity, 0);
+    const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * e.quantity, 0);
     const total = unitPrice + extrasTotal;
 
     if (editingItem) {
