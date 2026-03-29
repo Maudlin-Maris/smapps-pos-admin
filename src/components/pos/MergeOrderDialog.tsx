@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -118,6 +119,11 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
 
     if (itemsToMerge.length > 0) {
       addItemsToOrder(targetOrderId, itemsToMerge);
+      const totalQty = selectedItems.reduce((sum, s) => sum + s.quantity, 0);
+      toast({
+        title: "Order merged",
+        description: `${totalQty} item${totalQty !== 1 ? "s" : ""} merged into ${targetOrder?.orderNumber}`,
+      });
     }
 
     setSourceOrderId(null);
