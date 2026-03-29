@@ -207,7 +207,7 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
                         onCheckedChange={() => toggleItem(item)}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{item.name}</p>
+                        <p className="text-sm font-medium truncate">{item.productName}</p>
                         {item.variantName && (
                           <p className="text-xs text-muted-foreground">{item.variantName}</p>
                         )}
