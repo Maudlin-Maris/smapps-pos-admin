@@ -45,6 +45,10 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
   };
 
   const handleBack = () => {
+    if (showConfirmation) {
+      setShowConfirmation(false);
+      return;
+    }
     setSourceOrderId(null);
     setSelectedItems([]);
   };
@@ -52,7 +56,12 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
   const handleClose = () => {
     setSourceOrderId(null);
     setSelectedItems([]);
+    setShowConfirmation(false);
     onClose();
+  };
+
+  const handleProceedToConfirm = () => {
+    setShowConfirmation(true);
   };
 
   const toggleItem = (item: POSCartItem) => {
