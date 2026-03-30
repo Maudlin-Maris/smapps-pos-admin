@@ -28,7 +28,7 @@ type Step = "type" | "discount" | "payment" | "split" | "complete";
 
 export default function PaymentDialog({ open, onClose, existingOrderId, onBackToOrder }: Props) {
   const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
-  const [step, setStep] = useState<Step>("type");
+  const [step, setStep] = useState<Step>(existingOrderId ? "discount" : "type");
   const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
   const [selectedLocation, setSelectedLocation] = useState("");
