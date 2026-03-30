@@ -515,6 +515,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
                 )}
+                {existingOrderId && onBackToOrder && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { onClose(); onBackToOrder(); }}>
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
                 <DialogTitle>
                   {existingOrderId ? `Pay ${existingOrder?.orderNumber}` : "Payment"}
                 </DialogTitle>
