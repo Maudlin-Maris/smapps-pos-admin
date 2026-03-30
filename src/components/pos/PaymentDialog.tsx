@@ -162,6 +162,10 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
     setTipAmount("");
     setTipPreset(null);
     setCustomerNotes("");
+    setSelectedItems([]);
+    setSplitItemPaymentMethod("cash");
+    setPartialAmount("");
+    setPartialPaymentMethod("cash");
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
     }
