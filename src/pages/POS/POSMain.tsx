@@ -166,6 +166,9 @@ export default function POSMain() {
 
       {/* Checkout dialog */}
       <PaymentDialog open={showCheckout} onClose={() => setShowCheckout(false)} />
+
+      {/* Cashier sales dialog */}
+      <CashierSalesDialog open={salesOpen} onClose={() => setSalesOpen(false)} />
     </div>
   );
 }
