@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
