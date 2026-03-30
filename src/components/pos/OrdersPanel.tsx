@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
   Receipt, Printer, ChefHat, Search, MapPin, User, ArrowDownLeft, ListOrdered, LayoutList,
-  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight, Trash2
+  ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight, Trash2, DollarSign
 } from "lucide-react";
 import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 import PaymentDialog from "./PaymentDialog";
