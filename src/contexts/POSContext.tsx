@@ -1,3 +1,4 @@
+/* POS Context */
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 
 import {
