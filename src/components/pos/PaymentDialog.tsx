@@ -505,7 +505,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
               </div>
 
               <Button onClick={handleProceedToPayment} className="w-full h-11">
-                {payNow ? `Pay ${formatNaira(total)}` : "Create Order"}
+                {existingOrderId ? `Continue to Payment ${formatNaira(total)}` : (payNow ? `Pay ${formatNaira(total)}` : "Create Order")}
               </Button>
             </div>
           </>
