@@ -658,7 +658,15 @@ export default function OrdersPanel() {
       </Dialog>
 
       {/* Payment dialog for existing order */}
-      <PaymentDialog open={!!payOrderId} onClose={() => setPayOrderId(null)} existingOrderId={payOrderId || undefined} />
+      <PaymentDialog
+        open={!!payOrderId}
+        onClose={() => setPayOrderId(null)}
+        existingOrderId={payOrderId || undefined}
+        onBackToOrder={() => {
+          const order = orders.find(o => o.id === payOrderId);
+          if (order) setSelectedOrder(order);
+        }}
+      />
 
       {/* Merge dialog */}
       <MergeOrderDialog

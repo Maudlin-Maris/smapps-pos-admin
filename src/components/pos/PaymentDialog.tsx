@@ -21,11 +21,12 @@ interface Props {
   open: boolean;
   onClose: () => void;
   existingOrderId?: string;
+  onBackToOrder?: () => void;
 }
 
 type Step = "type" | "discount" | "payment" | "split" | "complete";
 
-export default function PaymentDialog({ open, onClose, existingOrderId }: Props) {
+export default function PaymentDialog({ open, onClose, existingOrderId, onBackToOrder }: Props) {
   const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
   const [step, setStep] = useState<Step>("type");
   const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
@@ -511,6 +512,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId }: Props)
               <div className="flex items-center gap-2">
                 {!existingOrderId && (
                   <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("discount")}>
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                {existingOrderId && onBackToOrder && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { onClose(); onBackToOrder(); }}>
                     <ArrowLeft className="w-4 h-4" />
                   </Button>
                 )}
