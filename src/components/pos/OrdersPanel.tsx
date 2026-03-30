@@ -551,6 +551,22 @@ export default function OrdersPanel() {
                         <span>{formatNaira(selectedOrder.paidAmount)}</span>
                       </div>
                     )}
+                    {selectedOrder.paidAmount > 0 && selectedOrder.paidAmount < selectedOrder.totalAmount && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                      <div className="flex items-center justify-between gap-2 mt-2 px-3 py-2.5 rounded-lg bg-[hsl(var(--warning))]/10 border border-[hsl(var(--warning))]/20">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-[hsl(var(--warning))]/20 flex items-center justify-center">
+                            <DollarSign className="w-3.5 h-3.5 text-[hsl(var(--warning))]" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-[hsl(var(--warning))]">Remaining Balance</p>
+                            <p className="text-sm font-bold text-foreground">{formatNaira(selectedOrder.totalAmount - selectedOrder.paidAmount)}</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="default" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
+                          Continue <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Payments */}
