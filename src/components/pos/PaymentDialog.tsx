@@ -167,7 +167,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   };
 
   const handleProceedToPayment = () => {
-    if (!payNow) {
+    if (!payNow && !existingOrderId) {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
