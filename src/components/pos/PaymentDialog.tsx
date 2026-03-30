@@ -757,18 +757,21 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
                     >
                       {paymentMethods.map(pm => <option key={pm.id} value={pm.id}>{pm.label}</option>)}
                     </select>
-                    <Input
-                      type="number"
-                      step="1"
-                      value={ca.amount}
-                      onChange={e => {
-                        const next = [...customAmounts];
-                        next[i] = { ...next[i], amount: e.target.value };
-                        setCustomAmounts(next);
-                      }}
-                      placeholder="Amount"
-                      className="h-9"
-                    />
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₦</span>
+                      <Input
+                        type="number"
+                        step="1"
+                        value={ca.amount}
+                        onChange={e => {
+                          const next = [...customAmounts];
+                          next[i] = { ...next[i], amount: e.target.value };
+                          setCustomAmounts(next);
+                        }}
+                        placeholder="Amount"
+                        className="h-9 pl-7"
+                      />
+                    </div>
                     {customAmounts.length > 2 && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setCustomAmounts(prev => prev.filter((_, j) => j !== i))}>×</Button>
                     )}
