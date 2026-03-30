@@ -437,9 +437,9 @@ export default function OrdersPanel() {
                   </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Info */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm bg-muted/40 rounded-lg p-3">
                     <div>
                       <p className="text-muted-foreground text-xs">Type</p>
                       <p className="font-medium capitalize">{selectedOrder.type.replace("_", " ")}</p>
@@ -469,9 +469,9 @@ export default function OrdersPanel() {
                   </div>
 
                   {/* Items */}
-                  <div className="space-y-1">
+                  <div>
                     {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
-                      <div className="flex gap-1 mb-1">
+                      <div className="flex gap-1 mb-2">
                         <Select
                           onValueChange={(val: ItemStatus) => {
                             selectedOrder.items.forEach(item => {
@@ -495,88 +495,99 @@ export default function OrdersPanel() {
                         </Select>
                       </div>
                     )}
-                    <p className="text-sm font-semibold">Items</p>
-                    {selectedOrder.items.map(item => {
-                      // Calculate how many units of this item have been paid via split-by-items
-                      const paidQty = selectedOrder.payments
-                        .filter(p => p.paidItems)
-                        .reduce((sum, p) => {
-                          const pi = p.paidItems!.find(pi => pi.itemId === item.id);
-                          return sum + (pi ? pi.qty : 0);
-                        }, 0);
-                      const fullyPaid = paidQty >= item.quantity;
-                      const partiallyPaid = paidQty > 0 && paidQty < item.quantity;
-
-                      return (
-                      <div key={item.id} className={`flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0 ${fullyPaid ? "opacity-60" : ""}`}>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span>{item.quantity}× {item.productName}</span>
-                            {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
-                            {fullyPaid && (
-                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                                Paid
-                              </span>
-                            )}
-                            {partiallyPaid && (
-                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">
-                                {paidQty} Paid
-                              </span>
-                            )}
-                          </div>
-                          {item.extras.length > 0 && (
-                            <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
-                            const status: ItemStatus = item.itemStatus || "open";
-                            return (
-                              <Select
-                                value={status}
-                                onValueChange={(val: ItemStatus) => {
-                                  updateItemStatus(selectedOrder.id, item.id, val);
-                                  setSelectedOrder(prev => prev ? {
-                                    ...prev,
-                                    items: prev.items.map(i => i.id === item.id ? { ...i, itemStatus: val } : i)
-                                  } : null);
-                                }}
-                              >
-                                <SelectTrigger className="h-6 w-[100px] text-[10px] px-2 gap-1">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(["open", "in_progress", "ready", "served"] as ItemStatus[]).map(s => {
-                                    const cfg = statusConfig[s as OrderStatus];
-                                    return (
-                                      <SelectItem key={s} value={s} className="text-xs">
-                                        <span className={`flex items-center gap-1.5 ${cfg?.color || ""}`}>
-                                          {cfg?.icon} {cfg?.label}
-                                        </span>
-                                      </SelectItem>
-                                    );
-                                  })}
-                                </SelectContent>
-                              </Select>
-                            );
-                          })()}
-                          <span className="font-medium">{formatNaira(item.totalPrice)}</span>
-                        </div>
-                      </div>
-                      );
-                    })}
-                    <div className="flex justify-between pt-2 text-sm font-bold">
-                      <span>Total</span>
-                      <span>{formatNaira(selectedOrder.totalAmount)}</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold">Items</p>
+                      <span className="text-xs text-muted-foreground">{selectedOrder.items.length} item{selectedOrder.items.length !== 1 ? "s" : ""}</span>
                     </div>
-                    {selectedOrder.paidAmount > 0 && (
-                      <div className="flex justify-between text-sm text-[hsl(var(--success))]">
-                        <span>Paid</span>
-                        <span>{formatNaira(selectedOrder.paidAmount)}</span>
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      {selectedOrder.items.map((item, idx) => {
+                        const paidQty = selectedOrder.payments
+                          .filter(p => p.paidItems)
+                          .reduce((sum, p) => {
+                            const pi = p.paidItems!.find(pi => pi.itemId === item.id);
+                            return sum + (pi ? pi.qty : 0);
+                          }, 0);
+                        const fullyPaid = paidQty >= item.quantity;
+                        const partiallyPaid = paidQty > 0 && paidQty < item.quantity;
+
+                        return (
+                          <div key={item.id} className={`flex items-start justify-between px-3 py-2.5 text-sm ${idx !== selectedOrder.items.length - 1 ? "border-b border-border/60" : ""} ${fullyPaid ? "bg-[hsl(var(--success))]/5 opacity-70" : "bg-card"}`}>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-muted text-[11px] font-semibold text-muted-foreground shrink-0">{item.quantity}×</span>
+                                <span className="font-medium truncate">{item.productName}</span>
+                                {item.variantName && <span className="text-muted-foreground text-xs">({item.variantName})</span>}
+                                {fullyPaid && (
+                                  <span className="text-[10px] font-semibold text-[hsl(var(--success))]">
+                                    ✓ Paid
+                                  </span>
+                                )}
+                                {partiallyPaid && (
+                                  <span className="text-[10px] font-semibold text-[hsl(var(--warning))]">
+                                    {paidQty} Paid
+                                  </span>
+                                )}
+                              </div>
+                              {item.extras.length > 0 && (
+                                <p className="text-xs text-muted-foreground mt-0.5 ml-[26px]">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
+                                const status: ItemStatus = item.itemStatus || "open";
+                                return (
+                                  <Select
+                                    value={status}
+                                    onValueChange={(val: ItemStatus) => {
+                                      updateItemStatus(selectedOrder.id, item.id, val);
+                                      setSelectedOrder(prev => prev ? {
+                                        ...prev,
+                                        items: prev.items.map(i => i.id === item.id ? { ...i, itemStatus: val } : i)
+                                      } : null);
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-6 w-[100px] text-[10px] px-2 gap-1">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(["open", "in_progress", "ready", "served"] as ItemStatus[]).map(s => {
+                                        const cfg = statusConfig[s as OrderStatus];
+                                        return (
+                                          <SelectItem key={s} value={s} className="text-xs">
+                                            <span className={`flex items-center gap-1.5 ${cfg?.color || ""}`}>
+                                              {cfg?.icon} {cfg?.label}
+                                            </span>
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </SelectContent>
+                                  </Select>
+                                );
+                              })()}
+                              <span className="font-semibold tabular-nums">{formatNaira(item.totalPrice)}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Totals */}
+                    <div className="mt-3 space-y-1.5 px-1">
+                      <div className="flex justify-between text-sm font-bold">
+                        <span>Total</span>
+                        <span>{formatNaira(selectedOrder.totalAmount)}</span>
                       </div>
-                    )}
+                      {selectedOrder.paidAmount > 0 && (
+                        <div className="flex justify-between text-sm text-[hsl(var(--success))]">
+                          <span>Paid</span>
+                          <span>{formatNaira(selectedOrder.paidAmount)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Remaining balance banner */}
                     {selectedOrder.paidAmount > 0 && selectedOrder.paidAmount < selectedOrder.totalAmount && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
-                      <div className="flex items-center justify-between gap-2 mt-2 px-3 py-2.5 rounded-lg bg-[hsl(var(--warning))]/10 border border-[hsl(var(--warning))]/20">
+                      <div className="flex items-center justify-between gap-2 mt-3 px-3 py-2.5 rounded-lg bg-[hsl(var(--warning))]/10 border border-[hsl(var(--warning))]/20">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-[hsl(var(--warning))]/20 flex items-center justify-center">
                             <span className="text-sm font-bold text-[hsl(var(--warning))]">₦</span>
