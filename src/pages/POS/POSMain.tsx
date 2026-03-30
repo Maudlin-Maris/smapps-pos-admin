@@ -96,6 +96,9 @@ export default function POSMain() {
             </div>
             <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
           </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
+            <BarChart3 className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={lockScreen} title="Lock Screen">
             <Lock className="w-4 h-4" />
           </Button>
