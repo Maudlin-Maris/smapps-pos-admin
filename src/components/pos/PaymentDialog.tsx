@@ -53,6 +53,14 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   const [tipPreset, setTipPreset] = useState<number | null>(null);
   const [customerNotes, setCustomerNotes] = useState("");
 
+  // Split by items state
+  const [selectedItems, setSelectedItems] = useState<{ itemId: string; qty: number }[]>([]);
+  const [splitItemPaymentMethod, setSplitItemPaymentMethod] = useState<PaymentMethod>("cash");
+
+  // Partial payment state
+  const [partialAmount, setPartialAmount] = useState("");
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState<PaymentMethod>("cash");
+
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
 
