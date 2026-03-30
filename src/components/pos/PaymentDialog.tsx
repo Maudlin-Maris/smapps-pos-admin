@@ -139,7 +139,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   }, [allowedOrderTypes]);
 
   const reset = () => {
-    setStep("type");
+    setStep(existingOrderId ? "discount" : "type");
     setSelectedLocation("");
     setCustomerName("");
     setPaymentMethod("cash");
