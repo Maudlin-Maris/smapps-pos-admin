@@ -26,7 +26,7 @@ interface Props {
 
 type Step = "type" | "discount" | "payment" | "split" | "complete";
 
-export default function PaymentDialog({ open, onClose, existingOrderId }: Props) {
+export default function PaymentDialog({ open, onClose, existingOrderId, onBackToOrder }: Props) {
   const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
   const [step, setStep] = useState<Step>("type");
   const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
