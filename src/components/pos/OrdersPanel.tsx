@@ -499,8 +499,8 @@ export default function OrdersPanel() {
                             <span className="text-xs sm:text-sm">{item.quantity}× {item.productName}</span>
                             {item.variantName && <span className="text-muted-foreground text-xs"> ({item.variantName})</span>}
                             {fullyPaid && (
-                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                                Paid
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]">
+                                {paidQty} Paid
                               </span>
                             )}
                             {partiallyPaid && (
