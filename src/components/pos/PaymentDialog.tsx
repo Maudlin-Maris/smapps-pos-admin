@@ -28,7 +28,7 @@ type Step = "type" | "discount" | "payment" | "split" | "complete";
 
 export default function PaymentDialog({ open, onClose, existingOrderId, onBackToOrder }: Props) {
   const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
-  const [step, setStep] = useState<Step>("type");
+  const [step, setStep] = useState<Step>(existingOrderId ? "discount" : "type");
   const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
   const [selectedLocation, setSelectedLocation] = useState("");
@@ -139,7 +139,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   }, [allowedOrderTypes]);
 
   const reset = () => {
-    setStep("type");
+    setStep(existingOrderId ? "discount" : "type");
     setSelectedLocation("");
     setCustomerName("");
     setPaymentMethod("cash");
@@ -167,7 +167,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   };
 
   const handleProceedToPayment = () => {
-    if (!payNow) {
+    if (!payNow && !existingOrderId) {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
@@ -353,35 +353,43 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
           <>
             <DialogHeader>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("type")}>
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <DialogTitle>Discount & Tip</DialogTitle>
+                {existingOrderId && onBackToOrder ? (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { onClose(); onBackToOrder(); }}>
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                ) : !existingOrderId ? (
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("type")}>
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                ) : null}
+                <DialogTitle>{existingOrderId ? `${existingOrder?.orderNumber} — Discount & Tip` : "Discount & Tip"}</DialogTitle>
               </div>
             </DialogHeader>
             <div className="space-y-4">
               {/* Order info summary */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
-                  {allowedOrderTypes.find(t => t.id === selectedOrderType)?.label || selectedOrderType}
-                </button>
-                {selectedLocation && (
-                  <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors">
-                    <MapPin className="w-3 h-3" />
-                    {selectedLocation}
+              {!existingOrderId && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                    {allowedOrderTypes.find(t => t.id === selectedOrderType)?.label || selectedOrderType}
                   </button>
-                )}
-                {customerName && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-                    {customerName}
-                  </span>
-                )}
-                {customerNotes && (
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-medium truncate max-w-[200px]" title={customerNotes}>
-                    ⚠ {customerNotes}
-                  </span>
-                )}
-              </div>
+                  {selectedLocation && (
+                    <button onClick={() => goBack("type")} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium hover:bg-muted/80 transition-colors">
+                      <MapPin className="w-3 h-3" />
+                      {selectedLocation}
+                    </button>
+                  )}
+                  {customerName && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-muted text-muted-foreground text-xs font-medium">
+                      {customerName}
+                    </span>
+                  )}
+                  {customerNotes && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-destructive/10 text-destructive text-xs font-medium truncate max-w-[200px]" title={customerNotes}>
+                      ⚠ {customerNotes}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Order summary */}
               <div className="text-center p-3 bg-muted/30 rounded-xl">
@@ -499,27 +507,20 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
               </div>
 
               <Button onClick={handleProceedToPayment} className="w-full h-11">
-                {payNow ? `Pay ${formatNaira(total)}` : "Create Order"}
+                {existingOrderId ? `Continue to Payment ${formatNaira(total)}` : (payNow ? `Pay ${formatNaira(total)}` : "Create Order")}
               </Button>
             </div>
           </>
         )}
 
         {/* ===== STEP: PAYMENT ===== */}
-        {(step === "payment" || (step === "type" && existingOrderId)) && (
+        {step === "payment" && (
           <>
             <DialogHeader>
               <div className="flex items-center gap-2">
-                {!existingOrderId && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("discount")}>
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                )}
-                {existingOrderId && onBackToOrder && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { onClose(); onBackToOrder(); }}>
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("discount")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
                 <DialogTitle>
                   {existingOrderId ? `Pay ${existingOrder?.orderNumber}` : "Payment"}
                 </DialogTitle>
