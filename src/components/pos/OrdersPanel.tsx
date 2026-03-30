@@ -425,46 +425,31 @@ export default function OrdersPanel() {
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={o => !o && setSelectedOrder(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 sm:rounded-lg rounded-none w-full h-full sm:h-auto sm:w-auto fixed sm:relative inset-0 sm:inset-auto">
           {selectedOrder && (() => {
             const sc = statusConfig[selectedOrder.status];
             return (
               <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+                <DialogHeader className="px-4 pt-4 pb-2 sm:px-0 sm:pt-0 sm:pb-0 border-b border-border sm:border-0 sticky top-0 bg-background z-10">
+                  <DialogTitle className="flex items-center gap-2 text-base">
                     {selectedOrder.orderNumber}
                     <Badge variant="outline" className={`text-xs gap-1 ${sc.color}`}>{sc.icon} {sc.label}</Badge>
                   </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-4">
-                  {/* Info */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Type</p>
-                      <p className="font-medium capitalize">{selectedOrder.type.replace("_", " ")}</p>
-                    </div>
+                <div className="space-y-3 px-4 pb-4 sm:px-0 sm:pb-0 overflow-y-auto flex-1">
+                  {/* Info - compact chips on mobile */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground py-1">
+                    <span className="capitalize">{selectedOrder.type.replace("_", " ")}</span>
                     {selectedOrder.tableNumber && features?.hasDineIn && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Table</p>
-                        <p className="font-medium">{selectedOrder.tableNumber}</p>
-                      </div>
+                      <span>Table {selectedOrder.tableNumber}</span>
                     )}
                     {selectedOrder.customerName && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Customer</p>
-                        <p className="font-medium">{selectedOrder.customerName}</p>
-                      </div>
+                      <span>{selectedOrder.customerName}</span>
                     )}
-                    <div>
-                      <p className="text-muted-foreground text-xs">Created</p>
-                      <p className="font-medium">{timeSince(selectedOrder.createdAt)}</p>
-                    </div>
+                    <span>{timeSince(selectedOrder.createdAt)}</span>
                     {selectedOrder.locationName && hasLocations && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">{features?.hasAppointments ? "Station" : "Location"}</p>
-                        <p className="font-medium">{selectedOrder.locationName}</p>
-                      </div>
+                      <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" /> {selectedOrder.locationName}</span>
                     )}
                   </div>
 
@@ -508,11 +493,11 @@ export default function OrdersPanel() {
                       const partiallyPaid = paidQty > 0 && paidQty < item.quantity;
 
                       return (
-                      <div key={item.id} className={`flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0 ${fullyPaid ? "opacity-60" : ""}`}>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span>{item.quantity}× {item.productName}</span>
-                            {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
+                      <div key={item.id} className={`flex flex-col sm:flex-row sm:justify-between py-2 text-sm border-b border-border/50 last:border-0 gap-1 ${fullyPaid ? "opacity-60" : ""}`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs sm:text-sm">{item.quantity}× {item.productName}</span>
+                            {item.variantName && <span className="text-muted-foreground text-xs"> ({item.variantName})</span>}
                             {fullyPaid && (
                               <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
                                 Paid
@@ -525,10 +510,10 @@ export default function OrdersPanel() {
                             )}
                           </div>
                           {item.extras.length > 0 && (
-                            <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
+                            <p className="text-[11px] text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                           {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
                             const status: ItemStatus = item.itemStatus || "open";
                             return (
@@ -542,7 +527,7 @@ export default function OrdersPanel() {
                                   } : null);
                                 }}
                               >
-                                <SelectTrigger className="h-6 w-[100px] text-[10px] px-2 gap-1">
+                                <SelectTrigger className="h-6 w-[90px] text-[10px] px-2 gap-1">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -682,27 +667,27 @@ export default function OrdersPanel() {
                     </div>
                   )}
 
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2">
+                  {/* Actions - sticky bottom on mobile */}
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:static border-t border-border sm:border-0">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
                         {selectedOrder.paidAmount < selectedOrder.totalAmount && (
-                          <Button size="sm" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
+                          <Button size="sm" className="w-full sm:w-auto" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
                             <CreditCard className="w-4 h-4 mr-1" /> Pay
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
-                          <Plus className="w-4 h-4 mr-1" /> Add / Remove Items
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
+                          <Plus className="w-4 h-4 mr-1" /> Add / Remove
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); }}>
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); }}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                    <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
                       <Printer className="w-4 h-4 mr-1" /> Receipt
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                    <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
                       <ChefHat className="w-4 h-4 mr-1" /> Docket
                     </Button>
                   </div>
