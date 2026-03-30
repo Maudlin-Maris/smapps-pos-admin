@@ -667,27 +667,27 @@ export default function OrdersPanel() {
                     </div>
                   )}
 
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2">
+                  {/* Actions - sticky bottom on mobile */}
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:static border-t border-border sm:border-0">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
                         {selectedOrder.paidAmount < selectedOrder.totalAmount && (
-                          <Button size="sm" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
+                          <Button size="sm" className="w-full sm:w-auto" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
                             <CreditCard className="w-4 h-4 mr-1" /> Pay
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
-                          <Plus className="w-4 h-4 mr-1" /> Add / Remove Items
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
+                          <Plus className="w-4 h-4 mr-1" /> Add / Remove
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); }}>
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setMergeSourceId(selectedOrder.id); setShowMerge(true); }}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
                         </Button>
                       </>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                    <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
                       <Printer className="w-4 h-4 mr-1" /> Receipt
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
+                    <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
                       <ChefHat className="w-4 h-4 mr-1" /> Docket
                     </Button>
                   </div>
