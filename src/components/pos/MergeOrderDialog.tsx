@@ -182,6 +182,9 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-sm">{order.orderNumber}</span>
                         {order.tableNumber && <Badge variant="secondary" className="text-[10px]">{order.tableNumber}</Badge>}
+                        <Badge variant={order.paidAmount > 0 ? "outline" : "destructive"} className={`text-[10px] ${order.paidAmount > 0 ? "border-amber-500 text-amber-600" : ""}`}>
+                          {order.paidAmount > 0 ? "Partial" : "Unpaid"}
+                        </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {order.items.length} items · {formatNaira(order.totalAmount)}
