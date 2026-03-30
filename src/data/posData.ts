@@ -62,9 +62,15 @@ export type OrderStatus = "open" | "in_progress" | "ready" | "served" | "paid" |
 export type OrderType = "dine_in" | "takeaway" | "delivery" | "pickup" | "walk_in";
 export type PaymentMethod = "cash" | "card" | "mobile" | "transfer";
 
+export interface PaidItem {
+  itemId: string;
+  qty: number;
+}
+
 export interface PaymentEntry {
   method: PaymentMethod;
   amount: number;
+  paidItems?: PaidItem[];
 }
 
 export interface POSDiscount {
