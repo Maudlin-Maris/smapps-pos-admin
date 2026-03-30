@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { Checkbox } from "@/components/ui/checkbox";
 import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
 import { getFeatures, getBusinessType } from "@/data/businessTypes";
 import { formatNaira } from "@/lib/currency";
@@ -13,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer,
   CheckCircle2, SplitSquareHorizontal, ArrowLeft, Percent, Tag, MapPin,
-  Heart, Search, ChefHat
+  Heart, Search, ChefHat, ListChecks, DollarSign, Minus, Plus
 } from "lucide-react";
 import PrintReceiptDialog from "./PrintReceiptDialog";
 
@@ -24,7 +25,7 @@ interface Props {
   onBackToOrder?: () => void;
 }
 
-type Step = "type" | "discount" | "payment" | "split" | "complete";
+type Step = "type" | "discount" | "payment" | "split" | "split-choice" | "split-items" | "partial" | "complete";
 
 export default function PaymentDialog({ open, onClose, existingOrderId, onBackToOrder }: Props) {
   const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
@@ -51,6 +52,14 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   const [tipAmount, setTipAmount] = useState("");
   const [tipPreset, setTipPreset] = useState<number | null>(null);
   const [customerNotes, setCustomerNotes] = useState("");
+
+  // Split by items state
+  const [selectedItems, setSelectedItems] = useState<{ itemId: string; qty: number }[]>([]);
+  const [splitItemPaymentMethod, setSplitItemPaymentMethod] = useState<PaymentMethod>("cash");
+
+  // Partial payment state
+  const [partialAmount, setPartialAmount] = useState("");
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState<PaymentMethod>("cash");
 
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
@@ -153,6 +162,10 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
     setTipAmount("");
     setTipPreset(null);
     setCustomerNotes("");
+    setSelectedItems([]);
+    setSplitItemPaymentMethod("cash");
+    setPartialAmount("");
+    setPartialPaymentMethod("cash");
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
     }
@@ -211,11 +224,76 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   };
 
   const initSplit = () => {
+    if (existingOrderId) {
+      setStep("split-choice");
+    } else {
+      setCustomAmounts([
+        { method: "cash", amount: "" },
+        { method: "card", amount: "" },
+      ]);
+      setStep("split");
+    }
+  };
+
+  const initSplitByAmount = () => {
     setCustomAmounts([
       { method: "cash", amount: "" },
       { method: "card", amount: "" },
     ]);
     setStep("split");
+  };
+
+  const initSplitByItems = () => {
+    setSelectedItems([]);
+    setSplitItemPaymentMethod("cash");
+    setStep("split-items");
+  };
+
+  const initPartialPayment = () => {
+    setPartialAmount("");
+    setPartialPaymentMethod("cash");
+    setStep("partial");
+  };
+
+  // Items available for payment (from existing order)
+  const orderItems = existingOrder?.items || cart;
+  const remainingAmount = existingOrder ? existingOrder.totalAmount - existingOrder.paidAmount : total;
+
+  // Calculate selected items total
+  const selectedItemsTotal = useMemo(() => {
+    return selectedItems.reduce((sum, si) => {
+      const item = orderItems.find(i => i.id === si.itemId);
+      if (!item) return sum;
+      const perUnit = item.unitPrice + item.extras.reduce((s, e) => s + e.price * e.quantity, 0);
+      return sum + perUnit * si.qty;
+    }, 0);
+  }, [selectedItems, orderItems]);
+
+  const toggleItemSelection = (itemId: string, maxQty: number) => {
+    setSelectedItems(prev => {
+      const existing = prev.find(s => s.itemId === itemId);
+      if (existing) return prev.filter(s => s.itemId !== itemId);
+      return [...prev, { itemId, qty: maxQty }];
+    });
+  };
+
+  const updateSelectedItemQty = (itemId: string, qty: number) => {
+    setSelectedItems(prev => prev.map(s => s.itemId === itemId ? { ...s, qty } : s));
+  };
+
+  const handleSplitItemsPayment = () => {
+    if (!existingOrderId || selectedItemsTotal <= 0) return;
+    addPayment(existingOrderId, { method: splitItemPaymentMethod, amount: selectedItemsTotal });
+    setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: selectedItemsTotal, id: existingOrderId });
+    setStep("complete");
+  };
+
+  const handlePartialPayment = () => {
+    const amt = parseFloat(partialAmount) || 0;
+    if (!existingOrderId || amt <= 0) return;
+    addPayment(existingOrderId, { method: partialPaymentMethod, amount: amt });
+    setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amt, id: existingOrderId });
+    setStep("complete");
   };
 
   const paymentMethods: { id: PaymentMethod; label: string; icon: React.ReactNode }[] = [
@@ -597,10 +675,10 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
           <>
             <DialogHeader>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("payment")}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack(existingOrderId ? "split-choice" : "payment")}>
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
-                <DialogTitle>Split Payment</DialogTitle>
+                <DialogTitle>Split by Amount</DialogTitle>
               </div>
             </DialogHeader>
             <div className="space-y-4">
@@ -712,7 +790,269 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
           </>
         )}
 
-        {/* ===== STEP: COMPLETE ===== */}
+        {/* ===== STEP: SPLIT CHOICE ===== */}
+        {step === "split-choice" && existingOrderId && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("payment")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <DialogTitle>Split Payment</DialogTitle>
+              </div>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="text-center p-3 bg-muted/30 rounded-xl">
+                <p className="text-sm text-muted-foreground">Amount Due</p>
+                <p className="text-2xl font-bold text-foreground">{formatNaira(remainingAmount)}</p>
+              </div>
+
+              <p className="text-sm text-muted-foreground">How would you like to split the payment?</p>
+
+              <button
+                onClick={initSplitByItems}
+                className="w-full flex items-start gap-3 p-4 rounded-xl border border-border hover:border-primary/30 transition-all text-left"
+              >
+                <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <ListChecks className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Split by Items</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Select specific items and quantities to pay for</p>
+                </div>
+              </button>
+
+              <button
+                onClick={initSplitByAmount}
+                className="w-full flex items-start gap-3 p-4 rounded-xl border border-border hover:border-primary/30 transition-all text-left"
+              >
+                <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <SplitSquareHorizontal className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Split by Amount</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Divide the total across multiple payment methods</p>
+                </div>
+              </button>
+
+              <button
+                onClick={initPartialPayment}
+                className="w-full flex items-start gap-3 p-4 rounded-xl border border-border hover:border-primary/30 transition-all text-left"
+              >
+                <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Partial Payment</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pay a custom amount towards the bill</p>
+                </div>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ===== STEP: SPLIT BY ITEMS ===== */}
+        {step === "split-items" && existingOrderId && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("split-choice")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <DialogTitle>Split by Items</DialogTitle>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-center p-3 bg-muted/30 rounded-xl">
+                <p className="text-sm text-muted-foreground">Order Total: <span className="font-bold text-foreground">{formatNaira(remainingAmount)}</span></p>
+              </div>
+
+              <p className="text-sm font-medium text-foreground">Select items to pay for</p>
+              <ScrollArea className="max-h-48">
+                <div className="space-y-2">
+                  {orderItems.map(item => {
+                    const selected = selectedItems.find(s => s.itemId === item.id);
+                    const perUnit = item.unitPrice + item.extras.reduce((s, e) => s + e.price * e.quantity, 0);
+                    return (
+                      <div
+                        key={item.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                          selected ? "border-primary bg-primary/5" : "border-border"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={!!selected}
+                          onCheckedChange={() => toggleItemSelection(item.id, item.quantity)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.productName}</p>
+                          {item.variantName && (
+                            <p className="text-xs text-muted-foreground">{item.variantName}</p>
+                          )}
+                          {item.extras.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              +{item.extras.map(e => e.name).join(", ")}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-medium">{formatNaira(perUnit)}</p>
+                          <p className="text-xs text-muted-foreground">×{item.quantity}</p>
+                        </div>
+                        {selected && item.quantity > 1 && (
+                          <div className="flex items-center gap-0 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 rounded-r-none"
+                              onClick={() => updateSelectedItemQty(item.id, Math.max(1, selected.qty - 1))}
+                              disabled={selected.qty <= 1}
+                            >
+                              <Minus className="w-3 h-3" />
+                            </Button>
+                            <div className="h-7 w-8 flex items-center justify-center border-y border-input bg-background text-xs font-medium">
+                              {selected.qty}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7 rounded-l-none"
+                              onClick={() => updateSelectedItemQty(item.id, Math.min(item.quantity, selected.qty + 1))}
+                              disabled={selected.qty >= item.quantity}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+
+              {selectedItemsTotal > 0 && (
+                <div className="border-t border-border pt-3 space-y-3">
+                  <div className="flex justify-between font-bold text-base">
+                    <span>Selected Total</span>
+                    <span>{formatNaira(selectedItemsTotal)}</span>
+                  </div>
+
+                  <p className="text-sm font-medium">Payment Method</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {paymentMethods.map(pm => (
+                      <button
+                        key={pm.id}
+                        onClick={() => setSplitItemPaymentMethod(pm.id)}
+                        className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                          splitItemPaymentMethod === pm.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                        }`}
+                      >
+                        {pm.icon}
+                        <span className="text-sm font-medium">{pm.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={handleSplitItemsPayment}
+                disabled={selectedItemsTotal <= 0}
+                className="w-full h-11"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1" />
+                Pay {formatNaira(selectedItemsTotal)}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* ===== STEP: PARTIAL PAYMENT ===== */}
+        {step === "partial" && existingOrderId && (
+          <>
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("split-choice")}>
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <DialogTitle>Partial Payment</DialogTitle>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="text-center p-3 bg-muted/30 rounded-xl">
+                <p className="text-sm text-muted-foreground">Amount Due</p>
+                <p className="text-2xl font-bold text-foreground">{formatNaira(remainingAmount)}</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Amount to Pay</label>
+                <Input
+                  type="number"
+                  value={partialAmount}
+                  onChange={e => setPartialAmount(e.target.value)}
+                  placeholder="Enter amount"
+                  className="h-11 text-lg"
+                />
+                {parseFloat(partialAmount) > 0 && parseFloat(partialAmount) < remainingAmount && (
+                  <p className="text-xs text-muted-foreground">
+                    Remaining after payment: {formatNaira(remainingAmount - (parseFloat(partialAmount) || 0))}
+                  </p>
+                )}
+                {parseFloat(partialAmount) > remainingAmount && (
+                  <p className="text-xs text-destructive">
+                    Amount exceeds balance due
+                  </p>
+                )}
+              </div>
+
+              {/* Quick amount buttons */}
+              <div className="grid grid-cols-4 gap-1.5">
+                {[25, 50, 75].map(pct => (
+                  <button
+                    key={pct}
+                    onClick={() => setPartialAmount(Math.round(remainingAmount * pct / 100).toString())}
+                    className="p-2 rounded-lg border border-border hover:border-primary/30 text-xs font-medium text-center transition-all"
+                  >
+                    {pct}%
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPartialAmount(remainingAmount.toString())}
+                  className="p-2 rounded-lg border border-border hover:border-primary/30 text-xs font-medium text-center transition-all"
+                >
+                  Full
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Payment Method</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {paymentMethods.map(pm => (
+                    <button
+                      key={pm.id}
+                      onClick={() => setPartialPaymentMethod(pm.id)}
+                      className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                        partialPaymentMethod === pm.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      {pm.icon}
+                      <span className="text-sm font-medium">{pm.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                onClick={handlePartialPayment}
+                disabled={!parseFloat(partialAmount) || parseFloat(partialAmount) <= 0 || parseFloat(partialAmount) > remainingAmount}
+                className="w-full h-11"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1" />
+                Pay {formatNaira(parseFloat(partialAmount) || 0)}
+              </Button>
+            </div>
+          </>
+        )}
         {step === "complete" && completedOrder && (
           <div className="text-center py-6 space-y-4">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[hsl(var(--success))]/10">
