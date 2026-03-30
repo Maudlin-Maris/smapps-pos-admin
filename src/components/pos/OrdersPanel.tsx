@@ -493,11 +493,11 @@ export default function OrdersPanel() {
                       const partiallyPaid = paidQty > 0 && paidQty < item.quantity;
 
                       return (
-                      <div key={item.id} className={`flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0 ${fullyPaid ? "opacity-60" : ""}`}>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <span>{item.quantity}× {item.productName}</span>
-                            {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
+                      <div key={item.id} className={`flex flex-col sm:flex-row sm:justify-between py-2 text-sm border-b border-border/50 last:border-0 gap-1 ${fullyPaid ? "opacity-60" : ""}`}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-xs sm:text-sm">{item.quantity}× {item.productName}</span>
+                            {item.variantName && <span className="text-muted-foreground text-xs"> ({item.variantName})</span>}
                             {fullyPaid && (
                               <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
                                 Paid
@@ -510,10 +510,10 @@ export default function OrdersPanel() {
                             )}
                           </div>
                           {item.extras.length > 0 && (
-                            <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
+                            <p className="text-[11px] text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
                           {hasKitchenStatuses && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (() => {
                             const status: ItemStatus = item.itemStatus || "open";
                             return (
@@ -527,7 +527,7 @@ export default function OrdersPanel() {
                                   } : null);
                                 }}
                               >
-                                <SelectTrigger className="h-6 w-[100px] text-[10px] px-2 gap-1">
+                                <SelectTrigger className="h-6 w-[90px] text-[10px] px-2 gap-1">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
