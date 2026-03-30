@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   CreditCard, Banknote, Smartphone, ArrowRightLeft, Clock, Printer,
   CheckCircle2, SplitSquareHorizontal, ArrowLeft, Percent, Tag, MapPin,
-  Heart, Search, ChefHat
+  Heart, Search, ChefHat, ListChecks, DollarSign, Minus, Plus
 } from "lucide-react";
 import PrintReceiptDialog from "./PrintReceiptDialog";
 
