@@ -30,6 +30,7 @@ export default function POSMain() {
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const [salesOpen, setSalesOpen] = useState(false);
   const isMobile = useIsMobile();
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
