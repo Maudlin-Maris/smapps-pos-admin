@@ -173,6 +173,13 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
 
   const handleClose = () => { reset(); onClose(); };
 
+  // Reset step when dialog opens or existingOrderId changes
+  useEffect(() => {
+    if (open) {
+      reset();
+    }
+  }, [open, existingOrderId]);
+
   const goBack = (to: Step) => setStep(to);
 
   const handleProceedToDiscount = () => {
