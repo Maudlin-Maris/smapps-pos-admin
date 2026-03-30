@@ -25,7 +25,7 @@ interface Props {
   onBackToOrder?: () => void;
 }
 
-type Step = "type" | "discount" | "payment" | "split" | "complete";
+type Step = "type" | "discount" | "payment" | "split" | "split-choice" | "split-items" | "partial" | "complete";
 
 export default function PaymentDialog({ open, onClose, existingOrderId, onBackToOrder }: Props) {
   const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
