@@ -21,6 +21,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   existingOrderId?: string;
+  onBackToOrder?: () => void;
 }
 
 type Step = "type" | "discount" | "payment" | "split" | "complete";
