@@ -425,7 +425,7 @@ export default function OrdersPanel() {
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={o => !o && setSelectedOrder(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 sm:rounded-lg rounded-none w-full h-full sm:h-auto sm:w-auto fixed sm:relative inset-0 sm:inset-auto">
+        <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
           {selectedOrder && (() => {
             const sc = statusConfig[selectedOrder.status];
             return (
