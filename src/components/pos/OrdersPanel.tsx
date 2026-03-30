@@ -520,7 +520,7 @@ export default function OrdersPanel() {
                             )}
                             {partiallyPaid && (
                               <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">
-                                {paidQty}/{item.quantity} Paid
+                                {paidQty} of {item.quantity} Paid
                               </span>
                             )}
                           </div>
