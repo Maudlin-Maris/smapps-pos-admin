@@ -675,10 +675,10 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
           <>
             <DialogHeader>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack("payment")}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => goBack(existingOrderId ? "split-choice" : "payment")}>
                   <ArrowLeft className="w-4 h-4" />
                 </Button>
-                <DialogTitle>Split Payment</DialogTitle>
+                <DialogTitle>Split by Amount</DialogTitle>
               </div>
             </DialogHeader>
             <div className="space-y-4">
