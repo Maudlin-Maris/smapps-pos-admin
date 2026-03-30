@@ -851,7 +851,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
                 className="w-full flex items-start gap-3 p-4 rounded-xl border border-border hover:border-primary/30 transition-all text-left"
               >
                 <div className="shrink-0 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <DollarSign className="w-5 h-5 text-primary" />
+                  <span className="text-lg font-bold text-primary">₦</span>
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Partial Payment</p>

@@ -579,7 +579,7 @@ export default function OrdersPanel() {
                       <div className="flex items-center justify-between gap-2 mt-2 px-3 py-2.5 rounded-lg bg-[hsl(var(--warning))]/10 border border-[hsl(var(--warning))]/20">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-[hsl(var(--warning))]/20 flex items-center justify-center">
-                            <DollarSign className="w-3.5 h-3.5 text-[hsl(var(--warning))]" />
+                            <span className="text-sm font-bold text-[hsl(var(--warning))]">₦</span>
                           </div>
                           <div>
                             <p className="text-xs font-semibold text-[hsl(var(--warning))]">Remaining Balance</p>
