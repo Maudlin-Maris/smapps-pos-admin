@@ -290,7 +290,11 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
 
   const handleSplitItemsPayment = () => {
     if (!existingOrderId || selectedItemsTotal <= 0) return;
-    addPayment(existingOrderId, { method: splitItemPaymentMethod, amount: selectedItemsTotal });
+    addPayment(existingOrderId, {
+      method: splitItemPaymentMethod,
+      amount: selectedItemsTotal,
+      paidItems: selectedItems.map(si => ({ itemId: si.itemId, qty: si.qty })),
+    });
     setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: selectedItemsTotal, id: existingOrderId });
     setStep("complete");
   };

@@ -496,11 +496,34 @@ export default function OrdersPanel() {
                       </div>
                     )}
                     <p className="text-sm font-semibold">Items</p>
-                    {selectedOrder.items.map(item => (
-                      <div key={item.id} className="flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0">
+                    {selectedOrder.items.map(item => {
+                      // Calculate how many units of this item have been paid via split-by-items
+                      const paidQty = selectedOrder.payments
+                        .filter(p => p.paidItems)
+                        .reduce((sum, p) => {
+                          const pi = p.paidItems!.find(pi => pi.itemId === item.id);
+                          return sum + (pi ? pi.qty : 0);
+                        }, 0);
+                      const fullyPaid = paidQty >= item.quantity;
+                      const partiallyPaid = paidQty > 0 && paidQty < item.quantity;
+
+                      return (
+                      <div key={item.id} className={`flex justify-between py-1.5 text-sm border-b border-border/50 last:border-0 ${fullyPaid ? "opacity-60" : ""}`}>
                         <div className="flex-1">
-                          <span>{item.quantity}× {item.productName}</span>
-                          {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
+                          <div className="flex items-center gap-1.5">
+                            <span>{item.quantity}× {item.productName}</span>
+                            {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
+                            {fullyPaid && (
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                                Paid
+                              </span>
+                            )}
+                            {partiallyPaid && (
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">
+                                {paidQty}/{item.quantity} Paid
+                              </span>
+                            )}
+                          </div>
                           {item.extras.length > 0 && (
                             <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.quantity > 1 ? `${e.name} ×${e.quantity}` : e.name).join(", ")}</p>
                           )}
@@ -540,7 +563,8 @@ export default function OrdersPanel() {
                           <span className="font-medium">{formatNaira(item.totalPrice)}</span>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                     <div className="flex justify-between pt-2 text-sm font-bold">
                       <span>Total</span>
                       <span>{formatNaira(selectedOrder.totalAmount)}</span>
