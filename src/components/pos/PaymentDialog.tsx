@@ -224,11 +224,76 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   };
 
   const initSplit = () => {
+    if (existingOrderId) {
+      setStep("split-choice");
+    } else {
+      setCustomAmounts([
+        { method: "cash", amount: "" },
+        { method: "card", amount: "" },
+      ]);
+      setStep("split");
+    }
+  };
+
+  const initSplitByAmount = () => {
     setCustomAmounts([
       { method: "cash", amount: "" },
       { method: "card", amount: "" },
     ]);
     setStep("split");
+  };
+
+  const initSplitByItems = () => {
+    setSelectedItems([]);
+    setSplitItemPaymentMethod("cash");
+    setStep("split-items");
+  };
+
+  const initPartialPayment = () => {
+    setPartialAmount("");
+    setPartialPaymentMethod("cash");
+    setStep("partial");
+  };
+
+  // Items available for payment (from existing order)
+  const orderItems = existingOrder?.items || cart;
+  const remainingAmount = existingOrder ? existingOrder.totalAmount - existingOrder.paidAmount : total;
+
+  // Calculate selected items total
+  const selectedItemsTotal = useMemo(() => {
+    return selectedItems.reduce((sum, si) => {
+      const item = orderItems.find(i => i.id === si.itemId);
+      if (!item) return sum;
+      const perUnit = item.unitPrice + item.extras.reduce((s, e) => s + e.price * e.quantity, 0);
+      return sum + perUnit * si.qty;
+    }, 0);
+  }, [selectedItems, orderItems]);
+
+  const toggleItemSelection = (itemId: string, maxQty: number) => {
+    setSelectedItems(prev => {
+      const existing = prev.find(s => s.itemId === itemId);
+      if (existing) return prev.filter(s => s.itemId !== itemId);
+      return [...prev, { itemId, qty: maxQty }];
+    });
+  };
+
+  const updateSelectedItemQty = (itemId: string, qty: number) => {
+    setSelectedItems(prev => prev.map(s => s.itemId === itemId ? { ...s, qty } : s));
+  };
+
+  const handleSplitItemsPayment = () => {
+    if (!existingOrderId || selectedItemsTotal <= 0) return;
+    addPayment(existingOrderId, { method: splitItemPaymentMethod, amount: selectedItemsTotal });
+    setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: selectedItemsTotal, id: existingOrderId });
+    setStep("complete");
+  };
+
+  const handlePartialPayment = () => {
+    const amt = parseFloat(partialAmount) || 0;
+    if (!existingOrderId || amt <= 0) return;
+    addPayment(existingOrderId, { method: partialPaymentMethod, amount: amt });
+    setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amt, id: existingOrderId });
+    setStep("complete");
   };
 
   const paymentMethods: { id: PaymentMethod; label: string; icon: React.ReactNode }[] = [
