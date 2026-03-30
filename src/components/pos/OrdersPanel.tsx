@@ -514,13 +514,13 @@ export default function OrdersPanel() {
                             <span>{item.quantity}× {item.productName}</span>
                             {item.variantName && <span className="text-muted-foreground"> ({item.variantName})</span>}
                             {fullyPaid && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                                <CheckCircle2 className="w-3 h-3" /> Paid
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                                Paid
                               </span>
                             )}
                             {partiallyPaid && (
-                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">
-                                <CreditCard className="w-3 h-3" /> {paidQty} Paid
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">
+                                {paidQty} Paid
                               </span>
                             )}
                           </div>

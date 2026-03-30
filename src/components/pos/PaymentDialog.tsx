@@ -1000,13 +1000,16 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Amount to Pay</label>
-                <Input
-                  type="number"
-                  value={partialAmount}
-                  onChange={e => setPartialAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  className="h-11 text-lg"
-                />
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted-foreground font-medium">₦</span>
+                  <Input
+                    type="number"
+                    value={partialAmount}
+                    onChange={e => setPartialAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    className="h-11 text-lg pl-8"
+                  />
+                </div>
                 {parseFloat(partialAmount) > 0 && parseFloat(partialAmount) < remainingAmount && (
                   <p className="text-xs text-muted-foreground">
                     Remaining after payment: {formatNaira(remainingAmount - (parseFloat(partialAmount) || 0))}
