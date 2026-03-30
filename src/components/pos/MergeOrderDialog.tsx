@@ -36,7 +36,8 @@ export default function MergeOrderDialog({ open, onClose, targetOrderId }: Props
     orders.filter(o =>
       o.id !== targetOrderId &&
       !["paid", "voided"].includes(o.status) &&
-      o.items.length > 0
+      o.items.length > 0 &&
+      o.paidAmount < o.totalAmount
     ), [orders, targetOrderId]);
 
   const handleSelectSource = (orderId: string) => {
