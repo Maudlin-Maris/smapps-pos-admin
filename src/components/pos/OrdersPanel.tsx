@@ -394,6 +394,22 @@ export default function OrdersPanel() {
                       </>
                     )}
                   </div>
+                  {/* Remaining balance banner for partial payments */}
+                  {order.paidAmount > 0 && order.paidAmount < order.totalAmount && order.status !== "paid" && order.status !== "voided" && (
+                    <div className="mt-2 flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[hsl(var(--warning))]/10 border border-[hsl(var(--warning))]/20">
+                      <div className="flex items-center gap-1.5 text-[11px] text-[hsl(var(--warning))]">
+                        <DollarSign className="w-3 h-3" />
+                        <span className="font-medium">Balance: {formatNaira(order.totalAmount - order.paidAmount)}</span>
+                      </div>
+                      <span
+                        role="button"
+                        onClick={(e) => { e.stopPropagation(); setPayOrderId(order.id); }}
+                        className="text-[11px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-0.5"
+                      >
+                        Continue Payment <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  )}
                 </button>
               );
             })}
