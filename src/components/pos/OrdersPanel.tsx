@@ -425,46 +425,31 @@ export default function OrdersPanel() {
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={o => !o && setSelectedOrder(null)}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 sm:rounded-lg rounded-none w-full h-full sm:h-auto sm:w-auto fixed sm:relative inset-0 sm:inset-auto">
           {selectedOrder && (() => {
             const sc = statusConfig[selectedOrder.status];
             return (
               <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+                <DialogHeader className="px-4 pt-4 pb-2 sm:px-0 sm:pt-0 sm:pb-0 border-b border-border sm:border-0 sticky top-0 bg-background z-10">
+                  <DialogTitle className="flex items-center gap-2 text-base">
                     {selectedOrder.orderNumber}
                     <Badge variant="outline" className={`text-xs gap-1 ${sc.color}`}>{sc.icon} {sc.label}</Badge>
                   </DialogTitle>
                 </DialogHeader>
 
-                <div className="space-y-4">
-                  {/* Info */}
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Type</p>
-                      <p className="font-medium capitalize">{selectedOrder.type.replace("_", " ")}</p>
-                    </div>
+                <div className="space-y-3 px-4 pb-4 sm:px-0 sm:pb-0 overflow-y-auto flex-1">
+                  {/* Info - compact chips on mobile */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground py-1">
+                    <span className="capitalize">{selectedOrder.type.replace("_", " ")}</span>
                     {selectedOrder.tableNumber && features?.hasDineIn && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Table</p>
-                        <p className="font-medium">{selectedOrder.tableNumber}</p>
-                      </div>
+                      <span>Table {selectedOrder.tableNumber}</span>
                     )}
                     {selectedOrder.customerName && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Customer</p>
-                        <p className="font-medium">{selectedOrder.customerName}</p>
-                      </div>
+                      <span>{selectedOrder.customerName}</span>
                     )}
-                    <div>
-                      <p className="text-muted-foreground text-xs">Created</p>
-                      <p className="font-medium">{timeSince(selectedOrder.createdAt)}</p>
-                    </div>
+                    <span>{timeSince(selectedOrder.createdAt)}</span>
                     {selectedOrder.locationName && hasLocations && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">{features?.hasAppointments ? "Station" : "Location"}</p>
-                        <p className="font-medium">{selectedOrder.locationName}</p>
-                      </div>
+                      <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" /> {selectedOrder.locationName}</span>
                     )}
                   </div>
 
