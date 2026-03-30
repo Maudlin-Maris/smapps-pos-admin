@@ -14,8 +14,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon
+  Menu as MenuIcon, BarChart3
 } from "lucide-react";
+import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import logoIconLight from "@/assets/logo-icon-light.png";
 
@@ -29,6 +30,7 @@ export default function POSMain() {
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const [salesOpen, setSalesOpen] = useState(false);
   const isMobile = useIsMobile();
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
@@ -94,6 +96,9 @@ export default function POSMain() {
             </div>
             <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
           </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
+            <BarChart3 className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={lockScreen} title="Lock Screen">
             <Lock className="w-4 h-4" />
           </Button>
@@ -161,6 +166,9 @@ export default function POSMain() {
 
       {/* Checkout dialog */}
       <PaymentDialog open={showCheckout} onClose={() => setShowCheckout(false)} />
+
+      {/* Cashier sales dialog */}
+      <CashierSalesDialog open={salesOpen} onClose={() => setSalesOpen(false)} />
     </div>
   );
 }
