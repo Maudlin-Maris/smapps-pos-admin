@@ -512,7 +512,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
         )}
 
         {/* ===== STEP: PAYMENT ===== */}
-        {(step === "payment" || (step === "type" && existingOrderId)) && (
+        {step === "payment" && (
           <>
             <DialogHeader>
               <div className="flex items-center gap-2">
