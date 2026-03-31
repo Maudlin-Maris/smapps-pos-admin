@@ -13,8 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock
+  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
 import { StartShiftDialog, CloseShiftDialog } from "@/components/pos/ShiftDialog";
@@ -34,6 +38,7 @@ export default function POSMain() {
   const [salesOpen, setSalesOpen] = useState(false);
   const [startShiftOpen, setStartShiftOpen] = useState(false);
   const [closeShiftOpen, setCloseShiftOpen] = useState(false);
+  const [outletToggleConfirm, setOutletToggleConfirm] = useState(false);
   const isMobile = useIsMobile();
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
@@ -75,15 +80,16 @@ export default function POSMain() {
 
         {/* Business open/close toggle */}
         <button
-          onClick={toggleOutletOpen}
-          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+          onClick={() => setOutletToggleConfirm(true)}
+          className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
             outletOpen
               ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
               : "bg-destructive/10 text-destructive hover:bg-destructive/20"
           }`}
         >
+          {outletOpen ? <DoorOpen className="w-3.5 h-3.5" /> : <DoorClosed className="w-3.5 h-3.5" />}
+          <span className="hidden sm:inline">{outletOpen ? "Open" : "Closed"}</span>
           <span className={`w-1.5 h-1.5 rounded-full ${outletOpen ? "bg-emerald-500" : "bg-destructive"}`} />
-          {outletOpen ? "Open" : "Closed"}
         </button>
 
         {/* Tabs (desktop) */}
@@ -219,6 +225,31 @@ export default function POSMain() {
       {/* Shift dialogs */}
       <StartShiftDialog open={startShiftOpen} onClose={() => setStartShiftOpen(false)} />
       <CloseShiftDialog open={closeShiftOpen} onClose={() => setCloseShiftOpen(false)} />
+
+      {/* Open/Close business confirmation */}
+      <AlertDialog open={outletToggleConfirm} onOpenChange={setOutletToggleConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {outletOpen ? "Close Business?" : "Open Business?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {outletOpen
+                ? `Are you sure you want to close ${currentOutlet?.name || "this outlet"} for the day? Cashiers will not be able to create new orders while closed.`
+                : `Are you sure you want to open ${currentOutlet?.name || "this outlet"} for business?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={toggleOutletOpen}
+              className={outletOpen ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {outletOpen ? "Yes, Close Business" : "Yes, Open Business"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

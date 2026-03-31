@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function POSCart({ onCheckout }: Props) {
-  const { cart, cartTotal, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart } = usePOS();
+  const { cart, cartTotal, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, outletOpen } = usePOS();
   const [editingItem, setEditingItem] = useState<POSCartItem | null>(null);
 
   if (cart.length === 0) {
@@ -86,8 +86,12 @@ export default function POSCart({ onCheckout }: Props) {
           <span className="text-sm text-muted-foreground">Total</span>
           <span className="text-xl font-bold text-foreground">{formatNaira(cartTotal)}</span>
         </div>
-        <Button onClick={onCheckout} className="w-full h-12 bg-primary text-primary-foreground text-base font-semibold">
-          Checkout · {formatNaira(cartTotal)}
+        <Button
+          onClick={onCheckout}
+          disabled={!outletOpen}
+          className="w-full h-12 bg-primary text-primary-foreground text-base font-semibold"
+        >
+          {outletOpen ? `Checkout · ${formatNaira(cartTotal)}` : "Business is Closed"}
         </Button>
       </div>
 
