@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function POSCart({ onCheckout }: Props) {
-  const { cart, cartTotal, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart } = usePOS();
+  const { cart, cartTotal, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, outletOpen } = usePOS();
   const [editingItem, setEditingItem] = useState<POSCartItem | null>(null);
 
   if (cart.length === 0) {
