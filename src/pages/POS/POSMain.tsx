@@ -80,15 +80,16 @@ export default function POSMain() {
 
         {/* Business open/close toggle */}
         <button
-          onClick={toggleOutletOpen}
-          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+          onClick={() => setOutletToggleConfirm(true)}
+          className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
             outletOpen
               ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
               : "bg-destructive/10 text-destructive hover:bg-destructive/20"
           }`}
         >
+          {outletOpen ? <DoorOpen className="w-3.5 h-3.5" /> : <DoorClosed className="w-3.5 h-3.5" />}
+          <span className="hidden sm:inline">{outletOpen ? "Open" : "Closed"}</span>
           <span className={`w-1.5 h-1.5 rounded-full ${outletOpen ? "bg-emerald-500" : "bg-destructive"}`} />
-          {outletOpen ? "Open" : "Closed"}
         </button>
 
         {/* Tabs (desktop) */}
