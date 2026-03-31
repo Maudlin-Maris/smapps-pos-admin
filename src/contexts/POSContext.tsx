@@ -41,6 +41,8 @@ interface POSContextType {
   currentOutlet: POSOutlet | null;
   setCurrentOutlet: (outlet: POSOutlet) => void;
   availableOutlets: POSOutlet[];
+  outletOpen: boolean;
+  toggleOutletOpen: () => void;
 
   // Cart
   cart: POSCartItem[];
