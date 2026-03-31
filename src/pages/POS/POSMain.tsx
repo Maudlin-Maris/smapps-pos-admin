@@ -89,6 +89,24 @@ export default function POSMain() {
           ))}
         </div>
 
+        {/* Shift indicator */}
+        <div className="hidden sm:flex items-center">
+          {currentShift ? (
+            <button
+              onClick={() => setCloseShiftOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <Clock className="w-3 h-3" />
+              Shift Active
+            </button>
+          ) : (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => setStartShiftOpen(true)}>
+              <PlayCircle className="w-3.5 h-3.5" /> Start Shift
+            </Button>
+          )}
+        </div>
+
         <div className="flex-1" />
 
         {/* User info & actions */}
@@ -98,6 +116,18 @@ export default function POSMain() {
               {currentCashier?.name.charAt(0)}
             </div>
             <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
+          </div>
+          {/* Mobile shift button */}
+          <div className="sm:hidden">
+            {currentShift ? (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setCloseShiftOpen(true)} title="Close Shift">
+                <StopCircle className="w-4 h-4" />
+              </Button>
+            ) : (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setStartShiftOpen(true)} title="Start Shift">
+                <PlayCircle className="w-4 h-4" />
+              </Button>
+            )}
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
             <BarChart3 className="w-4 h-4" />
