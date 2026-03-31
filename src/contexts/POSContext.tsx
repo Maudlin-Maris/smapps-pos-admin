@@ -9,6 +9,17 @@ import {
 
 type AuthState = "login" | "pin" | "locked" | "active";
 
+export interface POSShift {
+  id: string;
+  cashierId: string;
+  outletId: string;
+  startedAt: Date;
+  endedAt?: Date;
+  openingCash: number;
+  closingCash?: number;
+  status: "active" | "closed";
+}
+
 interface POSContextType {
   // Auth
   authState: AuthState;
@@ -20,6 +31,11 @@ interface POSContextType {
   lockScreen: () => void;
   switchProfile: () => void;
   logout: () => void;
+
+  // Shift
+  currentShift: POSShift | null;
+  startShift: (openingCash: number) => void;
+  closeShift: (closingCash: number) => void;
 
   // Outlet
   currentOutlet: POSOutlet | null;
@@ -87,6 +103,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<POSOrder[]>(mockOrders);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [orderCounter, setOrderCounter] = useState(5);
+  const [currentShift, setCurrentShift] = useState<POSShift | null>(null);
 
   // Persist session to sessionStorage
   useEffect(() => {
@@ -142,8 +159,26 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setCurrentCashier(null);
     setCurrentOutletState(null);
     setCart([]);
+    setCurrentShift(null);
     sessionStorage.removeItem("pos_session");
   }, [currentCashier]);
+
+  const startShift = useCallback((openingCash: number) => {
+    const shift: POSShift = {
+      id: `shift-${Date.now()}`,
+      cashierId: currentCashier?.id || "",
+      outletId: currentOutlet?.id || "",
+      startedAt: new Date(),
+      openingCash,
+      status: "active",
+    };
+    setCurrentShift(shift);
+  }, [currentCashier, currentOutlet]);
+
+  const closeShift = useCallback((closingCash: number) => {
+    setCurrentShift(prev => prev ? { ...prev, endedAt: new Date(), closingCash, status: "closed" } : null);
+    setTimeout(() => setCurrentShift(null), 0);
+  }, []);
 
   const availableOutlets = currentCashier
     ? posOutlets.filter(o => currentCashier.assignedOutlets.includes(o.id))
@@ -301,6 +336,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
   return (
     <POSContext.Provider value={{
       authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
+      currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
       orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder,

@@ -14,9 +14,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon, BarChart3
+  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
+import { StartShiftDialog, CloseShiftDialog } from "@/components/pos/ShiftDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import logoIconLight from "@/assets/logo-icon-light.png";
 
@@ -25,12 +26,14 @@ type POSTab = "catalog" | "orders" | "kitchen";
 export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
-    lockScreen, logout, cart, cartTotal
+    lockScreen, logout, cart, cartTotal, currentShift
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [salesOpen, setSalesOpen] = useState(false);
+  const [startShiftOpen, setStartShiftOpen] = useState(false);
+  const [closeShiftOpen, setCloseShiftOpen] = useState(false);
   const isMobile = useIsMobile();
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
@@ -86,6 +89,24 @@ export default function POSMain() {
           ))}
         </div>
 
+        {/* Shift indicator */}
+        <div className="hidden sm:flex items-center">
+          {currentShift ? (
+            <button
+              onClick={() => setCloseShiftOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <Clock className="w-3 h-3" />
+              Shift Active
+            </button>
+          ) : (
+            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => setStartShiftOpen(true)}>
+              <PlayCircle className="w-3.5 h-3.5" /> Start Shift
+            </Button>
+          )}
+        </div>
+
         <div className="flex-1" />
 
         {/* User info & actions */}
@@ -95,6 +116,18 @@ export default function POSMain() {
               {currentCashier?.name.charAt(0)}
             </div>
             <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
+          </div>
+          {/* Mobile shift button */}
+          <div className="sm:hidden">
+            {currentShift ? (
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setCloseShiftOpen(true)} title="Close Shift">
+                <StopCircle className="w-4 h-4" />
+              </Button>
+            ) : (
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setStartShiftOpen(true)} title="Start Shift">
+                <PlayCircle className="w-4 h-4" />
+              </Button>
+            )}
           </div>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
             <BarChart3 className="w-4 h-4" />
@@ -169,6 +202,10 @@ export default function POSMain() {
 
       {/* Cashier sales dialog */}
       <CashierSalesDialog open={salesOpen} onClose={() => setSalesOpen(false)} />
+
+      {/* Shift dialogs */}
+      <StartShiftDialog open={startShiftOpen} onClose={() => setStartShiftOpen(false)} />
+      <CloseShiftDialog open={closeShiftOpen} onClose={() => setCloseShiftOpen(false)} />
     </div>
   );
 }
