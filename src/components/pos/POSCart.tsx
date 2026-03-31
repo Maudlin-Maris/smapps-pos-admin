@@ -86,8 +86,12 @@ export default function POSCart({ onCheckout }: Props) {
           <span className="text-sm text-muted-foreground">Total</span>
           <span className="text-xl font-bold text-foreground">{formatNaira(cartTotal)}</span>
         </div>
-        <Button onClick={onCheckout} className="w-full h-12 bg-primary text-primary-foreground text-base font-semibold">
-          Checkout · {formatNaira(cartTotal)}
+        <Button
+          onClick={onCheckout}
+          disabled={!outletOpen}
+          className="w-full h-12 bg-primary text-primary-foreground text-base font-semibold"
+        >
+          {outletOpen ? `Checkout · ${formatNaira(cartTotal)}` : "Business is Closed"}
         </Button>
       </div>
 
