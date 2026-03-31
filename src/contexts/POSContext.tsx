@@ -159,8 +159,26 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setCurrentCashier(null);
     setCurrentOutletState(null);
     setCart([]);
+    setCurrentShift(null);
     sessionStorage.removeItem("pos_session");
   }, [currentCashier]);
+
+  const startShift = useCallback((openingCash: number) => {
+    const shift: POSShift = {
+      id: `shift-${Date.now()}`,
+      cashierId: currentCashier?.id || "",
+      outletId: currentOutlet?.id || "",
+      startedAt: new Date(),
+      openingCash,
+      status: "active",
+    };
+    setCurrentShift(shift);
+  }, [currentCashier, currentOutlet]);
+
+  const closeShift = useCallback((closingCash: number) => {
+    setCurrentShift(prev => prev ? { ...prev, endedAt: new Date(), closingCash, status: "closed" } : null);
+    setTimeout(() => setCurrentShift(null), 0);
+  }, []);
 
   const availableOutlets = currentCashier
     ? posOutlets.filter(o => currentCashier.assignedOutlets.includes(o.id))
