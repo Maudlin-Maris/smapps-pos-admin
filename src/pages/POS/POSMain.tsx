@@ -202,6 +202,10 @@ export default function POSMain() {
 
       {/* Cashier sales dialog */}
       <CashierSalesDialog open={salesOpen} onClose={() => setSalesOpen(false)} />
+
+      {/* Shift dialogs */}
+      <StartShiftDialog open={startShiftOpen} onClose={() => setStartShiftOpen(false)} />
+      <CloseShiftDialog open={closeShiftOpen} onClose={() => setCloseShiftOpen(false)} />
     </div>
   );
 }
