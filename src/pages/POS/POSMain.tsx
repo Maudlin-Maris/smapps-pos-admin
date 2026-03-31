@@ -26,7 +26,7 @@ type POSTab = "catalog" | "orders" | "kitchen";
 export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
-    lockScreen, logout, cart, cartTotal, currentShift
+    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -72,6 +72,19 @@ export default function POSMain() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Business open/close toggle */}
+        <button
+          onClick={toggleOutletOpen}
+          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+            outletOpen
+              ? "bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+              : "bg-destructive/10 text-destructive hover:bg-destructive/20"
+          }`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${outletOpen ? "bg-emerald-500" : "bg-destructive"}`} />
+          {outletOpen ? "Open" : "Closed"}
+        </button>
 
         {/* Tabs (desktop) */}
         <div className="hidden md:flex items-center gap-1 ml-4">
