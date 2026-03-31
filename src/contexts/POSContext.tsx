@@ -9,6 +9,17 @@ import {
 
 type AuthState = "login" | "pin" | "locked" | "active";
 
+export interface POSShift {
+  id: string;
+  cashierId: string;
+  outletId: string;
+  startedAt: Date;
+  endedAt?: Date;
+  openingCash: number;
+  closingCash?: number;
+  status: "active" | "closed";
+}
+
 interface POSContextType {
   // Auth
   authState: AuthState;
@@ -20,6 +31,11 @@ interface POSContextType {
   lockScreen: () => void;
   switchProfile: () => void;
   logout: () => void;
+
+  // Shift
+  currentShift: POSShift | null;
+  startShift: (openingCash: number) => void;
+  closeShift: (closingCash: number) => void;
 
   // Outlet
   currentOutlet: POSOutlet | null;
