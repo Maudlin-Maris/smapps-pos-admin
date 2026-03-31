@@ -225,6 +225,31 @@ export default function POSMain() {
       {/* Shift dialogs */}
       <StartShiftDialog open={startShiftOpen} onClose={() => setStartShiftOpen(false)} />
       <CloseShiftDialog open={closeShiftOpen} onClose={() => setCloseShiftOpen(false)} />
+
+      {/* Open/Close business confirmation */}
+      <AlertDialog open={outletToggleConfirm} onOpenChange={setOutletToggleConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {outletOpen ? "Close Business?" : "Open Business?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {outletOpen
+                ? `Are you sure you want to close ${currentOutlet?.name || "this outlet"} for the day? Cashiers will not be able to create new orders while closed.`
+                : `Are you sure you want to open ${currentOutlet?.name || "this outlet"} for business?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={toggleOutletOpen}
+              className={outletOpen ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+            >
+              {outletOpen ? "Yes, Close Business" : "Yes, Open Business"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
