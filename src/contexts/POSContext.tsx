@@ -103,6 +103,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<POSOrder[]>(mockOrders);
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [orderCounter, setOrderCounter] = useState(5);
+  const [currentShift, setCurrentShift] = useState<POSShift | null>(null);
 
   // Persist session to sessionStorage
   useEffect(() => {
