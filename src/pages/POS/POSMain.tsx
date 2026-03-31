@@ -14,9 +14,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon, BarChart3
+  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
+import { StartShiftDialog, CloseShiftDialog } from "@/components/pos/ShiftDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import logoIconLight from "@/assets/logo-icon-light.png";
 
