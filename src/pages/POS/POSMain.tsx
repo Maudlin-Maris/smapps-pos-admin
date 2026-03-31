@@ -38,6 +38,7 @@ export default function POSMain() {
   const [salesOpen, setSalesOpen] = useState(false);
   const [startShiftOpen, setStartShiftOpen] = useState(false);
   const [closeShiftOpen, setCloseShiftOpen] = useState(false);
+  const [outletToggleConfirm, setOutletToggleConfirm] = useState(false);
   const isMobile = useIsMobile();
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
