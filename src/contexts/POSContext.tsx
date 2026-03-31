@@ -106,6 +106,8 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [orderCounter, setOrderCounter] = useState(5);
   const [currentShift, setCurrentShift] = useState<POSShift | null>(null);
+  const [outletOpen, setOutletOpen] = useState(true);
+  const toggleOutletOpen = useCallback(() => setOutletOpen(prev => !prev), []);
 
   // Persist session to sessionStorage
   useEffect(() => {
