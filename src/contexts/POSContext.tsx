@@ -6,6 +6,7 @@ import {
   type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee, type ItemStatus,
   posCashiers, mockOrders, posOutlets,
 } from "@/data/posData";
+import type { LoyaltyRedemption } from "@/data/loyaltyData";
 
 type AuthState = "login" | "pin" | "locked" | "active";
 
