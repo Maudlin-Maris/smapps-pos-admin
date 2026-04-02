@@ -230,6 +230,8 @@ export default function LoyaltyManagement() {
     return list;
   }, [activity, activityType, activitySearch]);
 
+  const activityPagination = usePagination(filteredActivity, 10);
+
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: TrendingUp },
     { key: "rewards", label: "Rewards", icon: Gift },
