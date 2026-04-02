@@ -698,10 +698,20 @@ export default function LoyaltyManagement() {
                 <Label className="mb-3 block">Tier Multipliers</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {(Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => (
-                    <div key={tier} className="rounded-lg border p-3 text-center">
-                      <Badge className={cn("text-xs mb-2", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
-                      <p className="text-lg font-bold">{tierConfig[tier].earnMultiplier}x</p>
-                      <p className="text-xs text-muted-foreground">{tierConfig[tier].minPoints.toLocaleString()}+ pts</p>
+                    <div key={tier} className="rounded-lg border p-3 text-center space-y-1">
+                      <Badge className={cn("text-xs mb-1", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
+                      <div className="flex items-center justify-center gap-1">
+                        <Input
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          value={tierMultipliers[tier]}
+                          onChange={e => setTierMultipliers(prev => ({ ...prev, [tier]: parseFloat(e.target.value) || 1 }))}
+                          className="w-16 text-center h-8 text-sm font-bold"
+                        />
+                        <span className="text-sm text-muted-foreground">×</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{tierThresholds[tier].toLocaleString()}+ pts</p>
                     </div>
                   ))}
                 </div>
