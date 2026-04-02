@@ -157,6 +157,32 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
         </>
       )}
 
+      {/* Loyalty */}
+      {order.loyaltyRedemption && (() => {
+        const lr = order.loyaltyRedemption;
+        return (
+          <>
+            <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
+            <div>
+              <p style={{ fontWeight: 600, marginBottom: "2px" }}>Loyalty</p>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+                <span>Member: {lr.customerName}</span>
+              </div>
+              {lr.rewardName && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+                  <span>Reward: {lr.rewardName}</span>
+                  {lr.discountValue > 0 && <span>-{formatNaira(lr.discountValue)}</span>}
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px" }}>
+                <span>Points Used: {lr.pointsUsed}</span>
+                <span>Points Earned: +{lr.pointsEarned}</span>
+              </div>
+            </div>
+          </>
+        );
+      })()}
+
       {/* Footer */}
       <p style={{ textAlign: "center", margin: "12px 0 4px", borderTop: "1px dashed #999" }} />
       <div className="text-center" style={{ fontSize: "10px" }}>

@@ -579,6 +579,44 @@ export default function OrdersPanel() {
                     )}
                   </div>
 
+                   {/* Loyalty Redemption */}
+                  {selectedOrder.loyaltyRedemption && (() => {
+                    const lr = selectedOrder.loyaltyRedemption;
+                    return (
+                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-1.5">
+                        <p className="text-sm font-semibold flex items-center gap-1.5">
+                          <Star className="w-3.5 h-3.5 text-yellow-500" /> Loyalty Redemption
+                        </p>
+                        <div className="text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Member</span>
+                            <span className="font-medium">{lr.customerName}</span>
+                          </div>
+                          {lr.rewardName && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Reward</span>
+                              <span className="font-medium">{lr.rewardName}</span>
+                            </div>
+                          )}
+                          {lr.discountValue > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Discount</span>
+                              <span className="font-semibold text-[hsl(var(--success))]">-{formatNaira(lr.discountValue)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Points Used</span>
+                            <span className="font-medium">{lr.pointsUsed}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Points Earned</span>
+                            <span className="font-medium text-primary">+{lr.pointsEarned}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* Payments */}
                   {selectedOrder.payments.length > 0 && (
                     <div className="space-y-1">
