@@ -794,14 +794,22 @@ export default function LoyaltyManagement() {
                 <div key={tier} className="flex items-center justify-between py-2">
                   <Badge className={cn("text-xs w-20 justify-center", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
                   <div className="flex items-center gap-2">
-                    <Input type="number" defaultValue={tierConfig[tier].minPoints} className="w-28 text-right" disabled />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={tierThresholds[tier]}
+                      onChange={e => setTierThresholds(prev => ({ ...prev, [tier]: parseInt(e.target.value) || 0 }))}
+                      className="w-28 text-right"
+                      disabled={tier === "bronze"}
+                    />
                     <span className="text-sm text-muted-foreground w-12">points</span>
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground mt-4 italic">
-              Tier threshold editing will be available in a future update.
+            <p className="text-xs text-muted-foreground mt-4">
+              Bronze always starts at 0. Thresholds apply globally across all outlets.
             </p>
           </Card>
 
