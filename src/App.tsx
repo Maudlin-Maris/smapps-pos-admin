@@ -19,6 +19,7 @@ import ExpenseManagement from "@/pages/ExpenseManagement";
 import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
 import CashierManagement from "@/pages/CashierManagement";
+import LoyaltyManagement from "@/pages/LoyaltyManagement";
 import ServiceBookings from "@/pages/ServiceBookings";
 import POSMain from "@/pages/POS/POSMain";
 import NotFound from "./pages/NotFound";
