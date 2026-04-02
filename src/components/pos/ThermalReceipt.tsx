@@ -2,6 +2,7 @@ import { forwardRef } from "react";
 import type { POSOrder, POSOutlet } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { format } from "date-fns";
+import { tierConfig } from "@/data/loyaltyData";
 
 interface Props {
   order: POSOrder;
