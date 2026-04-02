@@ -19,6 +19,7 @@ import {
   Truck,
   ArrowLeftRight,
   Heart,
+  Gift,
   Globe,
   BarChart3,
   type LucideIcon,
