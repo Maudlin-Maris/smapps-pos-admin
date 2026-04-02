@@ -181,6 +181,16 @@ export default function LoyaltyManagement() {
   const [programEnabled, setProgramEnabled] = useState(true);
   const [earnRate, setEarnRate] = useState((POINTS_PER_NAIRA * 100).toString());
   const [earnOverrides, setEarnOverrides] = useState<OutletEarnOverride[]>([...outletEarnOverrides]);
+  const [tierThresholds, setTierThresholds] = useState<Record<LoyaltyTier, number>>(() => {
+    const t = {} as Record<LoyaltyTier, number>;
+    (Object.keys(tierConfig) as LoyaltyTier[]).forEach(k => { t[k] = tierConfig[k].minPoints; });
+    return t;
+  });
+  const [tierMultipliers, setTierMultipliers] = useState<Record<LoyaltyTier, number>>(() => {
+    const m = {} as Record<LoyaltyTier, number>;
+    (Object.keys(tierConfig) as LoyaltyTier[]).forEach(k => { m[k] = tierConfig[k].earnMultiplier; });
+    return m;
+  });
 
   // Outlet filter (global across tabs)
   const [outletFilter, setOutletFilter] = useState("all");
