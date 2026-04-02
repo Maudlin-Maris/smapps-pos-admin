@@ -1,4 +1,5 @@
 import type { BusinessTypeId } from "./businessTypes";
+import type { LoyaltyRedemption } from "./loyaltyData";
 
 export interface POSCategory {
   id: string;
