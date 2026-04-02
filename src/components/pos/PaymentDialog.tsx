@@ -142,7 +142,8 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
     return parseFloat(tipAmount) || 0;
   }, [tipPreset, tipAmount, subtotal]);
 
-  const total = subtotal - discountAmount + feesTotal + tipValue;
+  const loyaltyDiscount = loyaltyRedemption?.discountValue || 0;
+  const total = subtotal - discountAmount - loyaltyDiscount + feesTotal + tipValue;
 
   // Auto-select first order type
   const initializedRef = useMemo(() => {
