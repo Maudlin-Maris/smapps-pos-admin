@@ -100,6 +100,8 @@ export interface POSOrder {
   tableNumber?: string;
   locationName?: string;
   customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
   payments: PaymentEntry[];
   totalAmount: number;
   paidAmount: number;
