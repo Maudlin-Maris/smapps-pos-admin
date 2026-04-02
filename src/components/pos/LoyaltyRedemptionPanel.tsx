@@ -10,9 +10,10 @@ import {
 } from "@/data/loyaltyData";
 import {
   Search, Star, Gift, Award, User, Phone, ChevronRight,
-  X, Sparkles, TrendingUp, CheckCircle2,
+  X, Sparkles, TrendingUp, CheckCircle2, UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Props {
   subtotal: number;
@@ -21,7 +22,7 @@ interface Props {
   currentRedemption: LoyaltyRedemption | null;
 }
 
-type PanelView = "search" | "profile" | "rewards";
+type PanelView = "search" | "profile" | "rewards" | "register";
 
 export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, onClearRedemption, currentRedemption }: Props) {
   const [view, setView] = useState<PanelView>(currentRedemption ? "profile" : "search");
@@ -29,6 +30,11 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
   const [selectedCustomer, setSelectedCustomer] = useState<LoyaltyCustomer | null>(
     currentRedemption ? loyaltyCustomers.find(c => c.id === currentRedemption.customerId) || null : null
   );
+
+  // Registration form state
+  const [regName, setRegName] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regEmail, setRegEmail] = useState("");
 
   const filteredCustomers = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -69,7 +75,6 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
     } else if (reward.type === "discount_fixed") {
       discountValue = Math.min(reward.value, subtotal);
     }
-    // For free_item type, discount value stays 0 — handled externally
 
     onApplyRedemption({
       customerId: selectedCustomer.id,
@@ -88,6 +93,34 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
     onClearRedemption();
     setView("search");
     setSearchQuery("");
+  };
+
+  const handleRegister = () => {
+    if (!regName.trim() || !regPhone.trim()) {
+      toast.error("Name and phone are required");
+      return;
+    }
+    const newCustomer: LoyaltyCustomer = {
+      id: `c${Date.now()}`,
+      name: regName.trim(),
+      email: regEmail.trim(),
+      phone: regPhone.trim(),
+      loyaltyTier: "bronze",
+      points: 0,
+      totalSpent: 0,
+      visitCount: 0,
+      lastVisit: null,
+      notes: "",
+      tags: ["New"],
+      createdAt: new Date(),
+    };
+    loyaltyCustomers.push(newCustomer);
+    toast.success(`${newCustomer.name} enrolled as a Bronze member!`);
+    setSelectedCustomer(newCustomer);
+    setRegName("");
+    setRegPhone("");
+    setRegEmail("");
+    setView("profile");
   };
 
   // ── Compact applied state ──
@@ -130,6 +163,55 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
     );
   }
 
+  // ── Register new member view ──
+  if (view === "register") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <UserPlus className="w-4 h-4 text-primary" />
+            <p className="text-sm font-medium">New Loyalty Member</p>
+          </div>
+          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setView("search")}>
+            Cancel
+          </Button>
+        </div>
+        <div className="space-y-2">
+          <Input
+            value={regName}
+            onChange={e => setRegName(e.target.value)}
+            placeholder="Full Name *"
+            className="h-9 text-sm"
+            autoFocus
+          />
+          <Input
+            value={regPhone}
+            onChange={e => setRegPhone(e.target.value)}
+            placeholder="Phone Number *"
+            className="h-9 text-sm"
+          />
+          <Input
+            value={regEmail}
+            onChange={e => setRegEmail(e.target.value)}
+            placeholder="Email (Optional)"
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="rounded-lg border border-border bg-muted/20 p-2.5 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Award className="w-3.5 h-3.5 text-orange-500" />
+            <span className="font-medium text-foreground">Starts at Bronze tier</span>
+          </div>
+          <p>Earns {calculatePointsEarned(subtotal, "bronze")} points on this order</p>
+        </div>
+        <Button className="w-full h-9 text-sm gap-1.5" onClick={handleRegister}>
+          <UserPlus className="w-4 h-4" />
+          Enroll & Link to Order
+        </Button>
+      </div>
+    );
+  }
+
   // ── Search view ──
   if (view === "search") {
     return (
@@ -152,7 +234,21 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
         {searchQuery.trim() && (
           <ScrollArea className="max-h-40">
             {filteredCustomers.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No matching customers found</p>
+              <div className="text-center py-4 space-y-2">
+                <p className="text-xs text-muted-foreground">No matching customers found</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={() => {
+                    setRegName(searchQuery.trim());
+                    setView("register");
+                  }}
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Register "{searchQuery.trim()}" as New Member
+                </Button>
+              </div>
             ) : (
               <div className="space-y-1">
                 {filteredCustomers.map(c => {
@@ -190,9 +286,20 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
         )}
 
         {!searchQuery.trim() && (
-          <p className="text-[11px] text-muted-foreground text-center py-1">
-            Link a loyalty member to earn points & redeem rewards
-          </p>
+          <div className="text-center space-y-1.5 py-1">
+            <p className="text-[11px] text-muted-foreground">
+              Link a loyalty member to earn points & redeem rewards
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1.5 text-primary"
+              onClick={() => setView("register")}
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              Register New Member
+            </Button>
+          </div>
         )}
       </div>
     );

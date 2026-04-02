@@ -161,6 +161,19 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
 
           <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
 
+          {/* Loyalty info on docket */}
+          {order.loyaltyRedemption && (
+            <>
+              <div style={{ marginBottom: "4px", fontSize: "11px" }}>
+                <p style={{ fontWeight: 700 }}>★ Loyalty: {order.loyaltyRedemption.customerName}</p>
+                {order.loyaltyRedemption.rewardName && (
+                  <p style={{ paddingLeft: "8px" }}>Reward: {order.loyaltyRedemption.rewardName}</p>
+                )}
+              </div>
+              <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
+            </>
+          )}
+
           <div className="text-center" style={{ fontSize: "10px", color: "#888" }}>
             <p>{outlet?.name || "Store"} · {format(new Date(order.createdAt), "dd/MM/yy HH:mm")}</p>
           </div>
