@@ -474,6 +474,16 @@ export default function LoyaltyManagement() {
             </Select>
           </div>
 
+          <PaginationControls
+            page={activityPagination.page}
+            totalPages={activityPagination.totalPages}
+            perPage={activityPagination.perPage}
+            totalItems={activityPagination.totalItems}
+            pageSizeOptions={activityPagination.pageSizeOptions}
+            onPageChange={activityPagination.setPage}
+            onPerPageChange={activityPagination.setPerPage}
+          />
+
           <Card className="overflow-x-auto" style={{ touchAction: "pan-x" }}>
             <Table className="min-w-[600px]">
               <TableHeader>
@@ -486,7 +496,7 @@ export default function LoyaltyManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredActivity.map((a) => (
+                {activityPagination.paginatedItems.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="text-muted-foreground whitespace-nowrap">{format(a.date, "MMM d, yyyy h:mm a")}</TableCell>
                     <TableCell className="font-medium">{a.customerName}</TableCell>
