@@ -259,7 +259,7 @@ export default function LoyaltyManagement() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit overflow-x-auto" style={{ touchAction: "pan-x" }}>
+      <div className="flex gap-1 bg-muted p-1 rounded-lg max-w-full overflow-x-auto scrollbar-none" style={{ touchAction: "pan-x", WebkitOverflowScrolling: "touch" }}>
         {tabs.map((t) => (
           <button
             key={t.key}
