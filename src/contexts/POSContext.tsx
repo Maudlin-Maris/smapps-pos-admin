@@ -231,7 +231,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const cartTotal = cart.reduce((sum, i) => sum + i.totalPrice, 0);
 
-  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number) => {
+  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number, loyaltyRedemption?: LoyaltyRedemption) => {
     const num = orderCounter;
     setOrderCounter(n => n + 1);
     const order: POSOrder = {
@@ -244,7 +244,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       locationName: tableNumber,
       customerName: customerName || (type === "dine_in" && tableNumber ? tableNumber : undefined),
       payments: [],
-      totalAmount: cartTotal - (discountAmount || 0) + (feesTotal || 0),
+      totalAmount: cartTotal - (discountAmount || 0) - (loyaltyRedemption?.discountValue || 0) + (feesTotal || 0),
       paidAmount: 0,
       tipAmount,
       discountAmount,
@@ -252,6 +252,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       appliedFees,
       feesTotal,
       notes,
+      loyaltyRedemption,
       createdAt: new Date(),
       updatedAt: new Date(),
       outletId: currentOutlet?.id || "",

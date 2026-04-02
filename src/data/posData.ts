@@ -117,6 +117,7 @@ export interface POSOrder {
   cashierId: string;
   transferredToCashierId?: string;
   notes?: string;
+  loyaltyRedemption?: LoyaltyRedemption;
 }
 
 export interface POSCashier {
