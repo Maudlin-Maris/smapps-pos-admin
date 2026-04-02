@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "@/components/inventory/PaginationControls";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
