@@ -392,7 +392,7 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
           </div>
         </div>
 
-        <ScrollArea className="max-h-52">
+        <ScrollArea className="max-h-[60vh]">
           <div className="space-y-1.5">
             {allRewards.map(r => {
               const canRedeem = r.pointsCost <= selectedCustomer.points;
