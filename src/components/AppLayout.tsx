@@ -19,6 +19,7 @@ import {
   Truck,
   ArrowLeftRight,
   Heart,
+  Gift,
   Globe,
   BarChart3,
   type LucideIcon,
@@ -45,7 +46,8 @@ const coreNavItems: NavItem[] = [
   { title: "Advanced Inventory", path: "/inventory/advanced", icon: ArrowLeftRight, section: "Inventory" },
   { title: "Purchase Orders", path: "/purchase-orders", icon: Truck, section: "Inventory" },
   // Customers
-  { title: "Customers & Loyalty", path: "/customers", icon: Heart, section: "Customers" },
+  { title: "Customers", path: "/customers", icon: Heart, section: "Customers" },
+  { title: "Loyalty & Rewards", path: "/loyalty", icon: Gift, section: "Customers" },
   // Finance & Reports
   { title: "Expenses", path: "/expenses", icon: Receipt, section: "Finance" },
   { title: "Reports", path: "/reports", icon: FileBarChart, section: "Finance" },
