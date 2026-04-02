@@ -790,26 +790,42 @@ export default function LoyaltyManagement() {
             <p className="text-sm text-muted-foreground mb-5">Points required to reach each loyalty tier. Applied globally across all outlets.</p>
 
             <div className="space-y-3">
-              {(Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => (
-                <div key={tier} className="flex items-center justify-between py-2">
-                  <Badge className={cn("text-xs w-20 justify-center", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={tierThresholds[tier]}
-                      onChange={e => setTierThresholds(prev => ({ ...prev, [tier]: parseInt(e.target.value) || 0 }))}
-                      className="w-28 text-right"
-                      disabled={tier === "bronze"}
-                    />
-                    <span className="text-sm text-muted-foreground w-12">points</span>
+              {(Object.keys(tierConfig) as LoyaltyTier[]).map((tier, idx, arr) => {
+                const tierOrder: LoyaltyTier[] = ["bronze", "silver", "gold", "platinum"];
+                const tierIdx = tierOrder.indexOf(tier);
+                const prevTier = tierIdx > 0 ? tierOrder[tierIdx - 1] : null;
+                const nextTier = tierIdx < tierOrder.length - 1 ? tierOrder[tierIdx + 1] : null;
+                const hasError =
+                  (prevTier && tierThresholds[tier] <= tierThresholds[prevTier]) ||
+                  (nextTier && tierThresholds[tier] >= tierThresholds[nextTier]);
+                const errorMsg = tier !== "bronze" && prevTier && tierThresholds[tier] <= tierThresholds[prevTier]
+                  ? `Must be greater than ${tierConfig[prevTier].label} (${tierThresholds[prevTier]})`
+                  : null;
+
+                return (
+                  <div key={tier}>
+                    <div className="flex items-center justify-between py-2">
+                      <Badge className={cn("text-xs w-20 justify-center", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="100"
+                          value={tierThresholds[tier]}
+                          onChange={e => setTierThresholds(prev => ({ ...prev, [tier]: parseInt(e.target.value) || 0 }))}
+                          className={cn("w-28 text-right", errorMsg && "border-destructive focus-visible:ring-destructive")}
+                          disabled={tier === "bronze"}
+                        />
+                        <span className="text-sm text-muted-foreground w-12">points</span>
+                      </div>
+                    </div>
+                    {errorMsg && <p className="text-xs text-destructive text-right mr-16">{errorMsg}</p>}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <p className="text-xs text-muted-foreground mt-4">
-              Bronze always starts at 0. Thresholds apply globally across all outlets.
+              Bronze always starts at 0. Thresholds must increase with each tier.
             </p>
           </Card>
 
