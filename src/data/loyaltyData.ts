@@ -25,6 +25,8 @@ export interface LoyaltyReward {
   type: "discount_percentage" | "discount_fixed" | "free_item";
   value: number; // percentage, fixed naira amount, or 0 for free item
   isActive: boolean;
+  /** Empty array = available at ALL outlets (global). Non-empty = only at listed outlet IDs. */
+  outletIds: string[];
 }
 
 export interface LoyaltyRedemption {
@@ -53,8 +55,26 @@ export const tierConfig: Record<LoyaltyTier, {
 // Points earn rate: 1 point per ₦100 spent (base)
 export const POINTS_PER_NAIRA = 1 / 100;
 
-export function calculatePointsEarned(amount: number, tier: LoyaltyTier): number {
-  return Math.floor(amount * POINTS_PER_NAIRA * tierConfig[tier].earnMultiplier);
+/** Per-outlet earn rate multiplier overrides. Missing = use global default (1x). */
+export interface OutletEarnOverride {
+  outletId: string;
+  multiplier: number; // e.g. 1.5 means 1.5x the global base rate
+  label?: string; // e.g. "Grand Opening Bonus"
+}
+
+export const outletEarnOverrides: OutletEarnOverride[] = [
+  { outletId: "outlet-2", multiplier: 2, label: "Mall Branch 2x Promo" },
+  { outletId: "outlet-7", multiplier: 1.5, label: "FreshMart Bonus" },
+];
+
+export function getOutletEarnMultiplier(outletId: string): number {
+  const override = outletEarnOverrides.find(o => o.outletId === outletId);
+  return override?.multiplier ?? 1;
+}
+
+export function calculatePointsEarned(amount: number, tier: LoyaltyTier, outletId?: string): number {
+  const outletMultiplier = outletId ? getOutletEarnMultiplier(outletId) : 1;
+  return Math.floor(amount * POINTS_PER_NAIRA * tierConfig[tier].earnMultiplier * outletMultiplier);
 }
 
 export const loyaltyCustomers: LoyaltyCustomer[] = [
@@ -66,11 +86,38 @@ export const loyaltyCustomers: LoyaltyCustomer[] = [
 ];
 
 export const loyaltyRewards: LoyaltyReward[] = [
-  { id: "r1", name: "Free Coffee", pointsCost: 100, description: "Any regular sized coffee", type: "free_item", value: 0, isActive: true },
-  { id: "r2", name: "10% Discount", pointsCost: 250, description: "10% off entire purchase", type: "discount_percentage", value: 10, isActive: true },
-  { id: "r3", name: "Free Pastry", pointsCost: 150, description: "Any pastry from the menu", type: "free_item", value: 0, isActive: true },
-  { id: "r4", name: "25% Discount", pointsCost: 500, description: "25% off entire purchase", type: "discount_percentage", value: 25, isActive: true },
-  { id: "r5", name: "₦1,000 Off", pointsCost: 200, description: "₦1,000 off your purchase", type: "discount_fixed", value: 1000, isActive: true },
-  { id: "r6", name: "₦2,500 Off", pointsCost: 400, description: "₦2,500 off your purchase", type: "discount_fixed", value: 2500, isActive: true },
-  { id: "r7", name: "VIP Experience", pointsCost: 1000, description: "Complimentary meal for two", type: "free_item", value: 0, isActive: false },
+  { id: "r1", name: "Free Coffee", pointsCost: 100, description: "Any regular sized coffee", type: "free_item", value: 0, isActive: true, outletIds: [] },
+  { id: "r2", name: "10% Discount", pointsCost: 250, description: "10% off entire purchase", type: "discount_percentage", value: 10, isActive: true, outletIds: [] },
+  { id: "r3", name: "Free Pastry", pointsCost: 150, description: "Any pastry from the menu", type: "free_item", value: 0, isActive: true, outletIds: ["outlet-1", "outlet-3"] },
+  { id: "r4", name: "25% Discount", pointsCost: 500, description: "25% off entire purchase", type: "discount_percentage", value: 25, isActive: true, outletIds: [] },
+  { id: "r5", name: "₦1,000 Off", pointsCost: 200, description: "₦1,000 off your purchase", type: "discount_fixed", value: 1000, isActive: true, outletIds: [] },
+  { id: "r6", name: "₦2,500 Off", pointsCost: 400, description: "₦2,500 off your purchase", type: "discount_fixed", value: 2500, isActive: true, outletIds: ["outlet-2"] },
+  { id: "r7", name: "VIP Experience", pointsCost: 1000, description: "Complimentary meal for two", type: "free_item", value: 0, isActive: false, outletIds: ["outlet-1"] },
+];
+
+/** Activity entry with outlet tracking */
+export interface ActivityEntry {
+  id: string;
+  date: Date;
+  customerName: string;
+  type: "earn" | "redeem" | "adjust" | "register";
+  description: string;
+  points: number;
+  outletId: string;
+  outletName: string;
+}
+
+export const mockActivity: ActivityEntry[] = [
+  { id: "a1", date: new Date("2024-06-14T14:32:00"), customerName: "Chioma Okafor", type: "redeem", description: "Redeemed 25% Discount", points: -500, outletId: "outlet-1", outletName: "Downtown Flagship" },
+  { id: "a2", date: new Date("2024-06-14T14:32:00"), customerName: "Chioma Okafor", type: "earn", description: "Earned from ₦8,500 order", points: 255, outletId: "outlet-1", outletName: "Downtown Flagship" },
+  { id: "a3", date: new Date("2024-06-13T11:15:00"), customerName: "Tunde Bakare", type: "earn", description: "Earned from ₦12,000 order", points: 240, outletId: "outlet-2", outletName: "Mall Branch" },
+  { id: "a4", date: new Date("2024-06-12T09:45:00"), customerName: "Adebayo Johnson", type: "redeem", description: "Redeemed Free Coffee", points: -100, outletId: "outlet-3", outletName: "Airport Kiosk" },
+  { id: "a5", date: new Date("2024-06-12T09:45:00"), customerName: "Adebayo Johnson", type: "earn", description: "Earned from ₦3,200 order", points: 64, outletId: "outlet-3", outletName: "Airport Kiosk" },
+  { id: "a6", date: new Date("2024-06-10T16:20:00"), customerName: "Musa Abdullahi", type: "adjust", description: "Manual adjustment — Birthday bonus", points: 200, outletId: "outlet-2", outletName: "Mall Branch" },
+  { id: "a7", date: new Date("2024-06-08T10:00:00"), customerName: "Ngozi Eze", type: "register", description: "New member registered at POS", points: 0, outletId: "outlet-1", outletName: "Downtown Flagship" },
+  { id: "a8", date: new Date("2024-06-07T09:30:00"), customerName: "Tunde Bakare", type: "earn", description: "Earned from ₦5,000 order", points: 150, outletId: "outlet-7", outletName: "FreshMart Grocery" },
+  { id: "a9", date: new Date("2024-06-06T15:00:00"), customerName: "Chioma Okafor", type: "earn", description: "Earned from ₦15,000 order", points: 450, outletId: "outlet-2", outletName: "Mall Branch" },
+  { id: "a10", date: new Date("2024-06-05T12:00:00"), customerName: "Adebayo Johnson", type: "redeem", description: "Redeemed ₦1,000 Off", points: -200, outletId: "outlet-2", outletName: "Mall Branch" },
+  { id: "a11", date: new Date("2024-06-04T10:15:00"), customerName: "Musa Abdullahi", type: "earn", description: "Earned from ₦2,800 order", points: 42, outletId: "outlet-1", outletName: "Downtown Flagship" },
+  { id: "a12", date: new Date("2024-06-03T08:45:00"), customerName: "Ngozi Eze", type: "earn", description: "Earned from ₦1,500 order", points: 15, outletId: "outlet-7", outletName: "FreshMart Grocery" },
 ];
