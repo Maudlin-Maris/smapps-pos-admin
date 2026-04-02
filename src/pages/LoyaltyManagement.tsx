@@ -470,8 +470,8 @@ export default function LoyaltyManagement() {
             </Select>
           </div>
 
-          <Card className="overflow-hidden">
-            <Table>
+          <Card className="overflow-x-auto" style={{ touchAction: "pan-x" }}>
+            <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
