@@ -41,6 +41,7 @@ const App = () => (
             <Route path="/inventory/advanced" element={<AppLayout><AdvancedInventory /></AppLayout>} />
             <Route path="/purchase-orders" element={<AppLayout><PurchaseOrders /></AppLayout>} />
             <Route path="/customers" element={<AppLayout><CustomerManagement /></AppLayout>} />
+            <Route path="/loyalty" element={<AppLayout><LoyaltyManagement /></AppLayout>} />
             <Route path="/omnichannel" element={<AppLayout><EcommerceDashboard /></AppLayout>} />
             <Route path="/insights" element={<AppLayout><AdvancedReports /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><Reports /></AppLayout>} />
