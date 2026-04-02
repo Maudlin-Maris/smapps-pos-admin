@@ -181,6 +181,16 @@ export default function LoyaltyManagement() {
   const [programEnabled, setProgramEnabled] = useState(true);
   const [earnRate, setEarnRate] = useState((POINTS_PER_NAIRA * 100).toString());
   const [earnOverrides, setEarnOverrides] = useState<OutletEarnOverride[]>([...outletEarnOverrides]);
+  const [tierThresholds, setTierThresholds] = useState<Record<LoyaltyTier, number>>(() => {
+    const t = {} as Record<LoyaltyTier, number>;
+    (Object.keys(tierConfig) as LoyaltyTier[]).forEach(k => { t[k] = tierConfig[k].minPoints; });
+    return t;
+  });
+  const [tierMultipliers, setTierMultipliers] = useState<Record<LoyaltyTier, number>>(() => {
+    const m = {} as Record<LoyaltyTier, number>;
+    (Object.keys(tierConfig) as LoyaltyTier[]).forEach(k => { m[k] = tierConfig[k].earnMultiplier; });
+    return m;
+  });
 
   // Outlet filter (global across tabs)
   const [outletFilter, setOutletFilter] = useState("all");
@@ -688,10 +698,20 @@ export default function LoyaltyManagement() {
                 <Label className="mb-3 block">Tier Multipliers</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {(Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => (
-                    <div key={tier} className="rounded-lg border p-3 text-center">
-                      <Badge className={cn("text-xs mb-2", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
-                      <p className="text-lg font-bold">{tierConfig[tier].earnMultiplier}x</p>
-                      <p className="text-xs text-muted-foreground">{tierConfig[tier].minPoints.toLocaleString()}+ pts</p>
+                    <div key={tier} className="rounded-lg border p-3 text-center space-y-1">
+                      <Badge className={cn("text-xs mb-1", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
+                      <div className="flex items-center justify-center gap-1">
+                        <Input
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          value={tierMultipliers[tier]}
+                          onChange={e => setTierMultipliers(prev => ({ ...prev, [tier]: parseFloat(e.target.value) || 1 }))}
+                          className="w-16 text-center h-8 text-sm font-bold"
+                        />
+                        <span className="text-sm text-muted-foreground">×</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{tierThresholds[tier].toLocaleString()}+ pts</p>
                     </div>
                   ))}
                 </div>
@@ -774,14 +794,22 @@ export default function LoyaltyManagement() {
                 <div key={tier} className="flex items-center justify-between py-2">
                   <Badge className={cn("text-xs w-20 justify-center", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
                   <div className="flex items-center gap-2">
-                    <Input type="number" defaultValue={tierConfig[tier].minPoints} className="w-28 text-right" disabled />
+                    <Input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={tierThresholds[tier]}
+                      onChange={e => setTierThresholds(prev => ({ ...prev, [tier]: parseInt(e.target.value) || 0 }))}
+                      className="w-28 text-right"
+                      disabled={tier === "bronze"}
+                    />
                     <span className="text-sm text-muted-foreground w-12">points</span>
                   </div>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground mt-4 italic">
-              Tier threshold editing will be available in a future update.
+            <p className="text-xs text-muted-foreground mt-4">
+              Bronze always starts at 0. Thresholds apply globally across all outlets.
             </p>
           </Card>
 
