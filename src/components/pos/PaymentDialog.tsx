@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
+import { type LoyaltyRedemption } from "@/data/loyaltyData";
 import { getFeatures, getBusinessType } from "@/data/businessTypes";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +18,7 @@ import {
   Heart, Search, ChefHat, ListChecks, DollarSign, Minus, Plus
 } from "lucide-react";
 import PrintReceiptDialog from "./PrintReceiptDialog";
+import LoyaltyRedemptionPanel from "./LoyaltyRedemptionPanel";
 
 interface Props {
   open: boolean;
@@ -60,6 +62,9 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   // Partial payment state
   const [partialAmount, setPartialAmount] = useState("");
   const [partialPaymentMethod, setPartialPaymentMethod] = useState<PaymentMethod>("cash");
+
+  // Loyalty state
+  const [loyaltyRedemption, setLoyaltyRedemption] = useState<LoyaltyRedemption | null>(null);
 
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
@@ -137,7 +142,8 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
     return parseFloat(tipAmount) || 0;
   }, [tipPreset, tipAmount, subtotal]);
 
-  const total = subtotal - discountAmount + feesTotal + tipValue;
+  const loyaltyDiscount = loyaltyRedemption?.discountValue || 0;
+  const total = subtotal - discountAmount - loyaltyDiscount + feesTotal + tipValue;
 
   // Auto-select first order type
   const initializedRef = useMemo(() => {
@@ -166,6 +172,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
     setSplitItemPaymentMethod("cash");
     setPartialAmount("");
     setPartialPaymentMethod("cash");
+    setLoyaltyRedemption(null);
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
     }
@@ -189,7 +196,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   const handleProceedToPayment = () => {
     if (!payNow && !existingOrderId) {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
       setStep("complete");
       return;
@@ -203,7 +210,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
       addPayment(order.id, { method: paymentMethod, amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
@@ -220,7 +227,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
@@ -565,6 +572,14 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
                 )}
               </div>
 
+              {/* Loyalty & Rewards */}
+              <LoyaltyRedemptionPanel
+                subtotal={subtotal}
+                onApplyRedemption={setLoyaltyRedemption}
+                onClearRedemption={() => setLoyaltyRedemption(null)}
+                currentRedemption={loyaltyRedemption}
+              />
+
               {/* Total breakdown */}
               <div className="border-t border-border pt-3 space-y-1">
                 <div className="flex justify-between text-sm">
@@ -575,6 +590,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
                   <div className="flex justify-between text-sm text-[hsl(var(--success))]">
                     <span>Discount ({discountName})</span>
                     <span>-{formatNaira(discountAmount)}</span>
+                  </div>
+                )}
+                {loyaltyDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-[hsl(var(--success))]">
+                    <span>Loyalty ({loyaltyRedemption?.rewardName})</span>
+                    <span>-{formatNaira(loyaltyDiscount)}</span>
                   </div>
                 )}
                 {applicableFees.map((fee, i) => (
