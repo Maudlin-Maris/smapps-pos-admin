@@ -63,6 +63,9 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
   const [partialAmount, setPartialAmount] = useState("");
   const [partialPaymentMethod, setPartialPaymentMethod] = useState<PaymentMethod>("cash");
 
+  // Loyalty state
+  const [loyaltyRedemption, setLoyaltyRedemption] = useState<LoyaltyRedemption | null>(null);
+
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
   const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
 
