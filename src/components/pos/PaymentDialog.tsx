@@ -572,6 +572,14 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
                 )}
               </div>
 
+              {/* Loyalty & Rewards */}
+              <LoyaltyRedemptionPanel
+                subtotal={subtotal}
+                onApplyRedemption={setLoyaltyRedemption}
+                onClearRedemption={() => setLoyaltyRedemption(null)}
+                currentRedemption={loyaltyRedemption}
+              />
+
               {/* Total breakdown */}
               <div className="border-t border-border pt-3 space-y-1">
                 <div className="flex justify-between text-sm">
@@ -582,6 +590,12 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
                   <div className="flex justify-between text-sm text-[hsl(var(--success))]">
                     <span>Discount ({discountName})</span>
                     <span>-{formatNaira(discountAmount)}</span>
+                  </div>
+                )}
+                {loyaltyDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-[hsl(var(--success))]">
+                    <span>Loyalty ({loyaltyRedemption?.rewardName})</span>
+                    <span>-{formatNaira(loyaltyDiscount)}</span>
                   </div>
                 )}
                 {applicableFees.map((fee, i) => (
