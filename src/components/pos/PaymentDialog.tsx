@@ -172,6 +172,7 @@ export default function PaymentDialog({ open, onClose, existingOrderId, onBackTo
     setSplitItemPaymentMethod("cash");
     setPartialAmount("");
     setPartialPaymentMethod("cash");
+    setLoyaltyRedemption(null);
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
     }
