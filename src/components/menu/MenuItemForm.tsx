@@ -220,7 +220,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
-        setImages([]); setVariants([]); setTrackInventory(false);
+        setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
       }
     }
   }, [open, item, categories]);
