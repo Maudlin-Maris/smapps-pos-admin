@@ -322,7 +322,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
           </div>
         </div>
       ) : (
-        <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
           <div className="pt-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -341,8 +341,8 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="flex gap-1.5 py-2">
+          <div className="overflow-x-auto scrollbar-none" style={{ touchAction: "pan-x" }}>
+            <div className="flex gap-1.5 py-2 w-max">
               <button
                 onClick={() => setSelectedCategory(null)}
                 className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
@@ -372,7 +372,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
                   key={product.id}
                   onClick={() => product.inStock && handleProductClick(product)}
                   disabled={!product.inStock}
-                  className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] ${
+                  className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] min-w-0 ${
                     product.inStock
                       ? "bg-card border-border hover:border-primary/30 hover:shadow-sm"
                       : "bg-muted/50 border-border/50 opacity-60 cursor-not-allowed"
@@ -381,7 +381,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
                   {!product.inStock && (
                     <Badge variant="destructive" className="absolute top-1.5 right-1.5 text-[9px]">Out</Badge>
                   )}
-                  <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
+                  <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight break-words w-full">{product.name}</span>
                   <span className="text-[11px] text-muted-foreground mt-0.5">
                     {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
                   </span>
