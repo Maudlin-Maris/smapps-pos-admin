@@ -62,8 +62,7 @@ export default function OrdersPanel() {
   }, [orders]);
 
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
-  const [showMerge, setShowMerge] = useState(false);
-  const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
+  const [showMergeInline, setShowMergeInline] = useState(false);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
   const [transferTarget, setTransferTarget] = useState<string>("");
   const [addItemsOrderId, setAddItemsOrderId] = useState<string | null>(null);
