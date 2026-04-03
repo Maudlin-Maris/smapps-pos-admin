@@ -124,6 +124,7 @@ export interface POSCashier {
   id: string;
   name: string;
   username: string;
+  email?: string;
   pin: string;
   avatar?: string;
   assignedOutlets: string[];
