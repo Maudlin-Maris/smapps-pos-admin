@@ -211,6 +211,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setIsActive(item.status === "active");
         setImages(item.images ?? []);
         setVariants(item.variants ?? []);
+        setExtras(item.extras ?? []);
         setTrackInventory(item.trackInventory ?? false);
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
