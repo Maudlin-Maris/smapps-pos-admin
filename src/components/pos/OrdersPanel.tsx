@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
 import PaymentDialog from "./PaymentDialog";
-import MergeOrderDialog from "./MergeOrderDialog";
+import MergeOrderContent from "./MergeOrderContent";
 import PrintReceiptDialog from "./PrintReceiptDialog";
 
 const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ReactNode }> = {
