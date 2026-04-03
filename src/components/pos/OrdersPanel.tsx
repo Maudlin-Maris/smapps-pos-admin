@@ -759,16 +759,7 @@ export default function OrdersPanel() {
         </DialogContent>
       </Dialog>
 
-      {/* Payment dialog for existing order */}
-      <PaymentDialog
-        open={!!payOrderId}
-        onClose={() => setPayOrderId(null)}
-        existingOrderId={payOrderId || undefined}
-        onBackToOrder={() => {
-          const order = orders.find(o => o.id === payOrderId);
-          if (order) setSelectedOrder(order);
-        }}
-      />
+      {/* Payment dialog removed — payment is now inline in the order details dialog */}
 
 
       {/* Print Receipt/Docket dialog */}
