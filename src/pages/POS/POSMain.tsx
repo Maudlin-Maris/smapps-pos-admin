@@ -21,6 +21,7 @@ import {
   Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
+import CashierProfileDialog from "@/components/pos/CashierProfileDialog";
 import { StartShiftDialog, CloseShiftDialog } from "@/components/pos/ShiftDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import logoIconLight from "@/assets/logo-icon-light.png";
