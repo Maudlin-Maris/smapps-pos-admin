@@ -98,6 +98,11 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack }: Pro
       <DialogContent className="max-w-lg p-0 gap-0">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="flex items-center gap-2">
+            {onBack && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => { onClose(); onBack(); }}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            )}
             <Receipt className="w-5 h-5" />
             Print & Share — {order.orderNumber}
           </DialogTitle>
