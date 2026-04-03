@@ -747,15 +747,6 @@ export default function OrdersPanel() {
         }}
       />
 
-      {/* Merge dialog */}
-      <MergeOrderDialog
-        open={showMerge}
-        onClose={() => {
-          setShowMerge(false);
-          setMergeSourceId(null);
-        }}
-        targetOrderId={mergeSourceId}
-      />
 
       {/* Print Receipt/Docket dialog */}
       <PrintReceiptDialog
