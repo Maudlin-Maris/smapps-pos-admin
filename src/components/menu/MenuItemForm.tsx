@@ -188,7 +188,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [isActive, setIsActive] = useState(true);
   const [images, setImages] = useState<string[]>([]);
   const [variants, setVariants] = useState<MenuVariant[]>([]);
+  const [extras, setExtras] = useState<MenuExtra[]>([]);
   const [trackInventory, setTrackInventory] = useState(false);
+
+  const features = businessType ? getFeatures(businessType) : null;
 
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
