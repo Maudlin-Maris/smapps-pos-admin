@@ -173,7 +173,7 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add" }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType }: MenuItemFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
