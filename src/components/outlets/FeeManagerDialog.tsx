@@ -14,6 +14,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import FeeFormDialog, { type FeeFormData } from "@/components/fees/FeeFormDialog";
+import { getFeatures } from "@/data/businessTypes";
 
 const serviceOptionLabels: Record<string, string> = {
   all: "All",
@@ -26,14 +27,18 @@ interface FeeManagerDialogProps {
   onOpenChange: (open: boolean) => void;
   outletId: number;
   outletName: string;
+  businessType: string;
   fees: FeeFormData[];
   onUpdateFees: (fees: FeeFormData[]) => void;
 }
 
 export default function FeeManagerDialog({
-  open, onOpenChange, outletId, outletName, fees, onUpdateFees,
+  open, onOpenChange, outletId, outletName, businessType, fees, onUpdateFees,
 }: FeeManagerDialogProps) {
   const outletFees = fees.filter((f) => f.outletId === String(outletId));
+  const features = getFeatures(businessType);
+  const showServiceOption = features.hasDineIn || features.hasTakeaway;
+
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editingFee, setEditingFee] = useState<FeeFormData | null>(null);
@@ -89,19 +94,17 @@ export default function FeeManagerDialog({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead className="text-center">Fixed</TableHead>
+                  {showServiceOption && <TableHead>Service</TableHead>}
+                  <TableHead className="text-center">Type</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
                   <TableHead className="text-center">Customer</TableHead>
-                  <TableHead className="text-right">Peg</TableHead>
-                  <TableHead className="text-right">Min</TableHead>
-                  <TableHead className="text-right">Max</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {outletFees.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={showServiceOption ? 6 : 5} className="text-center py-10 text-muted-foreground">
                       <Percent className="h-7 w-7 mx-auto mb-2 opacity-40" />
                       <p className="text-sm">No fees or taxes yet</p>
                       <Button variant="link" size="sm" onClick={handleAdd} className="mt-1">
@@ -113,15 +116,26 @@ export default function FeeManagerDialog({
                   outletFees.map((fee) => (
                     <TableRow key={fee.id}>
                       <TableCell className="font-medium">{fee.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="text-xs">
-                          {serviceOptionLabels[fee.serviceOption]}
-                        </Badge>
-                      </TableCell>
+                      {showServiceOption && (
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">
+                            {serviceOptionLabels[fee.serviceOption]}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell className="text-center">
                         <Badge variant={fee.isFixed ? "default" : "outline"} className="text-xs">
-                          {fee.isFixed ? "Yes" : "No"}
+                          {fee.isFixed ? "Fixed" : "Percentage"}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-sm">
+                        {fee.isFixed ? (
+                          <span className="text-xs text-muted-foreground">
+                            {fee.minimumFee}/{fee.maximumFee} @{fee.orderPeg}
+                          </span>
+                        ) : (
+                          <span>{fee.value}%</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge
@@ -131,9 +145,6 @@ export default function FeeManagerDialog({
                           {fee.chargeToCustomers ? "Yes" : "No"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{fee.orderPeg || "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fee.minimumFee || "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{fee.maximumFee || "—"}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(fee)}>
@@ -160,6 +171,7 @@ export default function FeeManagerDialog({
         initialData={editingFee ? { ...editingFee, outletId: String(outletId) } : { outletId: String(outletId) }}
         onSubmit={handleSubmit}
         hideOutletSelector
+        showServiceOption={showServiceOption}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

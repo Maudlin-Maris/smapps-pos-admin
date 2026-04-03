@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ export interface FeeFormData {
   serviceOption: "all" | "dine_in" | "takeaway";
   isFixed: boolean;
   chargeToCustomers: boolean;
+  value: string;
   orderPeg: string;
   minimumFee: string;
   maximumFee: string;
@@ -32,10 +33,12 @@ interface FeeFormDialogProps {
   initialData?: Partial<FeeFormData>;
   onSubmit: (data: FeeFormData) => void;
   hideOutletSelector?: boolean;
+  /** Show service option field only for dine-in capable businesses */
+  showServiceOption?: boolean;
 }
 
 export default function FeeFormDialog({
-  open, onOpenChange, mode, initialData, onSubmit, hideOutletSelector = false,
+  open, onOpenChange, mode, initialData, onSubmit, hideOutletSelector = false, showServiceOption = false,
 }: FeeFormDialogProps) {
   const form = useForm<FeeFormData>({
     defaultValues: {
@@ -44,11 +47,14 @@ export default function FeeFormDialog({
       serviceOption: "all",
       isFixed: false,
       chargeToCustomers: false,
+      value: "",
       orderPeg: "",
       minimumFee: "",
       maximumFee: "",
     },
   });
+
+  const isFixed = useWatch({ control: form.control, name: "isFixed" });
 
   useEffect(() => {
     if (open) {
@@ -58,6 +64,7 @@ export default function FeeFormDialog({
         serviceOption: initialData?.serviceOption ?? "all",
         isFixed: initialData?.isFixed ?? false,
         chargeToCustomers: initialData?.chargeToCustomers ?? false,
+        value: initialData?.value ?? "",
         orderPeg: initialData?.orderPeg ?? "",
         minimumFee: initialData?.minimumFee ?? "",
         maximumFee: initialData?.maximumFee ?? "",
@@ -66,6 +73,14 @@ export default function FeeFormDialog({
   }, [open, initialData, form]);
 
   const handleSubmit = (data: FeeFormData) => {
+    // Clear irrelevant fields based on isFixed
+    if (data.isFixed) {
+      data.value = "";
+    } else {
+      data.orderPeg = "";
+      data.minimumFee = "";
+      data.maximumFee = "";
+    }
     onSubmit({ ...data, id: initialData?.id });
     onOpenChange(false);
   };
@@ -123,61 +138,46 @@ export default function FeeFormDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="serviceOption"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Service Option Applied</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="dine_in">Dine-In Only</SelectItem>
-                      <SelectItem value="takeaway">Takeaway Only</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Service Option — only for restaurants/lounges */}
+            {showServiceOption && (
+              <FormField
+                control={form.control}
+                name="serviceOption"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Service Option Applied</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="dine_in">Dine-In Only</SelectItem>
+                        <SelectItem value="takeaway">Takeaway Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
               name="isFixed"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Is Fixed?</FormLabel>
-                  <Select
-                    onValueChange={(v) => field.onChange(v === "yes")}
-                    value={field.value ? "yes" : "no"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="no">No</SelectItem>
-                      <SelectItem value="yes">Yes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="chargeToCustomers"
-              render={({ field }) => (
-                <FormItem>
                   <div className="flex items-center justify-between">
-                    <FormLabel>Charge To Customers?</FormLabel>
+                    <div>
+                      <FormLabel>Fixed Amount</FormLabel>
+                      <FormDescription className="text-xs">
+                        {field.value
+                          ? "A fixed fee amount applied based on order value thresholds"
+                          : "A percentage-based fee/tax applied to the order total"}
+                      </FormDescription>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Label className="text-xs text-muted-foreground">{field.value ? "Yes" : "No"}</Label>
                       <FormControl>
@@ -190,48 +190,107 @@ export default function FeeFormDialog({
               )}
             />
 
+            {/* Percentage value — shown when NOT fixed */}
+            {!isFixed && (
+              <FormField
+                control={form.control}
+                name="value"
+                rules={{ required: "Value is required" }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Value (%)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="e.g. 7.5" step="0.01" {...field} />
+                    </FormControl>
+                    <FormDescription className="text-xs">
+                      Percentage of the order total
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Fixed fee fields — shown when IS fixed */}
+            {isFixed && (
+              <div className="space-y-4 rounded-lg border border-border p-4 bg-muted/30">
+                <p className="text-xs text-muted-foreground">
+                  Example: If order peg is 2,000, min fee is 500 and max fee is 1,000 — orders below 2,000 are charged 500 and orders at or above 2,000 are charged 1,000.
+                </p>
+                <FormField
+                  control={form.control}
+                  name="orderPeg"
+                  rules={{ required: "Order peg is required for fixed fees" }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Order Peg (Threshold)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="e.g. 2000" {...field} />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Order amount threshold that determines which fee applies
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="minimumFee"
+                    rules={{ required: "Minimum fee is required" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Below Peg Fee</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g. 500" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Fee when order &lt; peg
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="maximumFee"
+                    rules={{ required: "Maximum fee is required" }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>At/Above Peg Fee</FormLabel>
+                        <FormControl>
+                          <Input type="number" placeholder="e.g. 1000" {...field} />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Fee when order ≥ peg
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            )}
+
             <FormField
               control={form.control}
-              name="orderPeg"
+              name="chargeToCustomers"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Order Peg</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="0" {...field} />
-                  </FormControl>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Charge To Customers</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-muted-foreground">{field.value ? "Yes" : "No"}</Label>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </div>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="minimumFee"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Minimum Fee</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="0.00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="maximumFee"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Fee</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="0.00" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
