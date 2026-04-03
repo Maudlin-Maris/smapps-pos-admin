@@ -41,6 +41,13 @@ export interface MenuVariant {
   status: "active" | "inactive";
 }
 
+export interface MenuExtra {
+  id: string;
+  name: string;
+  price: number;
+  category?: string;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -56,6 +63,7 @@ export interface MenuItem {
   status: "active" | "inactive";
   images: string[];
   variants: MenuVariant[];
+  extras: MenuExtra[];
   trackInventory: boolean;
   outletId?: string;
 }
