@@ -729,7 +729,7 @@ export default function OrdersPanel() {
                             <CreditCard className="w-4 h-4 mr-1" /> Pay
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setShowAddItemsInline(true)}>
                           <Plus className="w-4 h-4 mr-1" /> Add / Remove
                         </Button>
                         <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setShowMergeInline(true)}>
