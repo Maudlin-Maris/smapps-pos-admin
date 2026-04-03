@@ -424,7 +424,7 @@ export default function OrdersPanel() {
       </ScrollArea>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => !o && setSelectedOrder(null)}>
+      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); } }}>
         <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
           {selectedOrder && (() => {
             const sc = statusConfig[selectedOrder.status];
