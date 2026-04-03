@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, KeyRound, Lock, Eye, EyeOff } from "lucide-react";
+import { User, KeyRound, Lock, Eye, EyeOff, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -102,6 +102,11 @@ export default function CashierProfileDialog({ open, onClose }: Props) {
             <div>
               <p className="font-semibold text-foreground">{currentCashier.name}</p>
               <p className="text-sm text-muted-foreground">@{currentCashier.username}</p>
+              {currentCashier.email && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <Mail className="w-3 h-3" /> {currentCashier.email}
+                </p>
+              )}
             </div>
             <Badge variant="secondary" className="ml-auto capitalize">{currentCashier.role}</Badge>
           </div>
