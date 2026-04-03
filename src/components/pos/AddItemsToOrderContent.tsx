@@ -341,8 +341,8 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <div className="flex gap-1.5 py-2">
+          <div className="overflow-x-auto scrollbar-none" style={{ touchAction: "pan-x" }}>
+            <div className="flex gap-1.5 py-2 w-max">
               <button
                 onClick={() => setSelectedCategory(null)}
                 className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
