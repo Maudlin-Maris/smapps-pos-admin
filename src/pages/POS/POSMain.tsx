@@ -112,7 +112,7 @@ export default function POSMain() {
 
         {/* Shift indicator */}
         <div className="hidden sm:flex items-center">
-          {currentShift ? (
+          {currentShift && (
             <button
               onClick={() => setCloseShiftOpen(true)}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
@@ -121,10 +121,6 @@ export default function POSMain() {
               <Clock className="w-3 h-3" />
               Shift Active
             </button>
-          ) : (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={() => setStartShiftOpen(true)}>
-              <PlayCircle className="w-3.5 h-3.5" /> Start Shift
-            </Button>
           )}
         </div>
 
