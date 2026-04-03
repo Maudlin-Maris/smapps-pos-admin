@@ -776,16 +776,8 @@ export default function OrdersPanel() {
         }}
       />
 
-      {/* Add items to order dialog */}
-      <AddItemsToOrderDialog
-        open={!!addItemsOrderId}
-        onClose={() => setAddItemsOrderId(null)}
-        onBackToOrder={() => {
-          const order = orders.find(o => o.id === addItemsOrderId);
-          if (order) setSelectedOrder(order);
-        }}
-        orderId={addItemsOrderId || ""}
-      />
+
+
 
       {/* Auth dialog for removing items from order detail */}
       <RemoveItemAuthDialog
