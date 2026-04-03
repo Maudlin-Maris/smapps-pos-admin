@@ -15,6 +15,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   order: POSOrder | null;
+  onBack?: () => void;
 }
 
 export default function PrintReceiptDialog({ open, onClose, order }: Props) {
