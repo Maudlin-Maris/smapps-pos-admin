@@ -594,7 +594,7 @@ export default function OrdersPanel() {
                             <p className="text-sm font-bold text-foreground">{formatNaira(selectedOrder.totalAmount - selectedOrder.paidAmount)}</p>
                           </div>
                         </div>
-                        <Button size="sm" variant="default" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
+                        <Button size="sm" variant="default" onClick={() => setShowPayInline(true)}>
                           Continue <ArrowRight className="w-3.5 h-3.5 ml-1" />
                         </Button>
                       </div>
