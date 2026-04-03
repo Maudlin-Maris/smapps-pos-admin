@@ -75,6 +75,7 @@ interface MenuItemFormProps {
   item?: MenuItem | null;
   onSave: (item: MenuItem) => void;
   mode?: "add" | "edit" | "clone";
+  businessType?: BusinessTypeId;
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
