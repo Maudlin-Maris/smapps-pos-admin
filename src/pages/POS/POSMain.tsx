@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed
+  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed, User
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
 import CashierProfileDialog from "@/components/pos/CashierProfileDialog";
