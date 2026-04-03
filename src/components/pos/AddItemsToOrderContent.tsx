@@ -372,7 +372,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
                   key={product.id}
                   onClick={() => product.inStock && handleProductClick(product)}
                   disabled={!product.inStock}
-                  className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] ${
+                  className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] min-w-0 ${
                     product.inStock
                       ? "bg-card border-border hover:border-primary/30 hover:shadow-sm"
                       : "bg-muted/50 border-border/50 opacity-60 cursor-not-allowed"
