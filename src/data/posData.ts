@@ -188,10 +188,10 @@ export const posLocations: POSLocation[] = [
 
 // Mock Data
 export const posCashiers: POSCashier[] = [
-  { id: "c1", name: "Sarah Johnson", username: "sarah", pin: "1234", assignedOutlets: ["outlet-1", "outlet-2", "outlet-4", "outlet-5", "outlet-7"], role: "manager" },
-  { id: "c2", name: "Mike Chen", username: "mike", pin: "5678", assignedOutlets: ["outlet-1", "outlet-3"], role: "cashier" },
-  { id: "c3", name: "Amara Obi", username: "amara", pin: "9012", assignedOutlets: ["outlet-1", "outlet-5", "outlet-7"], role: "cashier" },
-  { id: "c4", name: "David Adeyemi", username: "david", pin: "3456", assignedOutlets: ["outlet-2", "outlet-4"], role: "cashier" },
+  { id: "c1", name: "Sarah Johnson", username: "sarah", email: "sarah.johnson@store.com", pin: "1234", assignedOutlets: ["outlet-1", "outlet-2", "outlet-4", "outlet-5", "outlet-7"], role: "manager" },
+  { id: "c2", name: "Mike Chen", username: "mike", email: "mike.chen@store.com", pin: "5678", assignedOutlets: ["outlet-1", "outlet-3"], role: "cashier" },
+  { id: "c3", name: "Amara Obi", username: "amara", email: "amara.obi@store.com", pin: "9012", assignedOutlets: ["outlet-1", "outlet-5", "outlet-7"], role: "cashier" },
+  { id: "c4", name: "David Adeyemi", username: "david", email: "david.adeyemi@store.com", pin: "3456", assignedOutlets: ["outlet-2", "outlet-4"], role: "cashier" },
 ];
 
 // ==================== CATEGORIES ====================
