@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { tierConfig } from "@/data/loyaltyData";
-import AddItemsToOrderDialog from "./AddItemsToOrderDialog";
+import AddItemsToOrderContent from "./AddItemsToOrderContent";
 import { formatNaira } from "@/lib/currency";
 import { getFeatures } from "@/data/businessTypes";
 import type { POSOrder, OrderStatus, ItemStatus } from "@/data/posData";
@@ -63,9 +63,9 @@ export default function OrdersPanel() {
 
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMergeInline, setShowMergeInline] = useState(false);
+  const [showAddItemsInline, setShowAddItemsInline] = useState(false);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
   const [transferTarget, setTransferTarget] = useState<string>("");
-  const [addItemsOrderId, setAddItemsOrderId] = useState<string | null>(null);
   const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
   const cashierId = currentCashier?.id || "";
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
@@ -424,9 +424,17 @@ export default function OrdersPanel() {
       </ScrollArea>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); } }}>
+      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); } }}>
         <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
-          {selectedOrder && showMergeInline ? (
+          {selectedOrder && showAddItemsInline ? (
+            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+              <AddItemsToOrderContent
+                orderId={selectedOrder.id}
+                onDone={() => setShowAddItemsInline(false)}
+                onBack={() => setShowAddItemsInline(false)}
+              />
+            </div>
+          ) : selectedOrder && showMergeInline ? (
             <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
               <MergeOrderContent
                 targetOrderId={selectedOrder.id}
@@ -721,7 +729,7 @@ export default function OrdersPanel() {
                             <CreditCard className="w-4 h-4 mr-1" /> Pay
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setAddItemsOrderId(selectedOrder.id); setSelectedOrder(null); }}>
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setShowAddItemsInline(true)}>
                           <Plus className="w-4 h-4 mr-1" /> Add / Remove
                         </Button>
                         <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setShowMergeInline(true)}>
@@ -768,16 +776,8 @@ export default function OrdersPanel() {
         }}
       />
 
-      {/* Add items to order dialog */}
-      <AddItemsToOrderDialog
-        open={!!addItemsOrderId}
-        onClose={() => setAddItemsOrderId(null)}
-        onBackToOrder={() => {
-          const order = orders.find(o => o.id === addItemsOrderId);
-          if (order) setSelectedOrder(order);
-        }}
-        orderId={addItemsOrderId || ""}
-      />
+
+
 
       {/* Auth dialog for removing items from order detail */}
       <RemoveItemAuthDialog
