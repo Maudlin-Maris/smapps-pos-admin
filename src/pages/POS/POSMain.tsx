@@ -129,10 +129,16 @@ export default function POSMain() {
         {/* User info & actions */}
         <div className="flex items-center gap-1.5">
           <div className="hidden sm:flex items-center gap-2 mr-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0">
-              {currentCashier?.name.charAt(0)}
-            </div>
-            <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
+            <button
+              onClick={() => setProfileOpen(true)}
+              className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted transition-colors"
+              title="My Profile"
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0">
+                {currentCashier?.name.charAt(0)}
+              </div>
+              <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
+            </button>
           </div>
           {/* Mobile shift button */}
           <div className="sm:hidden">
