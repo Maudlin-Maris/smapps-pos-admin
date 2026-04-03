@@ -425,9 +425,9 @@ export default function OrdersPanel() {
 
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); } }}>
-        <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
+        <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
           {selectedOrder && showAddItemsInline ? (
-            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3 w-full max-w-full overflow-hidden box-border">
               <AddItemsToOrderContent
                 orderId={selectedOrder.id}
                 onDone={() => setShowAddItemsInline(false)}
