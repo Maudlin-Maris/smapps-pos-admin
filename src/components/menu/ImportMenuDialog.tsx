@@ -177,6 +177,7 @@ function rowsToMenuItems(rows: ParsedRow[]): MenuItem[] {
         images: [],
         trackInventory: false,
         variants: [],
+        extras: [],
       };
 
       if (row.variantName) {

@@ -35,7 +35,9 @@ export interface BusinessTypeFeatures {
   hasDineIn: boolean;        // Dine-in service option
   hasTakeaway: boolean;      // Takeaway option
   hasAppointments: boolean;  // Appointment scheduling
+  hasExtras: boolean;        // Extras/sides/toppings/addons
   menuLabel: string;         // What to call the "menu" section
+  extrasLabel: string;       // What to call extras (Extras, Sides, Toppings, Add-ons)
   itemLabel: string;         // What to call an individual item
   itemsLabel: string;        // Plural
 }
@@ -58,8 +60,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: true, hasProducts: false, hasServices: false,
       hasBarcode: false, hasVariants: true, hasExpiry: false,
       hasBatchTracking: false, hasComposites: true,
-      hasDineIn: true, hasTakeaway: true, hasAppointments: false,
-      menuLabel: "Menu", itemLabel: "Menu Item", itemsLabel: "Menu Items",
+      hasDineIn: true, hasTakeaway: true, hasAppointments: false, hasExtras: true,
+      menuLabel: "Menu", itemLabel: "Menu Item", itemsLabel: "Menu Items", extrasLabel: "Extras / Sides / Toppings",
     },
   },
   grocery: {
@@ -71,8 +73,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: false, hasExpiry: true,
       hasBatchTracking: true, hasComposites: false,
-      hasDineIn: false, hasTakeaway: true, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: true, hasAppointments: false, hasExtras: false,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
   supermarket: {
@@ -84,8 +86,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: true, hasExpiry: true,
       hasBatchTracking: true, hasComposites: false,
-      hasDineIn: false, hasTakeaway: true, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: true, hasAppointments: false, hasExtras: true,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
   pharmacy: {
@@ -97,8 +99,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: false, hasExpiry: true,
       hasBatchTracking: true, hasComposites: false,
-      hasDineIn: false, hasTakeaway: false, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: false, hasAppointments: false, hasExtras: false,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
   salon: {
@@ -110,8 +112,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: true,
       hasBarcode: false, hasVariants: false, hasExpiry: false,
       hasBatchTracking: false, hasComposites: true,
-      hasDineIn: false, hasTakeaway: false, hasAppointments: true,
-      menuLabel: "Services & Products", itemLabel: "Service", itemsLabel: "Services",
+      hasDineIn: false, hasTakeaway: false, hasAppointments: true, hasExtras: true,
+      menuLabel: "Services & Products", itemLabel: "Service", itemsLabel: "Services", extrasLabel: "Add-on Services",
     },
   },
   barber: {
@@ -123,8 +125,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: true,
       hasBarcode: false, hasVariants: false, hasExpiry: false,
       hasBatchTracking: false, hasComposites: true,
-      hasDineIn: false, hasTakeaway: false, hasAppointments: true,
-      menuLabel: "Services & Products", itemLabel: "Service", itemsLabel: "Services",
+      hasDineIn: false, hasTakeaway: false, hasAppointments: true, hasExtras: true,
+      menuLabel: "Services & Products", itemLabel: "Service", itemsLabel: "Services", extrasLabel: "Add-on Services",
     },
   },
   wine_store: {
@@ -136,8 +138,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: true, hasExpiry: false,
       hasBatchTracking: true, hasComposites: false,
-      hasDineIn: false, hasTakeaway: true, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: true, hasAppointments: false, hasExtras: true,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
   clothing: {
@@ -149,8 +151,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: true, hasExpiry: false,
       hasBatchTracking: false, hasComposites: false,
-      hasDineIn: false, hasTakeaway: false, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: false, hasAppointments: false, hasExtras: true,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
   electronics: {
@@ -162,8 +164,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: true, hasExpiry: false,
       hasBatchTracking: true, hasComposites: false,
-      hasDineIn: false, hasTakeaway: false, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: false, hasAppointments: false, hasExtras: true,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
   hair_seller: {
@@ -175,8 +177,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: true, hasExpiry: false,
       hasBatchTracking: false, hasComposites: false,
-      hasDineIn: false, hasTakeaway: false, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: false, hasAppointments: false, hasExtras: true,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
   retail: {
@@ -188,8 +190,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: false, hasProducts: true, hasServices: false,
       hasBarcode: true, hasVariants: true, hasExpiry: false,
       hasBatchTracking: false, hasComposites: false,
-      hasDineIn: false, hasTakeaway: false, hasAppointments: false,
-      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products",
+      hasDineIn: false, hasTakeaway: false, hasAppointments: false, hasExtras: true,
+      menuLabel: "Products", itemLabel: "Product", itemsLabel: "Products", extrasLabel: "Add-ons",
     },
   },
 };
