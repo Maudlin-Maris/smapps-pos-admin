@@ -18,7 +18,7 @@ import {
   ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight, Trash2, DollarSign, Star
 } from "lucide-react";
 import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
-import PaymentDialog from "./PaymentDialog";
+import PaymentContent from "./PaymentContent";
 import MergeOrderContent from "./MergeOrderContent";
 import PrintReceiptDialog from "./PrintReceiptDialog";
 
