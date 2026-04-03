@@ -426,7 +426,15 @@ export default function OrdersPanel() {
       {/* Order Detail Dialog */}
       <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); } }}>
         <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
-          {selectedOrder && (() => {
+          {selectedOrder && showMergeInline ? (
+            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+              <MergeOrderContent
+                targetOrderId={selectedOrder.id}
+                onDone={() => setShowMergeInline(false)}
+                onBack={() => setShowMergeInline(false)}
+              />
+            </div>
+          ) : selectedOrder && (() => {
             const sc = statusConfig[selectedOrder.status];
             return (
               <>
@@ -482,7 +490,6 @@ export default function OrdersPanel() {
                     )}
                     <p className="text-sm font-semibold">Items</p>
                     {selectedOrder.items.map(item => {
-                      // Calculate how many units of this item have been paid via split-by-items
                       const paidQty = selectedOrder.payments
                         .filter(p => p.paidItems)
                         .reduce((sum, p) => {
@@ -504,7 +511,7 @@ export default function OrdersPanel() {
                               </span>
                             )}
                             {partiallyPaid && (
-                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/10 text-warning">
+                              <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]">
                                 {paidQty} Paid
                               </span>
                             )}
@@ -629,7 +636,7 @@ export default function OrdersPanel() {
                     </div>
                   )}
 
-                  {/* Status change — only for non-kitchen business types (status is auto-derived for restaurants) */}
+                  {/* Status change */}
                   {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && !hasKitchenStatuses && (
                     <div className="space-y-2">
                       <p className="text-sm font-semibold">Update Status</p>
@@ -705,7 +712,7 @@ export default function OrdersPanel() {
                     </div>
                   )}
 
-                  {/* Actions - sticky bottom on mobile */}
+                  {/* Actions */}
                   <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:static border-t border-border sm:border-0">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
