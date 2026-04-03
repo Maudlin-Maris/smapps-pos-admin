@@ -37,6 +37,7 @@ export default function POSMain() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [salesOpen, setSalesOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [startShiftOpen, setStartShiftOpen] = useState(false);
   const [closeShiftOpen, setCloseShiftOpen] = useState(false);
   const [outletToggleConfirm, setOutletToggleConfirm] = useState(false);
