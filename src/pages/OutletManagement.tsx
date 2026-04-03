@@ -241,6 +241,7 @@ export default function OutletManagement() {
           onOpenChange={(open) => !open && setFeeDialogOutlet(null)}
           outletId={feeDialogOutlet.id}
           outletName={feeDialogOutlet.name}
+          businessType={feeDialogOutlet.businessType}
           fees={fees}
           onUpdateFees={setFees}
         />
