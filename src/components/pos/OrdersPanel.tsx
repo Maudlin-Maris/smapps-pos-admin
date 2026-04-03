@@ -403,7 +403,7 @@ export default function OrdersPanel() {
                       </div>
                       <span
                         role="button"
-                        onClick={(e) => { e.stopPropagation(); setPayOrderId(order.id); }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); setShowPayInline(true); }}
                         className="text-[11px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-0.5"
                       >
                         Continue Payment <ArrowRight className="w-3 h-3" />
