@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { tierConfig } from "@/data/loyaltyData";
-import AddItemsToOrderDialog from "./AddItemsToOrderDialog";
+import AddItemsToOrderContent from "./AddItemsToOrderContent";
 import { formatNaira } from "@/lib/currency";
 import { getFeatures } from "@/data/businessTypes";
 import type { POSOrder, OrderStatus, ItemStatus } from "@/data/posData";
