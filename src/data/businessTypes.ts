@@ -60,8 +60,8 @@ export const businessTypes: Record<BusinessTypeId, BusinessType> = {
       hasMenu: true, hasProducts: false, hasServices: false,
       hasBarcode: false, hasVariants: true, hasExpiry: false,
       hasBatchTracking: false, hasComposites: true,
-      hasDineIn: true, hasTakeaway: true, hasAppointments: false,
-      menuLabel: "Menu", itemLabel: "Menu Item", itemsLabel: "Menu Items",
+      hasDineIn: true, hasTakeaway: true, hasAppointments: false, hasExtras: true,
+      menuLabel: "Menu", itemLabel: "Menu Item", itemsLabel: "Menu Items", extrasLabel: "Extras / Sides / Toppings",
     },
   },
   grocery: {
