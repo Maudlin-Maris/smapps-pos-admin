@@ -312,6 +312,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       status: isActive ? "active" : "inactive",
       images,
       variants: finalVariants,
+      extras,
       trackInventory: hasVariants ? false : trackInventory,
     });
     onOpenChange(false);
