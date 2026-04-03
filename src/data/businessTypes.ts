@@ -35,7 +35,9 @@ export interface BusinessTypeFeatures {
   hasDineIn: boolean;        // Dine-in service option
   hasTakeaway: boolean;      // Takeaway option
   hasAppointments: boolean;  // Appointment scheduling
+  hasExtras: boolean;        // Extras/sides/toppings/addons
   menuLabel: string;         // What to call the "menu" section
+  extrasLabel: string;       // What to call extras (Extras, Sides, Toppings, Add-ons)
   itemLabel: string;         // What to call an individual item
   itemsLabel: string;        // Plural
 }
