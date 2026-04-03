@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { usePOS } from "@/contexts/POSContext";
 import type { POSOrder } from "@/data/posData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,9 +16,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   order: POSOrder | null;
+  onBack?: () => void;
 }
 
-export default function PrintReceiptDialog({ open, onClose, order }: Props) {
+export default function PrintReceiptDialog({ open, onClose, order, onBack }: Props) {
   const { currentOutlet } = usePOS();
   const receiptRef = useRef<HTMLDivElement>(null);
   const docketRef = useRef<HTMLDivElement>(null);
@@ -96,6 +98,11 @@ export default function PrintReceiptDialog({ open, onClose, order }: Props) {
       <DialogContent className="max-w-lg p-0 gap-0">
         <DialogHeader className="p-4 pb-0">
           <DialogTitle className="flex items-center gap-2">
+            {onBack && (
+              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => { onClose(); onBack(); }}>
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            )}
             <Receipt className="w-5 h-5" />
             Print & Share — {order.orderNumber}
           </DialogTitle>

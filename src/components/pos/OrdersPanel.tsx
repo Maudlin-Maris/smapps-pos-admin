@@ -759,7 +759,17 @@ export default function OrdersPanel() {
       />
 
       {/* Print Receipt/Docket dialog */}
-      <PrintReceiptDialog open={!!printOrder} onClose={() => setPrintOrder(null)} order={printOrder} />
+      <PrintReceiptDialog
+        open={!!printOrder}
+        onClose={() => setPrintOrder(null)}
+        order={printOrder}
+        onBack={() => {
+          if (printOrder) {
+            const freshOrder = orders.find(o => o.id === printOrder.id);
+            if (freshOrder) setSelectedOrder(freshOrder);
+          }
+        }}
+      />
 
       {/* Add items to order dialog */}
       <AddItemsToOrderDialog
