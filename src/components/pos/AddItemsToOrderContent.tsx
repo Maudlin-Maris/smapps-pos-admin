@@ -381,7 +381,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
                   {!product.inStock && (
                     <Badge variant="destructive" className="absolute top-1.5 right-1.5 text-[9px]">Out</Badge>
                   )}
-                  <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
+                  <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight break-words w-full">{product.name}</span>
                   <span className="text-[11px] text-muted-foreground mt-0.5">
                     {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
                   </span>
