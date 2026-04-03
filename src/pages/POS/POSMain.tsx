@@ -140,15 +140,14 @@ export default function POSMain() {
               <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
             </button>
           </div>
-          {/* Mobile shift button */}
-          <div className="sm:hidden">
-            {currentShift ? (
+          {/* Mobile shift & profile buttons */}
+          <div className="sm:hidden flex items-center gap-0.5">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setProfileOpen(true)} title="My Profile">
+              <User className="w-4 h-4" />
+            </Button>
+            {currentShift && (
               <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setCloseShiftOpen(true)} title="Close Shift">
                 <StopCircle className="w-4 h-4" />
-              </Button>
-            ) : (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setStartShiftOpen(true)} title="Start Shift">
-                <PlayCircle className="w-4 h-4" />
               </Button>
             )}
           </div>
