@@ -279,6 +279,7 @@ export default function MenuManagement() {
           item={editingItem}
           onSave={handleSave}
           mode={formMode}
+          businessType={currentOutlet?.businessType}
         />
       )}
 

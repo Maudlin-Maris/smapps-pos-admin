@@ -473,6 +473,111 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
             ))}
           </div>
+
+          {/* Extras / Sides / Toppings / Add-ons */}
+          {features?.hasExtras && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">{features.extrasLabel}</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {extras.length > 0
+                      ? `${extras.length} ${extras.length === 1 ? "item" : "items"} added`
+                      : `Optional add-ons customers can select at checkout`}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setExtras((prev) => [
+                      ...prev,
+                      { id: crypto.randomUUID(), name: "", price: 0, category: "" },
+                    ])
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                </Button>
+              </div>
+              {extras.map((extra, idx) => (
+                <div
+                  key={extra.id}
+                  className="border border-border rounded-lg p-3 space-y-3 bg-muted/30"
+                >
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      {features.extrasLabel.split("/")[0].trim()} #{idx + 1}
+                    </Label>
+                    <button
+                      onClick={() =>
+                        setExtras((prev) => prev.filter((e) => e.id !== extra.id))
+                      }
+                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-xs">Name *</Label>
+                      <Input
+                        className="mt-1 h-9 text-sm"
+                        value={extra.name}
+                        onChange={(e) =>
+                          setExtras((prev) =>
+                            prev.map((ex) =>
+                              ex.id === extra.id
+                                ? { ...ex, name: e.target.value }
+                                : ex
+                            )
+                          )
+                        }
+                        placeholder="e.g. Extra cheese"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Price *</Label>
+                      <Input
+                        className="mt-1 h-9 text-sm"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={extra.price || ""}
+                        onChange={(e) =>
+                          setExtras((prev) =>
+                            prev.map((ex) =>
+                              ex.id === extra.id
+                                ? { ...ex, price: parseFloat(e.target.value) || 0 }
+                                : ex
+                            )
+                          )
+                        }
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Group (optional)</Label>
+                      <Input
+                        className="mt-1 h-9 text-sm"
+                        value={extra.category || ""}
+                        onChange={(e) =>
+                          setExtras((prev) =>
+                            prev.map((ex) =>
+                              ex.id === extra.id
+                                ? { ...ex, category: e.target.value }
+                                : ex
+                            )
+                          )
+                        }
+                        placeholder="e.g. Toppings"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
