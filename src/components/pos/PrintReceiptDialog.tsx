@@ -19,7 +19,7 @@ interface Props {
   onBack?: () => void;
 }
 
-export default function PrintReceiptDialog({ open, onClose, order }: Props) {
+export default function PrintReceiptDialog({ open, onClose, order, onBack }: Props) {
   const { currentOutlet } = usePOS();
   const receiptRef = useRef<HTMLDivElement>(null);
   const docketRef = useRef<HTMLDivElement>(null);
