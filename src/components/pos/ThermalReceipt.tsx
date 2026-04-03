@@ -135,27 +135,47 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
         </div>
       </div>
 
-      {/* Payments */}
-      {order.payments.length > 0 && (
-        <>
-          <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
-          <div>
-            <p style={{ fontWeight: 600, marginBottom: "2px" }}>Payment</p>
+      {/* Payments & Status */}
+      <p style={{ textAlign: "center", margin: "4px 0", borderTop: "1px dashed #999" }} />
+      <div>
+        <p style={{ fontWeight: 600, marginBottom: "2px" }}>Payment</p>
+        {order.payments.length > 0 ? (
+          <>
             {order.payments.map((p, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ textTransform: "capitalize" }}>{p.method}</span>
                 <span>{formatNaira(p.amount)}</span>
               </div>
             ))}
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2px" }}>
+              <span>Amount Paid</span>
+              <span style={{ fontWeight: 600 }}>{formatNaira(order.paidAmount)}</span>
+            </div>
             {order.paidAmount > order.totalAmount && (
               <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}>
                 <span>Change</span>
                 <span>{formatNaira(order.paidAmount - order.totalAmount)}</span>
               </div>
             )}
-          </div>
-        </>
-      )}
+            {order.paidAmount < order.totalAmount && (
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600 }}>
+                <span>Balance Due</span>
+                <span>{formatNaira(order.totalAmount - order.paidAmount)}</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <p style={{ fontSize: "11px" }}>No payment recorded</p>
+        )}
+        {/* Payment status badge */}
+        <div style={{ textAlign: "center", marginTop: "4px", fontSize: "12px", fontWeight: 700, letterSpacing: "0.5px" }}>
+          {order.paidAmount >= order.totalAmount
+            ? "** PAID **"
+            : order.paidAmount > 0
+              ? `** PARTIALLY PAID **`
+              : "** UNPAID **"}
+        </div>
+      </div>
 
       {/* Loyalty */}
       {order.loyaltyRedemption && (() => {
