@@ -63,9 +63,9 @@ export default function OrdersPanel() {
 
   const [payOrderId, setPayOrderId] = useState<string | null>(null);
   const [showMergeInline, setShowMergeInline] = useState(false);
+  const [showAddItemsInline, setShowAddItemsInline] = useState(false);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
   const [transferTarget, setTransferTarget] = useState<string>("");
-  const [addItemsOrderId, setAddItemsOrderId] = useState<string | null>(null);
   const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
   const cashierId = currentCashier?.id || "";
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
