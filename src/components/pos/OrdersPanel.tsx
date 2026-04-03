@@ -61,7 +61,7 @@ export default function OrdersPanel() {
     }
   }, [orders]);
 
-  const [payOrderId, setPayOrderId] = useState<string | null>(null);
+  const [showPayInline, setShowPayInline] = useState(false);
   const [showMergeInline, setShowMergeInline] = useState(false);
   const [showAddItemsInline, setShowAddItemsInline] = useState(false);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
