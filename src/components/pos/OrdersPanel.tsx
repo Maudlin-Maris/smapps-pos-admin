@@ -18,7 +18,7 @@ import {
   ChevronLeft, Users, ArrowRightLeft, Package, Scissors, ShoppingBag, Pill, Bell, ArrowRight, Trash2, DollarSign, Star
 } from "lucide-react";
 import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
-import PaymentDialog from "./PaymentDialog";
+import PaymentContent from "./PaymentContent";
 import MergeOrderContent from "./MergeOrderContent";
 import PrintReceiptDialog from "./PrintReceiptDialog";
 
@@ -61,7 +61,7 @@ export default function OrdersPanel() {
     }
   }, [orders]);
 
-  const [payOrderId, setPayOrderId] = useState<string | null>(null);
+  const [showPayInline, setShowPayInline] = useState(false);
   const [showMergeInline, setShowMergeInline] = useState(false);
   const [showAddItemsInline, setShowAddItemsInline] = useState(false);
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
@@ -403,7 +403,7 @@ export default function OrdersPanel() {
                       </div>
                       <span
                         role="button"
-                        onClick={(e) => { e.stopPropagation(); setPayOrderId(order.id); }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); setShowPayInline(true); }}
                         className="text-[11px] font-semibold text-primary hover:underline cursor-pointer flex items-center gap-0.5"
                       >
                         Continue Payment <ArrowRight className="w-3 h-3" />
@@ -424,9 +424,17 @@ export default function OrdersPanel() {
       </ScrollArea>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); } }}>
+      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); setShowPayInline(false); } }}>
         <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
-          {selectedOrder && showAddItemsInline ? (
+          {selectedOrder && showPayInline ? (
+            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+              <PaymentContent
+                existingOrderId={selectedOrder.id}
+                onClose={() => setShowPayInline(false)}
+                onBackToOrder={() => setShowPayInline(false)}
+              />
+            </div>
+          ) : selectedOrder && showAddItemsInline ? (
             <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3 w-full max-w-full overflow-hidden box-border">
               <AddItemsToOrderContent
                 orderId={selectedOrder.id}
@@ -586,7 +594,7 @@ export default function OrdersPanel() {
                             <p className="text-sm font-bold text-foreground">{formatNaira(selectedOrder.totalAmount - selectedOrder.paidAmount)}</p>
                           </div>
                         </div>
-                        <Button size="sm" variant="default" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
+                        <Button size="sm" variant="default" onClick={() => setShowPayInline(true)}>
                           Continue <ArrowRight className="w-3.5 h-3.5 ml-1" />
                         </Button>
                       </div>
@@ -725,9 +733,9 @@ export default function OrdersPanel() {
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
                         {selectedOrder.paidAmount < selectedOrder.totalAmount && (
-                          <Button size="sm" className="w-full sm:w-auto" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
-                            <CreditCard className="w-4 h-4 mr-1" /> Pay
-                          </Button>
+                          <Button size="sm" className="w-full sm:w-auto" onClick={() => setShowPayInline(true)}>
+                             <CreditCard className="w-4 h-4 mr-1" /> Pay
+                           </Button>
                         )}
                         <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setShowAddItemsInline(true)}>
                           <Plus className="w-4 h-4 mr-1" /> Add / Remove
@@ -751,16 +759,7 @@ export default function OrdersPanel() {
         </DialogContent>
       </Dialog>
 
-      {/* Payment dialog for existing order */}
-      <PaymentDialog
-        open={!!payOrderId}
-        onClose={() => setPayOrderId(null)}
-        existingOrderId={payOrderId || undefined}
-        onBackToOrder={() => {
-          const order = orders.find(o => o.id === payOrderId);
-          if (order) setSelectedOrder(order);
-        }}
-      />
+      {/* Payment dialog removed — payment is now inline in the order details dialog */}
 
 
       {/* Print Receipt/Docket dialog */}
