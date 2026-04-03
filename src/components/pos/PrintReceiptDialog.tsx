@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { usePOS } from "@/contexts/POSContext";
 import type { POSOrder } from "@/data/posData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
