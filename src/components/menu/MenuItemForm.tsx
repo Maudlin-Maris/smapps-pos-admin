@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
 import BarcodeScanner from "@/components/inventory/BarcodeScanner";
+import { getFeatures, type BusinessTypeId } from "@/data/businessTypes";
 
 export interface MenuVariant {
   id: string;
