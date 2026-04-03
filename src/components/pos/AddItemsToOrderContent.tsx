@@ -322,8 +322,8 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
           </div>
         </div>
       ) : (
-        <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-          <div className="pt-1">
+        <div className="flex flex-col flex-1 min-h-0 w-full max-w-full overflow-x-hidden">
+          <div className="pt-1 w-full max-w-full">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -341,7 +341,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
             </div>
           </div>
 
-          <div className="overflow-x-auto scrollbar-none" style={{ touchAction: "pan-x" }}>
+          <div className="overflow-x-auto overflow-y-hidden scrollbar-none w-full max-w-full" style={{ touchAction: "pan-x" }}>
             <div className="flex gap-1.5 py-2 w-max">
               <button
                 onClick={() => setSelectedCategory(null)}
@@ -365,14 +365,14 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
             </div>
           </div>
 
-          <ScrollArea className="flex-1 min-h-0 max-h-[40vh]">
-            <div className="grid grid-cols-2 gap-2 pt-1 pr-1">
+          <ScrollArea className="flex-1 min-h-0 max-h-[40vh] w-full max-w-full">
+            <div className="grid grid-cols-2 gap-2 pt-1 w-full max-w-full box-border">
               {products.map(product => (
                 <button
                   key={product.id}
                   onClick={() => product.inStock && handleProductClick(product)}
                   disabled={!product.inStock}
-                  className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] min-w-0 overflow-hidden ${
+                  className={`relative flex flex-col items-start p-2.5 rounded-xl border text-left transition-all active:scale-[0.97] min-w-0 w-full overflow-hidden ${
                     product.inStock
                       ? "bg-card border-border hover:border-primary/30 hover:shadow-sm"
                       : "bg-muted/50 border-border/50 opacity-60 cursor-not-allowed"
@@ -382,7 +382,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
                     <Badge variant="destructive" className="absolute top-1.5 right-1.5 text-[9px]">Out</Badge>
                   )}
                   <span className="text-xs font-semibold text-foreground line-clamp-2 leading-tight break-words w-full overflow-hidden">{product.name}</span>
-                  <span className="text-[11px] text-muted-foreground mt-0.5 truncate w-full">
+                  <span className="text-[11px] text-muted-foreground mt-0.5 truncate w-full block overflow-hidden">
                     {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
                   </span>
                 </button>
@@ -396,12 +396,12 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
             </div>
           </ScrollArea>
 
-          <div className="border-t border-border pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-sm">
+          <div className="border-t border-border pt-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 w-full max-w-full">
+            <div className="flex items-center gap-2 text-sm min-w-0">
               {pendingItems.length > 0 ? (
                 <>
-                  <Badge className="bg-primary text-primary-foreground">{pendingItems.length}</Badge>
-                  <span className="font-medium text-xs sm:text-sm">{formatNaira(pendingTotal)} in new items</span>
+                  <Badge className="bg-primary text-primary-foreground shrink-0">{pendingItems.length}</Badge>
+                  <span className="font-medium text-xs sm:text-sm truncate">{formatNaira(pendingTotal)} in new items</span>
                 </>
               ) : (
                 <span className="text-muted-foreground text-xs">Select products to add</span>
@@ -411,7 +411,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
               size="sm"
               onClick={() => setView("order")}
               variant={pendingItems.length > 0 ? "default" : "outline"}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto shrink-0"
             >
               <ShoppingBag className="w-3.5 h-3.5 mr-1.5" /> View Order Details
             </Button>
