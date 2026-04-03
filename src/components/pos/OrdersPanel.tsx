@@ -733,9 +733,9 @@ export default function OrdersPanel() {
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
                         {selectedOrder.paidAmount < selectedOrder.totalAmount && (
-                          <Button size="sm" className="w-full sm:w-auto" onClick={() => { setSelectedOrder(null); setPayOrderId(selectedOrder.id); }}>
-                            <CreditCard className="w-4 h-4 mr-1" /> Pay
-                          </Button>
+                          <Button size="sm" className="w-full sm:w-auto" onClick={() => setShowPayInline(true)}>
+                             <CreditCard className="w-4 h-4 mr-1" /> Pay
+                           </Button>
                         )}
                         <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setShowAddItemsInline(true)}>
                           <Plus className="w-4 h-4 mr-1" /> Add / Remove
