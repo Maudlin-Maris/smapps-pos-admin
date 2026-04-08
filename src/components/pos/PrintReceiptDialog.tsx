@@ -1,31 +1,83 @@
 import { useRef, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Send } from "lucide-react";
 import { usePOS } from "@/contexts/POSContext";
 import type { POSOrder } from "@/data/posData";
+import { initialDepartments } from "@/data/departments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, Mail, ChefHat, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import ThermalReceipt from "./ThermalReceipt";
 import KitchenDocket, { groupItemsByDepartment } from "./KitchenDocket";
+import type { POSPrinter } from "./PrinterManagementDialog";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   order: POSOrder | null;
   onBack?: () => void;
+  printers?: POSPrinter[];
 }
 
-export default function PrintReceiptDialog({ open, onClose, order, onBack }: Props) {
+export default function PrintReceiptDialog({ open, onClose, order, onBack, printers = [] }: Props) {
   const { currentOutlet } = usePOS();
   const receiptRef = useRef<HTMLDivElement>(null);
   const docketRef = useRef<HTMLDivElement>(null);
   const docketRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedTab, setSelectedTab] = useState("receipt");
+  const [selectedPrinters, setSelectedPrinters] = useState<Record<string, string>>({});
+
+  const enabledPrinters = printers.filter(p => p.enabled);
+  const outletNum = parseInt((currentOutlet?.id || "").replace("outlet-", ""));
+  const departments = initialDepartments.filter(d => d.outletId === outletNum);
+
+  const getPrintersForDepartment = (departmentName: string) => {
+    const dept = departments.find(d => d.name === departmentName);
+    if (!dept) return enabledPrinters;
+    return enabledPrinters.filter(p => p.assignedDepartments.includes(dept.id));
+  };
+
+  const handleSendToPrinter = (departmentName: string, printerId: string) => {
+    const printer = enabledPrinters.find(p => p.id === printerId);
+    if (!printer) return;
+    console.log(`[Reprint] Sending ${departmentName} docket to "${printer.name}"`);
+    toast.success(`Docket sent to ${printer.name}`, {
+      description: `${departmentName} — Order ${order?.orderNumber}`,
+      duration: 3000,
+    });
+  };
+
+  const handleSendAllToPrinters = () => {
+    if (!order) return;
+    const docketGroups = groupItemsByDepartment(order.items, order.outletId);
+    let sentCount = 0;
+
+    for (const group of docketGroups) {
+      const compatiblePrinters = getPrintersForDepartment(group.departmentName);
+      if (compatiblePrinters.length > 0) {
+        const targetId = selectedPrinters[group.departmentName] || compatiblePrinters[0].id;
+        const printer = enabledPrinters.find(p => p.id === targetId);
+        if (printer) {
+          console.log(`[Reprint] Sending ${group.departmentName} docket to "${printer.name}"`);
+          sentCount++;
+        }
+      }
+    }
+
+    if (sentCount > 0) {
+      toast.success(`Dockets sent to ${sentCount} printer${sentCount > 1 ? "s" : ""}`, {
+        description: `Order ${order.orderNumber} — auto-routed by department`,
+        duration: 3000,
+      });
+    } else {
+      toast.error("No printers configured for these departments");
+    }
+  };
 
   if (!order) return null;
 
