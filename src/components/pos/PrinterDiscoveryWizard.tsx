@@ -295,7 +295,7 @@ export default function PrinterDiscoveryWizard({ outletId, departments, onInstal
         {/* Discovered printers list (appears progressively) */}
         {discovered.length > 0 && (
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
-            {discovered.map(device => (
+            {discovered.filter(Boolean).map(device => (
               <button
                 key={device.id}
                 onClick={() => scanComplete && handleSelectDevice(device)}
@@ -304,15 +304,15 @@ export default function PrinterDiscoveryWizard({ outletId, departments, onInstal
               >
                 <Printer className="w-5 h-5 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{device.name}</p>
+                  <p className="font-medium text-sm truncate">{device?.name || "Unknown Printer"}</p>
                   <div className="flex items-center gap-2">
-                    {device.ip && <span className="text-[10px] text-muted-foreground">{device.ip}</span>}
-                    <span className="text-[10px] text-muted-foreground">{device.model}</span>
+                    {device?.ip && <span className="text-[10px] text-muted-foreground">{device.ip}</span>}
+                    <span className="text-[10px] text-muted-foreground">{device?.model || ""}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <Signal className={`w-3.5 h-3.5 ${device.signal > 70 ? "text-emerald-500" : device.signal > 40 ? "text-amber-500" : "text-red-400"}`} />
-                  <span className="text-[10px] text-muted-foreground">{device.signal}%</span>
+                <Signal className={`w-3.5 h-3.5 ${(device?.signal || 0) > 70 ? "text-emerald-500" : (device?.signal || 0) > 40 ? "text-amber-500" : "text-red-400"}`} />
+                  <span className="text-[10px] text-muted-foreground">{device?.signal || 0}%</span>
                 </div>
               </button>
             ))}
@@ -347,8 +347,8 @@ export default function PrinterDiscoveryWizard({ outletId, departments, onInstal
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
             <Printer className="w-5 h-5 text-primary shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm">{selectedDevice.name}</p>
-              <p className="text-[10px] text-muted-foreground">{selectedDevice.model}{selectedDevice.ip ? ` · ${selectedDevice.ip}` : ""}</p>
+              <p className="font-medium text-sm">{selectedDevice?.name || "Unknown Printer"}</p>
+              <p className="text-[10px] text-muted-foreground">{selectedDevice?.model || ""}{selectedDevice?.ip ? ` · ${selectedDevice.ip}` : ""}</p>
             </div>
             <Badge variant="secondary" className="text-[10px]">{connectionType}</Badge>
           </div>
