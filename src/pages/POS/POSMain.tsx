@@ -49,14 +49,15 @@ export default function POSMain() {
   const { printers, updatePrinters, routeOrderToPrinters } = usePrinters(currentOutlet?.id || "");
 
   // Auto-route dockets when a new order is created
-  const prevOrderCountRef = useState(() => orders.length)[0];
+  const [lastOrderCount, setLastOrderCount] = useState(orders.length);
   useEffect(() => {
-    if (orders.length > prevOrderCountRef) {
-      const latestOrder = orders[0]; // orders are prepended
+    if (orders.length > lastOrderCount) {
+      const latestOrder = orders[0];
       if (latestOrder && latestOrder.status !== "voided") {
         routeOrderToPrinters(latestOrder, currentOutlet);
       }
     }
+    setLastOrderCount(orders.length);
   }, [orders.length]);
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
