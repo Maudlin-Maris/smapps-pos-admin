@@ -31,6 +31,7 @@ import CashierProfileDialog from "@/components/pos/CashierProfileDialog";
 import { StartShiftDialog, CloseShiftDialog } from "@/components/pos/ShiftDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import logoIconLight from "@/assets/logo-icon-light.png";
+import logoIconDark from "@/assets/logo-icon-dark.png";
 
 type POSTab = "catalog" | "orders" | "kitchen";
 
