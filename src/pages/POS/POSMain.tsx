@@ -251,6 +251,14 @@ export default function POSMain() {
       <StartShiftDialog open={startShiftOpen} onClose={() => setStartShiftOpen(false)} />
       <CloseShiftDialog open={closeShiftOpen} onClose={() => setCloseShiftOpen(false)} />
 
+      {/* Printer management */}
+      <PrinterManagementDialog
+        open={printerDialogOpen}
+        onClose={() => setPrinterDialogOpen(false)}
+        printers={printers}
+        onPrintersChange={updatePrinters}
+      />
+
       {/* Open/Close business confirmation */}
       <AlertDialog open={outletToggleConfirm} onOpenChange={setOutletToggleConfirm}>
         <AlertDialogContent>
