@@ -188,7 +188,7 @@ export default function POSMain() {
         {/* Left panel - Tab content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {activeTab === "catalog" && <ProductGrid />}
-          {activeTab === "orders" && <OrdersPanel />}
+          {activeTab === "orders" && <OrdersPanel printers={printers} />}
           {activeTab === "kitchen" && <KitchenDisplay />}
         </div>
 
