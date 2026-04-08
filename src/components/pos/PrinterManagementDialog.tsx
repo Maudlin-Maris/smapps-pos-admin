@@ -5,13 +5,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Printer, Plus, Pencil, Trash2, Wifi, WifiOff, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import PrinterDiscoveryWizard from "./PrinterDiscoveryWizard";
 
 export interface POSPrinter {
   id: string;
@@ -32,88 +29,36 @@ interface Props {
   onPrintersChange: (printers: POSPrinter[]) => void;
 }
 
-type ViewMode = "list" | "form";
+type ViewMode = "list" | "wizard";
 
 export default function PrinterManagementDialog({ open, onClose, printers, onPrintersChange }: Props) {
   const { currentOutlet } = usePOS();
   const [view, setView] = useState<ViewMode>("list");
   const [editingPrinter, setEditingPrinter] = useState<POSPrinter | null>(null);
 
-  // Form state
-  const [name, setName] = useState("");
-  const [type, setType] = useState<POSPrinter["type"]>("thermal");
-  const [connectionType, setConnectionType] = useState<POSPrinter["connectionType"]>("network");
-  const [ipAddress, setIpAddress] = useState("");
-  const [port, setPort] = useState("9100");
-  const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
-  const [enabled, setEnabled] = useState(true);
-
   const outletId = currentOutlet?.id || "";
   const outletNum = parseInt(outletId.replace("outlet-", ""));
   const departments = initialDepartments.filter((d) => d.outletId === outletNum);
 
-  const resetForm = () => {
-    setName("");
-    setType("thermal");
-    setConnectionType("network");
-    setIpAddress("");
-    setPort("9100");
-    setSelectedDepts([]);
-    setEnabled(true);
+  const openAddWizard = () => {
     setEditingPrinter(null);
+    setView("wizard");
   };
 
-  const openAddForm = () => {
-    resetForm();
-    setView("form");
-  };
-
-  const openEditForm = (printer: POSPrinter) => {
+  const openEditWizard = (printer: POSPrinter) => {
     setEditingPrinter(printer);
-    setName(printer.name);
-    setType(printer.type);
-    setConnectionType(printer.connectionType);
-    setIpAddress(printer.ipAddress || "");
-    setPort(String(printer.port || 9100));
-    setSelectedDepts(printer.assignedDepartments);
-    setEnabled(printer.enabled);
-    setView("form");
+    setView("wizard");
   };
 
-  const handleSave = () => {
-    if (!name.trim()) {
-      toast.error("Printer name is required");
-      return;
-    }
-    if (connectionType === "network" && !ipAddress.trim()) {
-      toast.error("IP address is required for network printers");
-      return;
-    }
-
+  const handleInstall = (printer: POSPrinter) => {
     if (editingPrinter) {
-      const updated = printers.map((p) =>
-        p.id === editingPrinter.id
-          ? { ...p, name: name.trim(), type, connectionType, ipAddress: ipAddress.trim() || undefined, port: parseInt(port) || 9100, assignedDepartments: selectedDepts, enabled }
-          : p
-      );
-      onPrintersChange(updated);
-      toast.success(`Printer "${name}" updated`);
+      onPrintersChange(printers.map(p => p.id === editingPrinter.id ? printer : p));
+      toast.success(`Printer "${printer.name}" updated`);
     } else {
-      const newPrinter: POSPrinter = {
-        id: `printer-${Date.now()}`,
-        name: name.trim(),
-        type,
-        connectionType,
-        ipAddress: ipAddress.trim() || undefined,
-        port: parseInt(port) || 9100,
-        assignedDepartments: selectedDepts,
-        outletId,
-        enabled,
-      };
-      onPrintersChange([...printers, newPrinter]);
-      toast.success(`Printer "${name}" added`);
+      onPrintersChange([...printers, printer]);
+      toast.success(`Printer "${printer.name}" installed`);
     }
-    resetForm();
+    setEditingPrinter(null);
     setView("list");
   };
 
@@ -134,18 +79,12 @@ export default function PrinterManagementDialog({ open, onClose, printers, onPri
     });
   };
 
-  const toggleDept = (deptId: string) => {
-    setSelectedDepts((prev) =>
-      prev.includes(deptId) ? prev.filter((d) => d !== deptId) : [...prev, deptId]
-    );
-  };
-
   const getDeptName = (deptId: string) => {
     return initialDepartments.find((d) => d.id === deptId)?.name || deptId;
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setView("list"); setEditingPrinter(null); onClose(); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -155,7 +94,7 @@ export default function PrinterManagementDialog({ open, onClose, printers, onPri
           <DialogDescription>
             {view === "list"
               ? "Manage printers and assign them to departments for automatic docket routing."
-              : "Configure printer details and department assignments."}
+              : editingPrinter ? "Update printer configuration." : "Search for and install a printer."}
           </DialogDescription>
         </DialogHeader>
 
@@ -202,7 +141,7 @@ export default function PrinterManagementDialog({ open, onClose, printers, onPri
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleTestPrint(printer)} title="Test Print">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditForm(printer)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditWizard(printer)}>
                           <Pencil className="w-3.5 h-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(printer.id)}>
@@ -242,120 +181,18 @@ export default function PrinterManagementDialog({ open, onClose, printers, onPri
               </div>
             )}
 
-            <Button onClick={openAddForm} className="w-full gap-2">
+            <Button onClick={openAddWizard} className="w-full gap-2">
               <Plus className="w-4 h-4" /> Add Printer
             </Button>
           </div>
         ) : (
-          /* ===== ADD / EDIT FORM ===== */
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Printer Name</Label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Kitchen Printer, Bar Printer"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Printer Type</Label>
-                <Select value={type} onValueChange={(v) => setType(v as POSPrinter["type"])}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="thermal">Thermal (80mm)</SelectItem>
-                    <SelectItem value="label">Label</SelectItem>
-                    <SelectItem value="standard">Standard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Connection</Label>
-                <Select value={connectionType} onValueChange={(v) => setConnectionType(v as POSPrinter["connectionType"])}>
-                  <SelectTrigger className="h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="network">Network (IP)</SelectItem>
-                    <SelectItem value="usb">USB</SelectItem>
-                    <SelectItem value="bluetooth">Bluetooth</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {connectionType === "network" && (
-              <div className="grid grid-cols-3 gap-3">
-                <div className="col-span-2 space-y-2">
-                  <Label>IP Address</Label>
-                  <Input
-                    value={ipAddress}
-                    onChange={(e) => setIpAddress(e.target.value)}
-                    placeholder="192.168.1.100"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Port</Label>
-                  <Input
-                    type="number"
-                    value={port}
-                    onChange={(e) => setPort(e.target.value)}
-                    placeholder="9100"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Department assignments */}
-            <div className="space-y-2">
-              <Label>Assigned Departments</Label>
-              <p className="text-xs text-muted-foreground">
-                Dockets for items in these departments will automatically print to this printer
-              </p>
-              {departments.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">
-                  No departments configured for this outlet
-                </p>
-              ) : (
-                <div className="space-y-1.5 max-h-40 overflow-y-auto border rounded-lg p-2 bg-muted/20">
-                  {departments.map((dept) => (
-                    <label
-                      key={dept.id}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                    >
-                      <Checkbox
-                        checked={selectedDepts.includes(dept.id)}
-                        onCheckedChange={() => toggleDept(dept.id)}
-                      />
-                      <span className="text-sm">{dept.name}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Enable toggle */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={enabled}
-                onCheckedChange={(c) => setEnabled(!!c)}
-              />
-              <span className="text-sm">Enable printer</span>
-            </label>
-
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => { resetForm(); setView("list"); }}>
-                Cancel
-              </Button>
-              <Button className="flex-1" onClick={handleSave}>
-                {editingPrinter ? "Update Printer" : "Add Printer"}
-              </Button>
-            </div>
-          </div>
+          <PrinterDiscoveryWizard
+            outletId={outletId}
+            departments={departments}
+            onInstall={handleInstall}
+            onCancel={() => { setEditingPrinter(null); setView("list"); }}
+            editingPrinter={editingPrinter}
+          />
         )}
       </DialogContent>
     </Dialog>
