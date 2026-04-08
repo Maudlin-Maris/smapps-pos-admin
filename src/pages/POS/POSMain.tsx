@@ -147,8 +147,9 @@ export default function POSMain() {
         <div className="flex-1" />
 
         {/* User info & actions */}
-        <div className="flex items-center gap-1.5">
-          <div className="hidden sm:flex items-center gap-2 mr-2">
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Desktop: show all buttons inline */}
+          <div className="hidden sm:flex items-center gap-1">
             <button
               onClick={() => setProfileOpen(true)}
               className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted transition-colors"
@@ -159,30 +160,60 @@ export default function POSMain() {
               </div>
               <span className="text-xs font-medium text-foreground truncate max-w-[100px]">{currentCashier?.name}</span>
             </button>
-          </div>
-          {/* Mobile shift & profile buttons */}
-          <div className="sm:hidden flex items-center gap-0.5">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setProfileOpen(true)} title="My Profile">
-              <User className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPrinterDialogOpen(true)} title="Printers">
+              <Printer className="w-4 h-4" />
             </Button>
-            {currentShift && (
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => setCloseShiftOpen(true)} title="Close Shift">
-                <StopCircle className="w-4 h-4" />
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
+              <BarChart3 className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={lockScreen} title="Lock Screen">
+              <Lock className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={logout} title="Sign Out">
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPrinterDialogOpen(true)} title="Printers">
-            <Printer className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
-            <BarChart3 className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={lockScreen} title="Lock Screen">
-            <Lock className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={logout} title="Sign Out">
-            <LogOut className="w-4 h-4" />
-          </Button>
+
+          {/* Mobile: collapse into a dropdown menu */}
+          <div className="sm:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setProfileOpen(true)}>
+                  <User className="w-4 h-4 mr-2" />
+                  {currentCashier?.name || "Profile"}
+                </DropdownMenuItem>
+                {currentShift && (
+                  <DropdownMenuItem onClick={() => setCloseShiftOpen(true)}>
+                    <StopCircle className="w-4 h-4 mr-2" />
+                    Close Shift
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setPrinterDialogOpen(true)}>
+                  <Printer className="w-4 h-4 mr-2" />
+                  Printers
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setSalesOpen(true)}>
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  My Sales
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={lockScreen}>
+                  <Lock className="w-4 h-4 mr-2" />
+                  Lock Screen
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
