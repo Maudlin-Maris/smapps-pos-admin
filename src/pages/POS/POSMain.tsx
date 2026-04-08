@@ -33,7 +33,7 @@ type POSTab = "catalog" | "orders" | "kitchen";
 export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
-    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen
+    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -43,7 +43,21 @@ export default function POSMain() {
   const [startShiftOpen, setStartShiftOpen] = useState(false);
   const [closeShiftOpen, setCloseShiftOpen] = useState(false);
   const [outletToggleConfirm, setOutletToggleConfirm] = useState(false);
+  const [printerDialogOpen, setPrinterDialogOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  const { printers, updatePrinters, routeOrderToPrinters } = usePrinters(currentOutlet?.id || "");
+
+  // Auto-route dockets when a new order is created
+  const prevOrderCountRef = useState(() => orders.length)[0];
+  useEffect(() => {
+    if (orders.length > prevOrderCountRef) {
+      const latestOrder = orders[0]; // orders are prepended
+      if (latestOrder && latestOrder.status !== "voided") {
+        routeOrderToPrinters(latestOrder, currentOutlet);
+      }
+    }
+  }, [orders.length]);
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const showKitchen = features?.hasDineIn || features?.hasMenu;
