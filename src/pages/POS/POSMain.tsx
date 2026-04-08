@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from "next-themes";
 import { usePOS } from "@/contexts/POSContext";
 import { getFeatures } from "@/data/businessTypes";
 import POSLogin from "@/components/pos/POSLogin";
@@ -23,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed, User, Printer, MoreVertical
+  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed, User, Printer, MoreVertical, Sun, Moon
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
 import CashierProfileDialog from "@/components/pos/CashierProfileDialog";
