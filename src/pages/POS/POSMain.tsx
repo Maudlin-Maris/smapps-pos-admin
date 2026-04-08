@@ -149,7 +149,7 @@ export default function POSMain() {
         {/* User info & actions */}
         <div className="flex items-center gap-1 shrink-0">
           {/* Desktop: show all buttons inline */}
-          <div className="hidden sm:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             <button
               onClick={() => setProfileOpen(true)}
               className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-muted transition-colors"
@@ -175,7 +175,7 @@ export default function POSMain() {
           </div>
 
           {/* Mobile: collapse into a dropdown menu */}
-          <div className="sm:hidden">
+          <div className="lg:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
