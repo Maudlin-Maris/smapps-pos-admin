@@ -82,7 +82,7 @@ export default function POSMain() {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Top bar */}
-      <header className="flex items-center gap-2 h-14 px-3 border-b border-border bg-card shrink-0">
+      <header className="flex items-center gap-1.5 sm:gap-2 h-14 px-2 sm:px-3 border-b border-border bg-card shrink-0 overflow-hidden">
         <img src={logoIconLight} alt="Smapps" className="h-7 w-7 shrink-0" />
         {/* Outlet selector */}
         <Select value={currentOutlet?.id || ""} onValueChange={id => {
