@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { usePOS } from "@/contexts/POSContext";
 import type { POSOrder } from "@/data/posData";
 import { initialDepartments } from "@/data/departments";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, Mail, ChefHat, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import ThermalReceipt from "./ThermalReceipt";
@@ -30,53 +29,25 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
   const docketRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [customerEmail, setCustomerEmail] = useState("");
   const [selectedTab, setSelectedTab] = useState("receipt");
-  const [selectedPrinters, setSelectedPrinters] = useState<Record<string, string>>({});
 
   const enabledPrinters = printers.filter(p => p.enabled);
   const outletNum = parseInt((currentOutlet?.id || "").replace("outlet-", ""));
   const departments = initialDepartments.filter(d => d.outletId === outletNum);
 
-  const getPrintersForDepartment = (departmentName: string) => {
+  const routeToPrinter = (departmentName: string) => {
     const dept = departments.find(d => d.name === departmentName);
-    if (!dept) return enabledPrinters;
-    return enabledPrinters.filter(p => p.assignedDepartments.includes(dept.id));
-  };
+    if (!dept) return;
+    const assignedPrinters = enabledPrinters.filter(p => p.assignedDepartments.includes(dept.id));
+    if (assignedPrinters.length === 0) return;
 
-  const handleSendToPrinter = (departmentName: string, printerId: string) => {
-    const printer = enabledPrinters.find(p => p.id === printerId);
-    if (!printer) return;
-    console.log(`[Reprint] Sending ${departmentName} docket to "${printer.name}"`);
-    toast.success(`Docket sent to ${printer.name}`, {
+    for (const printer of assignedPrinters) {
+      console.log(`[Print] Routing ${departmentName} docket to "${printer.name}"`);
+    }
+    const names = assignedPrinters.map(p => p.name).join(", ");
+    toast.success(`Docket sent to ${names}`, {
       description: `${departmentName} — Order ${order?.orderNumber}`,
       duration: 3000,
     });
-  };
-
-  const handleSendAllToPrinters = () => {
-    if (!order) return;
-    const docketGroups = groupItemsByDepartment(order.items, order.outletId);
-    let sentCount = 0;
-
-    for (const group of docketGroups) {
-      const compatiblePrinters = getPrintersForDepartment(group.departmentName);
-      if (compatiblePrinters.length > 0) {
-        const targetId = selectedPrinters[group.departmentName] || compatiblePrinters[0].id;
-        const printer = enabledPrinters.find(p => p.id === targetId);
-        if (printer) {
-          console.log(`[Reprint] Sending ${group.departmentName} docket to "${printer.name}"`);
-          sentCount++;
-        }
-      }
-    }
-
-    if (sentCount > 0) {
-      toast.success(`Dockets sent to ${sentCount} printer${sentCount > 1 ? "s" : ""}`, {
-        description: `Order ${order.orderNumber} — auto-routed by department`,
-        duration: 3000,
-      });
-    } else {
-      toast.error("No printers configured for these departments");
-    }
   };
 
   if (!order) return null;
@@ -132,8 +103,34 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
 
   const handlePrintDepartment = (departmentName: string) => {
     const el = docketRefs.current.get(departmentName);
-    if (!el) return;
-    printElement(el, `Docket-${departmentName}-${order.orderNumber}`);
+    if (el) {
+      printElement(el, `Docket-${departmentName}-${order.orderNumber}`);
+    }
+    // Also route to assigned printers
+    routeToPrinter(departmentName);
+  };
+
+  const handlePrintAllDockets = () => {
+    handlePrint(docketRef, `Docket-${order.orderNumber}`);
+    // Route each department to its assigned printers
+    let sentCount = 0;
+    for (const group of docketGroups) {
+      const dept = departments.find(d => d.name === group.departmentName);
+      if (!dept) continue;
+      const assigned = enabledPrinters.filter(p => p.assignedDepartments.includes(dept.id));
+      if (assigned.length > 0) {
+        for (const printer of assigned) {
+          console.log(`[Print] Routing ${group.departmentName} docket to "${printer.name}"`);
+        }
+        sentCount += assigned.length;
+      }
+    }
+    if (sentCount > 0) {
+      toast.success(`Dockets routed to ${sentCount} printer${sentCount > 1 ? "s" : ""}`, {
+        description: `Order ${order.orderNumber} — auto-routed by department`,
+        duration: 3000,
+      });
+    }
   };
 
   const handleEmailReceipt = () => {
@@ -232,65 +229,6 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
                           </Button>
                         </div>
                       </div>
-
-                      {/* Send to printer selector */}
-                      {enabledPrinters.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <Select
-                            value={selectedPrinters[group.departmentName] || ""}
-                            onValueChange={(val) => setSelectedPrinters(prev => ({ ...prev, [group.departmentName]: val }))}
-                          >
-                            <SelectTrigger className="h-7 text-xs flex-1">
-                              <SelectValue placeholder="Select printer..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(() => {
-                                const compatible = getPrintersForDepartment(group.departmentName);
-                                const others = enabledPrinters.filter(p => !compatible.find(c => c.id === p.id));
-                                return (
-                                  <>
-                                    {compatible.length > 0 && (
-                                      <>
-                                        {compatible.map(p => (
-                                          <SelectItem key={p.id} value={p.id} className="text-xs">
-                                            <span className="flex items-center gap-1.5">
-                                              <Printer className="w-3 h-3 text-[hsl(var(--success))]" />
-                                              {p.name}
-                                              <Badge variant="secondary" className="h-4 px-1 text-[9px]">assigned</Badge>
-                                            </span>
-                                          </SelectItem>
-                                        ))}
-                                      </>
-                                    )}
-                                    {others.length > 0 && (
-                                      <>
-                                        {others.map(p => (
-                                          <SelectItem key={p.id} value={p.id} className="text-xs">
-                                            <span className="flex items-center gap-1.5">
-                                              <Printer className="w-3 h-3 text-muted-foreground" />
-                                              {p.name}
-                                            </span>
-                                          </SelectItem>
-                                        ))}
-                                      </>
-                                    )}
-                                  </>
-                                );
-                              })()}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="h-7 px-2 gap-1 text-xs shrink-0"
-                            disabled={!selectedPrinters[group.departmentName]}
-                            onClick={() => handleSendToPrinter(group.departmentName, selectedPrinters[group.departmentName])}
-                          >
-                            <Send className="w-3 h-3" /> Send
-                          </Button>
-                        </div>
-                      )}
-
                       <div className="flex justify-center">
                         <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                           <KitchenDocket
@@ -310,27 +248,14 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
             </div>
 
             <div className="border-t border-border p-4 space-y-2">
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => handlePrint(docketRef, `Docket-${order.orderNumber}`)}
-                  className="flex-1 gap-2"
-                >
-                  <Printer className="w-4 h-4" /> Print All
-                </Button>
-                {enabledPrinters.length > 0 && (
-                  <Button
-                    variant="secondary"
-                    onClick={handleSendAllToPrinters}
-                    className="flex-1 gap-2"
-                  >
-                    <Send className="w-4 h-4" /> Send All to Printers
-                  </Button>
-                )}
-              </div>
+              <Button
+                onClick={handlePrintAllDockets}
+                className="w-full gap-2"
+              >
+                <Printer className="w-4 h-4" /> Print All Dockets
+              </Button>
               <p className="text-[10px] text-muted-foreground text-center">
-                {enabledPrinters.length > 0
-                  ? "Print via browser or send directly to configured printers"
-                  : "Each department docket prints on a separate page"}
+                Each department docket prints on a separate page
               </p>
             </div>
 
