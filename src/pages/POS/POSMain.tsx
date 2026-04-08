@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { getFeatures } from "@/data/businessTypes";
 import POSLogin from "@/components/pos/POSLogin";
@@ -8,6 +8,8 @@ import POSCart from "@/components/pos/POSCart";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import OrdersPanel from "@/components/pos/OrdersPanel";
 import KitchenDisplay from "@/components/pos/KitchenDisplay";
+import PrinterManagementDialog from "@/components/pos/PrinterManagementDialog";
+import { usePrinters } from "@/hooks/use-printers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -18,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed, User
+  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed, User, Printer
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
 import CashierProfileDialog from "@/components/pos/CashierProfileDialog";
@@ -31,7 +33,7 @@ type POSTab = "catalog" | "orders" | "kitchen";
 export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
-    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen
+    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -41,7 +43,22 @@ export default function POSMain() {
   const [startShiftOpen, setStartShiftOpen] = useState(false);
   const [closeShiftOpen, setCloseShiftOpen] = useState(false);
   const [outletToggleConfirm, setOutletToggleConfirm] = useState(false);
+  const [printerDialogOpen, setPrinterDialogOpen] = useState(false);
   const isMobile = useIsMobile();
+
+  const { printers, updatePrinters, routeOrderToPrinters } = usePrinters(currentOutlet?.id || "");
+
+  // Auto-route dockets when a new order is created
+  const [lastOrderCount, setLastOrderCount] = useState(orders.length);
+  useEffect(() => {
+    if (orders.length > lastOrderCount) {
+      const latestOrder = orders[0];
+      if (latestOrder && latestOrder.status !== "voided") {
+        routeOrderToPrinters(latestOrder, currentOutlet);
+      }
+    }
+    setLastOrderCount(orders.length);
+  }, [orders.length]);
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const showKitchen = features?.hasDineIn || features?.hasMenu;
@@ -151,6 +168,9 @@ export default function POSMain() {
               </Button>
             )}
           </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPrinterDialogOpen(true)} title="Printers">
+            <Printer className="w-4 h-4" />
+          </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
             <BarChart3 className="w-4 h-4" />
           </Button>
@@ -231,6 +251,14 @@ export default function POSMain() {
       {/* Shift dialogs */}
       <StartShiftDialog open={startShiftOpen} onClose={() => setStartShiftOpen(false)} />
       <CloseShiftDialog open={closeShiftOpen} onClose={() => setCloseShiftOpen(false)} />
+
+      {/* Printer management */}
+      <PrinterManagementDialog
+        open={printerDialogOpen}
+        onClose={() => setPrinterDialogOpen(false)}
+        printers={printers}
+        onPrintersChange={updatePrinters}
+      />
 
       {/* Open/Close business confirmation */}
       <AlertDialog open={outletToggleConfirm} onOpenChange={setOutletToggleConfirm}>
