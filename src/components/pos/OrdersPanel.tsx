@@ -44,7 +44,13 @@ interface LocationSummary {
   paymentStatus: LocationPaymentStatus;
 }
 
-export default function OrdersPanel() {
+import type { POSPrinter } from "./PrinterManagementDialog";
+
+interface OrdersPanelProps {
+  printers?: POSPrinter[];
+}
+
+export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
   const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
@@ -767,6 +773,7 @@ export default function OrdersPanel() {
         open={!!printOrder}
         onClose={() => setPrintOrder(null)}
         order={printOrder}
+        printers={printers}
         onBack={() => {
           if (printOrder) {
             const freshOrder = orders.find(o => o.id === printOrder.id);
