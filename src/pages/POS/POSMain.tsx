@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { getFeatures } from "@/data/businessTypes";
 import POSLogin from "@/components/pos/POSLogin";
@@ -8,6 +8,8 @@ import POSCart from "@/components/pos/POSCart";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import OrdersPanel from "@/components/pos/OrdersPanel";
 import KitchenDisplay from "@/components/pos/KitchenDisplay";
+import PrinterManagementDialog from "@/components/pos/PrinterManagementDialog";
+import { usePrinters } from "@/hooks/use-printers";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -18,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ShoppingCart, ClipboardList, CookingPot, Lock, LogOut, Store,
-  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed, User
+  Menu as MenuIcon, BarChart3, PlayCircle, StopCircle, Clock, DoorOpen, DoorClosed, User, Printer
 } from "lucide-react";
 import CashierSalesDialog from "@/components/pos/CashierSalesDialog";
 import CashierProfileDialog from "@/components/pos/CashierProfileDialog";
