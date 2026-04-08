@@ -232,6 +232,65 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
                           </Button>
                         </div>
                       </div>
+
+                      {/* Send to printer selector */}
+                      {enabledPrinters.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Select
+                            value={selectedPrinters[group.departmentName] || ""}
+                            onValueChange={(val) => setSelectedPrinters(prev => ({ ...prev, [group.departmentName]: val }))}
+                          >
+                            <SelectTrigger className="h-7 text-xs flex-1">
+                              <SelectValue placeholder="Select printer..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(() => {
+                                const compatible = getPrintersForDepartment(group.departmentName);
+                                const others = enabledPrinters.filter(p => !compatible.find(c => c.id === p.id));
+                                return (
+                                  <>
+                                    {compatible.length > 0 && (
+                                      <>
+                                        {compatible.map(p => (
+                                          <SelectItem key={p.id} value={p.id} className="text-xs">
+                                            <span className="flex items-center gap-1.5">
+                                              <Printer className="w-3 h-3 text-[hsl(var(--success))]" />
+                                              {p.name}
+                                              <Badge variant="secondary" className="h-4 px-1 text-[9px]">assigned</Badge>
+                                            </span>
+                                          </SelectItem>
+                                        ))}
+                                      </>
+                                    )}
+                                    {others.length > 0 && (
+                                      <>
+                                        {others.map(p => (
+                                          <SelectItem key={p.id} value={p.id} className="text-xs">
+                                            <span className="flex items-center gap-1.5">
+                                              <Printer className="w-3 h-3 text-muted-foreground" />
+                                              {p.name}
+                                            </span>
+                                          </SelectItem>
+                                        ))}
+                                      </>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-7 px-2 gap-1 text-xs shrink-0"
+                            disabled={!selectedPrinters[group.departmentName]}
+                            onClick={() => handleSendToPrinter(group.departmentName, selectedPrinters[group.departmentName])}
+                          >
+                            <Send className="w-3 h-3" /> Send
+                          </Button>
+                        </div>
+                      )}
+
                       <div className="flex justify-center">
                         <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                           <KitchenDocket
@@ -251,14 +310,27 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
             </div>
 
             <div className="border-t border-border p-4 space-y-2">
-              <Button
-                onClick={() => handlePrint(docketRef, `Docket-${order.orderNumber}`)}
-                className="w-full gap-2"
-              >
-                <Printer className="w-4 h-4" /> Print All Dockets
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => handlePrint(docketRef, `Docket-${order.orderNumber}`)}
+                  className="flex-1 gap-2"
+                >
+                  <Printer className="w-4 h-4" /> Print All
+                </Button>
+                {enabledPrinters.length > 0 && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleSendAllToPrinters}
+                    className="flex-1 gap-2"
+                  >
+                    <Send className="w-4 h-4" /> Send All to Printers
+                  </Button>
+                )}
+              </div>
               <p className="text-[10px] text-muted-foreground text-center">
-                Each department docket prints on a separate page
+                {enabledPrinters.length > 0
+                  ? "Print via browser or send directly to configured printers"
+                  : "Each department docket prints on a separate page"}
               </p>
             </div>
 
