@@ -574,6 +574,15 @@ export default function InventoryManagement() {
         item={adjustItem}
         onAdjust={handleAdjustStock}
       />
+
+      <BulkReceiveStockDialog
+        open={bulkReceiveOpen}
+        onOpenChange={setBulkReceiveOpen}
+        items={outletItems}
+        units={units}
+        outletId={selectedOutletId}
+        onReceive={handleAdjustStock}
+      />
     </div>
   );
 }
