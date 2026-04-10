@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, Eye, Clock } from "lucide-react";
+import { AlertTriangle, Eye, Clock, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
@@ -33,6 +33,7 @@ import StockAdjustmentHistory, {
   type StockAdjustment,
   type AdjustmentType,
 } from "@/components/inventory/StockAdjustmentHistory";
+import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialog";
 
 const defaultItems: InventoryItem[] = [
   // Restaurant (outlet-1, outlet-3)
@@ -200,6 +201,7 @@ export default function InventoryManagement() {
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [bulkReceiveOpen, setBulkReceiveOpen] = useState(false);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
@@ -409,17 +411,29 @@ export default function InventoryManagement() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Inventory</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and composite items</p>
         </div>
-        <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
-          <SelectTrigger className="w-[180px] h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Outlets</SelectItem>
-            {outlets.map((o) => (
-              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {!isAllOutlets && (
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() => setBulkReceiveOpen(true)}
+            >
+              <Truck className="h-4 w-4" />
+              Receive Shipment
+            </Button>
+          )}
+          <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Outlets</SelectItem>
+              {outlets.map((o) => (
+                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -559,6 +573,15 @@ export default function InventoryManagement() {
         onOpenChange={setAdjustOpen}
         item={adjustItem}
         onAdjust={handleAdjustStock}
+      />
+
+      <BulkReceiveStockDialog
+        open={bulkReceiveOpen}
+        onOpenChange={setBulkReceiveOpen}
+        items={outletItems}
+        units={units}
+        outletId={selectedOutletId}
+        onReceive={handleAdjustStock}
       />
     </div>
   );
