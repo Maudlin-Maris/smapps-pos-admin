@@ -250,7 +250,7 @@ export default function InventoryManagement() {
     return { expiredItemCount: expiredCount, expiringSoonItemCount: soonCount };
   }, [outletItems]);
 
-  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string) => {
+  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string, pricing?: import("@/components/inventory/StockAdjustmentHistory").StockReceivePricing) => {
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
 
@@ -275,7 +275,6 @@ export default function InventoryManagement() {
         if (existingBatch) {
           existingBatch.quantity += quantity;
         } else {
-          // Batch was fully depleted or new batch - create entry
           updatedBatches.push({
             id: crypto.randomUUID(),
             batchNumber,
@@ -287,7 +286,6 @@ export default function InventoryManagement() {
           });
         }
       } else if (type === "add" && batchNumber && updatedBatches) {
-        // Add stock always creates a new batch
         updatedBatches.push({
           id: crypto.randomUUID(),
           batchNumber,
@@ -313,7 +311,6 @@ export default function InventoryManagement() {
 
       // For removals, reduce from batches using FEFO (First Expiry, First Out)
       if (updatedBatches && updatedBatches.length > 0) {
-        // Sort by expiry date ascending (earliest first)
         updatedBatches.sort((a, b) => {
           if (!a.expiryDate) return 1;
           if (!b.expiryDate) return -1;
@@ -326,7 +323,6 @@ export default function InventoryManagement() {
           batch.quantity -= deduct;
           remaining -= deduct;
         }
-        // Remove empty batches
         updatedBatches = updatedBatches.filter(b => b.quantity > 0);
       }
     }
@@ -350,6 +346,10 @@ export default function InventoryManagement() {
       costTotal,
       batchNumber,
       expiryDate,
+      sellPrice: pricing?.sellPrice,
+      pricingMethod: pricing?.method,
+      pricingValue: pricing?.value,
+      syncToCatalog: pricing?.syncToCatalog,
     };
 
     setAdjustments((prev) => [adjustment, ...prev]);
@@ -374,11 +374,19 @@ export default function InventoryManagement() {
           : i
       )
     );
-    
-    const costChangeMsg = newAverageCost !== item.costPrice 
-      ? ` | Avg cost updated: ₦${item.costPrice.toFixed(2)} → ₦${newAverageCost.toFixed(2)}`
-      : "";
-    toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: ₦${costTotal.toFixed(2)})${costChangeMsg}`);
+
+    // Handle catalog sync for retail business types
+    if (pricing?.syncToCatalog && type === "add") {
+      toast.success(
+        `Stock received: ${previousStock} → ${newStock} | Sell price: ₦${pricing.sellPrice.toFixed(2)} | Catalog updated automatically`,
+        { duration: 5000 }
+      );
+    } else {
+      const costChangeMsg = newAverageCost !== item.costPrice 
+        ? ` | Avg cost updated: ₦${item.costPrice.toFixed(2)} → ₦${newAverageCost.toFixed(2)}`
+        : "";
+      toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: ₦${costTotal.toFixed(2)})${costChangeMsg}`);
+    }
   };
 
   const openAdjust = (item: InventoryItem) => {

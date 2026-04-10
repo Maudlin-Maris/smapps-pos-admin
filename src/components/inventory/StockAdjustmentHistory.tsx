@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, ArrowUpRight, ArrowDownRight, History } from "lucide-react";
+import { Search, ArrowUpRight, ArrowDownRight, History, Tag, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -28,6 +30,7 @@ import type { InventoryItem, ItemBatch } from "./InventoryItemForm";
 import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { outlets } from "@/data/outlets";
+import { getBusinessType, type BusinessTypeId } from "@/data/businessTypes";
 
 export type AdjustmentType = "add" | "remove" | "damaged" | "returned";
 
@@ -45,6 +48,10 @@ export interface StockAdjustment {
   costTotal: number;
   batchNumber?: string;
   expiryDate?: string;
+  sellPrice?: number;
+  pricingMethod?: "markup" | "margin" | "fixed";
+  pricingValue?: number;
+  syncToCatalog?: boolean;
 }
 
 const adjustmentTypeLabels: Record<AdjustmentType, string> = {
@@ -54,14 +61,58 @@ const adjustmentTypeLabels: Record<AdjustmentType, string> = {
   returned: "Returned",
 };
 
+export type PricingMethod = "markup" | "margin" | "fixed";
+
+export interface StockReceivePricing {
+  method: PricingMethod;
+  value: number;
+  sellPrice: number;
+  syncToCatalog: boolean;
+}
+
+/** Business types where inventory items ARE catalog products (not recipe ingredients) */
+const RETAIL_BUSINESS_TYPES: BusinessTypeId[] = [
+  "grocery", "supermarket", "pharmacy", "wine_store", "clothing",
+  "electronics", "hair_seller", "retail",
+];
+
+function isRetailType(outletId: string): boolean {
+  const outlet = outlets.find(o => o.id === outletId);
+  if (!outlet) return false;
+  return RETAIL_BUSINESS_TYPES.includes(outlet.businessType);
+}
+
+function calcSellPrice(costPrice: number, method: PricingMethod, value: number): number {
+  if (method === "fixed") return value;
+  if (method === "markup") return costPrice * (1 + value / 100);
+  if (method === "margin") {
+    if (value >= 100) return costPrice * 10; // cap
+    return costPrice / (1 - value / 100);
+  }
+  return costPrice;
+}
+
+function calcValueFromSellPrice(costPrice: number, sellPrice: number, method: PricingMethod): number {
+  if (method === "fixed") return sellPrice;
+  if (method === "markup") return costPrice > 0 ? ((sellPrice - costPrice) / costPrice) * 100 : 0;
+  if (method === "margin") return sellPrice > 0 ? ((sellPrice - costPrice) / sellPrice) * 100 : 0;
+  return 0;
+}
+
 interface AdjustDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item: InventoryItem | null;
-  onAdjust: (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string) => void;
+  onAdjust: (
+    itemId: string, type: AdjustmentType, quantity: number, reason: string,
+    batchCostPrice?: number, batchNumber?: string, expiryDate?: string,
+    pricing?: StockReceivePricing
+  ) => void;
+  /** Current catalog sell price for the item, if known */
+  currentSellPrice?: number;
 }
 
-export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: AdjustDialogProps) {
+export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentSellPrice }: AdjustDialogProps) {
   const [type, setType] = useState<AdjustmentType>("add");
   const [quantity, setQuantity] = useState(0);
   const [reason, setReason] = useState("");
@@ -71,6 +122,14 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   const [selectedBatchId, setSelectedBatchId] = useState<string>("new");
   const [returnBatchId, setReturnBatchId] = useState<string>("new");
 
+  // Pricing state
+  const [pricingMethod, setPricingMethod] = useState<PricingMethod>("markup");
+  const [pricingValue, setPricingValue] = useState<number>(0);
+  const [sellPrice, setSellPrice] = useState<number>(0);
+  const [syncToCatalog, setSyncToCatalog] = useState<boolean>(true);
+
+  const showRetailPricing = item ? isRetailType(item.outletId) : false;
+
   // Check if this item's outlet is batch-tracked
   const selectedOutlet = item ? outlets.find(o => o.id === item.outletId) : null;
   const isBatchTracked = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
@@ -79,11 +138,35 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
   const isReturnType = type === "returned";
   const isRemoveType = type === "remove" || type === "damaged";
 
-  useState(() => {
-    if (item && isAddType) {
+  // Reset pricing when dialog opens or item changes
+  useEffect(() => {
+    if (item && open) {
       setBatchCostPrice(item.costPrice);
+      const existingSellPrice = currentSellPrice || item.costPrice * 1.3; // default 30% markup
+      setSellPrice(existingSellPrice);
+      const defaultMarkup = item.costPrice > 0
+        ? ((existingSellPrice - item.costPrice) / item.costPrice) * 100
+        : 30;
+      setPricingMethod("markup");
+      setPricingValue(Math.round(defaultMarkup * 100) / 100);
     }
-  });
+  }, [item, open, currentSellPrice]);
+
+  // Recalculate sell price when cost or pricing params change
+  useEffect(() => {
+    if (isAddType && showRetailPricing && batchCostPrice > 0) {
+      const newSellPrice = calcSellPrice(batchCostPrice, pricingMethod, pricingValue);
+      setSellPrice(Math.round(newSellPrice * 100) / 100);
+    }
+  }, [batchCostPrice, pricingMethod, pricingValue, isAddType, showRetailPricing]);
+
+  const handleSellPriceDirectChange = (newSellPrice: number) => {
+    setSellPrice(newSellPrice);
+    if (batchCostPrice > 0) {
+      const newValue = calcValueFromSellPrice(batchCostPrice, newSellPrice, pricingMethod);
+      setPricingValue(Math.round(newValue * 100) / 100);
+    }
+  };
 
   const handleSave = () => {
     if (quantity <= 0) {
@@ -124,6 +207,13 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       }
     }
 
+    const pricing: StockReceivePricing | undefined = (isAddType && showRetailPricing) ? {
+      method: pricingMethod,
+      value: pricingValue,
+      sellPrice,
+      syncToCatalog,
+    } : undefined;
+
     onAdjust(
       item.id,
       type,
@@ -131,7 +221,8 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
       reason,
       isAddType ? batchCostPrice : undefined,
       isBatchTracked && isAddType ? (finalBatchNumber || new Date().toISOString().slice(0, 16).replace("T", " ")) : (isBatchTracked && isReturnType ? finalBatchNumber : undefined),
-      isBatchTracked && isAddType ? finalExpiryDate : (isBatchTracked && isReturnType ? finalExpiryDate : undefined)
+      isBatchTracked && isAddType ? finalExpiryDate : (isBatchTracked && isReturnType ? finalExpiryDate : undefined),
+      pricing
     );
     setType("add");
     setQuantity(0);
@@ -141,6 +232,10 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
     setExpiryDate("");
     setSelectedBatchId("new");
     setReturnBatchId("new");
+    setPricingMethod("markup");
+    setPricingValue(0);
+    setSellPrice(0);
+    setSyncToCatalog(true);
     onOpenChange(false);
   };
 
@@ -150,11 +245,16 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
         : item.stock - quantity
     : 0;
 
+  const profitPerUnit = isAddType && batchCostPrice > 0 ? sellPrice - batchCostPrice : 0;
+  const totalProfit = profitPerUnit * quantity;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Adjust Stock — {item?.name}</DialogTitle>
+          <DialogTitle>
+            {isAddType && showRetailPricing ? "Receive Stock" : "Adjust Stock"} — {item?.name}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
@@ -187,7 +287,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             <Select value={type} onValueChange={(v) => setType(v as AdjustmentType)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="add">Add Stock (New Batch)</SelectItem>
+                <SelectItem value="add">{showRetailPricing ? "Receive New Stock" : "Add Stock (New Batch)"}</SelectItem>
                 <SelectItem value="remove">Remove Stock</SelectItem>
                 <SelectItem value="damaged">Damaged</SelectItem>
                 <SelectItem value="returned">Returned</SelectItem>
@@ -242,7 +342,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
               />
             </div>
             
-          {isAddType && (
+            {isAddType && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cost per unit (₦)</label>
                 <Input
@@ -270,12 +370,110 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
             </div>
           )}
 
+          {/* ── Pricing Section (Retail business types only, on stock add) ── */}
+          {isAddType && showRetailPricing && (
+            <div className="border-t pt-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-accent" />
+                <label className="text-sm font-semibold">Sell Price & Markup</label>
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">
+                Set the retail price for this item. Choose a pricing method or enter the sell price directly.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Pricing Method</label>
+                  <Select value={pricingMethod} onValueChange={(v) => setPricingMethod(v as PricingMethod)}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="markup">Markup %</SelectItem>
+                      <SelectItem value="margin">Margin %</SelectItem>
+                      <SelectItem value="fixed">Fixed Price</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    {pricingMethod === "markup" ? "Markup %" : pricingMethod === "margin" ? "Margin %" : "Sell Price (₦)"}
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={pricingValue}
+                    onChange={(e) => setPricingValue(Number(e.target.value))}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Sell Price (₦)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={sellPrice}
+                  onChange={(e) => handleSellPriceDirectChange(Number(e.target.value))}
+                  className="h-9"
+                />
+              </div>
+
+              {/* Profit preview */}
+              {batchCostPrice > 0 && sellPrice > 0 && quantity > 0 && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-success/5 border border-success/20">
+                  <TrendingUp className="h-4 w-4 text-success shrink-0" />
+                  <div className="flex-1 text-xs space-y-0.5">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Profit per unit</span>
+                      <span className={cn("font-medium", profitPerUnit >= 0 ? "text-success" : "text-destructive")}>
+                        ₦{profitPerUnit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total profit ({quantity} units)</span>
+                      <span className={cn("font-semibold", totalProfit >= 0 ? "text-success" : "text-destructive")}>
+                        ₦{totalProfit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Effective margin</span>
+                      <span className="font-medium">
+                        {sellPrice > 0 ? (((sellPrice - batchCostPrice) / sellPrice) * 100).toFixed(1) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sync to catalog toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                <div className="space-y-0.5">
+                  <Label htmlFor="sync-catalog" className="text-sm font-medium cursor-pointer">
+                    Auto-update catalog
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Automatically update catalog quantity and sell price when stock is received
+                  </p>
+                </div>
+                <Switch
+                  id="sync-catalog"
+                  checked={syncToCatalog}
+                  onCheckedChange={setSyncToCatalog}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label className="text-sm font-medium">Reason <span className="text-destructive">*</span></label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Received new shipment, Monthly recount..."
+              placeholder={isAddType && showRetailPricing
+                ? "e.g. Received new shipment from supplier, Purchase order #1234..."
+                : "e.g. Received new shipment, Monthly recount..."}
               rows={2}
             />
           </div>
@@ -287,7 +485,9 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust }: Adjust
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>Confirm Adjustment</Button>
+          <Button onClick={handleSave}>
+            {isAddType && showRetailPricing ? "Receive Stock" : "Confirm Adjustment"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -395,6 +595,12 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
                     <p className="text-xs text-muted-foreground truncate">{adj.reason}</p>
                     {adj.batchNumber && (
                       <p className="text-[10px] text-muted-foreground">Batch: {adj.batchNumber} {adj.expiryDate ? `· Exp: ${adj.expiryDate}` : ""}</p>
+                    )}
+                    {adj.syncToCatalog && adj.sellPrice && (
+                      <p className="text-[10px] text-accent">
+                        Catalog synced · Sell: ₦{adj.sellPrice.toFixed(2)}
+                        {adj.pricingMethod && adj.pricingValue ? ` (${adj.pricingMethod} ${adj.pricingValue}%)` : ""}
+                      </p>
                     )}
                   </div>
                 </div>
