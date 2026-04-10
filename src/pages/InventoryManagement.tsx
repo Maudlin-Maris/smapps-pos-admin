@@ -33,6 +33,7 @@ import StockAdjustmentHistory, {
   type StockAdjustment,
   type AdjustmentType,
 } from "@/components/inventory/StockAdjustmentHistory";
+import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialog";
 
 const defaultItems: InventoryItem[] = [
   // Restaurant (outlet-1, outlet-3)
