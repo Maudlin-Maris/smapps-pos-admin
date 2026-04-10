@@ -201,6 +201,7 @@ export default function InventoryManagement() {
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [bulkReceiveOpen, setBulkReceiveOpen] = useState(false);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
