@@ -411,17 +411,29 @@ export default function InventoryManagement() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Inventory</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and composite items</p>
         </div>
-        <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
-          <SelectTrigger className="w-[180px] h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Outlets</SelectItem>
-            {outlets.map((o) => (
-              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {!isAllOutlets && (
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={() => setBulkReceiveOpen(true)}
+            >
+              <Truck className="h-4 w-4" />
+              Receive Shipment
+            </Button>
+          )}
+          <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Outlets</SelectItem>
+              {outlets.map((o) => (
+                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-3">
