@@ -23,6 +23,7 @@ import CashierManagement from "@/pages/CashierManagement";
 import LoyaltyManagement from "@/pages/LoyaltyManagement";
 import ServiceBookings from "@/pages/ServiceBookings";
 import POSMain from "@/pages/POS/POSMain";
+import PromoBundleManagement from "@/pages/PromoBundleManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
             <Route path="/menu" element={<AppLayout><MenuManagement /></AppLayout>} />
+            <Route path="/bundles" element={<AppLayout><PromoBundleManagement /></AppLayout>} />
             
             <Route path="/inventory" element={<AppLayout><InventoryManagement /></AppLayout>} />
             <Route path="/inventory/advanced" element={<AppLayout><AdvancedInventory /></AppLayout>} />
