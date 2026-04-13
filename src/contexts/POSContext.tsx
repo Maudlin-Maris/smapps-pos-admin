@@ -1,6 +1,6 @@
 /* POS Context */
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-
+import { posProducts } from "@/data/posData";
 import {
   type POSCashier, type POSOrder, type POSCartItem, type POSOutlet,
   type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee, type ItemStatus,
@@ -53,6 +53,9 @@ interface POSContextType {
   updateCartItem: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
   clearCart: () => void;
   cartTotal: number;
+  removeBundleFromCart: (bundleId: string) => void;
+  breakBundle: (bundleId: string) => void;
+  swapBundleItem: (bundleId: string, oldItemId: string, newProductId: string, newVariantId?: string, newVariantName?: string) => void;
 
   // Orders
   orders: POSOrder[];
@@ -191,8 +194,14 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((item: Omit<POSCartItem, "id">) => {
     setCart(prev => {
+      // Never merge bundle items — they must stay as separate locked entries
+      if (item.bundleId) {
+        const id = `cart-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+        return [...prev, { ...item, id }];
+      }
       const extrasKey = [...item.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => `${e.id}:${e.quantity}`).join(",");
       const existing = prev.find(c => {
+        if (c.bundleId) return false; // don't merge into bundle items
         const cExtrasKey = [...c.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => `${e.id}:${e.quantity}`).join(",");
         return c.productId === item.productId && c.variantId === item.variantId && cExtrasKey === extrasKey;
       });
@@ -230,6 +239,56 @@ export function POSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const cartTotal = cart.reduce((sum, i) => sum + i.totalPrice, 0);
+
+  // Bundle group actions
+  const removeBundleFromCart = useCallback((bundleId: string) => {
+    setCart(prev => prev.filter(i => i.bundleId !== bundleId));
+  }, []);
+
+  const breakBundle = useCallback((bundleId: string) => {
+    setCart(prev => prev.map(i => {
+      if (i.bundleId !== bundleId) return i;
+      // Restore original prices and remove bundle association
+      const prod = posProducts.find(p => p.id === i.productId);
+      const variant = i.variantId ? prod?.variants?.find(v => v.id === i.variantId) : undefined;
+      const originalPrice = variant?.price ?? prod?.price ?? i.unitPrice;
+      return {
+        ...i,
+        bundleId: undefined,
+        bundleName: undefined,
+        unitPrice: originalPrice,
+        totalPrice: originalPrice * i.quantity,
+      };
+    }));
+  }, []);
+
+  const swapBundleItem = useCallback((bundleId: string, oldItemId: string, newProductId: string, newVariantId?: string, newVariantName?: string) => {
+    setCart(prev => {
+      const bundleItems = prev.filter(i => i.bundleId === bundleId);
+      const oldItem = bundleItems.find(i => i.id === oldItemId);
+      if (!oldItem) return prev;
+
+      const newProd = posProducts.find(p => p.id === newProductId);
+      if (!newProd) return prev;
+      const newVariant = newVariantId ? newProd.variants?.find(v => v.id === newVariantId) : undefined;
+
+      return prev.map(i => {
+        if (i.id !== oldItemId) return i;
+        return {
+          ...i,
+          productId: newProd.id,
+          productName: newProd.name,
+          categoryId: newProd.categoryId,
+          variantId: newVariant?.id,
+          variantName: newVariantName || newVariant?.name,
+          extras: [],
+          // Keep the same proportional bundle price
+          unitPrice: i.unitPrice,
+          totalPrice: i.totalPrice,
+        };
+      });
+    });
+  }, []);
 
   const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number, loyaltyRedemption?: LoyaltyRedemption) => {
     const num = orderCounter;
@@ -344,7 +403,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       authState, currentCashier, signedInCashiers, loginWithCredentials, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets, outletOpen, toggleOutletOpen,
-      cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal,
+      cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal, removeBundleFromCart, breakBundle, swapBundleItem,
       orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder,
       orderType, setOrderType,
     }}>
