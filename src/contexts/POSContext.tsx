@@ -53,6 +53,9 @@ interface POSContextType {
   updateCartItem: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
   clearCart: () => void;
   cartTotal: number;
+  removeBundleFromCart: (bundleId: string) => void;
+  breakBundle: (bundleId: string) => void;
+  swapBundleItem: (bundleId: string, oldItemId: string, newProductId: string, newVariantId?: string, newVariantName?: string) => void;
 
   // Orders
   orders: POSOrder[];
