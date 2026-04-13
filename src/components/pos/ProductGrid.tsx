@@ -423,40 +423,97 @@ export default function ProductGrid() {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-3">
-          {products.map(product => (
-            <button
-              key={product.id}
-              onClick={() => product.inStock && handleProductClick(product)}
-              disabled={!product.inStock}
-              className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.97] ${
-                product.inStock
-                  ? "bg-card border-border hover:border-primary/30 hover:shadow-md"
-                  : "bg-muted/50 border-border/50 opacity-60 cursor-not-allowed"
-              }`}
-            >
-              {!product.inStock && (
-                <Badge variant="destructive" className="absolute top-2 right-2 text-[10px]">Out</Badge>
-              )}
-              <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
-              <span className="text-xs text-muted-foreground mt-1">
-                {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
-              </span>
-              {product.variants && product.variants.length > 0 && (
-                <div className="flex gap-1 mt-1.5 flex-wrap">
-                  {product.variants.map(v => (
-                    <span key={v.id} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{v.name}</span>
-                  ))}
-                </div>
-              )}
-            </button>
-          ))}
-        </div>
-        {products.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Search className="w-8 h-8 mb-2" />
-            <p className="text-sm">No products found</p>
+        {isBundlesTab ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 p-3">
+            {outletBundles.map(bundle => {
+              const savings = bundle.originalPrice - bundle.bundlePrice;
+              const savingsPercent = bundle.originalPrice > 0 ? Math.round((savings / bundle.originalPrice) * 100) : 0;
+              return (
+                <button
+                  key={bundle.id}
+                  onClick={() => handleBundleClick(bundle)}
+                  className="relative flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.97] bg-card border-border hover:border-primary/30 hover:shadow-md"
+                >
+                  <Badge className="absolute top-2 right-2 text-[10px] bg-primary/10 text-primary border-primary/20" variant="outline">
+                    <Tag className="w-2.5 h-2.5 mr-0.5" />
+                    {savingsPercent}% off
+                  </Badge>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Gift className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-sm font-semibold text-foreground line-clamp-1">{bundle.name}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">{bundle.description}</p>
+                  <div className="flex items-center gap-2 mt-auto">
+                    <span className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</span>
+                    <span className="text-sm font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-3">
+              {/* Show bundle cards at top when on "All" tab */}
+              {!selectedCategory && outletBundles.slice(0, 2).map(bundle => {
+                const savings = bundle.originalPrice - bundle.bundlePrice;
+                const savingsPercent = bundle.originalPrice > 0 ? Math.round((savings / bundle.originalPrice) * 100) : 0;
+                return (
+                  <button
+                    key={bundle.id}
+                    onClick={() => handleBundleClick(bundle)}
+                    className="relative flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.97] bg-primary/5 border-primary/20 hover:border-primary/40 hover:shadow-md col-span-1"
+                  >
+                    <Badge className="absolute top-2 right-2 text-[10px] bg-primary/10 text-primary border-primary/20" variant="outline">
+                      <Tag className="w-2.5 h-2.5 mr-0.5" />
+                      {savingsPercent}% off
+                    </Badge>
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Gift className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-sm font-semibold text-foreground line-clamp-1">{bundle.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</span>
+                      <span className="text-sm font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</span>
+                    </div>
+                  </button>
+                );
+              })}
+              {products.map(product => (
+                <button
+                  key={product.id}
+                  onClick={() => product.inStock && handleProductClick(product)}
+                  disabled={!product.inStock}
+                  className={`relative flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.97] ${
+                    product.inStock
+                      ? "bg-card border-border hover:border-primary/30 hover:shadow-md"
+                      : "bg-muted/50 border-border/50 opacity-60 cursor-not-allowed"
+                  }`}
+                >
+                  {!product.inStock && (
+                    <Badge variant="destructive" className="absolute top-2 right-2 text-[10px]">Out</Badge>
+                  )}
+                  <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
+                  <span className="text-xs text-muted-foreground mt-1">
+                    {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
+                  </span>
+                  {product.variants && product.variants.length > 0 && (
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {product.variants.map(v => (
+                        <span key={v.id} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{v.name}</span>
+                      ))}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            {products.length === 0 && !selectedCategory && outletBundles.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Search className="w-8 h-8 mb-2" />
+                <p className="text-sm">No products found</p>
+              </div>
+            )}
+          </>
         )}
       </ScrollArea>
 
