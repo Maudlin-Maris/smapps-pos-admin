@@ -4,7 +4,7 @@ import { formatNaira } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Minus, Plus, Trash2, ShoppingCart, Pencil } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart, Pencil, Gift } from "lucide-react";
 import { type POSCartItem } from "@/data/posData";
 import CartItemEditDialog from "./CartItemEditDialog";
 
@@ -51,6 +51,12 @@ export default function POSCart({ onCheckout }: Props) {
                   {item.productName}
                   {item.variantName && <span className="text-muted-foreground font-normal"> · {item.variantName}</span>}
                 </p>
+                {item.bundleName && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Gift className="w-3 h-3 text-primary" />
+                    <span className="text-[10px] text-primary font-medium">{item.bundleName}</span>
+                  </div>
+                )}
                 {item.extras.length > 0 && (
                   <p className="text-[11px] text-muted-foreground truncate">
                     +{item.extras.map(e => e.quantity > 1 ? `${e.quantity}x ${e.name}` : e.name).join(", ")}

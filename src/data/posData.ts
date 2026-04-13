@@ -57,6 +57,9 @@ export interface POSCartItem {
   totalPrice: number;
   notes?: string;
   itemStatus?: ItemStatus;
+  /** If this item is part of a promo bundle */
+  bundleId?: string;
+  bundleName?: string;
 }
 
 export type OrderStatus = "open" | "in_progress" | "ready" | "served" | "paid" | "voided";
