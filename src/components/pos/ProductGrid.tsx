@@ -356,8 +356,19 @@ export default function ProductGrid() {
         <Button type="button" variant="outline" size="icon" onClick={startCamera} title="Scan with camera" className="shrink-0 h-10 w-10">
           <Camera className="h-4 w-4" />
         </Button>
+            {showBundlesTab && (
+              <button
+                onClick={() => { setSelectedCategory("__bundles__"); setSelectedSubcategory(null); }}
+                className={`shrink-0 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+                  isBundlesTab ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                <Gift className="w-3.5 h-3.5" />
+                Combos
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
       <div className="border-b border-border">
         <div className="w-full overflow-x-auto">
