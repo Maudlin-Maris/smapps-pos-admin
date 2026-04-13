@@ -109,8 +109,13 @@ export default function ProductGrid() {
   // Filter categories for current outlet
   const outletCategories = posCategories.filter(c => !c.outletId || c.outletId === currentOutlet?.id);
 
+  // Active bundles for this outlet
+  const outletBundles = promoBundles.filter(b => b.status === "active" && (!currentOutlet || b.outletId === currentOutlet.id));
+  const showBundlesTab = outletBundles.length > 0;
+  const isBundlesTab = selectedCategory === "__bundles__";
+
   // Filter products for current outlet
-  const products = posProducts.filter(p => {
+  const products = isBundlesTab ? [] : posProducts.filter(p => {
     if (currentOutlet && p.outletId !== currentOutlet.id) return false;
     if (search) return p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search);
     if (!selectedCategory) return true;
@@ -119,6 +124,41 @@ export default function ProductGrid() {
   });
 
   const currentCategory = outletCategories.find(c => c.id === selectedCategory);
+
+  const handleBundleClick = (bundle: PromoBundle) => {
+    const bundleInstanceId = `bundle-${Date.now()}`;
+    // Add each bundle item as a cart item, distributing price proportionally
+    const itemPrices = bundle.items.map(item => {
+      const prod = posProducts.find(p => p.id === item.productId);
+      const variant = item.variantId ? prod?.variants?.find(v => v.id === item.variantId) : undefined;
+      return (variant?.price ?? prod?.price ?? 0) * item.quantity;
+    });
+    const totalOriginal = itemPrices.reduce((s, p) => s + p, 0);
+
+    bundle.items.forEach((item, idx) => {
+      const prod = posProducts.find(p => p.id === item.productId);
+      if (!prod) return;
+      const variant = item.variantId ? prod.variants?.find(v => v.id === item.variantId) : undefined;
+      // Proportional price distribution
+      const proportion = totalOriginal > 0 ? itemPrices[idx] / totalOriginal : 1 / bundle.items.length;
+      const itemBundlePrice = Math.round(bundle.bundlePrice * proportion);
+
+      addToCart({
+        productId: prod.id,
+        productName: prod.name,
+        categoryId: prod.categoryId,
+        variantId: variant?.id,
+        variantName: variant?.name,
+        extras: [],
+        quantity: item.quantity,
+        unitPrice: Math.round(itemBundlePrice / item.quantity),
+        totalPrice: itemBundlePrice,
+        bundleId: bundleInstanceId,
+        bundleName: bundle.name,
+      });
+    });
+    toast.success(`Added "${bundle.name}" bundle`);
+  };
 
   const handleProductClick = (product: POSProduct) => {
     if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
