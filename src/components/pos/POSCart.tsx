@@ -22,7 +22,7 @@ export default function POSCart({ onCheckout }: Props) {
     removeBundleFromCart, breakBundle, swapBundleItem, currentOutlet
   } = usePOS();
   const [editingItem, setEditingItem] = useState<POSCartItem | null>(null);
-  const [swapState, setSwapState] = useState<{ bundleId: string; itemId: string; categoryId?: string } | null>(null);
+  const [swapState, setSwapState] = useState<{ bundleId: string; itemId: string; categoryId?: string; swapOptions?: POSCartItem["bundleSwapOptions"] } | null>(null);
 
   // Group items: bundles grouped together, standalone items separate
   const groupedItems: Array<{ type: "bundle"; bundleId: string; bundleName: string; items: POSCartItem[]; total: number } | { type: "item"; item: POSCartItem }> = [];
