@@ -1,3 +1,11 @@
+export interface SwapOption {
+  productId: string;
+  productName: string;
+  /** Optional: lock to a specific variant */
+  variantId?: string;
+  variantName?: string;
+}
+
 export interface BundleItem {
   productId: string;
   productName: string;
@@ -5,6 +13,10 @@ export interface BundleItem {
   /** If set, lock to this variant */
   variantId?: string;
   variantName?: string;
+  /** Admin-configured allowed swap alternatives for this slot */
+  swapOptions?: SwapOption[];
+  /** Whether swapping is enabled for this slot */
+  swappable?: boolean;
 }
 
 export type BundlePricingType = "fixed" | "percentage_discount";
@@ -38,13 +50,36 @@ export const promoBundles: PromoBundle[] = [
     description: "Classic Beef Burger + French Fries + Coca-Cola",
     outletId: "outlet-1",
     items: [
-      { productId: "p1", productName: "Classic Beef Burger", quantity: 1, variantId: "v1a", variantName: "Single" },
-      { productId: "p12", productName: "French Fries", quantity: 1, variantId: "v12a", variantName: "Regular" },
-      { productId: "p16", productName: "Coca-Cola", quantity: 1 },
+      {
+        productId: "p1", productName: "Classic Beef Burger", quantity: 1, variantId: "v1a", variantName: "Single",
+        swappable: true,
+        swapOptions: [
+          { productId: "p2", productName: "Chicken Burger", variantId: "v2a", variantName: "Single" },
+          { productId: "p3", productName: "Veggie Burger" },
+        ],
+      },
+      {
+        productId: "p12", productName: "French Fries", quantity: 1, variantId: "v12a", variantName: "Regular",
+        swappable: true,
+        swapOptions: [
+          { productId: "p13", productName: "Sweet Potato Fries" },
+          { productId: "p14", productName: "Onion Rings" },
+          { productId: "p15", productName: "Coleslaw" },
+        ],
+      },
+      {
+        productId: "p16", productName: "Coca-Cola", quantity: 1,
+        swappable: true,
+        swapOptions: [
+          { productId: "p17", productName: "Sprite" },
+          { productId: "p18", productName: "Fanta Orange" },
+          { productId: "p19", productName: "Cappuccino", variantId: "v19b", variantName: "Regular" },
+        ],
+      },
     ],
     pricingType: "fixed",
     pricingValue: 7500,
-    originalPrice: 8800, // 5500 + 2500 + 800
+    originalPrice: 8800,
     bundlePrice: 7500,
     status: "active",
   },
@@ -54,12 +89,19 @@ export const promoBundles: PromoBundle[] = [
     description: "Any Medium Pizza + 2 Coca-Colas — 15% off",
     outletId: "outlet-1",
     items: [
-      { productId: "p6", productName: "Margherita Pizza", quantity: 1, variantId: "v6b", variantName: "Medium 12\"" },
-      { productId: "p16", productName: "Coca-Cola", quantity: 2 },
+      {
+        productId: "p6", productName: "Margherita Pizza", quantity: 1, variantId: "v6b", variantName: "Medium 12\"",
+        swappable: true,
+        swapOptions: [
+          { productId: "p7", productName: "Pepperoni Pizza", variantId: "v7b", variantName: "Medium 12\"" },
+          { productId: "p8", productName: "BBQ Chicken Pizza", variantId: "v8b", variantName: "Medium 12\"" },
+        ],
+      },
+      { productId: "p16", productName: "Coca-Cola", quantity: 2, swappable: false },
     ],
     pricingType: "percentage_discount",
     pricingValue: 15,
-    originalPrice: 9100, // 7500 + 1600
+    originalPrice: 9100,
     bundlePrice: 7735,
     status: "active",
   },
@@ -69,8 +111,8 @@ export const promoBundles: PromoBundle[] = [
     description: "Cappuccino + Chocolate Cake",
     outletId: "outlet-1",
     items: [
-      { productId: "p19", productName: "Cappuccino", quantity: 1, variantId: "v19b", variantName: "Regular" },
-      { productId: "p21", productName: "Chocolate Cake", quantity: 1 },
+      { productId: "p19", productName: "Cappuccino", quantity: 1, variantId: "v19b", variantName: "Regular", swappable: false },
+      { productId: "p21", productName: "Chocolate Cake", quantity: 1, swappable: false },
     ],
     pricingType: "fixed",
     pricingValue: 5500,
@@ -85,9 +127,9 @@ export const promoBundles: PromoBundle[] = [
     description: "Paracetamol + Cough Syrup + Vitamin C",
     outletId: "outlet-4",
     items: [
-      { productId: "ph1", productName: "Paracetamol 500mg", quantity: 1 },
-      { productId: "ph5", productName: "Cough Syrup 100ml", quantity: 1 },
-      { productId: "ph6", productName: "Vitamin C 1000mg", quantity: 1, variantId: "phv6a", variantName: "30 Tabs" },
+      { productId: "ph1", productName: "Paracetamol 500mg", quantity: 1, swappable: false },
+      { productId: "ph5", productName: "Cough Syrup 100ml", quantity: 1, swappable: false },
+      { productId: "ph6", productName: "Vitamin C 1000mg", quantity: 1, variantId: "phv6a", variantName: "30 Tabs", swappable: false },
     ],
     pricingType: "percentage_discount",
     pricingValue: 10,
@@ -102,8 +144,8 @@ export const promoBundles: PromoBundle[] = [
     description: "Rice + Oil + Tomatoes — save ₦500",
     outletId: "outlet-7",
     items: [
-      { productId: "g1", productName: "Organic Apples", quantity: 2 },
-      { productId: "g3", productName: "Fresh Milk 1L", quantity: 1 },
+      { productId: "g1", productName: "Organic Apples", quantity: 2, swappable: false },
+      { productId: "g3", productName: "Fresh Milk 1L", quantity: 1, swappable: false },
     ],
     pricingType: "fixed",
     pricingValue: 3500,
