@@ -128,19 +128,20 @@ export default function ProductGrid() {
   const handleBundleClick = (bundle: PromoBundle) => {
     const bundleInstanceId = `bundle-${Date.now()}`;
     // Add each bundle item as a cart item, distributing price proportionally
-    const itemPrices = bundle.items.map(item => {
+    const itemMarketPrices = bundle.items.map(item => {
       const prod = posProducts.find(p => p.id === item.productId);
       const variant = item.variantId ? prod?.variants?.find(v => v.id === item.variantId) : undefined;
       return (variant?.price ?? prod?.price ?? 0) * item.quantity;
     });
-    const totalOriginal = itemPrices.reduce((s, p) => s + p, 0);
+    const totalOriginal = itemMarketPrices.reduce((s, p) => s + p, 0);
 
     bundle.items.forEach((item, idx) => {
       const prod = posProducts.find(p => p.id === item.productId);
       if (!prod) return;
       const variant = item.variantId ? prod.variants?.find(v => v.id === item.variantId) : undefined;
+      const marketPrice = itemMarketPrices[idx];
       // Proportional price distribution
-      const proportion = totalOriginal > 0 ? itemPrices[idx] / totalOriginal : 1 / bundle.items.length;
+      const proportion = totalOriginal > 0 ? marketPrice / totalOriginal : 1 / bundle.items.length;
       const itemBundlePrice = Math.round(bundle.bundlePrice * proportion);
 
       addToCart({
@@ -157,6 +158,8 @@ export default function ProductGrid() {
         bundleName: bundle.name,
         bundleSwappable: !!item.swappable && (item.swapOptions || []).length > 0,
         bundleSwapOptions: item.swapOptions,
+        bundleDefaultMarketPrice: marketPrice,
+        bundleSlotBasePrice: itemBundlePrice,
       });
     });
     toast.success(`Added "${bundle.name}" bundle`);

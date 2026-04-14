@@ -264,13 +264,21 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const swapBundleItem = useCallback((bundleId: string, oldItemId: string, newProductId: string, newVariantId?: string, newVariantName?: string) => {
     setCart(prev => {
-      const bundleItems = prev.filter(i => i.bundleId === bundleId);
-      const oldItem = bundleItems.find(i => i.id === oldItemId);
+      const oldItem = prev.find(i => i.id === oldItemId && i.bundleId === bundleId);
       if (!oldItem) return prev;
 
       const newProd = posProducts.find(p => p.id === newProductId);
       if (!newProd) return prev;
       const newVariant = newVariantId ? newProd.variants?.find(v => v.id === newVariantId) : undefined;
+
+      // Toast POS swap pricing rule:
+      // - New item costs MORE than the default → upcharge = difference added to slot price
+      // - New item costs LESS or EQUAL → keep the base slot price (no discount below combo price)
+      const defaultMarketPrice = oldItem.bundleDefaultMarketPrice ?? (oldItem.unitPrice * oldItem.quantity);
+      const slotBasePrice = oldItem.bundleSlotBasePrice ?? oldItem.totalPrice;
+      const newMarketPrice = ((newVariant?.price ?? newProd.price) * oldItem.quantity);
+      const upcharge = Math.max(0, newMarketPrice - defaultMarketPrice);
+      const newTotalPrice = slotBasePrice + upcharge;
 
       return prev.map(i => {
         if (i.id !== oldItemId) return i;
@@ -282,9 +290,11 @@ export function POSProvider({ children }: { children: ReactNode }) {
           variantId: newVariant?.id,
           variantName: newVariantName || newVariant?.name,
           extras: [],
-          // Keep the same proportional bundle price
-          unitPrice: i.unitPrice,
-          totalPrice: i.totalPrice,
+          unitPrice: Math.round(newTotalPrice / oldItem.quantity),
+          totalPrice: newTotalPrice,
+          // Preserve original defaults for future swaps
+          bundleDefaultMarketPrice: oldItem.bundleDefaultMarketPrice,
+          bundleSlotBasePrice: oldItem.bundleSlotBasePrice,
         };
       });
     });
