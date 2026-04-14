@@ -194,11 +194,21 @@ export default function POSCart({ onCheckout }: Props) {
 
                 {/* Bundle items — tap to swap, touch-friendly */}
                 <div className="px-2 py-1 space-y-0.5">
-                  {group.items.map(item => (
+                {group.items.map(item => {
+                  const canSwap = item.bundleSwappable && item.bundleSwapOptions && item.bundleSwapOptions.length > 0;
+                  return (
                     <button
                       key={item.id}
-                      onClick={() => setSwapState({ bundleId: group.bundleId, itemId: item.id, categoryId: item.categoryId })}
-                      className="w-full flex items-center gap-2 p-2 rounded-lg active:bg-primary/10 hover:bg-primary/5 transition-colors text-left"
+                      onClick={() => canSwap && setSwapState({
+                        bundleId: group.bundleId,
+                        itemId: item.id,
+                        categoryId: item.categoryId,
+                        swapOptions: item.bundleSwapOptions,
+                      })}
+                      disabled={!canSwap}
+                      className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors text-left ${
+                        canSwap ? "active:bg-primary/10 hover:bg-primary/5 cursor-pointer" : "cursor-default"
+                      }`}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-foreground truncate">
@@ -209,10 +219,11 @@ export default function POSCart({ onCheckout }: Props) {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-xs text-muted-foreground">{formatNaira(item.totalPrice)}</span>
-                        <ArrowRightLeft className="w-3.5 h-3.5 text-primary/50" />
+                        {canSwap && <ArrowRightLeft className="w-3.5 h-3.5 text-primary/50" />}
                       </div>
                     </button>
-                  ))}
+                  );
+                })}
                 </div>
               </div>
             );
