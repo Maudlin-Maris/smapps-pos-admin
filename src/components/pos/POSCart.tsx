@@ -270,8 +270,17 @@ export default function POSCart({ onCheckout }: Props) {
           <div className="space-y-1 mt-2">
             {swapCandidates.map(prod => {
               const currentItem = swapState ? cart.find(i => i.id === swapState.itemId) : null;
+              const defaultMarketPrice = currentItem?.bundleDefaultMarketPrice ?? (currentItem?.unitPrice ?? 0) * (currentItem?.quantity ?? 1);
               const isCurrentProduct = prod.id === currentItem?.productId && !prod.variants?.length;
               
+              const renderUpcharge = (itemPrice: number) => {
+                const newMarket = itemPrice * (currentItem?.quantity ?? 1);
+                const upcharge = newMarket - defaultMarketPrice;
+                if (upcharge > 0) return <span className="text-xs font-medium text-orange-600">+{formatNaira(upcharge)}</span>;
+                if (upcharge < 0) return <span className="text-xs text-muted-foreground">No extra charge</span>;
+                return null;
+              };
+
               if (prod.variants && prod.variants.length > 0) {
                 return prod.variants.map(v => {
                   const isCurrent = prod.id === currentItem?.productId && v.id === currentItem?.variantId;
@@ -290,7 +299,10 @@ export default function POSCart({ onCheckout }: Props) {
                         <p className="text-sm font-medium">{prod.name}</p>
                         <p className="text-xs text-muted-foreground">{v.name}</p>
                       </div>
-                      <span className="text-sm text-muted-foreground">{formatNaira(v.price)}</span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-sm text-muted-foreground">{formatNaira(v.price)}</span>
+                        {!isCurrent && renderUpcharge(v.price)}
+                      </div>
                     </button>
                   );
                 });
@@ -308,7 +320,10 @@ export default function POSCart({ onCheckout }: Props) {
                   }`}
                 >
                   <p className="text-sm font-medium">{prod.name}</p>
-                  <span className="text-sm text-muted-foreground">{formatNaira(prod.price)}</span>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="text-sm text-muted-foreground">{formatNaira(prod.price)}</span>
+                    {!isCurrentProduct && renderUpcharge(prod.price)}
+                  </div>
                 </button>
               );
             })}
