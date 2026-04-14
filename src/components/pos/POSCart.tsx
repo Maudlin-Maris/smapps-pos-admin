@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
-import { posProducts, posCategories } from "@/data/posData";
+import { posProducts, posCategories, type POSProduct } from "@/data/posData";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,7 @@ export default function POSCart({ onCheckout }: Props) {
     removeBundleFromCart, breakBundle, swapBundleItem, currentOutlet
   } = usePOS();
   const [editingItem, setEditingItem] = useState<POSCartItem | null>(null);
-  const [swapState, setSwapState] = useState<{ bundleId: string; itemId: string; categoryId?: string } | null>(null);
+  const [swapState, setSwapState] = useState<{ bundleId: string; itemId: string; categoryId?: string; swapOptions?: POSCartItem["bundleSwapOptions"] } | null>(null);
 
   // Group items: bundles grouped together, standalone items separate
   const groupedItems: Array<{ type: "bundle"; bundleId: string; bundleName: string; items: POSCartItem[]; total: number } | { type: "item"; item: POSCartItem }> = [];
@@ -55,13 +55,26 @@ export default function POSCart({ onCheckout }: Props) {
     return aIdx - bIdx;
   });
 
-  // Swap dialog: show products from same category
+  // Swap dialog: use admin-configured swap options if available, fallback to category
   const swapCandidates = swapState
-    ? posProducts.filter(p =>
-        p.outletId === currentOutlet?.id &&
-        p.inStock &&
-        p.categoryId === swapState.categoryId
-      )
+    ? swapState.swapOptions && swapState.swapOptions.length > 0
+      ? swapState.swapOptions.map(opt => {
+          const prod = posProducts.find(p => p.id === opt.productId && p.outletId === currentOutlet?.id && p.inStock);
+          if (!prod) return null;
+          // If swap option specifies a variant, filter to just that variant
+          if (opt.variantId) {
+            const variant = prod.variants?.find(v => v.id === opt.variantId);
+            if (!variant) return null;
+            return { ...prod, variants: [variant] };
+          }
+          // If product has no variants, return as-is; if it has variants, return all
+          return prod;
+        }).filter(Boolean) as POSProduct[]
+      : posProducts.filter(p =>
+          p.outletId === currentOutlet?.id &&
+          p.inStock &&
+          p.categoryId === swapState.categoryId
+        )
     : [];
 
   if (cart.length === 0) {
@@ -181,11 +194,21 @@ export default function POSCart({ onCheckout }: Props) {
 
                 {/* Bundle items — tap to swap, touch-friendly */}
                 <div className="px-2 py-1 space-y-0.5">
-                  {group.items.map(item => (
+                {group.items.map(item => {
+                  const canSwap = item.bundleSwappable && item.bundleSwapOptions && item.bundleSwapOptions.length > 0;
+                  return (
                     <button
                       key={item.id}
-                      onClick={() => setSwapState({ bundleId: group.bundleId, itemId: item.id, categoryId: item.categoryId })}
-                      className="w-full flex items-center gap-2 p-2 rounded-lg active:bg-primary/10 hover:bg-primary/5 transition-colors text-left"
+                      onClick={() => canSwap && setSwapState({
+                        bundleId: group.bundleId,
+                        itemId: item.id,
+                        categoryId: item.categoryId,
+                        swapOptions: item.bundleSwapOptions,
+                      })}
+                      disabled={!canSwap}
+                      className={`w-full flex items-center gap-2 p-2 rounded-lg transition-colors text-left ${
+                        canSwap ? "active:bg-primary/10 hover:bg-primary/5 cursor-pointer" : "cursor-default"
+                      }`}
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-foreground truncate">
@@ -196,10 +219,11 @@ export default function POSCart({ onCheckout }: Props) {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-xs text-muted-foreground">{formatNaira(item.totalPrice)}</span>
-                        <ArrowRightLeft className="w-3.5 h-3.5 text-primary/50" />
+                        {canSwap && <ArrowRightLeft className="w-3.5 h-3.5 text-primary/50" />}
                       </div>
                     </button>
-                  ))}
+                  );
+                })}
                 </div>
               </div>
             );
@@ -238,7 +262,11 @@ export default function POSCart({ onCheckout }: Props) {
               Swap Item
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Select a replacement from the same category:</p>
+          <p className="text-sm text-muted-foreground">
+            {swapState?.swapOptions && swapState.swapOptions.length > 0
+              ? "Select a replacement from the available options:"
+              : "Select a replacement from the same category:"}
+          </p>
           <div className="space-y-1 mt-2">
             {swapCandidates.map(prod => {
               const currentItem = swapState ? cart.find(i => i.id === swapState.itemId) : null;

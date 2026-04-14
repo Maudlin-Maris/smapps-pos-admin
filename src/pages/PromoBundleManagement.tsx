@@ -9,12 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Search, Package, Trash2, Pencil, Gift, Tag } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Search, Package, Trash2, Pencil, Gift, Tag, ArrowRightLeft, ChevronDown, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
 import { outlets } from "@/data/outlets";
 import { posProducts, type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
-import { promoBundles as initialBundles, type PromoBundle, type BundleItem, type BundlePricingType } from "@/data/promoBundles";
+import { promoBundles as initialBundles, type PromoBundle, type BundleItem, type BundlePricingType, type SwapOption } from "@/data/promoBundles";
 
 export default function PromoBundleManagement() {
   const [bundles, setBundles] = useState<PromoBundle[]>(initialBundles);
@@ -100,6 +101,7 @@ export default function PromoBundleManagement() {
             const outlet = outlets.find(o => o.id === bundle.outletId);
             const savings = bundle.originalPrice - bundle.bundlePrice;
             const savingsPercent = bundle.originalPrice > 0 ? Math.round((savings / bundle.originalPrice) * 100) : 0;
+            const swappableCount = bundle.items.filter(i => i.swappable && i.swapOptions && i.swapOptions.length > 0).length;
             return (
               <Card key={bundle.id} className="relative overflow-hidden">
                 {bundle.status === "inactive" && (
@@ -131,9 +133,19 @@ export default function PromoBundleManagement() {
                         <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">{item.quantity}</span>
                         <span className="text-foreground">{item.productName}</span>
                         {item.variantName && <span className="text-muted-foreground text-xs">({item.variantName})</span>}
+                        {item.swappable && item.swapOptions && item.swapOptions.length > 0 && (
+                          <ArrowRightLeft className="w-3 h-3 text-primary/60" />
+                        )}
                       </div>
                     ))}
                   </div>
+
+                  {swappableCount > 0 && (
+                    <p className="text-[11px] text-primary/70 mb-3">
+                      <ArrowRightLeft className="w-3 h-3 inline mr-1" />
+                      {swappableCount} swappable slot{swappableCount > 1 ? "s" : ""}
+                    </p>
+                  )}
 
                   <div className="flex items-end justify-between pt-3 border-t border-border">
                     <div>
@@ -182,6 +194,8 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
   const [pricingType, setPricingType] = useState<BundlePricingType>("fixed");
   const [pricingValue, setPricingValue] = useState<number>(0);
   const [productSearch, setProductSearch] = useState("");
+  const [expandedSwapIdx, setExpandedSwapIdx] = useState<number | null>(null);
+  const [swapSearch, setSwapSearch] = useState("");
 
   // Reset form when dialog opens
   const handleOpenChange = (isOpen: boolean) => {
@@ -190,7 +204,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
         setName(bundle.name);
         setDescription(bundle.description);
         setOutletId(bundle.outletId);
-        setItems([...bundle.items]);
+        setItems(bundle.items.map(i => ({ ...i, swapOptions: i.swapOptions ? [...i.swapOptions] : [] })));
         setPricingType(bundle.pricingType);
         setPricingValue(bundle.pricingValue);
       } else {
@@ -201,6 +215,8 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
         setPricingType("fixed");
         setPricingValue(0);
       }
+      setExpandedSwapIdx(null);
+      setSwapSearch("");
     }
     if (!isOpen) onClose();
   };
@@ -211,6 +227,20 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
     if (productSearch) return prods.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()));
     return prods;
   }, [outletId, productSearch]);
+
+  // Swap candidate products for the expanded item
+  const swapCandidateProducts = useMemo(() => {
+    if (expandedSwapIdx === null) return [];
+    const item = items[expandedSwapIdx];
+    if (!item) return [];
+    const prods = posProducts.filter(p =>
+      p.outletId === outletId &&
+      p.inStock &&
+      p.id !== item.productId // exclude the default item itself
+    );
+    if (swapSearch) return prods.filter(p => p.name.toLowerCase().includes(swapSearch.toLowerCase()));
+    return prods;
+  }, [outletId, expandedSwapIdx, items, swapSearch]);
 
   const originalPrice = useMemo(() => {
     return items.reduce((sum, item) => {
@@ -236,6 +266,8 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
         productId: product.id,
         productName: product.name,
         quantity: 1,
+        swappable: false,
+        swapOptions: [],
       }]);
     }
     setProductSearch("");
@@ -252,16 +284,55 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
         quantity: 1,
         variantId,
         variantName,
+        swappable: false,
+        swapOptions: [],
       }]);
     }
     setProductSearch("");
   };
 
-  const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
+  const removeItem = (idx: number) => {
+    setItems(prev => prev.filter((_, i) => i !== idx));
+    if (expandedSwapIdx === idx) setExpandedSwapIdx(null);
+  };
 
   const updateItemQuantity = (idx: number, qty: number) => {
     if (qty < 1) return removeItem(idx);
     setItems(prev => prev.map((item, i) => i === idx ? { ...item, quantity: qty } : item));
+  };
+
+  const toggleSwappable = (idx: number) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const newSwappable = !item.swappable;
+      return { ...item, swappable: newSwappable, swapOptions: newSwappable ? (item.swapOptions || []) : [] };
+    }));
+  };
+
+  const addSwapOption = (idx: number, product: POSProduct, variantId?: string, variantName?: string) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const options = item.swapOptions || [];
+      const exists = options.some(o => o.productId === product.id && o.variantId === variantId);
+      if (exists) return item;
+      return {
+        ...item,
+        swapOptions: [...options, {
+          productId: product.id,
+          productName: product.name,
+          variantId,
+          variantName,
+        }],
+      };
+    }));
+    setSwapSearch("");
+  };
+
+  const removeSwapOption = (itemIdx: number, optIdx: number) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== itemIdx) return item;
+      return { ...item, swapOptions: (item.swapOptions || []).filter((_, j) => j !== optIdx) };
+    }));
   };
 
   const handleSave = () => {
@@ -317,9 +388,14 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
               <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what's in this bundle..." rows={2} />
             </div>
 
-            {/* Bundle Items */}
+            {/* Bundle Items with Modifier Groups */}
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Bundle Items</Label>
+              <div>
+                <Label className="text-base font-semibold">Combo Slots</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Add items and configure which alternatives cashiers can swap in at the POS
+                </p>
+              </div>
 
               {items.length > 0 && (
                 <div className="space-y-2">
@@ -327,28 +403,150 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                     const prod = posProducts.find(p => p.id === item.productId);
                     const variant = item.variantId ? prod?.variants?.find(v => v.id === item.variantId) : undefined;
                     const price = variant?.price ?? prod?.price ?? 0;
+                    const isExpanded = expandedSwapIdx === idx;
+                    const swapCount = item.swapOptions?.length || 0;
+
                     return (
-                      <div key={idx} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/40 border border-border">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {item.productName}
-                            {item.variantName && <span className="text-muted-foreground font-normal"> · {item.variantName}</span>}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{formatNaira(price)} each</p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity - 1)}>
-                            <span className="text-sm">−</span>
+                      <div key={idx} className="rounded-lg border border-border overflow-hidden">
+                        {/* Item row */}
+                        <div className="flex items-center gap-3 p-3 bg-muted/40">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {item.productName}
+                              {item.variantName && <span className="text-muted-foreground font-normal"> · {item.variantName}</span>}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{formatNaira(price)} each</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity - 1)}>
+                              <span className="text-sm">−</span>
+                            </Button>
+                            <span className="text-sm font-semibold w-6 text-center">{item.quantity}</span>
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity + 1)}>
+                              <span className="text-sm">+</span>
+                            </Button>
+                          </div>
+                          <p className="text-sm font-semibold w-20 text-right">{formatNaira(price * item.quantity)}</p>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(idx)}>
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
-                          <span className="text-sm font-semibold w-6 text-center">{item.quantity}</span>
-                          <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity + 1)}>
-                            <span className="text-sm">+</span>
-                          </Button>
                         </div>
-                        <p className="text-sm font-semibold w-20 text-right">{formatNaira(price * item.quantity)}</p>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(idx)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+
+                        {/* Swap toggle & modifier group */}
+                        <div className="border-t border-border bg-background">
+                          <div className="flex items-center justify-between px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={!!item.swappable}
+                                onCheckedChange={() => toggleSwappable(idx)}
+                                className="scale-[0.85]"
+                              />
+                              <span className="text-xs font-medium text-foreground">Allow swap</span>
+                              {item.swappable && swapCount > 0 && (
+                                <Badge variant="secondary" className="text-[10px] h-5">
+                                  {swapCount} option{swapCount !== 1 ? "s" : ""}
+                                </Badge>
+                              )}
+                            </div>
+                            {item.swappable && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => {
+                                  setExpandedSwapIdx(isExpanded ? null : idx);
+                                  setSwapSearch("");
+                                }}
+                              >
+                                <ArrowRightLeft className="w-3 h-3" />
+                                {isExpanded ? "Close" : "Configure"}
+                                {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                              </Button>
+                            )}
+                          </div>
+
+                          {/* Expanded swap options editor */}
+                          {item.swappable && isExpanded && (
+                            <div className="px-3 pb-3 space-y-2">
+                              {/* Current swap options */}
+                              {(item.swapOptions || []).length > 0 && (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {(item.swapOptions || []).map((opt, optIdx) => (
+                                    <div
+                                      key={optIdx}
+                                      className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
+                                    >
+                                      <span className="text-xs text-foreground">
+                                        {opt.productName}
+                                        {opt.variantName && <span className="text-muted-foreground"> · {opt.variantName}</span>}
+                                      </span>
+                                      <button
+                                        onClick={() => removeSwapOption(idx, optIdx)}
+                                        className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                                      >
+                                        <X className="w-2.5 h-2.5 text-muted-foreground" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Search to add swap options */}
+                              <div className="relative">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                <Input
+                                  value={swapSearch}
+                                  onChange={e => setSwapSearch(e.target.value)}
+                                  placeholder="Search products to add as swap option..."
+                                  className="pl-8 h-8 text-sm"
+                                />
+                              </div>
+                              {swapSearch && swapCandidateProducts.length > 0 && (
+                                <div className="border border-border rounded-lg max-h-36 overflow-y-auto bg-popover">
+                                  {swapCandidateProducts.slice(0, 12).map(product => (
+                                    <div key={product.id}>
+                                      {product.variants && product.variants.length > 0 ? (
+                                        product.variants.map(v => {
+                                          const alreadyAdded = (item.swapOptions || []).some(o => o.productId === product.id && o.variantId === v.id);
+                                          return (
+                                            <button
+                                              key={v.id}
+                                              disabled={alreadyAdded}
+                                              className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
+                                              onClick={() => addSwapOption(idx, product, v.id, v.name)}
+                                            >
+                                              <span className="text-foreground">
+                                                {product.name} · <span className="text-muted-foreground">{v.name}</span>
+                                              </span>
+                                              <span className="text-muted-foreground">{formatNaira(v.price)}</span>
+                                            </button>
+                                          );
+                                        })
+                                      ) : (
+                                        (() => {
+                                          const alreadyAdded = (item.swapOptions || []).some(o => o.productId === product.id && !o.variantId);
+                                          return (
+                                            <button
+                                              disabled={alreadyAdded}
+                                              className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
+                                              onClick={() => addSwapOption(idx, product)}
+                                            >
+                                              <span className="text-foreground">{product.name}</span>
+                                              <span className="text-muted-foreground">{formatNaira(product.price)}</span>
+                                            </button>
+                                          );
+                                        })()
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {swapSearch && swapCandidateProducts.length === 0 && (
+                                <p className="text-xs text-muted-foreground text-center py-2">No matching products found</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
