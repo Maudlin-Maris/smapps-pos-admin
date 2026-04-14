@@ -262,7 +262,11 @@ export default function POSCart({ onCheckout }: Props) {
               Swap Item
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Select a replacement from the same category:</p>
+          <p className="text-sm text-muted-foreground">
+            {swapState?.swapOptions && swapState.swapOptions.length > 0
+              ? "Select a replacement from the available options:"
+              : "Select a replacement from the same category:"}
+          </p>
           <div className="space-y-1 mt-2">
             {swapCandidates.map(prod => {
               const currentItem = swapState ? cart.find(i => i.id === swapState.itemId) : null;
