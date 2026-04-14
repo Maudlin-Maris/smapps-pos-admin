@@ -64,6 +64,10 @@ export interface POSCartItem {
   bundleSwapOptions?: { productId: string; productName: string; variantId?: string; variantName?: string }[];
   /** Whether this bundle slot allows swapping */
   bundleSwappable?: boolean;
+  /** The default item's market price (used to calculate swap upcharges, Toast POS style) */
+  bundleDefaultMarketPrice?: number;
+  /** The proportional base price assigned to this slot from the bundle price */
+  bundleSlotBasePrice?: number;
 }
 
 export type OrderStatus = "open" | "in_progress" | "ready" | "served" | "paid" | "voided";
