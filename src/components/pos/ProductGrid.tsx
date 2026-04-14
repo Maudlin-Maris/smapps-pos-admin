@@ -155,6 +155,8 @@ export default function ProductGrid() {
         totalPrice: itemBundlePrice,
         bundleId: bundleInstanceId,
         bundleName: bundle.name,
+        bundleSwappable: !!item.swappable && (item.swapOptions || []).length > 0,
+        bundleSwapOptions: item.swapOptions,
       });
     });
     toast.success(`Added "${bundle.name}" bundle`);

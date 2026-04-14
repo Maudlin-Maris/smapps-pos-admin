@@ -60,6 +60,10 @@ export interface POSCartItem {
   /** If this item is part of a promo bundle */
   bundleId?: string;
   bundleName?: string;
+  /** Admin-configured swap options for this bundle slot */
+  bundleSwapOptions?: { productId: string; productName: string; variantId?: string; variantName?: string }[];
+  /** Whether this bundle slot allows swapping */
+  bundleSwappable?: boolean;
 }
 
 export type OrderStatus = "open" | "in_progress" | "ready" | "served" | "paid" | "voided";
