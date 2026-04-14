@@ -55,13 +55,26 @@ export default function POSCart({ onCheckout }: Props) {
     return aIdx - bIdx;
   });
 
-  // Swap dialog: show products from same category
+  // Swap dialog: use admin-configured swap options if available, fallback to category
   const swapCandidates = swapState
-    ? posProducts.filter(p =>
-        p.outletId === currentOutlet?.id &&
-        p.inStock &&
-        p.categoryId === swapState.categoryId
-      )
+    ? swapState.swapOptions && swapState.swapOptions.length > 0
+      ? swapState.swapOptions.map(opt => {
+          const prod = posProducts.find(p => p.id === opt.productId && p.outletId === currentOutlet?.id && p.inStock);
+          if (!prod) return null;
+          // If swap option specifies a variant, filter to just that variant
+          if (opt.variantId) {
+            const variant = prod.variants?.find(v => v.id === opt.variantId);
+            if (!variant) return null;
+            return { ...prod, variants: [variant] };
+          }
+          // If product has no variants, return as-is; if it has variants, return all
+          return prod;
+        }).filter(Boolean) as POSProduct[]
+      : posProducts.filter(p =>
+          p.outletId === currentOutlet?.id &&
+          p.inStock &&
+          p.categoryId === swapState.categoryId
+        )
     : [];
 
   if (cart.length === 0) {
