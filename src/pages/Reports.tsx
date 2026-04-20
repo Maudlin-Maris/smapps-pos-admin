@@ -188,24 +188,30 @@ export default function Reports() {
                     });
                   })()}
                 </div>
-                <div className="p-3 border-b sm:border-b-0 sm:border-r">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">From</p>
-                  <Calendar mode="single" selected={dateFrom} defaultMonth={dateFrom} onSelect={(d) => d && setDateFrom(d)} className={cn("p-0 pointer-events-auto")} />
-                </div>
                 <div className="p-3">
-                  <p className="text-xs font-medium text-muted-foreground mb-2">To</p>
                   <Calendar
-                    mode="single"
-                    selected={dateTo}
+                    mode="range"
+                    numberOfMonths={2}
+                    selected={{ from: dateFrom, to: dateTo }}
                     defaultMonth={
                       dateTo.getFullYear() === dateFrom.getFullYear() && dateTo.getMonth() === dateFrom.getMonth()
-                        ? new Date(dateFrom.getFullYear(), dateFrom.getMonth() + 1, 1)
-                        : dateTo
+                        ? new Date(dateFrom.getFullYear(), dateFrom.getMonth() - 1, 1)
+                        : dateFrom
                     }
-                    onSelect={(d) => d && setDateTo(d)}
+                    onSelect={(range) => {
+                      if (!range) return;
+                      if (range.from) setDateFrom(startOfDay(range.from));
+                      if (range.to) setDateTo(endOfDay(range.to));
+                      else if (range.from) setDateTo(endOfDay(range.from));
+                    }}
                     className={cn("p-0 pointer-events-auto")}
                   />
                 </div>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/30 text-xs">
+                <span className="text-muted-foreground">
+                  {format(dateFrom, "MMM d, yyyy")} – {format(dateTo, "MMM d, yyyy")}
+                </span>
               </div>
             </PopoverContent>
           </Popover>
