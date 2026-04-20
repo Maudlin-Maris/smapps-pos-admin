@@ -34,7 +34,7 @@ export interface SalesRecord {
 const EXPENSES_KEY = "financial_expenses";
 const SALES_KEY = "financial_sales";
 const DATA_VERSION_KEY = "financial_data_version";
-const CURRENT_DATA_VERSION = 2; // Bump when default data schema changes
+const CURRENT_DATA_VERSION = 3; // Bump when default data schema changes
 
 // Clear stale localStorage when data version changes
 (function migrateStorage() {
@@ -88,29 +88,68 @@ const defaultExpenses: Expense[] = [
   { id: "e24", outletId: "outlet-4", category: "other", amount: 180, date: "2026-03-28", description: "Stationery", recurring: false },
 ];
 
-// Default sample sales
-const defaultSales: SalesRecord[] = [
-  { id: "s1", outletId: "outlet-1", date: "2026-03-01", totalSales: 1420, otherIncome: 40, cashier: "Amina" },
-  { id: "s2", outletId: "outlet-1", date: "2026-03-02", totalSales: 1380, otherIncome: 0, cashier: "Tunde" },
-  { id: "s3", outletId: "outlet-1", date: "2026-03-03", totalSales: 1510, otherIncome: 60, cashier: "Amina" },
-  { id: "s4", outletId: "outlet-1", date: "2026-03-04", totalSales: 1290, otherIncome: 0, cashier: "Blessing" },
-  { id: "s5", outletId: "outlet-1", date: "2026-03-05", totalSales: 1600, otherIncome: 80, cashier: "Tunde" },
-  { id: "s6", outletId: "outlet-2", date: "2026-03-01", totalSales: 1250, otherIncome: 30, cashier: "Chidi" },
-  { id: "s7", outletId: "outlet-2", date: "2026-03-02", totalSales: 1180, otherIncome: 0, cashier: "Fatima" },
-  { id: "s8", outletId: "outlet-2", date: "2026-03-03", totalSales: 1340, otherIncome: 50, cashier: "Chidi" },
-  { id: "s9", outletId: "outlet-2", date: "2026-03-04", totalSales: 1100, otherIncome: 0, cashier: "Fatima" },
-  { id: "s10", outletId: "outlet-2", date: "2026-03-05", totalSales: 1450, otherIncome: 40, cashier: "Chidi" },
-  { id: "s11", outletId: "outlet-3", date: "2026-03-01", totalSales: 980, otherIncome: 20, cashier: "Grace" },
-  { id: "s12", outletId: "outlet-3", date: "2026-03-02", totalSales: 920, otherIncome: 0, cashier: "Emeka" },
-  { id: "s13", outletId: "outlet-3", date: "2026-03-03", totalSales: 1050, otherIncome: 30, cashier: "Grace" },
-  { id: "s14", outletId: "outlet-3", date: "2026-03-04", totalSales: 870, otherIncome: 0, cashier: "Emeka" },
-  { id: "s15", outletId: "outlet-3", date: "2026-03-05", totalSales: 1100, otherIncome: 20, cashier: "Grace" },
-  { id: "s16", outletId: "outlet-4", date: "2026-03-01", totalSales: 520, otherIncome: 10, cashier: "Kemi" },
-  { id: "s17", outletId: "outlet-4", date: "2026-03-02", totalSales: 480, otherIncome: 0, cashier: "Kemi" },
-  { id: "s18", outletId: "outlet-4", date: "2026-03-03", totalSales: 550, otherIncome: 20, cashier: "Dayo" },
-  { id: "s19", outletId: "outlet-4", date: "2026-03-04", totalSales: 430, otherIncome: 0, cashier: "Dayo" },
-  { id: "s20", outletId: "outlet-4", date: "2026-03-05", totalSales: 600, otherIncome: 10, cashier: "Kemi" },
-];
+// Default sample sales — generated across ~60 days with multiple records per outlet per day
+// to provide realistic data for trend charts and pagination testing.
+const OUTLET_CASHIERS: Record<string, string[]> = {
+  "outlet-1": ["Amina", "Tunde", "Blessing"],
+  "outlet-2": ["Chidi", "Fatima", "Ngozi"],
+  "outlet-3": ["Grace", "Emeka", "Yetunde"],
+  "outlet-4": ["Kemi", "Dayo", "Ifeoma"],
+};
+
+// Base daily sales magnitude per outlet (NGN)
+const OUTLET_BASE: Record<string, number> = {
+  "outlet-1": 1450,
+  "outlet-2": 1300,
+  "outlet-3": 980,
+  "outlet-4": 520,
+};
+
+function generateSales(): SalesRecord[] {
+  const records: SalesRecord[] = [];
+  const start = new Date("2026-02-01");
+  const days = 60; // Feb 1 -> Apr 1 2026
+  let counter = 1;
+
+  // Deterministic pseudo-random so totals are stable across reloads
+  const rand = (seed: number) => {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  };
+
+  for (let d = 0; d < days; d++) {
+    const date = new Date(start);
+    date.setDate(start.getDate() + d);
+    const dateStr = date.toISOString().split("T")[0];
+    const dow = date.getDay();
+    // Weekend uplift (Sat=6, Sun=0), midweek dip
+    const dayMultiplier = dow === 6 ? 1.45 : dow === 0 ? 1.25 : dow === 5 ? 1.15 : dow === 2 ? 0.85 : 1;
+
+    Object.entries(OUTLET_BASE).forEach(([outletId, base], outletIdx) => {
+      const cashiers = OUTLET_CASHIERS[outletId];
+      // 2-4 transactions per outlet per day
+      const txnCount = 2 + Math.floor(rand(d * 31 + outletIdx * 7) * 3);
+      for (let t = 0; t < txnCount; t++) {
+        const r = rand(d * 131 + outletIdx * 17 + t * 3);
+        const variance = 0.7 + r * 0.6; // 0.7 - 1.3
+        const totalSales = Math.round(base * dayMultiplier * variance);
+        const otherIncome = r > 0.7 ? Math.round(base * 0.04 * r) : 0;
+        const cashier = cashiers[Math.floor(rand(d * 11 + t * 5 + outletIdx) * cashiers.length)];
+        records.push({
+          id: `s${counter++}`,
+          outletId,
+          date: dateStr,
+          totalSales,
+          otherIncome,
+          cashier,
+        });
+      }
+    });
+  }
+  return records;
+}
+
+const defaultSales: SalesRecord[] = generateSales();
 
 export function useExpenses() {
   const [expenses, setExpenses] = useState<Expense[]>(() => loadFromStorage(EXPENSES_KEY, defaultExpenses));
