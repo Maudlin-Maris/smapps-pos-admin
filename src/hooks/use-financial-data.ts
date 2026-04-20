@@ -34,7 +34,7 @@ export interface SalesRecord {
 const EXPENSES_KEY = "financial_expenses";
 const SALES_KEY = "financial_sales";
 const DATA_VERSION_KEY = "financial_data_version";
-const CURRENT_DATA_VERSION = 3; // Bump when default data schema changes
+const CURRENT_DATA_VERSION = 4; // Bump when default data schema changes
 
 // Clear stale localStorage when data version changes
 (function migrateStorage() {
@@ -107,8 +107,11 @@ const OUTLET_BASE: Record<string, number> = {
 
 function generateSales(): SalesRecord[] {
   const records: SalesRecord[] = [];
-  const start = new Date("2026-02-01");
-  const days = 60; // Feb 1 -> Apr 1 2026
+  // Cover Jan 1 of current year through today so YTD views have full data
+  const today = new Date();
+  const start = new Date(today.getFullYear(), 0, 1); // Jan 1
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const days = Math.floor((today.getTime() - start.getTime()) / msPerDay) + 1;
   let counter = 1;
 
   // Deterministic pseudo-random so totals are stable across reloads
