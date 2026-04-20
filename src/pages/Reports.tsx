@@ -57,6 +57,21 @@ export default function Reports() {
   const [dateTo, setDateTo] = useState<Date>(defaultTo);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
 
+  // Date picker draft state — only committed to dateFrom/dateTo on Apply
+  const [dateOpen, setDateOpen] = useState(false);
+  const [draftFrom, setDraftFrom] = useState<Date>(defaultFrom);
+  const [draftTo, setDraftTo] = useState<Date>(defaultTo);
+
+  // When the popover opens, sync drafts to current applied range
+  const openDatePicker = (open: boolean) => {
+    if (open) {
+      setDraftFrom(dateFrom);
+      setDraftTo(dateTo);
+      setCalendarMonth(new Date(dateFrom.getFullYear(), dateFrom.getMonth(), 1));
+    }
+    setDateOpen(open);
+  };
+
   const isFiltered =
     selectedOutletId !== "all" ||
     selectedCashier !== "all" ||
@@ -84,12 +99,24 @@ export default function Reports() {
     d.setHours(h24, minute, period === "PM" ? 59 : 0, period === "PM" ? 999 : 0);
     return d;
   };
-  const applyPreset = (from: Date, to: Date) => {
-    setDateFrom(from);
-    setDateTo(to);
-    // Focus calendar so the FROM month is visible in the left pane
+  const applyDraftPreset = (from: Date, to: Date) => {
+    setDraftFrom(from);
+    setDraftTo(to);
     setCalendarMonth(new Date(from.getFullYear(), from.getMonth(), 1));
   };
+
+  const applyDateRange = () => {
+    setDateFrom(draftFrom);
+    setDateTo(draftTo);
+    setDateOpen(false);
+  };
+
+  const cancelDateRange = () => {
+    setDraftFrom(dateFrom);
+    setDraftTo(dateTo);
+    setDateOpen(false);
+  };
+
 
   const { getExpensesByOutletAndPeriod } = useExpenses();
   const { sales, getSalesByOutletAndPeriod } = useSales();
@@ -308,7 +335,7 @@ export default function Reports() {
               ))}
             </SelectContent>
           </Select>
-          <Popover>
+          <Popover open={dateOpen} onOpenChange={openDatePicker}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5 h-8 sm:h-9 text-xs sm:text-sm shrink-0">
                 <CalendarIcon className="h-3.5 w-3.5" />
@@ -333,7 +360,7 @@ export default function Reports() {
                       a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
                     return presets.map((preset) => {
                       const [pFrom, pTo] = preset.get();
-                      const active = sameDay(pFrom, dateFrom) && sameDay(pTo, dateTo);
+                      const active = sameDay(pFrom, draftFrom) && sameDay(pTo, draftTo);
                       return (
                         <Button
                           key={preset.label}
@@ -343,7 +370,7 @@ export default function Reports() {
                             "justify-start text-xs h-8 font-normal",
                             active && "bg-primary/10 text-primary font-medium hover:bg-primary/15"
                           )}
-                          onClick={() => applyPreset(pFrom, pTo)}
+                          onClick={() => applyDraftPreset(pFrom, pTo)}
                         >
                           {preset.label}
                         </Button>
@@ -357,23 +384,22 @@ export default function Reports() {
                     numberOfMonths={2}
                     month={calendarMonth}
                     onMonthChange={setCalendarMonth}
-                    selected={{ from: dateFrom, to: dateTo }}
+                    selected={{ from: draftFrom, to: draftTo }}
                     onSelect={(range) => {
                       if (!range) return;
                       if (range.from) {
-                        // Preserve current time-of-day on dateFrom
                         const f = new Date(range.from);
-                        f.setHours(dateFrom.getHours(), dateFrom.getMinutes(), 0, 0);
-                        setDateFrom(f);
+                        f.setHours(draftFrom.getHours(), draftFrom.getMinutes(), 0, 0);
+                        setDraftFrom(f);
                       }
                       if (range.to) {
                         const t = new Date(range.to);
-                        t.setHours(dateTo.getHours(), dateTo.getMinutes(), 59, 999);
-                        setDateTo(t);
+                        t.setHours(draftTo.getHours(), draftTo.getMinutes(), 59, 999);
+                        setDraftTo(t);
                       } else if (range.from) {
                         const t = new Date(range.from);
                         t.setHours(23, 59, 59, 999);
-                        setDateTo(t);
+                        setDraftTo(t);
                       }
                     }}
                     className={cn("p-0 pointer-events-auto")}
@@ -382,8 +408,8 @@ export default function Reports() {
               </div>
               <div className="flex flex-col sm:flex-row sm:items-end gap-3 px-3 py-2.5 border-t bg-muted/30">
                 {([
-                  { label: "From", value: dateFrom, set: setDateFrom },
-                  { label: "To", value: dateTo, set: setDateTo },
+                  { label: "From", value: draftFrom, set: setDraftFrom },
+                  { label: "To", value: draftTo, set: setDraftTo },
                 ] as const).map(({ label, value, set }) => {
                   const { h12, minute, period } = get12h(value);
                   return (
@@ -427,6 +453,14 @@ export default function Reports() {
                     </div>
                   );
                 })}
+              </div>
+              <div className="flex items-center justify-end gap-2 px-3 py-2.5 border-t">
+                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={cancelDateRange}>
+                  Cancel
+                </Button>
+                <Button size="sm" className="h-8 text-xs" onClick={applyDateRange}>
+                  Apply
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
