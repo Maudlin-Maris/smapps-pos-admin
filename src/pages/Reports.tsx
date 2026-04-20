@@ -19,7 +19,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, subDays, startOfYear, startOfYear as soy, endOfYear, subYears } from "date-fns";
-import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText } from "lucide-react";
+import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText, User, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { outlets } from "@/data/outlets";
 import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
@@ -36,9 +36,26 @@ function fmt(n: number) {
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<string>("pnl");
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
-  const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
+  const [selectedCashier, setSelectedCashier] = useState<string>("all");
+  const defaultFrom = startOfMonth(new Date());
+  const defaultTo = endOfMonth(new Date());
+  const [dateFrom, setDateFrom] = useState<Date>(defaultFrom);
+  const [dateTo, setDateTo] = useState<Date>(defaultTo);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
+
+  const isFiltered =
+    selectedOutletId !== "all" ||
+    selectedCashier !== "all" ||
+    dateFrom.getTime() !== defaultFrom.getTime() ||
+    dateTo.getTime() !== defaultTo.getTime();
+
+  const clearFilters = () => {
+    setSelectedOutletId("all");
+    setSelectedCashier("all");
+    setDateFrom(defaultFrom);
+    setDateTo(defaultTo);
+    setCalendarMonth(startOfMonth(new Date()));
+  };
 
   const get12h = (d: Date) => {
     const h24 = d.getHours();
@@ -79,14 +96,30 @@ export default function Reports() {
     i7: "Hair Color Mix", i8: "Disposable Gloves", i9: "Sandwich Bread", i10: "Napkins",
   }), []);
 
+  // Available cashiers within current outlet/date scope (for the Reports cashier filter)
+  const availableCashiers = useMemo(() => {
+    const fromStr = dateFrom.toISOString().split("T")[0];
+    const toStr = dateTo.toISOString().split("T")[0];
+    const names = new Set<string>();
+    sales.forEach((s) => {
+      if (outletIds.includes(s.outletId) && s.date >= fromStr && s.date <= toStr && s.cashier) {
+        names.add(s.cashier);
+      }
+    });
+    return Array.from(names).sort();
+  }, [sales, outletIds, dateFrom, dateTo]);
+
   const data = useMemo(() => {
     const filteredExpenses = getExpensesByOutletAndPeriod(outletIds, dateFrom, dateTo);
-    const filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
+    let filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
+    if (selectedCashier !== "all") {
+      filteredSales = filteredSales.filter((s) => s.cashier === selectedCashier);
+    }
     const cogsInventory = getCOGSByOutletAndPeriod(outletIds, dateFrom, dateTo);
     const totalSales = filteredSales.reduce((s, r) => s + r.totalSales, 0);
     const cogsLabor = Math.round(totalSales * 0.10);
     return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
-  }, [selectedOutletId, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
+  }, [selectedOutletId, selectedCashier, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
 
   const cogsItemRows = useMemo(
     () => buildCOGSItems(filteredAdjustments, itemNames),
@@ -165,6 +198,24 @@ export default function Reports() {
               <SelectItem value="all">All Outlets</SelectItem>
               {outlets.map((o) => (
                 <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={selectedCashier}
+            onValueChange={setSelectedCashier}
+            disabled={availableCashiers.length === 0}
+          >
+            <SelectTrigger className="w-[150px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm shrink-0">
+              <div className="flex items-center gap-1.5 truncate">
+                <User className="h-3.5 w-3.5 shrink-0" />
+                <SelectValue placeholder="All Cashiers" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cashiers</SelectItem>
+              {availableCashiers.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -290,6 +341,18 @@ export default function Reports() {
               </div>
             </PopoverContent>
           </Popover>
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="gap-1 h-8 sm:h-9 text-xs sm:text-sm shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Clear filters</span>
+              <span className="sm:hidden">Clear</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -416,11 +479,11 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="sales" className="mt-6">
-          <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
+          <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
         </TabsContent>
 
         <TabsContent value="transactions" className="mt-6">
-          <ReportTransactions selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
+          <ReportTransactions selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
         </TabsContent>
       </Tabs>
     </div>

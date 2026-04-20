@@ -56,6 +56,8 @@ const rowsPerPageOptions = ["5", "10", "20", "50"];
 interface ReportTransactionsProps {
   selectedOutlets: string[];
   dateRange: { from: Date; to: Date };
+  /** When provided, controls cashier filter externally and hides the internal selector. */
+  cashierFilter?: string;
 }
 
 function flattenForExport(txn: Transaction) {
@@ -72,10 +74,12 @@ function flattenForExport(txn: Transaction) {
   };
 }
 
-export default function ReportTransactions({ selectedOutlets, dateRange }: ReportTransactionsProps) {
+export default function ReportTransactions({ selectedOutlets, dateRange, cashierFilter }: ReportTransactionsProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [search, setSearch] = useState("");
-  const [selectedCashier, setSelectedCashier] = useState("all");
+  const [internalCashier, setInternalCashier] = useState("all");
+  const isCashierControlled = cashierFilter !== undefined;
+  const selectedCashier = isCashierControlled ? (cashierFilter as string) : internalCashier;
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
@@ -123,7 +127,7 @@ export default function ReportTransactions({ selectedOutlets, dateRange }: Repor
 
   const handleSearchChange = (val: string) => { setSearch(val); setPage(1); };
   const handleRowsChange = (val: string) => { setRowsPerPage(val); setPage(1); };
-  const handleCashierChange = (val: string) => { setSelectedCashier(val); setPage(1); };
+  const handleCashierChange = (val: string) => { setInternalCashier(val); setPage(1); };
 
   const handleExportCSV = useCallback(() => {
     if (filtered.length === 0) { toast.error("No data to export"); return; }
@@ -177,17 +181,19 @@ export default function ReportTransactions({ selectedOutlets, dateRange }: Repor
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={selectedCashier} onValueChange={handleCashierChange}>
-              <SelectTrigger className="h-8 w-[140px] sm:w-[160px] text-xs sm:text-sm">
-                <SelectValue placeholder="All Cashiers" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Cashiers</SelectItem>
-                {availableCashiers.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!isCashierControlled && (
+              <Select value={selectedCashier} onValueChange={handleCashierChange}>
+                <SelectTrigger className="h-8 w-[140px] sm:w-[160px] text-xs sm:text-sm">
+                  <SelectValue placeholder="All Cashiers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Cashiers</SelectItem>
+                  {availableCashiers.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
               <span>Rows</span>
               <Select value={rowsPerPage} onValueChange={handleRowsChange}>
