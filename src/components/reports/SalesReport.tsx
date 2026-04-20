@@ -384,7 +384,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                 />
                 <Area
                   type="monotone"
-                  dataKey={trendMetric === "sales" ? "sales" : "transactions"}
+                  dataKey={trendMetric === "sales" ? "sales" : "orders"}
                   stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   fill="url(#salesTrendFill)"
