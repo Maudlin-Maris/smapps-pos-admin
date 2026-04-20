@@ -341,6 +341,18 @@ export default function Reports() {
               </div>
             </PopoverContent>
           </Popover>
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="gap-1 h-8 sm:h-9 text-xs sm:text-sm shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Clear filters</span>
+              <span className="sm:hidden">Clear</span>
+            </Button>
+          )}
         </div>
       </div>
 
