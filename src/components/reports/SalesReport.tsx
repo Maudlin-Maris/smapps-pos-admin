@@ -260,6 +260,36 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
       .sort((a, b) => b.total - a.total);
   }, [filteredSales]);
 
+  // --- Daily breakdown helpers (proportional spread by daily sales share) ---
+  const dailySalesShare = useMemo(() => {
+    const grouped: Record<string, number> = {};
+    let total = 0;
+    filteredSales.forEach((s) => {
+      grouped[s.date] = (grouped[s.date] || 0) + s.totalSales;
+      total += s.totalSales;
+    });
+    const dates = Object.keys(grouped).sort();
+    return { perDay: grouped, total, dates };
+  }, [filteredSales]);
+
+  const buildDailyBreakdown = (totalQty: number, totalRevenue: number) => {
+    const { perDay, total, dates } = dailySalesShare;
+    if (total === 0 || dates.length === 0) return [];
+    return dates.map((date) => {
+      const share = perDay[date] / total;
+      return {
+        date,
+        displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" }),
+        qty: Math.round(totalQty * share),
+        revenue: Math.round(totalRevenue * share),
+      };
+    });
+  };
+
+  // Dialog state for daily breakdowns
+  const [itemDailyOpen, setItemDailyOpen] = useState<{ name: string; qty: number; revenue: number } | null>(null);
+  const [categoryDailyOpen, setCategoryDailyOpen] = useState<{ category: string; qty: number; revenue: number } | null>(null);
+  const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
   // Pagination hooks
   const topItemsPag = usePagination(allItems, 5);
