@@ -57,6 +57,21 @@ export default function Reports() {
   const [dateTo, setDateTo] = useState<Date>(defaultTo);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
 
+  // Date picker draft state — only committed to dateFrom/dateTo on Apply
+  const [dateOpen, setDateOpen] = useState(false);
+  const [draftFrom, setDraftFrom] = useState<Date>(defaultFrom);
+  const [draftTo, setDraftTo] = useState<Date>(defaultTo);
+
+  // When the popover opens, sync drafts to current applied range
+  const openDatePicker = (open: boolean) => {
+    if (open) {
+      setDraftFrom(dateFrom);
+      setDraftTo(dateTo);
+      setCalendarMonth(new Date(dateFrom.getFullYear(), dateFrom.getMonth(), 1));
+    }
+    setDateOpen(open);
+  };
+
   const isFiltered =
     selectedOutletId !== "all" ||
     selectedCashier !== "all" ||
@@ -84,10 +99,24 @@ export default function Reports() {
     d.setHours(h24, minute, period === "PM" ? 59 : 0, period === "PM" ? 999 : 0);
     return d;
   };
-  const applyPreset = (from: Date, to: Date) => {
-    setDateFrom(from);
-    setDateTo(to);
-    // Focus calendar so the FROM month is visible in the left pane
+  const applyDraftPreset = (from: Date, to: Date) => {
+    setDraftFrom(from);
+    setDraftTo(to);
+    setCalendarMonth(new Date(from.getFullYear(), from.getMonth(), 1));
+  };
+
+  const applyDateRange = () => {
+    setDateFrom(draftFrom);
+    setDateTo(draftTo);
+    setDateOpen(false);
+  };
+
+  const cancelDateRange = () => {
+    setDraftFrom(dateFrom);
+    setDraftTo(dateTo);
+    setDateOpen(false);
+  };
+
     setCalendarMonth(new Date(from.getFullYear(), from.getMonth(), 1));
   };
 
