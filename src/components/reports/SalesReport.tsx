@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
 import { outlets } from "@/data/outlets";
 import {
@@ -15,7 +17,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star, User } from "lucide-react";
+import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star, User, CalendarRange } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 
