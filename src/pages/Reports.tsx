@@ -30,6 +30,17 @@ import SalesByItem from "@/components/reports/SalesByItem";
 import SalesByCategory from "@/components/reports/SalesByCategory";
 import ReportTransactions from "@/components/reports/ReportTransactions";
 import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
+import {
+  exportSalesSummaryExcel,
+  exportSalesSummaryPDF,
+  exportSalesByItemExcel,
+  exportSalesByItemPDF,
+  exportSalesByCategoryExcel,
+  exportSalesByCategoryPDF,
+  exportTransactionsPDF,
+  filterSales as filterSalesForExport,
+} from "@/lib/sales-export";
+import { initialReportTransactions } from "@/components/reports/ReportTransactions";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
