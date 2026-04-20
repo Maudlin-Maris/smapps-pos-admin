@@ -82,7 +82,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
     }));
   }, [filteredSales]);
 
-  // Sales by date
+  // Sales by date — include every day in the selected range, even when there are zero orders
   const salesByDate = useMemo(() => {
     const grouped: Record<string, { sales: number; orders: number }> = {};
     filteredSales.forEach((s) => {
@@ -90,15 +90,35 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
       grouped[s.date].sales += s.totalSales;
       grouped[s.date].orders += 1;
     });
-    return Object.entries(grouped)
-      .map(([date, d]) => ({
+
+    const rows: { date: string; displayDate: string; sales: number; orders: number }[] = [];
+    const cursor = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
+    const end = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
+
+    while (cursor <= end) {
+      const year = cursor.getFullYear();
+      const month = String(cursor.getMonth() + 1).padStart(2, "0");
+      const day = String(cursor.getDate()).padStart(2, "0");
+      const date = `${year}-${month}-${day}`;
+      const dayData = grouped[date] || { sales: 0, orders: 0 };
+
+      rows.push({
         date,
-        displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric", year: "numeric" }),
-        sales: d.sales,
-        orders: d.orders,
-      }))
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [filteredSales]);
+        displayDate: cursor.toLocaleDateString("en-NG", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+        sales: dayData.sales,
+        orders: dayData.orders,
+      });
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return rows.sort((a, b) => b.date.localeCompare(a.date));
+  }, [filteredSales, dateRange]);
 
   // Sales by business day
   const salesByBusinessDay = useMemo(() => {
@@ -165,7 +185,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
   const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
   const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
-  const salesByDatePag = usePagination(salesByDate, 10);
+  const salesByDatePag = usePagination(salesByDate, 20);
   const cashierPag = usePagination(salesByCashier, 10);
   const paymentDailyPag = usePagination(dailyShare.dates, 10);
   const [trendMetric, setTrendMetric] = useState<"sales" | "orders">("sales");
