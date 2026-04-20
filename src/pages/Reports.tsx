@@ -117,8 +117,6 @@ export default function Reports() {
     setDateOpen(false);
   };
 
-    setCalendarMonth(new Date(from.getFullYear(), from.getMonth(), 1));
-  };
 
   const { getExpensesByOutletAndPeriod } = useExpenses();
   const { sales, getSalesByOutletAndPeriod } = useSales();
