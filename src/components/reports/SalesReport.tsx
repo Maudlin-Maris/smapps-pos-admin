@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
@@ -17,9 +16,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star, User, CalendarRange } from "lucide-react";
+import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, User, CalendarRange } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
+import { outletPaymentSplits, PAYMENT_COLORS, formatCurrency, filterSales, dailySalesShareFor } from "./salesData";
 
 interface SalesReportProps {
   sales: SalesRecord[];
@@ -30,71 +30,19 @@ interface SalesReportProps {
 }
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
-const PAYMENT_COLORS: Record<string, string> = {
-  Cash: "hsl(var(--chart-1))",
-  Card: "hsl(var(--chart-2))",
-  "Mobile Money": "hsl(var(--chart-3))",
-  "Bank Transfer": "hsl(var(--chart-4))",
-};
-
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 }).format(value);
-
-// --- Sample item-level sales data per outlet ---
-const outletItemSales: Record<string, { name: string; category: string; qty: number; revenue: number }[]> = {
-  "outlet-1": [
-    { name: "Detergent 2kg", category: "Household", qty: 42, revenue: 6300 },
-    { name: "Rice 5kg", category: "Groceries", qty: 38, revenue: 5700 },
-    { name: "Cooking Oil 1L", category: "Groceries", qty: 56, revenue: 4480 },
-    { name: "Bread (White)", category: "Bakery", qty: 120, revenue: 3600 },
-    { name: "Eggs (Tray)", category: "Groceries", qty: 34, revenue: 3400 },
-    { name: "Sugar 1kg", category: "Groceries", qty: 62, revenue: 2480 },
-    { name: "Milk 1L", category: "Dairy", qty: 48, revenue: 1920 },
-    { name: "Butter 250g", category: "Dairy", qty: 30, revenue: 1500 },
-  ],
-  "outlet-2": [
-    { name: "Grilled Chicken Combo", category: "Main Dishes", qty: 86, revenue: 12900 },
-    { name: "Espresso Coffee", category: "Beverages", qty: 142, revenue: 7100 },
-    { name: "Fresh Juice (L)", category: "Beverages", qty: 112, revenue: 6720 },
-    { name: "Burger Meal", category: "Main Dishes", qty: 64, revenue: 5760 },
-    { name: "Fried Rice", category: "Main Dishes", qty: 48, revenue: 4320 },
-    { name: "Meat Pie", category: "Snacks", qty: 90, revenue: 2700 },
-    { name: "Chin Chin Pack", category: "Snacks", qty: 65, revenue: 1950 },
-  ],
-  "outlet-3": [
-    { name: "Premium Haircut", category: "Hair Services", qty: 24, revenue: 7200 },
-    { name: "Hair Treatment", category: "Hair Services", qty: 18, revenue: 9000 },
-    { name: "Manicure & Pedicure", category: "Nail Services", qty: 22, revenue: 6600 },
-    { name: "Hair Coloring", category: "Hair Services", qty: 8, revenue: 6400 },
-    { name: "Beard Trim", category: "Grooming", qty: 32, revenue: 4800 },
-    { name: "Facial Treatment", category: "Skin Care", qty: 12, revenue: 3600 },
-  ],
-  "outlet-4": [
-    { name: "Travel Snack Pack", category: "Snacks", qty: 68, revenue: 6800 },
-    { name: "Neck Pillow", category: "Travel", qty: 22, revenue: 5500 },
-    { name: "Earphones", category: "Electronics", qty: 18, revenue: 5400 },
-    { name: "Magazine", category: "Media", qty: 44, revenue: 4400 },
-    { name: "Bottled Water", category: "Beverages", qty: 120, revenue: 3600 },
-    { name: "Chewing Gum", category: "Snacks", qty: 80, revenue: 1600 },
-  ],
-};
-
-const outletPaymentSplits: Record<string, Record<string, number>> = {
-  "outlet-1": { Cash: 0.45, Card: 0.30, "Mobile Money": 0.18, "Bank Transfer": 0.07 },
-  "outlet-2": { Cash: 0.35, Card: 0.38, "Mobile Money": 0.22, "Bank Transfer": 0.05 },
-  "outlet-3": { Cash: 0.30, Card: 0.42, "Mobile Money": 0.22, "Bank Transfer": 0.06 },
-  "outlet-4": { Cash: 0.25, Card: 0.48, "Mobile Money": 0.20, "Bank Transfer": 0.07 },
-};
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+/**
+ * Sales Summary — high-level overview only.
+ * Item-level and category-level breakdowns live in their own tabs (SalesByItem, SalesByCategory).
+ */
 export default function SalesReport({ sales, selectedOutlets, dateRange, cashierFilter }: SalesReportProps) {
   const [internalCashier, setInternalCashier] = useState<string>("all");
   const isControlled = cashierFilter !== undefined;
   const selectedCashier = isControlled ? (cashierFilter as string) : internalCashier;
   const setSelectedCashier = isControlled ? () => {} : setInternalCashier;
 
-  // Get unique cashiers from sales matching outlet/date filters
   const availableCashiers = useMemo(() => {
     const fromStr = dateRange.from.toISOString().split("T")[0];
     const toStr = dateRange.to.toISOString().split("T")[0];
@@ -107,24 +55,17 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
     return Array.from(names).sort();
   }, [sales, selectedOutlets, dateRange]);
 
-  const filteredSales = useMemo(() => {
-    const fromStr = dateRange.from.toISOString().split("T")[0];
-    const toStr = dateRange.to.toISOString().split("T")[0];
-    return sales.filter(
-      (s) =>
-        selectedOutlets.includes(s.outletId) &&
-        s.date >= fromStr &&
-        s.date <= toStr &&
-        (selectedCashier === "all" || s.cashier === selectedCashier)
-    );
-  }, [sales, selectedOutlets, dateRange, selectedCashier]);
+  const filteredSales = useMemo(
+    () => filterSales(sales, selectedOutlets, dateRange, selectedCashier),
+    [sales, selectedOutlets, dateRange, selectedCashier]
+  );
 
   const totalSales = filteredSales.reduce((sum, s) => sum + s.totalSales, 0);
   const totalOtherIncome = filteredSales.reduce((sum, s) => sum + s.otherIncome, 0);
   const totalRevenue = totalSales + totalOtherIncome;
-  const avgDailySales = filteredSales.length > 0 ? totalSales / filteredSales.length : 0;
+  const avgPerTxn = filteredSales.length > 0 ? totalSales / filteredSales.length : 0;
 
-  // --- Sales by outlet ---
+  // Sales by outlet
   const salesByOutlet = useMemo(() => {
     const grouped: Record<string, { sales: number; otherIncome: number; count: number }> = {};
     filteredSales.forEach((s) => {
@@ -141,7 +82,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
     }));
   }, [filteredSales]);
 
-  // --- Sales by date ---
+  // Sales by date
   const salesByDate = useMemo(() => {
     const grouped: Record<string, { sales: number; orders: number }> = {};
     filteredSales.forEach((s) => {
@@ -159,7 +100,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
       .sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredSales]);
 
-  // --- Sales by business day ---
+  // Sales by business day
   const salesByBusinessDay = useMemo(() => {
     const dayTotals: Record<number, { sales: number; count: number }> = {};
     filteredSales.forEach((s) => {
@@ -177,43 +118,12 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
     }));
   }, [filteredSales]);
 
-  const topBusinessDay = useMemo(() => {
-    const sorted = [...salesByBusinessDay].sort((a, b) => b.sales - a.sales);
-    return sorted[0];
-  }, [salesByBusinessDay]);
+  const topBusinessDay = useMemo(
+    () => [...salesByBusinessDay].sort((a, b) => b.sales - a.sales)[0],
+    [salesByBusinessDay]
+  );
 
-  // --- All items aggregated ---
-  const allItems = useMemo(() => {
-    const itemMap: Record<string, { name: string; category: string; qty: number; revenue: number }> = {};
-    selectedOutlets.forEach((outletId) => {
-      const items = outletItemSales[outletId] || [];
-      items.forEach((item) => {
-        if (!itemMap[item.name]) {
-          itemMap[item.name] = { ...item };
-        } else {
-          itemMap[item.name].qty += item.qty;
-          itemMap[item.name].revenue += item.revenue;
-        }
-      });
-    });
-    return Object.values(itemMap).sort((a, b) => b.revenue - a.revenue);
-  }, [selectedOutlets]);
-
-  // --- Sales by item category ---
-  const salesByCategory = useMemo(() => {
-    const catMap: Record<string, { qty: number; revenue: number }> = {};
-    allItems.forEach((item) => {
-      if (!catMap[item.category]) catMap[item.category] = { qty: 0, revenue: 0 };
-      catMap[item.category].qty += item.qty;
-      catMap[item.category].revenue += item.revenue;
-    });
-    const totalItemRevenue = allItems.reduce((s, i) => s + i.revenue, 0);
-    return Object.entries(catMap)
-      .map(([category, data]) => ({ category, ...data, pct: totalItemRevenue > 0 ? ((data.revenue / totalItemRevenue) * 100).toFixed(1) : "0" }))
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [allItems]);
-
-  // --- Sales by payment method ---
+  // Payment methods
   const paymentMethodData = useMemo(() => {
     const methods: Record<string, number> = {};
     selectedOutlets.forEach((outletId) => {
@@ -233,13 +143,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
     }));
   }, [selectedOutlets, filteredSales]);
 
-  const outletDistribution = salesByOutlet.map((o, idx) => ({
-    name: o.outletName,
-    value: o.total,
-    color: COLORS[idx % COLORS.length],
-  }));
-
-  // --- Sales by Cashier ---
+  // Cashier leaderboard
   const salesByCashier = useMemo(() => {
     const grouped: Record<string, { sales: number; otherIncome: number; count: number }> = {};
     filteredSales.forEach((s) => {
@@ -252,54 +156,20 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
     return Object.entries(grouped)
       .map(([cashier, data]) => ({
         cashier,
-        sales: data.sales,
-        otherIncome: data.otherIncome,
         total: data.sales + data.otherIncome,
         transactions: data.count,
       }))
       .sort((a, b) => b.total - a.total);
   }, [filteredSales]);
 
-  // --- Daily breakdown helpers (proportional spread by daily sales share) ---
-  const dailySalesShare = useMemo(() => {
-    const grouped: Record<string, number> = {};
-    let total = 0;
-    filteredSales.forEach((s) => {
-      grouped[s.date] = (grouped[s.date] || 0) + s.totalSales;
-      total += s.totalSales;
-    });
-    const dates = Object.keys(grouped).sort();
-    return { perDay: grouped, total, dates };
-  }, [filteredSales]);
-
-  const buildDailyBreakdown = (totalQty: number, totalRevenue: number) => {
-    const { perDay, total, dates } = dailySalesShare;
-    if (total === 0 || dates.length === 0) return [];
-    return dates.map((date) => {
-      const share = perDay[date] / total;
-      return {
-        date,
-        displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" }),
-        qty: Math.round(totalQty * share),
-        revenue: Math.round(totalRevenue * share),
-      };
-    });
-  };
-
-  // Dialog state for daily breakdowns
-  const [itemDailyOpen, setItemDailyOpen] = useState<{ name: string; qty: number; revenue: number } | null>(null);
-  const [categoryDailyOpen, setCategoryDailyOpen] = useState<{ category: string; qty: number; revenue: number } | null>(null);
+  const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
   const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
-  // Pagination hooks
-  const topItemsPag = usePagination(allItems, 5);
-  const allItemsPag = usePagination(allItems, 10);
-  const categoryPag = usePagination(salesByCategory, 10);
   const salesByDatePag = usePagination(salesByDate, 10);
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Cashier Filter (hidden when controlled by parent) */}
+      {/* Cashier Filter (hidden when controlled) */}
       {!isControlled && availableCashiers.length > 0 && (
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
@@ -359,7 +229,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           </CardHeader>
           <CardContent className="p-0 sm:p-6 sm:pt-0">
             <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Avg / Transaction</p>
-            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(avgDailySales)}</div>
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(avgPerTxn)}</div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">Across selected period</p>
           </CardContent>
         </Card>
@@ -437,222 +307,49 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
         </Card>
       </div>
 
-      {/* Sales by Date + Sales by Item */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Sales by Date</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
-            <PaginationControls
-              page={salesByDatePag.page}
-              totalPages={salesByDatePag.totalPages}
-              perPage={salesByDatePag.perPage}
-              totalItems={salesByDatePag.totalItems}
-              pageSizeOptions={salesByDatePag.pageSizeOptions}
-              onPageChange={salesByDatePag.setPage}
-              onPerPageChange={salesByDatePag.setPerPage}
-            />
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Date</TableHead>
-                    <TableHead className="text-right text-xs">Orders</TableHead>
-                    <TableHead className="text-right text-xs">Total Sales</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {salesByDatePag.paginatedItems.length > 0 ? (
-                    salesByDatePag.paginatedItems.map((row) => (
-                      <TableRow key={row.date}>
-                        <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{row.displayDate}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{row.orders}</TableCell>
-                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.sales)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No sales data</TableCell>
+      {/* Sales by Date */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <CardTitle className="text-sm sm:text-base">Sales by Date</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
+          <PaginationControls
+            page={salesByDatePag.page}
+            totalPages={salesByDatePag.totalPages}
+            perPage={salesByDatePag.perPage}
+            totalItems={salesByDatePag.totalItems}
+            pageSizeOptions={salesByDatePag.pageSizeOptions}
+            onPageChange={salesByDatePag.setPage}
+            onPerPageChange={salesByDatePag.setPerPage}
+          />
+          <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-right text-xs">Orders</TableHead>
+                  <TableHead className="text-right text-xs">Total Sales</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {salesByDatePag.paginatedItems.length > 0 ? (
+                  salesByDatePag.paginatedItems.map((row) => (
+                    <TableRow key={row.date}>
+                      <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{row.displayDate}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{row.orders}</TableCell>
+                      <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.sales)}</TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Sales by Item</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
-            <PaginationControls
-              page={allItemsPag.page}
-              totalPages={allItemsPag.totalPages}
-              perPage={allItemsPag.perPage}
-              totalItems={allItemsPag.totalItems}
-              pageSizeOptions={allItemsPag.pageSizeOptions}
-              onPageChange={allItemsPag.setPage}
-              onPerPageChange={allItemsPag.setPerPage}
-            />
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <Table>
-                <TableHeader>
+                  ))
+                ) : (
                   <TableRow>
-                    <TableHead className="text-xs">Item</TableHead>
-                    <TableHead className="text-xs">Category</TableHead>
-                    <TableHead className="text-right text-xs">Qty</TableHead>
-                    <TableHead className="text-right text-xs">Revenue</TableHead>
-                    <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No sales data</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allItemsPag.paginatedItems.length > 0 ? (
-                    allItemsPag.paginatedItems.map((item) => (
-                      <TableRow key={item.name}>
-                        <TableCell className="font-medium text-xs sm:text-sm">{item.name}</TableCell>
-                        <TableCell className="text-xs sm:text-sm text-muted-foreground">{item.category}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
-                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => setItemDailyOpen({ name: item.name, qty: item.qty, revenue: item.revenue })}
-                          >
-                            <CalendarRange className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No item data</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Selling Items + Sales by Item Category */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <Star className="h-4 w-4" /> Top Selling Items
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
-            <PaginationControls
-              page={topItemsPag.page}
-              totalPages={topItemsPag.totalPages}
-              perPage={topItemsPag.perPage}
-              totalItems={topItemsPag.totalItems}
-              pageSizeOptions={topItemsPag.pageSizeOptions}
-              onPageChange={topItemsPag.setPage}
-              onPerPageChange={topItemsPag.setPerPage}
-            />
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Item</TableHead>
-                    <TableHead className="text-right text-xs">Qty</TableHead>
-                    <TableHead className="text-right text-xs">Revenue</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topItemsPag.paginatedItems.length > 0 ? (
-                    topItemsPag.paginatedItems.map((item, idx) => (
-                      <TableRow key={item.name}>
-                        <TableCell className="font-medium text-xs sm:text-sm">
-                          <div className="flex items-center gap-1.5">
-                            {(topItemsPag.page - 1) * topItemsPag.perPage + idx < 3 ? (
-                              <Badge variant={(topItemsPag.page - 1) * topItemsPag.perPage + idx === 0 ? "default" : "secondary"} className="w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center p-0 text-[10px] sm:text-xs shrink-0">
-                                {(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-[10px] sm:text-xs w-4 sm:w-5 text-center shrink-0">{(topItemsPag.page - 1) * topItemsPag.perPage + idx + 1}</span>
-                            )}
-                            <span className="truncate">{item.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
-                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No item data</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Sales by Item Category</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
-            <PaginationControls
-              page={categoryPag.page}
-              totalPages={categoryPag.totalPages}
-              perPage={categoryPag.perPage}
-              totalItems={categoryPag.totalItems}
-              pageSizeOptions={categoryPag.pageSizeOptions}
-              onPageChange={categoryPag.setPage}
-              onPerPageChange={categoryPag.setPerPage}
-            />
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Category</TableHead>
-                    <TableHead className="text-right text-xs">Qty</TableHead>
-                    <TableHead className="text-right text-xs">Revenue</TableHead>
-                    <TableHead className="text-right text-xs">%</TableHead>
-                    <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {categoryPag.paginatedItems.length > 0 ? (
-                    categoryPag.paginatedItems.map((cat) => (
-                      <TableRow key={cat.category}>
-                        <TableCell className="font-medium text-xs sm:text-sm">{cat.category}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{cat.qty}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(cat.revenue)}</TableCell>
-                        <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{cat.pct}%</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => setCategoryDailyOpen({ category: cat.category, qty: cat.qty, revenue: cat.revenue })}
-                          >
-                            <CalendarRange className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No category data</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Sales by Cashier + Sales by Outlet */}
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
@@ -698,7 +395,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
             <CardTitle className="text-sm sm:text-base">Sales by Outlet</CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0">
-            {outletDistribution.length > 0 ? (
+            {salesByOutlet.length > 0 ? (
               <div className="overflow-x-auto -mx-3 sm:mx-0">
                 <Table>
                   <TableHeader>
@@ -731,83 +428,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
         </Card>
       </div>
 
-      {/* Daily breakdown dialogs */}
-      <Dialog open={!!itemDailyOpen} onOpenChange={(o) => !o && setItemDailyOpen(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base">{itemDailyOpen?.name}</DialogTitle>
-            <DialogDescription className="text-xs">
-              Daily sales breakdown for the selected period
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
-                  <TableHead className="text-right text-xs">Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {itemDailyOpen && buildDailyBreakdown(itemDailyOpen.qty, itemDailyOpen.revenue).map((d) => (
-                  <TableRow key={d.date}>
-                    <TableCell className="text-xs">{d.displayDate}</TableCell>
-                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
-                    <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
-                  </TableRow>
-                ))}
-                {itemDailyOpen && (
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell className="text-xs">Total</TableCell>
-                    <TableCell className="text-right text-xs">{itemDailyOpen.qty}</TableCell>
-                    <TableCell className="text-right text-xs">{formatCurrency(itemDailyOpen.revenue)}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!categoryDailyOpen} onOpenChange={(o) => !o && setCategoryDailyOpen(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base">{categoryDailyOpen?.category}</DialogTitle>
-            <DialogDescription className="text-xs">
-              Daily category sales breakdown for the selected period
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
-                  <TableHead className="text-right text-xs">Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categoryDailyOpen && buildDailyBreakdown(categoryDailyOpen.qty, categoryDailyOpen.revenue).map((d) => (
-                  <TableRow key={d.date}>
-                    <TableCell className="text-xs">{d.displayDate}</TableCell>
-                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
-                    <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
-                  </TableRow>
-                ))}
-                {categoryDailyOpen && (
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell className="text-xs">Total</TableCell>
-                    <TableCell className="text-right text-xs">{categoryDailyOpen.qty}</TableCell>
-                    <TableCell className="text-right text-xs">{formatCurrency(categoryDailyOpen.revenue)}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
-
+      {/* Payment Methods daily dialog */}
       <Dialog open={paymentDailyOpen} onOpenChange={setPaymentDailyOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -828,9 +449,9 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dailySalesShare.dates.map((date) => {
-                  const dayTotal = dailySalesShare.perDay[date];
-                  const share = dailySalesShare.total > 0 ? dayTotal / dailySalesShare.total : 0;
+                {dailyShare.dates.map((date) => {
+                  const dayTotal = dailyShare.perDay[date];
+                  const share = dailyShare.total > 0 ? dayTotal / dailyShare.total : 0;
                   return (
                     <TableRow key={date}>
                       <TableCell className="text-xs whitespace-nowrap">
@@ -848,14 +469,13 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                   {paymentMethodData.map((pm) => (
                     <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(pm.value)}</TableCell>
                   ))}
-                  <TableCell className="text-right text-xs">{formatCurrency(dailySalesShare.total)}</TableCell>
+                  <TableCell className="text-right text-xs">{formatCurrency(dailyShare.total)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

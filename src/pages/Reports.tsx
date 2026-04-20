@@ -26,6 +26,8 @@ import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } fr
 import PnLStatement from "@/components/reports/PnLStatement";
 import COGSBreakdown from "@/components/reports/COGSBreakdown";
 import SalesReport from "@/components/reports/SalesReport";
+import SalesByItem from "@/components/reports/SalesByItem";
+import SalesByCategory from "@/components/reports/SalesByCategory";
 import ReportTransactions from "@/components/reports/ReportTransactions";
 import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
 
@@ -364,9 +366,11 @@ export default function Reports() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full sm:w-auto">
+        <TabsList className="w-full sm:w-auto flex-wrap h-auto sm:h-10">
           <TabsTrigger value="pnl" className="flex-1 sm:flex-none text-xs sm:text-sm">Profit & Loss</TabsTrigger>
-          <TabsTrigger value="sales" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales Report</TabsTrigger>
+          <TabsTrigger value="sales" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales Summary</TabsTrigger>
+          <TabsTrigger value="items" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Item</TabsTrigger>
+          <TabsTrigger value="categories" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Category</TabsTrigger>
           <TabsTrigger value="transactions" className="flex-1 sm:flex-none text-xs sm:text-sm">Transactions</TabsTrigger>
         </TabsList>
 
@@ -486,6 +490,14 @@ export default function Reports() {
 
         <TabsContent value="sales" className="mt-6">
           <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+        </TabsContent>
+
+        <TabsContent value="items" className="mt-6">
+          <SalesByItem sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+        </TabsContent>
+
+        <TabsContent value="categories" className="mt-6">
+          <SalesByCategory sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
         </TabsContent>
 
         <TabsContent value="transactions" className="mt-6">
