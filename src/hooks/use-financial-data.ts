@@ -34,7 +34,7 @@ export interface SalesRecord {
 const EXPENSES_KEY = "financial_expenses";
 const SALES_KEY = "financial_sales";
 const DATA_VERSION_KEY = "financial_data_version";
-const CURRENT_DATA_VERSION = 4; // Bump when default data schema changes
+const CURRENT_DATA_VERSION = 5; // Bump when default data schema changes
 
 // Clear stale localStorage when data version changes
 (function migrateStorage() {
@@ -130,11 +130,14 @@ function generateSales(): SalesRecord[] {
 
     Object.entries(OUTLET_BASE).forEach(([outletId, base], outletIdx) => {
       const cashiers = OUTLET_CASHIERS[outletId];
-      // 2-4 transactions per outlet per day
-      const txnCount = 2 + Math.floor(rand(d * 31 + outletIdx * 7) * 3);
+      // Variable transactions per outlet per day: 1-8, scaled by weekend uplift,
+      // with an extra noise factor so adjacent days differ noticeably.
+      const txnNoise = rand(d * 53 + outletIdx * 11); // 0-1
+      const baseTxns = 2 + Math.floor(txnNoise * 6); // 2-7
+      const txnCount = Math.max(1, Math.round(baseTxns * (0.55 + dayMultiplier * 0.55)));
       for (let t = 0; t < txnCount; t++) {
         const r = rand(d * 131 + outletIdx * 17 + t * 3);
-        const variance = 0.7 + r * 0.6; // 0.7 - 1.3
+        const variance = 0.45 + r * 1.1; // 0.45 - 1.55, much wider spread
         const totalSales = Math.round(base * dayMultiplier * variance);
         const otherIncome = r > 0.7 ? Math.round(base * 0.04 * r) : 0;
         const cashier = cashiers[Math.floor(rand(d * 11 + t * 5 + outletIdx) * cashiers.length)];
