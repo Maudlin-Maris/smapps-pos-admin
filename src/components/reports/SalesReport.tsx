@@ -166,6 +166,8 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
   const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
   const salesByDatePag = usePagination(salesByDate, 10);
+  const cashierPag = usePagination(salesByCashier, 10);
+  const paymentDailyPag = usePagination(dailyShare.dates, 10);
   const [trendMetric, setTrendMetric] = useState<"sales" | "orders">("sales");
 
   // Chronological trend (oldest -> newest) for the line chart
