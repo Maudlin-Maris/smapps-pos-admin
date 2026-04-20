@@ -87,6 +87,7 @@ export default function TransactionDetailDialog({
   const [voidCodeError, setVoidCodeError] = useState("");
   const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
+  const [removePaymentIndex, setRemovePaymentIndex] = useState<number | null>(null);
 
   if (!transaction) return null;
 
@@ -123,13 +124,19 @@ export default function TransactionDetailDialog({
     toast.success("Payment method updated");
   };
 
-  const handleRemovePayment = (index: number) => {
+  const requestRemovePayment = (index: number) => {
     if (transaction.payments.length <= 1) {
       toast.error("Cannot remove the only payment method");
       return;
     }
-    const updatedPayments = transaction.payments.filter((_, i) => i !== index);
+    setRemovePaymentIndex(index);
+  };
+
+  const confirmRemovePayment = () => {
+    if (removePaymentIndex === null) return;
+    const updatedPayments = transaction.payments.filter((_, i) => i !== removePaymentIndex);
     onUpdate({ ...transaction, payments: updatedPayments });
+    setRemovePaymentIndex(null);
     toast.success("Payment method removed");
   };
 
@@ -259,7 +266,7 @@ export default function TransactionDetailDialog({
                           </button>
                           {transaction.payments.length > 1 && (
                             <button
-                              onClick={() => handleRemovePayment(i)}
+                              onClick={() => requestRemovePayment(i)}
                               className="text-muted-foreground hover:text-destructive transition-colors"
                               title="Remove payment method"
                             >
@@ -355,6 +362,31 @@ export default function TransactionDetailDialog({
               disabled={!voidCode}
             >
               Void Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove payment method confirmation */}
+      <AlertDialog open={removePaymentIndex !== null} onOpenChange={(open) => { if (!open) setRemovePaymentIndex(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {removePaymentIndex !== null && transaction.payments[removePaymentIndex] ? (
+                <>This will remove the <span className="font-medium text-foreground">{transaction.payments[removePaymentIndex].method}</span> payment of <span className="font-medium text-foreground">{transaction.payments[removePaymentIndex].amount}</span> from this order. This action cannot be undone.</>
+              ) : (
+                <>This action cannot be undone.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmRemovePayment(); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
