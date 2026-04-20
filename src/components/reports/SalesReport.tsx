@@ -399,8 +399,13 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
         </Card>
 
         <Card>
-          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm sm:text-base">Sales by Payment Method</CardTitle>
+            {paymentMethodData.length > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setPaymentDailyOpen(true)}>
+                <CalendarRange className="h-3.5 w-3.5" /> Daily
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {paymentMethodData.length > 0 ? (
@@ -496,8 +501,10 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">Item</TableHead>
+                    <TableHead className="text-xs">Category</TableHead>
                     <TableHead className="text-right text-xs">Qty</TableHead>
                     <TableHead className="text-right text-xs">Revenue</TableHead>
+                    <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -505,13 +512,24 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     allItemsPag.paginatedItems.map((item) => (
                       <TableRow key={item.name}>
                         <TableCell className="font-medium text-xs sm:text-sm">{item.name}</TableCell>
+                        <TableCell className="text-xs sm:text-sm text-muted-foreground">{item.category}</TableCell>
                         <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
                         <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setItemDailyOpen({ name: item.name, qty: item.qty, revenue: item.revenue })}
+                          >
+                            <CalendarRange className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No item data</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No item data</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -601,6 +619,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     <TableHead className="text-right text-xs">Qty</TableHead>
                     <TableHead className="text-right text-xs">Revenue</TableHead>
                     <TableHead className="text-right text-xs">%</TableHead>
+                    <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -611,11 +630,21 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                         <TableCell className="text-right text-xs sm:text-sm">{cat.qty}</TableCell>
                         <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(cat.revenue)}</TableCell>
                         <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{cat.pct}%</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setCategoryDailyOpen({ category: cat.category, qty: cat.qty, revenue: cat.revenue })}
+                          >
+                            <CalendarRange className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground text-xs">No category data</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No category data</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
