@@ -172,7 +172,7 @@ export default function Reports() {
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5 h-8 sm:h-9 text-xs sm:text-sm shrink-0">
                 <CalendarIcon className="h-3.5 w-3.5" />
-                {format(dateFrom, "MMM d")} – {format(dateTo, "MMM d, yyyy")}
+                {format(dateFrom, "MMM d, h:mm a")} – {format(dateTo, "MMM d, yyyy, h:mm a")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
