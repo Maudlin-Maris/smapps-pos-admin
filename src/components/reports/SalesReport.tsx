@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, AreaChart, Area,
 } from "recharts";
 import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, User, CalendarRange } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
@@ -167,6 +167,18 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
 
   const salesByDatePag = usePagination(salesByDate, 10);
 
+  // Chronological trend (oldest -> newest) for the line chart
+  const salesTrend = useMemo(
+    () =>
+      [...salesByDate]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((d) => ({
+          ...d,
+          shortDate: new Date(d.date).toLocaleDateString("en-NG", { month: "short", day: "numeric" }),
+        })),
+    [salesByDate]
+  );
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Cashier Filter (hidden when controlled) */}
@@ -306,6 +318,51 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           </CardContent>
         </Card>
       </div>
+
+      {/* Sales Trend */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <TrendingUp className="h-4 w-4" /> Sales Trend
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+          {salesTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={salesTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="salesTrendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="shortDate" className="text-xs" tick={{ fontSize: 11 }} minTickGap={16} />
+                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" tick={{ fontSize: 10 }} width={50} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [
+                    name === "sales" ? formatCurrency(value) : value,
+                    name === "sales" ? "Sales" : "Orders",
+                  ]}
+                  labelFormatter={(_, payload) => (payload?.[0]?.payload as { displayDate?: string } | undefined)?.displayDate || ""}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  fill="url(#salesTrendFill)"
+                  dot={salesTrend.length <= 31 ? { r: 3, fill: "hsl(var(--primary))" } : false}
+                  activeDot={{ r: 5 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[220px] items-center justify-center text-muted-foreground text-sm">No sales data for this period</div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Sales by Date */}
       <Card>
