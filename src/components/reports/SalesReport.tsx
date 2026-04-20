@@ -23,6 +23,8 @@ interface SalesReportProps {
   sales: SalesRecord[];
   selectedOutlets: string[];
   dateRange: { from: Date; to: Date };
+  /** When provided, controls cashier filter externally and hides the internal selector. */
+  cashierFilter?: string;
 }
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
@@ -84,8 +86,11 @@ const outletPaymentSplits: Record<string, Record<string, number>> = {
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export default function SalesReport({ sales, selectedOutlets, dateRange }: SalesReportProps) {
-  const [selectedCashier, setSelectedCashier] = useState<string>("all");
+export default function SalesReport({ sales, selectedOutlets, dateRange, cashierFilter }: SalesReportProps) {
+  const [internalCashier, setInternalCashier] = useState<string>("all");
+  const isControlled = cashierFilter !== undefined;
+  const selectedCashier = isControlled ? (cashierFilter as string) : internalCashier;
+  const setSelectedCashier = isControlled ? () => {} : setInternalCashier;
 
   // Get unique cashiers from sales matching outlet/date filters
   const availableCashiers = useMemo(() => {
@@ -262,8 +267,8 @@ export default function SalesReport({ sales, selectedOutlets, dateRange }: Sales
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Cashier Filter */}
-      {availableCashiers.length > 0 && (
+      {/* Cashier Filter (hidden when controlled by parent) */}
+      {!isControlled && availableCashiers.length > 0 && (
         <div className="flex items-center gap-2">
           <User className="h-4 w-4 text-muted-foreground" />
           <Select value={selectedCashier} onValueChange={setSelectedCashier}>
