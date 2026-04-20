@@ -96,18 +96,24 @@ export default function Reports() {
     i7: "Hair Color Mix", i8: "Disposable Gloves", i9: "Sandwich Bread", i10: "Napkins",
   }), []);
 
-  // Available cashiers within current outlet/date scope (for the Reports cashier filter)
+  // Available cashiers within current outlet scope (date-independent so filter is always usable)
   const availableCashiers = useMemo(() => {
-    const fromStr = dateFrom.toISOString().split("T")[0];
-    const toStr = dateTo.toISOString().split("T")[0];
     const names = new Set<string>();
     sales.forEach((s) => {
-      if (outletIds.includes(s.outletId) && s.date >= fromStr && s.date <= toStr && s.cashier) {
+      if (outletIds.includes(s.outletId) && s.cashier) {
         names.add(s.cashier);
       }
     });
     return Array.from(names).sort();
-  }, [sales, outletIds, dateFrom, dateTo]);
+  }, [sales, outletIds]);
+
+  // Reset cashier selection if it's no longer valid for the current outlet
+  useMemo(() => {
+    if (selectedCashier !== "all" && !availableCashiers.includes(selectedCashier)) {
+      setSelectedCashier("all");
+    }
+    return null;
+  }, [availableCashiers, selectedCashier]);
 
   const data = useMemo(() => {
     const filteredExpenses = getExpensesByOutletAndPeriod(outletIds, dateFrom, dateTo);
