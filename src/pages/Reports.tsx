@@ -479,11 +479,11 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="sales" className="mt-6">
-          <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
+          <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
         </TabsContent>
 
         <TabsContent value="transactions" className="mt-6">
-          <ReportTransactions selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} />
+          <ReportTransactions selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
         </TabsContent>
       </Tabs>
     </div>
