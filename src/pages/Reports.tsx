@@ -155,34 +155,56 @@ export default function Reports() {
             <PopoverContent className="w-auto p-0" align="end">
               <div className="flex flex-col sm:flex-row">
                 <div className="flex flex-col gap-1 p-2 border-b sm:border-b-0 sm:border-r min-w-[140px]">
-                  {[
-                    { label: "Today", get: () => { const n = new Date(); return [startOfDay(n), endOfDay(n)] as const; } },
-                    { label: "Yesterday", get: () => { const y = subDays(new Date(), 1); return [startOfDay(y), endOfDay(y)] as const; } },
-                    { label: "Last 7 days", get: () => [startOfDay(subDays(new Date(), 6)), endOfDay(new Date())] as const },
-                    { label: "Last 30 days", get: () => [startOfDay(subDays(new Date(), 29)), endOfDay(new Date())] as const },
-                    { label: "This Month", get: () => [startOfMonth(new Date()), endOfMonth(new Date())] as const },
-                    { label: "Last Month", get: () => [startOfMonth(subMonths(new Date(), 1)), endOfMonth(subMonths(new Date(), 1))] as const },
-                    { label: "Year to date", get: () => [startOfYear(new Date()), endOfDay(new Date())] as const },
-                    { label: "Last year", get: () => { const ly = subYears(new Date(), 1); return [startOfYear(ly), endOfYear(ly)] as const; } },
-                  ].map((preset) => (
-                    <Button
-                      key={preset.label}
-                      size="sm"
-                      variant="ghost"
-                      className="justify-start text-xs h-8 font-normal"
-                      onClick={() => { const [from, to] = preset.get(); setDateFrom(from); setDateTo(to); }}
-                    >
-                      {preset.label}
-                    </Button>
-                  ))}
+                  {(() => {
+                    const presets = [
+                      { label: "Today", get: () => { const n = new Date(); return [startOfDay(n), endOfDay(n)] as const; } },
+                      { label: "Yesterday", get: () => { const y = subDays(new Date(), 1); return [startOfDay(y), endOfDay(y)] as const; } },
+                      { label: "Last 7 days", get: () => [startOfDay(subDays(new Date(), 6)), endOfDay(new Date())] as const },
+                      { label: "Last 30 days", get: () => [startOfDay(subDays(new Date(), 29)), endOfDay(new Date())] as const },
+                      { label: "This Month", get: () => [startOfMonth(new Date()), endOfMonth(new Date())] as const },
+                      { label: "Last Month", get: () => [startOfMonth(subMonths(new Date(), 1)), endOfMonth(subMonths(new Date(), 1))] as const },
+                      { label: "Year to date", get: () => [startOfYear(new Date()), endOfDay(new Date())] as const },
+                      { label: "Last year", get: () => { const ly = subYears(new Date(), 1); return [startOfYear(ly), endOfYear(ly)] as const; } },
+                    ];
+                    const sameDay = (a: Date, b: Date) =>
+                      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+                    return presets.map((preset) => {
+                      const [pFrom, pTo] = preset.get();
+                      const active = sameDay(pFrom, dateFrom) && sameDay(pTo, dateTo);
+                      return (
+                        <Button
+                          key={preset.label}
+                          size="sm"
+                          variant={active ? "secondary" : "ghost"}
+                          className={cn(
+                            "justify-start text-xs h-8 font-normal",
+                            active && "bg-primary/10 text-primary font-medium hover:bg-primary/15"
+                          )}
+                          onClick={() => { setDateFrom(pFrom); setDateTo(pTo); }}
+                        >
+                          {preset.label}
+                        </Button>
+                      );
+                    });
+                  })()}
                 </div>
                 <div className="p-3 border-b sm:border-b-0 sm:border-r">
                   <p className="text-xs font-medium text-muted-foreground mb-2">From</p>
-                  <Calendar mode="single" selected={dateFrom} onSelect={(d) => d && setDateFrom(d)} className={cn("p-0 pointer-events-auto")} />
+                  <Calendar mode="single" selected={dateFrom} defaultMonth={dateFrom} onSelect={(d) => d && setDateFrom(d)} className={cn("p-0 pointer-events-auto")} />
                 </div>
                 <div className="p-3">
                   <p className="text-xs font-medium text-muted-foreground mb-2">To</p>
-                  <Calendar mode="single" selected={dateTo} onSelect={(d) => d && setDateTo(d)} className={cn("p-0 pointer-events-auto")} />
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    defaultMonth={
+                      dateTo.getFullYear() === dateFrom.getFullYear() && dateTo.getMonth() === dateFrom.getMonth()
+                        ? new Date(dateFrom.getFullYear(), dateFrom.getMonth() + 1, 1)
+                        : dateTo
+                    }
+                    onSelect={(d) => d && setDateTo(d)}
+                    className={cn("p-0 pointer-events-auto")}
+                  />
                 </div>
               </div>
             </PopoverContent>
