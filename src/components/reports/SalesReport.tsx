@@ -166,6 +166,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
   const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
   const salesByDatePag = usePagination(salesByDate, 10);
+  const [trendMetric, setTrendMetric] = useState<"sales" | "orders">("sales");
 
   // Chronological trend (oldest -> newest) for the line chart
   const salesTrend = useMemo(
@@ -322,9 +323,35 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
       {/* Sales Trend */}
       <Card>
         <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-            <TrendingUp className="h-4 w-4" /> Sales Trend
-          </CardTitle>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <TrendingUp className="h-4 w-4" /> Sales Trend
+            </CardTitle>
+            <div className="inline-flex rounded-md border border-border bg-muted/40 p-0.5">
+              <button
+                type="button"
+                onClick={() => setTrendMetric("sales")}
+                className={`px-3 py-1 text-xs rounded-sm transition-colors ${
+                  trendMetric === "sales"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Sales
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrendMetric("orders")}
+                className={`px-3 py-1 text-xs rounded-sm transition-colors ${
+                  trendMetric === "orders"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Orders
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
           {salesTrend.length > 0 ? (
@@ -338,18 +365,24 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="shortDate" className="text-xs" tick={{ fontSize: 11 }} minTickGap={16} />
-                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" tick={{ fontSize: 10 }} width={50} />
+                <YAxis
+                  tickFormatter={(v) => (trendMetric === "sales" ? `₦${(v / 1000).toFixed(0)}k` : `${v}`)}
+                  className="text-xs"
+                  tick={{ fontSize: 10 }}
+                  width={50}
+                  allowDecimals={false}
+                />
                 <Tooltip
-                  formatter={(value: number, name: string) => [
-                    name === "sales" ? formatCurrency(value) : value,
-                    name === "sales" ? "Sales" : "Orders",
+                  formatter={(value: number) => [
+                    trendMetric === "sales" ? formatCurrency(value) : value,
+                    trendMetric === "sales" ? "Sales" : "Orders",
                   ]}
                   labelFormatter={(_, payload) => (payload?.[0]?.payload as { displayDate?: string } | undefined)?.displayDate || ""}
                   contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
                 />
                 <Area
                   type="monotone"
-                  dataKey="sales"
+                  dataKey={trendMetric === "sales" ? "sales" : "transactions"}
                   stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   fill="url(#salesTrendFill)"
