@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +38,22 @@ export default function Reports() {
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
+  const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
+
+  const toTimeStr = (d: Date) =>
+    `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  const setTime = (base: Date, time: string) => {
+    const [h, m] = time.split(":").map(Number);
+    const d = new Date(base);
+    d.setHours(h || 0, m || 0, 0, 0);
+    return d;
+  };
+  const applyPreset = (from: Date, to: Date) => {
+    setDateFrom(from);
+    setDateTo(to);
+    // Focus calendar so the FROM month is visible in the left pane
+    setCalendarMonth(new Date(from.getFullYear(), from.getMonth(), 1));
+  };
 
   const { getExpensesByOutletAndPeriod } = useExpenses();
   const { sales, getSalesByOutletAndPeriod } = useSales();
@@ -180,7 +198,7 @@ export default function Reports() {
                             "justify-start text-xs h-8 font-normal",
                             active && "bg-primary/10 text-primary font-medium hover:bg-primary/15"
                           )}
-                          onClick={() => { setDateFrom(pFrom); setDateTo(pTo); }}
+                          onClick={() => applyPreset(pFrom, pTo)}
                         >
                           {preset.label}
                         </Button>
@@ -192,26 +210,56 @@ export default function Reports() {
                   <Calendar
                     mode="range"
                     numberOfMonths={2}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
                     selected={{ from: dateFrom, to: dateTo }}
-                    defaultMonth={
-                      dateTo.getFullYear() === dateFrom.getFullYear() && dateTo.getMonth() === dateFrom.getMonth()
-                        ? new Date(dateFrom.getFullYear(), dateFrom.getMonth() - 1, 1)
-                        : dateFrom
-                    }
                     onSelect={(range) => {
                       if (!range) return;
-                      if (range.from) setDateFrom(startOfDay(range.from));
-                      if (range.to) setDateTo(endOfDay(range.to));
-                      else if (range.from) setDateTo(endOfDay(range.from));
+                      if (range.from) {
+                        // Preserve current time-of-day on dateFrom
+                        const f = new Date(range.from);
+                        f.setHours(dateFrom.getHours(), dateFrom.getMinutes(), 0, 0);
+                        setDateFrom(f);
+                      }
+                      if (range.to) {
+                        const t = new Date(range.to);
+                        t.setHours(dateTo.getHours(), dateTo.getMinutes(), 59, 999);
+                        setDateTo(t);
+                      } else if (range.from) {
+                        const t = new Date(range.from);
+                        t.setHours(23, 59, 59, 999);
+                        setDateTo(t);
+                      }
                     }}
                     className={cn("p-0 pointer-events-auto")}
                   />
                 </div>
               </div>
-              <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/30 text-xs">
-                <span className="text-muted-foreground">
-                  {format(dateFrom, "MMM d, yyyy")} – {format(dateTo, "MMM d, yyyy")}
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3 px-3 py-2.5 border-t bg-muted/30">
+                <div className="flex flex-col gap-1">
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">From</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium min-w-[90px]">{format(dateFrom, "MMM d, yyyy")}</span>
+                    <Input
+                      type="time"
+                      value={toTimeStr(dateFrom)}
+                      onChange={(e) => setDateFrom(setTime(dateFrom, e.target.value))}
+                      className="h-7 w-[110px] text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">To</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium min-w-[90px]">{format(dateTo, "MMM d, yyyy")}</span>
+                    <Input
+                      type="time"
+                      value={toTimeStr(dateTo)}
+                      onChange={(e) => setDateTo(setTime(dateTo, e.target.value))}
+                      className="h-7 w-[110px] text-xs"
+                    />
+                  </div>
+                </div>
               </div>
             </PopoverContent>
           </Popover>
