@@ -168,9 +168,8 @@ export default function Reports() {
     if (activeTab === "categories")
       return exportSalesByCategoryExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "transactions") {
-      // Excel for transactions already built into the component; trigger by re-using same export shape
-      // Build a simple workbook here for parity.
-      const XLSX = require("xlsx");
+      // Build workbook for transactions tab
+
       const txnRows = initialReportTransactions.map((t) => ({
         "Order ID": t.orderId,
         Date: t.date,
