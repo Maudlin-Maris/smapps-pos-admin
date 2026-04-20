@@ -96,14 +96,30 @@ export default function Reports() {
     i7: "Hair Color Mix", i8: "Disposable Gloves", i9: "Sandwich Bread", i10: "Napkins",
   }), []);
 
+  // Available cashiers within current outlet/date scope (for the Reports cashier filter)
+  const availableCashiers = useMemo(() => {
+    const fromStr = dateFrom.toISOString().split("T")[0];
+    const toStr = dateTo.toISOString().split("T")[0];
+    const names = new Set<string>();
+    sales.forEach((s) => {
+      if (outletIds.includes(s.outletId) && s.date >= fromStr && s.date <= toStr && s.cashier) {
+        names.add(s.cashier);
+      }
+    });
+    return Array.from(names).sort();
+  }, [sales, outletIds, dateFrom, dateTo]);
+
   const data = useMemo(() => {
     const filteredExpenses = getExpensesByOutletAndPeriod(outletIds, dateFrom, dateTo);
-    const filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
+    let filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
+    if (selectedCashier !== "all") {
+      filteredSales = filteredSales.filter((s) => s.cashier === selectedCashier);
+    }
     const cogsInventory = getCOGSByOutletAndPeriod(outletIds, dateFrom, dateTo);
     const totalSales = filteredSales.reduce((s, r) => s + r.totalSales, 0);
     const cogsLabor = Math.round(totalSales * 0.10);
     return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
-  }, [selectedOutletId, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
+  }, [selectedOutletId, selectedCashier, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
 
   const cogsItemRows = useMemo(
     () => buildCOGSItems(filteredAdjustments, itemNames),
