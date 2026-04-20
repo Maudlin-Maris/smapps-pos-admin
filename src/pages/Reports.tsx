@@ -19,7 +19,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, subDays, startOfYear, startOfYear as soy, endOfYear, subYears } from "date-fns";
-import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText } from "lucide-react";
+import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText, User, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { outlets } from "@/data/outlets";
 import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
@@ -36,9 +36,26 @@ function fmt(n: number) {
 export default function Reports() {
   const [activeTab, setActiveTab] = useState<string>("pnl");
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
-  const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
+  const [selectedCashier, setSelectedCashier] = useState<string>("all");
+  const defaultFrom = startOfMonth(new Date());
+  const defaultTo = endOfMonth(new Date());
+  const [dateFrom, setDateFrom] = useState<Date>(defaultFrom);
+  const [dateTo, setDateTo] = useState<Date>(defaultTo);
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
+
+  const isFiltered =
+    selectedOutletId !== "all" ||
+    selectedCashier !== "all" ||
+    dateFrom.getTime() !== defaultFrom.getTime() ||
+    dateTo.getTime() !== defaultTo.getTime();
+
+  const clearFilters = () => {
+    setSelectedOutletId("all");
+    setSelectedCashier("all");
+    setDateFrom(defaultFrom);
+    setDateTo(defaultTo);
+    setCalendarMonth(startOfMonth(new Date()));
+  };
 
   const get12h = (d: Date) => {
     const h24 = d.getHours();
