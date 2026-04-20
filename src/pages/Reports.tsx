@@ -40,12 +40,17 @@ export default function Reports() {
   const [dateTo, setDateTo] = useState<Date>(endOfMonth(new Date()));
   const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
 
-  const toTimeStr = (d: Date) =>
-    `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  const setTime = (base: Date, time: string) => {
-    const [h, m] = time.split(":").map(Number);
+  const get12h = (d: Date) => {
+    const h24 = d.getHours();
+    const period: "AM" | "PM" = h24 >= 12 ? "PM" : "AM";
+    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+    return { h12, minute: d.getMinutes(), period };
+  };
+  const setTimeParts = (base: Date, h12: number, minute: number, period: "AM" | "PM") => {
+    let h24 = h12 % 12;
+    if (period === "PM") h24 += 12;
     const d = new Date(base);
-    d.setHours(h || 0, m || 0, 0, 0);
+    d.setHours(h24, minute, period === "PM" ? 59 : 0, period === "PM" ? 999 : 0);
     return d;
   };
   const applyPreset = (from: Date, to: Date) => {
