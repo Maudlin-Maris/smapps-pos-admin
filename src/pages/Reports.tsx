@@ -190,7 +190,7 @@ export default function Reports() {
                 </div>
                 <div className="p-3 border-b sm:border-b-0 sm:border-r">
                   <p className="text-xs font-medium text-muted-foreground mb-2">From</p>
-                  <Calendar mode="single" selected={dateFrom} month={dateFrom} onMonthChange={() => {}} onSelect={(d) => d && setDateFrom(d)} className={cn("p-0 pointer-events-auto")} />
+                  <Calendar mode="single" selected={dateFrom} defaultMonth={dateFrom} onSelect={(d) => d && setDateFrom(d)} className={cn("p-0 pointer-events-auto")} />
                 </div>
                 <div className="p-3">
                   <p className="text-xs font-medium text-muted-foreground mb-2">To</p>
