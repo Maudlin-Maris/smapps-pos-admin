@@ -241,30 +241,52 @@ export default function Reports() {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-end gap-3 px-3 py-2.5 border-t bg-muted/30">
-                <div className="flex flex-col gap-1">
-                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">From</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium min-w-[90px]">{format(dateFrom, "MMM d, yyyy")}</span>
-                    <Input
-                      type="time"
-                      value={toTimeStr(dateFrom)}
-                      onChange={(e) => setDateFrom(setTime(dateFrom, e.target.value))}
-                      className="h-7 w-[110px] text-xs"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">To</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium min-w-[90px]">{format(dateTo, "MMM d, yyyy")}</span>
-                    <Input
-                      type="time"
-                      value={toTimeStr(dateTo)}
-                      onChange={(e) => setDateTo(setTime(dateTo, e.target.value))}
-                      className="h-7 w-[110px] text-xs"
-                    />
-                  </div>
-                </div>
+                {([
+                  { label: "From", value: dateFrom, set: setDateFrom },
+                  { label: "To", value: dateTo, set: setDateTo },
+                ] as const).map(({ label, value, set }) => {
+                  const { h12, minute, period } = get12h(value);
+                  return (
+                    <div key={label} className="flex flex-col gap-1">
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium min-w-[90px]">{format(value, "MMM d, yyyy")}</span>
+                        <Select value={String(h12)} onValueChange={(v) => set(setTimeParts(value, Number(v), minute, period))}>
+                          <SelectTrigger className="h-7 w-[58px] text-xs px-2"><SelectValue /></SelectTrigger>
+                          <SelectContent className="max-h-[220px]">
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+                              <SelectItem key={h} value={String(h)} className="text-xs">{String(h).padStart(2, "0")}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs">:</span>
+                        <Select value={String(minute).padStart(2, "0")} onValueChange={(v) => set(setTimeParts(value, h12, Number(v), period))}>
+                          <SelectTrigger className="h-7 w-[58px] text-xs px-2"><SelectValue /></SelectTrigger>
+                          <SelectContent className="max-h-[220px]">
+                            {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                              <SelectItem key={m} value={String(m).padStart(2, "0")} className="text-xs">{String(m).padStart(2, "0")}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex rounded-md border overflow-hidden">
+                          {(["AM", "PM"] as const).map((p) => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => set(setTimeParts(value, h12, minute, p))}
+                              className={cn(
+                                "px-2 h-7 text-[10px] font-medium transition-colors",
+                                period === p ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                              )}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </PopoverContent>
           </Popover>
