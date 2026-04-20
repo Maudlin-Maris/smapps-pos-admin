@@ -2,6 +2,8 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
 import { outlets } from "@/data/outlets";
 import {
@@ -15,7 +17,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star, User } from "lucide-react";
+import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, Star, User, CalendarRange } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 
@@ -258,6 +260,36 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
       .sort((a, b) => b.total - a.total);
   }, [filteredSales]);
 
+  // --- Daily breakdown helpers (proportional spread by daily sales share) ---
+  const dailySalesShare = useMemo(() => {
+    const grouped: Record<string, number> = {};
+    let total = 0;
+    filteredSales.forEach((s) => {
+      grouped[s.date] = (grouped[s.date] || 0) + s.totalSales;
+      total += s.totalSales;
+    });
+    const dates = Object.keys(grouped).sort();
+    return { perDay: grouped, total, dates };
+  }, [filteredSales]);
+
+  const buildDailyBreakdown = (totalQty: number, totalRevenue: number) => {
+    const { perDay, total, dates } = dailySalesShare;
+    if (total === 0 || dates.length === 0) return [];
+    return dates.map((date) => {
+      const share = perDay[date] / total;
+      return {
+        date,
+        displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" }),
+        qty: Math.round(totalQty * share),
+        revenue: Math.round(totalRevenue * share),
+      };
+    });
+  };
+
+  // Dialog state for daily breakdowns
+  const [itemDailyOpen, setItemDailyOpen] = useState<{ name: string; qty: number; revenue: number } | null>(null);
+  const [categoryDailyOpen, setCategoryDailyOpen] = useState<{ category: string; qty: number; revenue: number } | null>(null);
+  const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
   // Pagination hooks
   const topItemsPag = usePagination(allItems, 5);
@@ -367,8 +399,13 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
         </Card>
 
         <Card>
-          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm sm:text-base">Sales by Payment Method</CardTitle>
+            {paymentMethodData.length > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setPaymentDailyOpen(true)}>
+                <CalendarRange className="h-3.5 w-3.5" /> Daily
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {paymentMethodData.length > 0 ? (
@@ -464,8 +501,10 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">Item</TableHead>
+                    <TableHead className="text-xs">Category</TableHead>
                     <TableHead className="text-right text-xs">Qty</TableHead>
                     <TableHead className="text-right text-xs">Revenue</TableHead>
+                    <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -473,13 +512,24 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     allItemsPag.paginatedItems.map((item) => (
                       <TableRow key={item.name}>
                         <TableCell className="font-medium text-xs sm:text-sm">{item.name}</TableCell>
+                        <TableCell className="text-xs sm:text-sm text-muted-foreground">{item.category}</TableCell>
                         <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
                         <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setItemDailyOpen({ name: item.name, qty: item.qty, revenue: item.revenue })}
+                          >
+                            <CalendarRange className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No item data</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No item data</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -569,6 +619,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     <TableHead className="text-right text-xs">Qty</TableHead>
                     <TableHead className="text-right text-xs">Revenue</TableHead>
                     <TableHead className="text-right text-xs">%</TableHead>
+                    <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -579,11 +630,21 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                         <TableCell className="text-right text-xs sm:text-sm">{cat.qty}</TableCell>
                         <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(cat.revenue)}</TableCell>
                         <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{cat.pct}%</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setCategoryDailyOpen({ category: cat.category, qty: cat.qty, revenue: cat.revenue })}
+                          >
+                            <CalendarRange className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground text-xs">No category data</TableCell>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No category data</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -669,6 +730,131 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           </CardContent>
         </Card>
       </div>
+
+      {/* Daily breakdown dialogs */}
+      <Dialog open={!!itemDailyOpen} onOpenChange={(o) => !o && setItemDailyOpen(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">{itemDailyOpen?.name}</DialogTitle>
+            <DialogDescription className="text-xs">
+              Daily sales breakdown for the selected period
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {itemDailyOpen && buildDailyBreakdown(itemDailyOpen.qty, itemDailyOpen.revenue).map((d) => (
+                  <TableRow key={d.date}>
+                    <TableCell className="text-xs">{d.displayDate}</TableCell>
+                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
+                  </TableRow>
+                ))}
+                {itemDailyOpen && (
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell className="text-xs">Total</TableCell>
+                    <TableCell className="text-right text-xs">{itemDailyOpen.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{formatCurrency(itemDailyOpen.revenue)}</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!categoryDailyOpen} onOpenChange={(o) => !o && setCategoryDailyOpen(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">{categoryDailyOpen?.category}</DialogTitle>
+            <DialogDescription className="text-xs">
+              Daily category sales breakdown for the selected period
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categoryDailyOpen && buildDailyBreakdown(categoryDailyOpen.qty, categoryDailyOpen.revenue).map((d) => (
+                  <TableRow key={d.date}>
+                    <TableCell className="text-xs">{d.displayDate}</TableCell>
+                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
+                  </TableRow>
+                ))}
+                {categoryDailyOpen && (
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell className="text-xs">Total</TableCell>
+                    <TableCell className="text-right text-xs">{categoryDailyOpen.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{formatCurrency(categoryDailyOpen.revenue)}</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentDailyOpen} onOpenChange={setPaymentDailyOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">Payment Methods — Daily Breakdown</DialogTitle>
+            <DialogDescription className="text-xs">
+              Estimated revenue per payment method, per day
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  {paymentMethodData.map((pm) => (
+                    <TableHead key={pm.name} className="text-right text-xs whitespace-nowrap">{pm.name}</TableHead>
+                  ))}
+                  <TableHead className="text-right text-xs">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dailySalesShare.dates.map((date) => {
+                  const dayTotal = dailySalesShare.perDay[date];
+                  const share = dailySalesShare.total > 0 ? dayTotal / dailySalesShare.total : 0;
+                  return (
+                    <TableRow key={date}>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" })}
+                      </TableCell>
+                      {paymentMethodData.map((pm) => (
+                        <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(Math.round(pm.value * share))}</TableCell>
+                      ))}
+                      <TableCell className="text-right text-xs font-semibold">{formatCurrency(dayTotal)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="bg-muted/50 font-semibold">
+                  <TableCell className="text-xs">Total</TableCell>
+                  {paymentMethodData.map((pm) => (
+                    <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(pm.value)}</TableCell>
+                  ))}
+                  <TableCell className="text-right text-xs">{formatCurrency(dailySalesShare.total)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
