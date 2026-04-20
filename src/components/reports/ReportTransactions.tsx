@@ -29,7 +29,7 @@ const orderStatusStyles: Record<string, string> = {
   "On Hold": "bg-warning/10 text-warning",
 };
 
-const initialTransactions: Transaction[] = [
+export const initialReportTransactions: Transaction[] = [
   { orderId: "ORD-1001", date: "2026-03-08 09:12", customerPhone: "+233 24 111 2233", amount: "₦42.50", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Paid", payments: [{ method: "Cash", amount: "₦20.00" }, { method: "Card", amount: "₦22.50" }], orderStatus: "Completed", items: [{ name: "Rice 5kg", qty: 1, unitPrice: "₦25.00", total: "₦25.00" }, { name: "Cooking Oil 1L", qty: 1, unitPrice: "₦17.50", total: "₦17.50" }] },
   { orderId: "ORD-1002", date: "2026-03-08 09:28", customerPhone: "+233 20 555 7788", amount: "₦128.00", cashier: "Kofi B.", location: "Mall Food Court", paymentStatus: "Paid", payments: [{ method: "Card", amount: "₦128.00" }], orderStatus: "Completed", items: [{ name: "Grilled Chicken Combo", qty: 2, unitPrice: "₦45.00", total: "₦90.00" }, { name: "Fresh Juice", qty: 2, unitPrice: "₦12.00", total: "₦24.00" }, { name: "Side Salad", qty: 2, unitPrice: "₦7.00", total: "₦14.00" }] },
   { orderId: "ORD-1003", date: "2026-03-08 09:45", customerPhone: "+233 27 333 4455", amount: "₦35.75", cashier: "Ama K.", location: "Downtown Supermarket", paymentStatus: "Refunded", payments: [{ method: "Mobile Money", amount: "₦35.75" }], orderStatus: "Cancelled", items: [{ name: "Shampoo 500ml", qty: 1, unitPrice: "₦18.75", total: "₦18.75" }, { name: "Conditioner 500ml", qty: 1, unitPrice: "₦17.00", total: "₦17.00" }] },
@@ -75,7 +75,7 @@ function flattenForExport(txn: Transaction) {
 }
 
 export default function ReportTransactions({ selectedOutlets, dateRange, cashierFilter }: ReportTransactionsProps) {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>(initialReportTransactions);
   const [search, setSearch] = useState("");
   const [internalCashier, setInternalCashier] = useState("all");
   const isCashierControlled = cashierFilter !== undefined;
