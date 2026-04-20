@@ -30,6 +30,18 @@ import SalesByItem from "@/components/reports/SalesByItem";
 import SalesByCategory from "@/components/reports/SalesByCategory";
 import ReportTransactions from "@/components/reports/ReportTransactions";
 import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
+import {
+  exportSalesSummaryExcel,
+  exportSalesSummaryPDF,
+  exportSalesByItemExcel,
+  exportSalesByItemPDF,
+  exportSalesByCategoryExcel,
+  exportSalesByCategoryPDF,
+  exportTransactionsPDF,
+  filterSales as filterSalesForExport,
+} from "@/lib/sales-export";
+import { initialReportTransactions } from "@/components/reports/ReportTransactions";
+import * as XLSX from "xlsx";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -136,8 +148,79 @@ export default function Reports() {
 
   const outletLabel = isAllOutlets ? "All Outlets" : outlets.find((o) => o.id === selectedOutletId)?.name || selectedOutletId;
 
-  const handleExportExcel = () => exportPnLToExcel(data, cogsItemRows, dateFrom, dateTo, outletLabel);
-  const handleExportPDF = () => exportPnLToPDF(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+  const filteredSalesForExport = useMemo(
+    () => filterSalesForExport(sales, outletIds, { from: dateFrom, to: dateTo }, selectedCashier),
+    [sales, outletIds, dateFrom, dateTo, selectedCashier]
+  );
+
+  const handleExportExcel = () => {
+    if (activeTab === "pnl") return exportPnLToExcel(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+    if (activeTab === "sales")
+      return exportSalesSummaryExcel({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+        filteredSales: filteredSalesForExport,
+      });
+    if (activeTab === "items")
+      return exportSalesByItemExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+    if (activeTab === "categories")
+      return exportSalesByCategoryExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+    if (activeTab === "transactions") {
+      // Build workbook for transactions tab
+
+      const txnRows = initialReportTransactions.map((t) => ({
+        "Order ID": t.orderId,
+        Date: t.date,
+        Phone: t.customerPhone,
+        Amount: t.amount,
+        Cashier: t.cashier,
+        Location: t.location,
+        "Payment Status": t.paymentStatus,
+        "Payment Methods": t.payments.map((p) => `${p.method}: ${p.amount}`).join(", "),
+        "Order Status": t.orderStatus,
+      }));
+      const ws = XLSX.utils.json_to_sheet(txnRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+      ws["!cols"] = Object.keys(txnRows[0] || {}).map(() => ({ wch: 20 }));
+      XLSX.writeFile(wb, `Transactions_${format(dateFrom, "yyyy-MM-dd")}_${format(dateTo, "yyyy-MM-dd")}.xlsx`);
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (activeTab === "pnl") return exportPnLToPDF(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+    if (activeTab === "sales")
+      return exportSalesSummaryPDF({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+        filteredSales: filteredSalesForExport,
+      });
+    if (activeTab === "items")
+      return exportSalesByItemPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+    if (activeTab === "categories")
+      return exportSalesByCategoryPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+    if (activeTab === "transactions")
+      return exportTransactionsPDF({
+        outletLabel,
+        dateFrom,
+        dateTo,
+        rows: initialReportTransactions.map((t) => ({
+          orderId: t.orderId,
+          date: t.date,
+          customerPhone: t.customerPhone,
+          amount: t.amount,
+          cashier: t.cashier,
+          location: t.location,
+          paymentStatus: t.paymentStatus,
+          paymentSummary: t.payments.map((p) => `${p.method}: ${p.amount}`).join(", "),
+          orderStatus: t.orderStatus,
+        })),
+      });
+  };
 
   const totalRevenue = data.revenue.sales + data.revenue.otherIncome;
   const totalCOGS = data.costOfGoods.inventory + data.costOfGoods.directLabor;
@@ -184,18 +267,16 @@ export default function Reports() {
             <h1 className="text-xl sm:text-2xl font-heading font-bold tracking-tight">Reports</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Financial performance & analytics</p>
           </div>
-          {activeTab === "pnl" && (
-            <div className="flex items-center gap-1.5">
-              <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportExcel}>
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Excel</span>
-              </Button>
-              <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportPDF}>
-                <FileText className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">PDF</span>
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportExcel}>
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Excel</span>
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportPDF}>
+              <FileText className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Print / PDF</span>
+            </Button>
+          </div>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
           <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
