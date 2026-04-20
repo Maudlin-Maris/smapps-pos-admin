@@ -538,42 +538,53 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
               Estimated revenue per payment method, per day
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  {paymentMethodData.map((pm) => (
-                    <TableHead key={pm.name} className="text-right text-xs whitespace-nowrap">{pm.name}</TableHead>
-                  ))}
-                  <TableHead className="text-right text-xs">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dailyShare.dates.map((date) => {
-                  const dayTotal = dailyShare.perDay[date];
-                  const share = dailyShare.total > 0 ? dayTotal / dailyShare.total : 0;
-                  return (
-                    <TableRow key={date}>
-                      <TableCell className="text-xs whitespace-nowrap">
-                        {new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" })}
-                      </TableCell>
-                      {paymentMethodData.map((pm) => (
-                        <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(Math.round(pm.value * share))}</TableCell>
-                      ))}
-                      <TableCell className="text-right text-xs font-semibold">{formatCurrency(dayTotal)}</TableCell>
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell className="text-xs">Total</TableCell>
-                  {paymentMethodData.map((pm) => (
-                    <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(pm.value)}</TableCell>
-                  ))}
-                  <TableCell className="text-right text-xs">{formatCurrency(dailyShare.total)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <div className="space-y-2">
+            <PaginationControls
+              page={paymentDailyPag.page}
+              totalPages={paymentDailyPag.totalPages}
+              perPage={paymentDailyPag.perPage}
+              totalItems={paymentDailyPag.totalItems}
+              pageSizeOptions={paymentDailyPag.pageSizeOptions}
+              onPageChange={paymentDailyPag.setPage}
+              onPerPageChange={paymentDailyPag.setPerPage}
+            />
+            <div className="max-h-[55vh] overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Date</TableHead>
+                    {paymentMethodData.map((pm) => (
+                      <TableHead key={pm.name} className="text-right text-xs whitespace-nowrap">{pm.name}</TableHead>
+                    ))}
+                    <TableHead className="text-right text-xs">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paymentDailyPag.paginatedItems.map((date) => {
+                    const dayTotal = dailyShare.perDay[date];
+                    const share = dailyShare.total > 0 ? dayTotal / dailyShare.total : 0;
+                    return (
+                      <TableRow key={date}>
+                        <TableCell className="text-xs whitespace-nowrap">
+                          {new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" })}
+                        </TableCell>
+                        {paymentMethodData.map((pm) => (
+                          <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(Math.round(pm.value * share))}</TableCell>
+                        ))}
+                        <TableCell className="text-right text-xs font-semibold">{formatCurrency(dayTotal)}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell className="text-xs">Total (all dates)</TableCell>
+                    {paymentMethodData.map((pm) => (
+                      <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(pm.value)}</TableCell>
+                    ))}
+                    <TableCell className="text-right text-xs">{formatCurrency(dailyShare.total)}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
