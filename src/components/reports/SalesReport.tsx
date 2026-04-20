@@ -93,7 +93,11 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
 
     const rows: { date: string; displayDate: string; sales: number; orders: number }[] = [];
     const cursor = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
-    const end = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const rangeEnd = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
+    // Don't list future dates — they're guaranteed to be empty for a typical business view.
+    const end = rangeEnd > todayMidnight ? todayMidnight : rangeEnd;
 
     while (cursor <= end) {
       const year = cursor.getFullYear();
