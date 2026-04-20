@@ -452,7 +452,16 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                 <User className="h-4 w-4" /> Sales by Cashier
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-3 sm:p-6 pt-0">
+            <CardContent className="p-3 sm:p-6 pt-0 space-y-2">
+              <PaginationControls
+                page={cashierPag.page}
+                totalPages={cashierPag.totalPages}
+                perPage={cashierPag.perPage}
+                totalItems={cashierPag.totalItems}
+                pageSizeOptions={cashierPag.pageSizeOptions}
+                onPageChange={cashierPag.setPage}
+                onPerPageChange={cashierPag.setPerPage}
+              />
               <div className="overflow-x-auto -mx-3 sm:mx-0">
                 <Table>
                   <TableHeader>
@@ -463,7 +472,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {salesByCashier.map((row) => (
+                    {cashierPag.paginatedItems.map((row) => (
                       <TableRow key={row.cashier}>
                         <TableCell className="font-medium text-xs sm:text-sm">{row.cashier}</TableCell>
                         <TableCell className="text-right text-xs sm:text-sm">{row.transactions}</TableCell>
