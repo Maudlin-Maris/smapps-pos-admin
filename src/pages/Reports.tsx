@@ -201,6 +201,24 @@ export default function Reports() {
               ))}
             </SelectContent>
           </Select>
+          <Select
+            value={selectedCashier}
+            onValueChange={setSelectedCashier}
+            disabled={availableCashiers.length === 0}
+          >
+            <SelectTrigger className="w-[150px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm shrink-0">
+              <div className="flex items-center gap-1.5 truncate">
+                <User className="h-3.5 w-3.5 shrink-0" />
+                <SelectValue placeholder="All Cashiers" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cashiers</SelectItem>
+              {availableCashiers.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1.5 h-8 sm:h-9 text-xs sm:text-sm shrink-0">
