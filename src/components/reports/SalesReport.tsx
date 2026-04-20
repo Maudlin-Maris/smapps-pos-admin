@@ -731,6 +731,131 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
         </Card>
       </div>
 
+      {/* Daily breakdown dialogs */}
+      <Dialog open={!!itemDailyOpen} onOpenChange={(o) => !o && setItemDailyOpen(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">{itemDailyOpen?.name}</DialogTitle>
+            <DialogDescription className="text-xs">
+              Daily sales breakdown for the selected period
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {itemDailyOpen && buildDailyBreakdown(itemDailyOpen.qty, itemDailyOpen.revenue).map((d) => (
+                  <TableRow key={d.date}>
+                    <TableCell className="text-xs">{d.displayDate}</TableCell>
+                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
+                  </TableRow>
+                ))}
+                {itemDailyOpen && (
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell className="text-xs">Total</TableCell>
+                    <TableCell className="text-right text-xs">{itemDailyOpen.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{formatCurrency(itemDailyOpen.revenue)}</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!categoryDailyOpen} onOpenChange={(o) => !o && setCategoryDailyOpen(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">{categoryDailyOpen?.category}</DialogTitle>
+            <DialogDescription className="text-xs">
+              Daily category sales breakdown for the selected period
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Revenue</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categoryDailyOpen && buildDailyBreakdown(categoryDailyOpen.qty, categoryDailyOpen.revenue).map((d) => (
+                  <TableRow key={d.date}>
+                    <TableCell className="text-xs">{d.displayDate}</TableCell>
+                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
+                    <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
+                  </TableRow>
+                ))}
+                {categoryDailyOpen && (
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell className="text-xs">Total</TableCell>
+                    <TableCell className="text-right text-xs">{categoryDailyOpen.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{formatCurrency(categoryDailyOpen.revenue)}</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentDailyOpen} onOpenChange={setPaymentDailyOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">Payment Methods — Daily Breakdown</DialogTitle>
+            <DialogDescription className="text-xs">
+              Estimated revenue per payment method, per day
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Date</TableHead>
+                  {paymentMethodData.map((pm) => (
+                    <TableHead key={pm.name} className="text-right text-xs whitespace-nowrap">{pm.name}</TableHead>
+                  ))}
+                  <TableHead className="text-right text-xs">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dailySalesShare.dates.map((date) => {
+                  const dayTotal = dailySalesShare.perDay[date];
+                  const share = dailySalesShare.total > 0 ? dayTotal / dailySalesShare.total : 0;
+                  return (
+                    <TableRow key={date}>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" })}
+                      </TableCell>
+                      {paymentMethodData.map((pm) => (
+                        <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(Math.round(pm.value * share))}</TableCell>
+                      ))}
+                      <TableCell className="text-right text-xs font-semibold">{formatCurrency(dayTotal)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableRow className="bg-muted/50 font-semibold">
+                  <TableCell className="text-xs">Total</TableCell>
+                  {paymentMethodData.map((pm) => (
+                    <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(pm.value)}</TableCell>
+                  ))}
+                  <TableCell className="text-right text-xs">{formatCurrency(dailySalesShare.total)}</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
