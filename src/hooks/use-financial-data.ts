@@ -34,7 +34,7 @@ export interface SalesRecord {
 const EXPENSES_KEY = "financial_expenses";
 const SALES_KEY = "financial_sales";
 const DATA_VERSION_KEY = "financial_data_version";
-const CURRENT_DATA_VERSION = 2; // Bump when default data schema changes
+const CURRENT_DATA_VERSION = 3; // Bump when default data schema changes
 
 // Clear stale localStorage when data version changes
 (function migrateStorage() {
