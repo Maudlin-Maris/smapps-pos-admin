@@ -295,6 +295,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const hasVariants = variants.length > 0;
     if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
     if (hasVariants && variants.some((v) => !v.name.trim())) return;
+    if (selectedOutletIds.length === 0) return;
     const cat = categories.find((c) => c.id === selectedCatId);
     const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
     const baseQty = hasVariants ? variants.reduce((sum, v) => sum + v.quantity, 0) : parseInt(quantity) || 0;
@@ -322,7 +323,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       variants: finalVariants,
       extras,
       trackInventory: hasVariants ? false : trackInventory,
-    });
+    }, selectedOutletIds);
     onOpenChange(false);
   };
 
