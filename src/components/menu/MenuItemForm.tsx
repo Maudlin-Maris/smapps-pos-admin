@@ -21,12 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
 import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 import { getFeatures, type BusinessTypeId } from "@/data/businessTypes";
+import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, PopoverTrigger as OutletPopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import type { Outlet } from "@/data/outlets";
 
 export interface MenuVariant {
   id: string;
@@ -73,9 +76,11 @@ interface MenuItemFormProps {
   onOpenChange: (open: boolean) => void;
   categories: Category[];
   item?: MenuItem | null;
-  onSave: (item: MenuItem) => void;
+  onSave: (item: MenuItem, targetOutletIds: string[]) => void;
   mode?: "add" | "edit" | "clone";
   businessType?: BusinessTypeId;
+  outlets: Outlet[];
+  currentOutletId: string;
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
@@ -173,7 +178,7 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId }: MenuItemFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -190,6 +195,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [variants, setVariants] = useState<MenuVariant[]>([]);
   const [extras, setExtras] = useState<MenuExtra[]>([]);
   const [trackInventory, setTrackInventory] = useState(false);
+  const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
 
   const features = businessType ? getFeatures(businessType) : null;
 
@@ -216,14 +222,16 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
+        setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
       } else {
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
+        setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
       }
     }
-  }, [open, item, categories]);
+  }, [open, item, categories, currentOutletId]);
 
   const handleImageUpload = () => {
     if (images.length >= 4) return;
@@ -287,6 +295,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const hasVariants = variants.length > 0;
     if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
     if (hasVariants && variants.some((v) => !v.name.trim())) return;
+    if (selectedOutletIds.length === 0) return;
     const cat = categories.find((c) => c.id === selectedCatId);
     const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
     const baseQty = hasVariants ? variants.reduce((sum, v) => sum + v.quantity, 0) : parseInt(quantity) || 0;
@@ -314,7 +323,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       variants: finalVariants,
       extras,
       trackInventory: hasVariants ? false : trackInventory,
-    });
+    }, selectedOutletIds);
     onOpenChange(false);
   };
 
@@ -383,6 +392,81 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </Select>
             </div>
 
+            <div className="sm:col-span-2">
+              <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlets *</Label>
+              <OutletPopover>
+                <OutletPopoverTrigger asChild>
+                  <Button variant="outline" className="w-full mt-1 justify-between font-normal h-auto min-h-10 py-1.5">
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {selectedOutletIds.length === 0 ? (
+                        <span className="text-muted-foreground text-sm">Select outlets...</span>
+                      ) : (
+                        selectedOutletIds.map((id) => {
+                          const o = outlets.find((x) => x.id === id);
+                          if (!o) return null;
+                          return (
+                            <Badge key={id} variant="secondary" className="text-xs gap-1">
+                              {o.name}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedOutletIds((prev) => prev.filter((p) => p !== id));
+                                }}
+                                className="hover:text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })
+                      )}
+                    </div>
+                  </Button>
+                </OutletPopoverTrigger>
+                <OutletPopoverContent className="w-[--radix-popover-trigger-width] p-1 max-h-72 overflow-y-auto" align="start">
+                  <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
+                    <span>{selectedOutletIds.length} selected</span>
+                    <button
+                      type="button"
+                      className="hover:text-foreground underline"
+                      onClick={() =>
+                        setSelectedOutletIds(
+                          selectedOutletIds.length === outlets.length ? [] : outlets.map((o) => o.id)
+                        )
+                      }
+                    >
+                      {selectedOutletIds.length === outlets.length ? "Clear all" : "Select all"}
+                    </button>
+                  </div>
+                  {outlets.map((o) => {
+                    const checked = selectedOutletIds.includes(o.id);
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedOutletIds((prev) =>
+                            checked ? prev.filter((p) => p !== o.id) : [...prev, o.id]
+                          )
+                        }
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground text-left"
+                      >
+                        <div className={cn("h-4 w-4 rounded border flex items-center justify-center", checked ? "bg-primary border-primary text-primary-foreground" : "border-input")}>
+                          {checked && <Check className="h-3 w-3" />}
+                        </div>
+                        <span className="flex-1">{o.name}</span>
+                      </button>
+                    );
+                  })}
+                </OutletPopoverContent>
+              </OutletPopover>
+              {mode === "edit" && selectedOutletIds.length > 1 && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Selecting additional outlets will create copies of this item in those outlets.
+                </p>
+              )}
+            </div>
 
             {variants.length === 0 && (
               <div className="flex items-center gap-3 self-end pb-1">
@@ -582,7 +666,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || (variants.length > 0 && variants.some((v) => !v.name.trim()))}>
+          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || selectedOutletIds.length === 0 || (variants.length > 0 && variants.some((v) => !v.name.trim()))}>
             {submitLabel}
           </Button>
         </DialogFooter>
