@@ -395,8 +395,6 @@ export function exportSalesByCategoryPDF(input: ItemsExport) {
 // ─────────────────────── Sales by Department ──────────────────────
 
 export function exportSalesByDepartmentExcel(input: ItemsExport) {
-  // Lazy import to avoid circular deps at module init
-  const { aggregateItemsByDepartment } = require("@/components/reports/departmentMapping") as typeof import("@/components/reports/departmentMapping");
   const rows = aggregateItemsByDepartment(input.selectedOutlets);
   const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
   const totalQty = rows.reduce((s, r) => s + r.qty, 0);
@@ -425,7 +423,6 @@ export function exportSalesByDepartmentExcel(input: ItemsExport) {
 }
 
 export function exportSalesByDepartmentPDF(input: ItemsExport) {
-  const { aggregateItemsByDepartment } = require("@/components/reports/departmentMapping") as typeof import("@/components/reports/departmentMapping");
   const rows = aggregateItemsByDepartment(input.selectedOutlets);
   const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
   const totalQty = rows.reduce((s, r) => s + r.qty, 0);
