@@ -76,9 +76,11 @@ interface MenuItemFormProps {
   onOpenChange: (open: boolean) => void;
   categories: Category[];
   item?: MenuItem | null;
-  onSave: (item: MenuItem) => void;
+  onSave: (item: MenuItem, targetOutletIds: string[]) => void;
   mode?: "add" | "edit" | "clone";
   businessType?: BusinessTypeId;
+  outlets: Outlet[];
+  currentOutletId: string;
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
