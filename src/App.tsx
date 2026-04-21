@@ -13,7 +13,7 @@ import InventoryManagement from "@/pages/InventoryManagement";
 import AdvancedInventory from "@/pages/AdvancedInventory";
 import PurchaseOrders from "@/pages/PurchaseOrders";
 import CustomerManagement from "@/pages/CustomerManagement";
-import EcommerceDashboard from "@/pages/EcommerceDashboard";
+
 import AdvancedReports from "@/pages/AdvancedReports";
 import Reports from "@/pages/Reports";
 import ExpenseManagement from "@/pages/ExpenseManagement";
