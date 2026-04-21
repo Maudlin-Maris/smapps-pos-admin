@@ -145,6 +145,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm(selectedOutletId));
+    setSelectedOutletIds(selectedOutletId && selectedOutletId !== "all" ? [selectedOutletId] : []);
     setOpen(true);
   };
 
@@ -164,6 +165,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       expiryDate: item.expiryDate || "",
       batches: item.batches || [],
     });
+    setSelectedOutletIds(item.outletId ? [item.outletId] : []);
     setOpen(true);
   };
 
