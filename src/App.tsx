@@ -13,7 +13,7 @@ import InventoryManagement from "@/pages/InventoryManagement";
 import AdvancedInventory from "@/pages/AdvancedInventory";
 import PurchaseOrders from "@/pages/PurchaseOrders";
 import CustomerManagement from "@/pages/CustomerManagement";
-import EcommerceDashboard from "@/pages/EcommerceDashboard";
+
 import AdvancedReports from "@/pages/AdvancedReports";
 import Reports from "@/pages/Reports";
 import ExpenseManagement from "@/pages/ExpenseManagement";
@@ -21,7 +21,6 @@ import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
 import CashierManagement from "@/pages/CashierManagement";
 import LoyaltyManagement from "@/pages/LoyaltyManagement";
-import ServiceBookings from "@/pages/ServiceBookings";
 import POSMain from "@/pages/POS/POSMain";
 import PromoBundleManagement from "@/pages/PromoBundleManagement";
 import NotFound from "./pages/NotFound";
@@ -46,14 +45,12 @@ const App = () => (
             <Route path="/purchase-orders" element={<AppLayout><PurchaseOrders /></AppLayout>} />
             <Route path="/customers" element={<AppLayout><CustomerManagement /></AppLayout>} />
             <Route path="/loyalty" element={<AppLayout><LoyaltyManagement /></AppLayout>} />
-            <Route path="/omnichannel" element={<AppLayout><EcommerceDashboard /></AppLayout>} />
             <Route path="/insights" element={<AppLayout><AdvancedReports /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><Reports /></AppLayout>} />
             <Route path="/expenses" element={<AppLayout><ExpenseManagement /></AppLayout>} />
             <Route path="/outlets" element={<AppLayout><OutletManagement /></AppLayout>} />
             <Route path="/cashiers" element={<AppLayout><CashierManagement /></AppLayout>} />
             <Route path="/subscription" element={<AppLayout><SubscriptionManagement /></AppLayout>} />
-            <Route path="/appointments" element={<AppLayout><ServiceBookings /></AppLayout>} />
             <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
 
             <Route path="*" element={<NotFound />} />

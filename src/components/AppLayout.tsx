@@ -42,9 +42,6 @@ const coreNavItems: NavItem[] = [
   // Sales & Catalog
   { title: "Catalog", path: "/menu", icon: UtensilsCrossed, section: "Sales" },
   { title: "Promo Bundles", path: "/bundles", icon: Gift, section: "Sales" },
-  
-  { title: "Appointments", path: "/appointments", icon: CalendarClock, section: "Sales" },
-  { title: "Omnichannel", path: "/omnichannel", icon: Globe, section: "Sales" },
   // Inventory & Supply
   { title: "Inventory", path: "/inventory", icon: Package, section: "Inventory" },
   { title: "Advanced Inventory", path: "/inventory/advanced", icon: ArrowLeftRight, section: "Inventory" },
