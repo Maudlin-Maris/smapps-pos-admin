@@ -222,14 +222,16 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
+        setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
       } else {
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
+        setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
       }
     }
-  }, [open, item, categories]);
+  }, [open, item, categories, currentOutletId]);
 
   const handleImageUpload = () => {
     if (images.length >= 4) return;
