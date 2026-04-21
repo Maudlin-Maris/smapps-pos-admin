@@ -131,16 +131,35 @@ export default function MenuManagement() {
     [menuItems, selectedOutletId, isAllOutlets]
   );
 
-  const handleSave = (item: MenuItem) => {
-    const finalItem = { ...item, outletId: selectedOutletId };
+  const handleSave = (item: MenuItem, targetOutletIds: string[]) => {
     setMenuItems((prev) => {
-      const exists = prev.find((m) => m.id === finalItem.id);
+      const exists = prev.find((m) => m.id === item.id);
       if (exists) {
-        toast.success("Menu item updated");
-        return prev.map((m) => (m.id === finalItem.id ? finalItem : m));
+        // Update existing item to first selected outlet, then create copies for the rest
+        const primaryOutletId = targetOutletIds[0] ?? selectedOutletId;
+        const additionalOutlets = targetOutletIds.slice(1);
+        const updated = prev.map((m) => (m.id === item.id ? { ...item, outletId: primaryOutletId } : m));
+        const copies: MenuItem[] = additionalOutlets.map((oid) => ({
+          ...item,
+          id: crypto.randomUUID(),
+          outletId: oid,
+          sku: "",
+          variants: item.variants.map((v) => ({ ...v, id: crypto.randomUUID(), sku: "" })),
+        }));
+        const total = 1 + copies.length;
+        toast.success(total > 1 ? `Item updated and copied to ${copies.length} more outlet${copies.length > 1 ? "s" : ""}` : "Menu item updated");
+        return [...updated, ...copies];
       }
-      toast.success("Menu item added");
-      return [...prev, finalItem];
+      // New item — create one per selected outlet
+      const newItems: MenuItem[] = targetOutletIds.map((oid, idx) => ({
+        ...item,
+        id: idx === 0 ? item.id : crypto.randomUUID(),
+        outletId: oid,
+        sku: idx === 0 ? item.sku : "",
+        variants: idx === 0 ? item.variants : item.variants.map((v) => ({ ...v, id: crypto.randomUUID(), sku: "" })),
+      }));
+      toast.success(newItems.length > 1 ? `Item added to ${newItems.length} outlets` : "Menu item added");
+      return [...prev, ...newItems];
     });
     setEditingItem(null);
   };
