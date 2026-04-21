@@ -77,15 +77,25 @@ export default function BulkReceiveStockDialog({
   const [reason, setReason] = useState("");
   const [syncToCatalog, setSyncToCatalog] = useState(true);
   const [lineItems, setLineItems] = useState<ReceiveLineItem[]>([]);
+  const [activeOutletId, setActiveOutletId] = useState<string>(
+    outletId && outletId !== "all" ? outletId : (outlets[0]?.id ?? "")
+  );
 
-  const outlet = outlets.find(o => o.id === outletId);
+  const isAllMode = outletId === "all";
+  const effectiveOutletId = isAllMode ? activeOutletId : outletId;
+  const outlet = outlets.find(o => o.id === effectiveOutletId);
   const isRetail = outlet ? RETAIL_BUSINESS_TYPES.includes(outlet.businessType) : false;
   const isBatchTracked = outlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(outlet.businessType) : false;
 
-  // Initialize line items when dialog opens
+  const outletItems = useMemo(
+    () => items.filter(i => i.outletId === effectiveOutletId),
+    [items, effectiveOutletId]
+  );
+
+  // Initialize line items when dialog opens or active outlet changes
   useEffect(() => {
     if (open) {
-      setLineItems(items.map(item => ({
+      setLineItems(outletItems.map(item => ({
         itemId: item.id,
         selected: false,
         quantity: 0,
@@ -100,7 +110,14 @@ export default function BulkReceiveStockDialog({
       setReason("");
       setSyncToCatalog(true);
     }
-  }, [open, items]);
+  }, [open, outletItems]);
+
+  // Reset active outlet when dialog (re)opens
+  useEffect(() => {
+    if (open) {
+      setActiveOutletId(outletId && outletId !== "all" ? outletId : (outlets[0]?.id ?? ""));
+    }
+  }, [open, outletId]);
 
   const updateLine = (itemId: string, updates: Partial<ReceiveLineItem>) => {
     setLineItems(prev => prev.map(li => {
@@ -116,10 +133,10 @@ export default function BulkReceiveStockDialog({
 
   const filteredItems = useMemo(() => {
     const q = search.toLowerCase();
-    return items.filter(item =>
+    return outletItems.filter(item =>
       item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q)
     );
-  }, [items, search]);
+  }, [outletItems, search]);
 
   const selectedLines = lineItems.filter(li => li.selected && li.quantity > 0);
   const totalItems = selectedLines.length;
@@ -186,12 +203,24 @@ export default function BulkReceiveStockDialog({
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <Truck className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <DialogTitle className="text-lg">Receive Shipment</DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Select items, enter quantities, and receive all at once — {outlet?.name}
+                Select items, enter quantities, and receive all at once{!isAllMode && outlet ? ` — ${outlet.name}` : ""}
               </p>
             </div>
+            {isAllMode && (
+              <Select value={activeOutletId} onValueChange={setActiveOutletId}>
+                <SelectTrigger className="w-[200px] h-9">
+                  <SelectValue placeholder="Select outlet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {outlets.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </DialogHeader>
 
