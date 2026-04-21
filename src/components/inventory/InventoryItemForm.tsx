@@ -250,25 +250,37 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       return;
     }
 
-    // For batch-tracked items, stock = sum of batch quantities
-    const hasBatches = showBatchExpiry && form.batches && form.batches.length > 0;
-    const finalStock = hasBatches
-      ? form.batches!.reduce((sum, b) => sum + b.quantity, 0)
-      : form.stock;
-
-    const status = computeStatus(finalStock, form.minStock);
+    // Resolve per-outlet stock + batches.
+    const resolveOutletPayload = (oid: string) => {
+      const entry = outletStocks[oid] ?? { stock: 0, minStock: 0, batches: [] };
+      const batchTracked = isOutletBatchTracked(oid);
+      const usesBatches = batchTracked && entry.batches.length > 0;
+      const stock = usesBatches
+        ? entry.batches.reduce((sum, b) => sum + b.quantity, 0)
+        : entry.stock;
+      return {
+        stock,
+        minStock: entry.minStock,
+        batches: batchTracked ? entry.batches.map((b) => ({ ...b, id: crypto.randomUUID() })) : undefined,
+        status: computeStatus(stock, entry.minStock),
+      };
+    };
 
     // Helper: build a fresh per-outlet payload with unique batch & conversion ids
-    const buildForOutlet = (outletId: string, reuseId?: string, reuseSku?: boolean): InventoryItem => ({
-      id: reuseId ?? crypto.randomUUID(),
-      ...form,
-      sku: reuseSku ? form.sku : "",
-      outletId,
-      stock: finalStock,
-      status,
-      conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
-      batches: form.batches?.map((b) => ({ ...b, id: crypto.randomUUID() })),
-    });
+    const buildForOutlet = (outletId: string, reuseId?: string, reuseSku?: boolean): InventoryItem => {
+      const payload = resolveOutletPayload(outletId);
+      return {
+        id: reuseId ?? crypto.randomUUID(),
+        ...form,
+        sku: reuseSku ? form.sku : "",
+        outletId,
+        stock: payload.stock,
+        minStock: payload.minStock,
+        status: payload.status,
+        conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
+        batches: payload.batches,
+      };
+    };
 
     if (editing) {
       // Update the edited item in its current outlet, then add clones for any
@@ -278,15 +290,20 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       const additionalOutlets = selectedOutletIds.filter((o) => o !== editingOutlet);
 
       setItems((prev) => {
-        let next = prev.map((i) =>
-          i.id === editing.id
-            ? includesOriginal
-              ? { ...i, ...form, outletId: editingOutlet, stock: finalStock, status }
-              : i
-            : i,
-        );
-        // If user removed the original outlet, fall back to keeping it (don't lose data)
-        // and treat all selected as additional copies.
+        let next = prev.map((i) => {
+          if (i.id !== editing.id) return i;
+          if (!includesOriginal) return i;
+          const payload = resolveOutletPayload(editingOutlet);
+          return {
+            ...i,
+            ...form,
+            outletId: editingOutlet,
+            stock: payload.stock,
+            minStock: payload.minStock,
+            status: payload.status,
+            batches: payload.batches,
+          };
+        });
         const targets = includesOriginal ? additionalOutlets : selectedOutletIds;
         const clones = targets.map((oid) => buildForOutlet(oid));
         next = [...next, ...clones];
