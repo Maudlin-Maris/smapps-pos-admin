@@ -666,7 +666,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || (variants.length > 0 && variants.some((v) => !v.name.trim()))}>
+          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || selectedOutletIds.length === 0 || (variants.length > 0 && variants.some((v) => !v.name.trim()))}>
             {submitLabel}
           </Button>
         </DialogFooter>
