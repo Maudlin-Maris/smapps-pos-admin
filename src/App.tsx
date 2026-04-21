@@ -45,14 +45,12 @@ const App = () => (
             <Route path="/purchase-orders" element={<AppLayout><PurchaseOrders /></AppLayout>} />
             <Route path="/customers" element={<AppLayout><CustomerManagement /></AppLayout>} />
             <Route path="/loyalty" element={<AppLayout><LoyaltyManagement /></AppLayout>} />
-            <Route path="/omnichannel" element={<AppLayout><EcommerceDashboard /></AppLayout>} />
             <Route path="/insights" element={<AppLayout><AdvancedReports /></AppLayout>} />
             <Route path="/reports" element={<AppLayout><Reports /></AppLayout>} />
             <Route path="/expenses" element={<AppLayout><ExpenseManagement /></AppLayout>} />
             <Route path="/outlets" element={<AppLayout><OutletManagement /></AppLayout>} />
             <Route path="/cashiers" element={<AppLayout><CashierManagement /></AppLayout>} />
             <Route path="/subscription" element={<AppLayout><SubscriptionManagement /></AppLayout>} />
-            <Route path="/appointments" element={<AppLayout><ServiceBookings /></AppLayout>} />
             <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
 
             <Route path="*" element={<NotFound />} />
