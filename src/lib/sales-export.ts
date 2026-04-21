@@ -7,6 +7,7 @@ import {
   aggregateItems,
   filterSales,
 } from "@/components/reports/salesData";
+import { aggregateItemsByDepartment } from "@/components/reports/departmentMapping";
 
 const cur = (n: number) =>
   new Intl.NumberFormat("en-NG", {
