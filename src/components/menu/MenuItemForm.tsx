@@ -21,12 +21,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
 import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 import { getFeatures, type BusinessTypeId } from "@/data/businessTypes";
+import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, PopoverTrigger as OutletPopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import type { Outlet } from "@/data/outlets";
 
 export interface MenuVariant {
   id: string;
