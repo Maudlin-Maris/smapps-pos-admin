@@ -7,6 +7,7 @@ import {
   aggregateItems,
   filterSales,
 } from "@/components/reports/salesData";
+import { aggregateItemsByDepartment } from "@/components/reports/departmentMapping";
 
 const cur = (n: number) =>
   new Intl.NumberFormat("en-NG", {
@@ -385,6 +386,76 @@ export function exportSalesByCategoryPDF(input: ItemsExport) {
   <thead><tr><th>Category</th><th style="text-align:right">Qty</th><th style="text-align:right">Revenue</th><th style="text-align:right">% of Revenue</th></tr></thead>
   <tbody>${rows}
     <tr class="total"><td>Total</td><td style="text-align:right;font-family:monospace;">${totalQty}</td><td style="text-align:right;font-family:monospace;">${cur(totalRev)}</td><td></td></tr>
+  </tbody>
+</table>
+</body></html>`;
+  openPrint(html);
+}
+
+// ─────────────────────── Sales by Department ──────────────────────
+
+export function exportSalesByDepartmentExcel(input: ItemsExport) {
+  const rows = aggregateItemsByDepartment(input.selectedOutlets);
+  const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
+  const totalQty = rows.reduce((s, r) => s + r.qty, 0);
+
+  const wb = XLSX.utils.book_new();
+  const data = [
+    ["Sales by Department"],
+    ["Period", fmtDate(input.dateFrom, input.dateTo)],
+    ["Outlet", input.outletLabel],
+    [],
+    ["Department", "Outlet", "Qty", "Revenue", "% of Revenue"],
+    ...rows.map((r) => [
+      r.department,
+      r.outletName,
+      r.qty,
+      r.revenue,
+      totalRev > 0 ? `${((r.revenue / totalRev) * 100).toFixed(1)}%` : "0%",
+    ]),
+    [],
+    ["Total", "", totalQty, totalRev, ""],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"] = [{ wch: 26 }, { wch: 26 }, { wch: 10 }, { wch: 14 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws, "Sales by Department");
+  XLSX.writeFile(wb, `Sales_By_Department_${format(input.dateFrom, "yyyy-MM-dd")}_${format(input.dateTo, "yyyy-MM-dd")}.xlsx`);
+}
+
+export function exportSalesByDepartmentPDF(input: ItemsExport) {
+  const rows = aggregateItemsByDepartment(input.selectedOutlets);
+  const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
+  const totalQty = rows.reduce((s, r) => s + r.qty, 0);
+
+  const body = rows
+    .map(
+      (r) => `<tr>
+      <td>${r.department}</td>
+      <td>${r.outletName}</td>
+      <td style="text-align:right;font-family:monospace;">${r.qty}</td>
+      <td style="text-align:right;font-family:monospace;">${cur(r.revenue)}</td>
+      <td style="text-align:right;">${totalRev > 0 ? ((r.revenue / totalRev) * 100).toFixed(1) : "0"}%</td>
+    </tr>`
+    )
+    .join("");
+
+  const html = `<!DOCTYPE html><html><head><title>Sales by Department</title>
+<style>
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; padding:32px; color:#1a1a1a; max-width:900px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .meta { font-size:12px; color:#666; margin-bottom:20px; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { padding:6px 8px; border-bottom:2px solid #ddd; text-align:left; font-size:11px; text-transform:uppercase; color:#888; }
+  td { padding:5px 8px; border-bottom:1px solid #eee; }
+  tr.total td { border-top:2px solid #333; font-weight:700; }
+  @media print { body { padding:0; } }
+</style></head><body>
+<h1>Sales by Department</h1>
+<p class="meta">${fmtDate(input.dateFrom, input.dateTo)} · ${input.outletLabel}</p>
+<table>
+  <thead><tr><th>Department</th><th>Outlet</th><th style="text-align:right">Qty</th><th style="text-align:right">Revenue</th><th style="text-align:right">% of Revenue</th></tr></thead>
+  <tbody>${body}
+    <tr class="total"><td>Total</td><td></td><td style="text-align:right;font-family:monospace;">${totalQty}</td><td style="text-align:right;font-family:monospace;">${cur(totalRev)}</td><td></td></tr>
   </tbody>
 </table>
 </body></html>`;
