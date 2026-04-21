@@ -77,15 +77,25 @@ export default function BulkReceiveStockDialog({
   const [reason, setReason] = useState("");
   const [syncToCatalog, setSyncToCatalog] = useState(true);
   const [lineItems, setLineItems] = useState<ReceiveLineItem[]>([]);
+  const [activeOutletId, setActiveOutletId] = useState<string>(
+    outletId && outletId !== "all" ? outletId : (outlets[0]?.id ?? "")
+  );
 
-  const outlet = outlets.find(o => o.id === outletId);
+  const isAllMode = outletId === "all";
+  const effectiveOutletId = isAllMode ? activeOutletId : outletId;
+  const outlet = outlets.find(o => o.id === effectiveOutletId);
   const isRetail = outlet ? RETAIL_BUSINESS_TYPES.includes(outlet.businessType) : false;
   const isBatchTracked = outlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(outlet.businessType) : false;
 
-  // Initialize line items when dialog opens
+  const outletItems = useMemo(
+    () => items.filter(i => i.outletId === effectiveOutletId),
+    [items, effectiveOutletId]
+  );
+
+  // Initialize line items when dialog opens or active outlet changes
   useEffect(() => {
     if (open) {
-      setLineItems(items.map(item => ({
+      setLineItems(outletItems.map(item => ({
         itemId: item.id,
         selected: false,
         quantity: 0,
@@ -100,7 +110,14 @@ export default function BulkReceiveStockDialog({
       setReason("");
       setSyncToCatalog(true);
     }
-  }, [open, items]);
+  }, [open, outletItems]);
+
+  // Reset active outlet when dialog (re)opens
+  useEffect(() => {
+    if (open) {
+      setActiveOutletId(outletId && outletId !== "all" ? outletId : (outlets[0]?.id ?? ""));
+    }
+  }, [open, outletId]);
 
   const updateLine = (itemId: string, updates: Partial<ReceiveLineItem>) => {
     setLineItems(prev => prev.map(li => {
