@@ -178,7 +178,7 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId }: MenuItemFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -195,6 +195,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [variants, setVariants] = useState<MenuVariant[]>([]);
   const [extras, setExtras] = useState<MenuExtra[]>([]);
   const [trackInventory, setTrackInventory] = useState(false);
+  const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
 
   const features = businessType ? getFeatures(businessType) : null;
 
