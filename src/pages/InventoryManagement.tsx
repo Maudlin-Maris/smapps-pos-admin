@@ -412,16 +412,14 @@ export default function InventoryManagement() {
           <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and composite items</p>
         </div>
         <div className="flex items-center gap-2">
-          {!isAllOutlets && (
-            <Button
-              size="sm"
-              className="gap-2"
-              onClick={() => setBulkReceiveOpen(true)}
-            >
-              <Truck className="h-4 w-4" />
-              Receive Shipment
-            </Button>
-          )}
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={() => setBulkReceiveOpen(true)}
+          >
+            <Truck className="h-4 w-4" />
+            Receive Shipment
+          </Button>
           <Select value={selectedOutletId} onValueChange={setSelectedOutletId}>
             <SelectTrigger className="w-[180px] h-9">
               <SelectValue />
@@ -541,7 +539,8 @@ export default function InventoryManagement() {
           categories={categories}
           units={units}
           onAdjustStock={isAllOutlets ? undefined : openAdjust}
-          readOnly={isAllOutlets}
+          readOnly={false}
+          allowRegister
           selectedOutletId={selectedOutletId}
           filterLowStock={showLowStock}
           filterExpiryStatus={showExpired ? "expired" : showExpiringSoon ? "expiring" : undefined}
@@ -578,7 +577,7 @@ export default function InventoryManagement() {
       <BulkReceiveStockDialog
         open={bulkReceiveOpen}
         onOpenChange={setBulkReceiveOpen}
-        items={outletItems}
+        items={items}
         units={units}
         outletId={selectedOutletId}
         onReceive={handleAdjustStock}
