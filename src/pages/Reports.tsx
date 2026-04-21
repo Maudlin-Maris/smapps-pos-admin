@@ -28,6 +28,7 @@ import COGSBreakdown from "@/components/reports/COGSBreakdown";
 import SalesReport from "@/components/reports/SalesReport";
 import SalesByItem from "@/components/reports/SalesByItem";
 import SalesByCategory from "@/components/reports/SalesByCategory";
+import SalesByDepartment from "@/components/reports/SalesByDepartment";
 import ReportTransactions from "@/components/reports/ReportTransactions";
 import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
 import {
@@ -37,6 +38,8 @@ import {
   exportSalesByItemPDF,
   exportSalesByCategoryExcel,
   exportSalesByCategoryPDF,
+  exportSalesByDepartmentExcel,
+  exportSalesByDepartmentPDF,
   exportTransactionsPDF,
   filterSales as filterSalesForExport,
 } from "@/lib/sales-export";
@@ -194,6 +197,8 @@ export default function Reports() {
       return exportSalesByItemExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "categories")
       return exportSalesByCategoryExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+    if (activeTab === "departments")
+      return exportSalesByDepartmentExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "transactions") {
       // Build workbook for transactions tab
 
@@ -230,6 +235,8 @@ export default function Reports() {
       return exportSalesByItemPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "categories")
       return exportSalesByCategoryPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+    if (activeTab === "departments")
+      return exportSalesByDepartmentPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "transactions")
       return exportTransactionsPDF({
         outletLabel,
@@ -486,6 +493,7 @@ export default function Reports() {
           <TabsTrigger value="sales" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales Summary</TabsTrigger>
           <TabsTrigger value="items" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Item</TabsTrigger>
           <TabsTrigger value="categories" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Category</TabsTrigger>
+          <TabsTrigger value="departments" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Department</TabsTrigger>
           <TabsTrigger value="transactions" className="flex-1 sm:flex-none text-xs sm:text-sm">Transactions</TabsTrigger>
         </TabsList>
 
@@ -613,6 +621,10 @@ export default function Reports() {
 
         <TabsContent value="categories" className="mt-6">
           <SalesByCategory sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+        </TabsContent>
+
+        <TabsContent value="departments" className="mt-6">
+          <SalesByDepartment sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
         </TabsContent>
 
         <TabsContent value="transactions" className="mt-6">
