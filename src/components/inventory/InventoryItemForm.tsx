@@ -19,8 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store, Check } from "lucide-react";
 import { outlets } from "@/data/outlets";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -122,6 +124,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
+  const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterExpiry, setFilterExpiry] = useState("all");
@@ -142,6 +145,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm(selectedOutletId));
+    setSelectedOutletIds(selectedOutletId && selectedOutletId !== "all" ? [selectedOutletId] : []);
     setOpen(true);
   };
 
@@ -161,6 +165,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       expiryDate: item.expiryDate || "",
       batches: item.batches || [],
     });
+    setSelectedOutletIds(item.outletId ? [item.outletId] : []);
     setOpen(true);
   };
 
@@ -186,6 +191,10 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       toast.error("Category and unit are required");
       return;
     }
+    if (selectedOutletIds.length === 0) {
+      toast.error("Select at least one outlet");
+      return;
+    }
     if (form.conversions.length === 0) {
       toast.error("At least one unit conversion is required");
       return;
@@ -203,14 +212,58 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       : form.stock;
 
     const status = computeStatus(finalStock, form.minStock);
+
+    // Helper: build a fresh per-outlet payload with unique batch & conversion ids
+    const buildForOutlet = (outletId: string, reuseId?: string, reuseSku?: boolean): InventoryItem => ({
+      id: reuseId ?? crypto.randomUUID(),
+      ...form,
+      sku: reuseSku ? form.sku : "",
+      outletId,
+      stock: finalStock,
+      status,
+      conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
+      batches: form.batches?.map((b) => ({ ...b, id: crypto.randomUUID() })),
+    });
+
     if (editing) {
-      setItems((prev) =>
-        prev.map((i) => (i.id === editing.id ? { ...i, ...form, stock: finalStock, status } : i))
-      );
-      toast.success("Item updated");
+      // Update the edited item in its current outlet, then add clones for any
+      // additional outlets that were selected.
+      const editingOutlet = editing.outletId;
+      const includesOriginal = selectedOutletIds.includes(editingOutlet);
+      const additionalOutlets = selectedOutletIds.filter((o) => o !== editingOutlet);
+
+      setItems((prev) => {
+        let next = prev.map((i) =>
+          i.id === editing.id
+            ? includesOriginal
+              ? { ...i, ...form, outletId: editingOutlet, stock: finalStock, status }
+              : i
+            : i,
+        );
+        // If user removed the original outlet, fall back to keeping it (don't lose data)
+        // and treat all selected as additional copies.
+        const targets = includesOriginal ? additionalOutlets : selectedOutletIds;
+        const clones = targets.map((oid) => buildForOutlet(oid));
+        next = [...next, ...clones];
+        return next;
+      });
+
+      const copyCount = (includesOriginal ? additionalOutlets : selectedOutletIds).length;
+      if (copyCount > 0) {
+        toast.success(`Item updated and copied to ${copyCount} additional outlet${copyCount > 1 ? "s" : ""}`);
+      } else {
+        toast.success("Item updated");
+      }
     } else {
-      setItems((prev) => [...prev, { id: crypto.randomUUID(), ...form, stock: finalStock, status }]);
-      toast.success("Item registered");
+      const newItems = selectedOutletIds.map((oid, idx) =>
+        buildForOutlet(oid, undefined, idx === 0),
+      );
+      setItems((prev) => [...prev, ...newItems]);
+      toast.success(
+        selectedOutletIds.length > 1
+          ? `Item registered in ${selectedOutletIds.length} outlets`
+          : "Item registered",
+      );
     }
     setOpen(false);
   };
@@ -526,6 +579,88 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <DialogTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <Store className="h-3.5 w-3.5" /> Outlets *
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between font-normal h-auto min-h-10 py-1.5">
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {selectedOutletIds.length === 0 ? (
+                        <span className="text-muted-foreground text-sm">Select outlets...</span>
+                      ) : (
+                        selectedOutletIds.map((id) => {
+                          const o = outlets.find((x) => x.id === id);
+                          if (!o) return null;
+                          return (
+                            <Badge key={id} variant="secondary" className="text-xs gap-1">
+                              {o.name}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedOutletIds((prev) => prev.filter((p) => p !== id));
+                                }}
+                                className="hover:text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          );
+                        })
+                      )}
+                    </div>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-1 max-h-72 overflow-y-auto" align="start">
+                  <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
+                    <span>{selectedOutletIds.length} selected</span>
+                    <button
+                      type="button"
+                      className="hover:text-foreground underline"
+                      onClick={() =>
+                        setSelectedOutletIds(
+                          selectedOutletIds.length === outlets.length ? [] : outlets.map((o) => o.id),
+                        )
+                      }
+                    >
+                      {selectedOutletIds.length === outlets.length ? "Clear all" : "Select all"}
+                    </button>
+                  </div>
+                  {outlets.map((o) => {
+                    const checked = selectedOutletIds.includes(o.id);
+                    return (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedOutletIds((prev) =>
+                            checked ? prev.filter((p) => p !== o.id) : [...prev, o.id],
+                          )
+                        }
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground text-left"
+                      >
+                        <div className={cn("h-4 w-4 rounded border flex items-center justify-center", checked ? "bg-primary border-primary text-primary-foreground" : "border-input")}>
+                          {checked && <Check className="h-3 w-3" />}
+                        </div>
+                        <span className="flex-1">{o.name}</span>
+                      </button>
+                    );
+                  })}
+                </PopoverContent>
+              </Popover>
+              {editing && selectedOutletIds.length > 1 && (
+                <p className="text-[11px] text-muted-foreground">
+                  Selecting additional outlets will create copies of this item in those outlets.
+                </p>
+              )}
+              {!editing && selectedOutletIds.length > 1 && (
+                <p className="text-[11px] text-muted-foreground">
+                  This item will be registered in {selectedOutletIds.length} outlets. SKU will only apply to the first; set unique SKUs per outlet later.
+                </p>
+              )}
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Item Name *</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
