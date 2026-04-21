@@ -540,7 +540,6 @@ export default function InventoryManagement() {
           units={units}
           onAdjustStock={isAllOutlets ? undefined : openAdjust}
           readOnly={false}
-          allowRegister
           selectedOutletId={selectedOutletId}
           filterLowStock={showLowStock}
           filterExpiryStatus={showExpired ? "expired" : showExpiringSoon ? "expiring" : undefined}
