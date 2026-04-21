@@ -19,8 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store, Check } from "lucide-react";
 import { outlets } from "@/data/outlets";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
