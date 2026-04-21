@@ -299,6 +299,8 @@ export default function MenuManagement() {
           onSave={handleSave}
           mode={formMode}
           businessType={currentOutlet?.businessType}
+          outlets={outlets}
+          currentOutletId={selectedOutletId}
         />
       )}
 
