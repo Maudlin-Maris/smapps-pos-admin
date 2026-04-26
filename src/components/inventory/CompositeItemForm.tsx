@@ -40,6 +40,9 @@ export interface CompositeComponent {
   inventoryItemId: string;
   quantity: number;
   role: ComponentRole;
+  /** Unit the quantity is expressed in. Undefined = the item's base unit.
+   *  Otherwise must match one of the item's conversion `toUnitId`s. */
+  unitId?: string;
 }
 
 export interface CompositeItem {
@@ -188,6 +191,53 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   };
 
   const getItemName = (id: string) => inventoryItems.find((i) => i.id === id)?.name || "Unknown";
+  const getItem = (id: string) => inventoryItems.find((i) => i.id === id);
+  const getUnitAbbr = (unitId?: string) =>
+    unitId ? units.find((u) => u.id === unitId)?.abbreviation || "" : "";
+  /** Abbreviation for a component's selected unit (falls back to base unit). */
+  const getComponentUnitAbbr = (comp: CompositeComponent) => {
+    const item = getItem(comp.inventoryItemId);
+    if (!item) return "";
+    const unitId = comp.unitId || item.unitId;
+    return getUnitAbbr(unitId);
+  };
+  /** Unit options available for a component: base unit + every conversion target. */
+  const getComponentUnitOptions = (itemId: string) => {
+    const item = getItem(itemId);
+    if (!item) return [] as { id: string; label: string; baseUnitsPer: number }[];
+    const baseUnit = units.find((u) => u.id === item.unitId);
+    const opts: { id: string; label: string; baseUnitsPer: number }[] = [
+      {
+        id: item.unitId,
+        label: baseUnit ? `${baseUnit.name} (${baseUnit.abbreviation})` : "Base unit",
+        baseUnitsPer: 1,
+      },
+    ];
+    (item.conversions || []).forEach((c) => {
+      if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0) return;
+      const u = units.find((x) => x.id === c.toUnitId);
+      if (!u) return;
+      // 1 sub-unit = fromQuantity / toQuantity base units
+      opts.push({
+        id: c.toUnitId,
+        label: `${u.name} (${u.abbreviation})`,
+        baseUnitsPer: c.fromQuantity / c.toQuantity,
+      });
+    });
+    return opts;
+  };
+  /** Cost per 1 of the component's selected unit. */
+  const getComponentUnitCost = (comp: CompositeComponent) => {
+    const item = getItem(comp.inventoryItemId);
+    if (!item) return 0;
+    const baseCost = item.costPrice ?? 0;
+    if (!comp.unitId || comp.unitId === item.unitId) return baseCost;
+    const opt = getComponentUnitOptions(comp.inventoryItemId).find((o) => o.id === comp.unitId);
+    return baseCost * (opt?.baseUnitsPer ?? 1);
+  };
+  const getComponentLineCost = (comp: CompositeComponent) =>
+    getComponentUnitCost(comp) * (comp.quantity || 0);
+  // Back-compat for card list rendering
   const getItemUnit = (id: string) => {
     const item = inventoryItems.find((i) => i.id === id);
     if (!item) return "";
@@ -197,12 +247,8 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
   // Live cost economics for the form being edited.
   const rawCost = useMemo(
-    () =>
-      form.components.reduce(
-        (sum, c) => sum + (c.inventoryItemId ? getItemCost(c.inventoryItemId) * (c.quantity || 0) : 0),
-        0
-      ),
-    [form.components, inventoryItems]
+    () => form.components.reduce((sum, c) => sum + getComponentLineCost(c), 0),
+    [form.components, inventoryItems, units]
   );
   const overheadValue = form.overheadPerUnit === "" ? 0 : Number(form.overheadPerUnit) || 0;
   const totalCost = rawCost + overheadValue;
@@ -267,7 +313,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               {item.components.map((comp, i) => (
                 <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className={cn("h-1.5 w-1.5 rounded-full", comp.role === "primary" ? "bg-primary" : "bg-muted-foreground/40")} />
-                  {getItemName(comp.inventoryItemId)} — {comp.quantity} {getItemUnit(comp.inventoryItemId)}
+                  {getItemName(comp.inventoryItemId)} — {comp.quantity} {getComponentUnitAbbr(comp) || getItemUnit(comp.inventoryItemId)}
                   <Badge variant={comp.role === "primary" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 h-4 ml-auto">
                     {comp.role}
                   </Badge>
@@ -276,7 +322,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
             </ul>
             {(() => {
               const cardCost = item.components.reduce(
-                (s, c) => s + getItemCost(c.inventoryItemId) * (c.quantity || 0),
+                (s, c) => s + getComponentLineCost(c),
                 0
               ) + (item.overheadPerUnit ?? 0);
               const cardSell = item.sellPrice ?? 0;
@@ -346,59 +392,94 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               {form.components.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-lg">No components added yet</p>
               )}
-              {form.components.map((comp, i) => (
-                <div key={i} className="space-y-2 p-3 border rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <ItemCombobox
-                      inventoryItems={inventoryItems}
-                      value={comp.inventoryItemId}
-                      onSelect={(v) => updateComponent(i, "inventoryItemId", v)}
-                    />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      className="w-24"
-                      value={comp.quantity}
-                      onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
-                      min={0}
-                      step={0.1}
-                      placeholder="Qty"
-                    />
-                    <span className="text-xs text-muted-foreground w-10 shrink-0">
-                      {getItemUnit(comp.inventoryItemId)}
-                    </span>
-                    {comp.inventoryItemId && (
-                      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-                        @ {formatNaira(getItemCost(comp.inventoryItemId))} = <span className="font-medium text-foreground">{formatNaira(getItemCost(comp.inventoryItemId) * (comp.quantity || 0))}</span>
-                      </span>
-                    )}
-                    <div className="flex gap-1 ml-auto">
-                      <Button
-                        type="button"
-                        variant={comp.role === "primary" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs px-2.5"
-                        onClick={() => updateComponent(i, "role", "primary")}
-                      >
-                        Primary
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={comp.role === "secondary" ? "secondary" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs px-2.5"
-                        onClick={() => updateComponent(i, "role", "secondary")}
-                      >
-                        Secondary
+              {form.components.map((comp, i) => {
+                const unitOptions = comp.inventoryItemId
+                  ? getComponentUnitOptions(comp.inventoryItemId)
+                  : [];
+                const item = getItem(comp.inventoryItemId);
+                const activeUnitId = comp.unitId || item?.unitId || "";
+                const unitCost = getComponentUnitCost(comp);
+                const lineCost = unitCost * (comp.quantity || 0);
+                return (
+                  <div key={i} className="space-y-2 p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <ItemCombobox
+                        inventoryItems={inventoryItems}
+                        value={comp.inventoryItemId}
+                        onSelect={(v) => {
+                          // Reset unit when the underlying item changes so we
+                          // don't carry over a unitId that's no longer valid.
+                          setForm((f) => {
+                            const updated = [...f.components];
+                            updated[i] = { ...updated[i], inventoryItemId: v, unitId: undefined };
+                            return { ...f, components: updated };
+                          });
+                        }}
+                      />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
+                        <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={comp.quantity}
+                        onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
+                        min={0}
+                        step={0.1}
+                        placeholder="Qty"
+                      />
+                      {comp.inventoryItemId && unitOptions.length > 0 ? (
+                        <Select
+                          value={activeUnitId}
+                          onValueChange={(v) => updateComponent(i, "unitId", v)}
+                        >
+                          <SelectTrigger className="h-9 w-32">
+                            <SelectValue placeholder="Unit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {unitOptions.map((opt) => (
+                              <SelectItem key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-xs text-muted-foreground w-10 shrink-0">
+                          {getItemUnit(comp.inventoryItemId)}
+                        </span>
+                      )}
+                      {comp.inventoryItemId && (
+                        <span className="text-[11px] text-muted-foreground tabular-nums">
+                          @ {formatNaira(unitCost)} = <span className="font-medium text-foreground">{formatNaira(lineCost)}</span>
+                        </span>
+                      )}
+                      <div className="flex gap-1 ml-auto">
+                        <Button
+                          type="button"
+                          variant={comp.role === "primary" ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs px-2.5"
+                          onClick={() => updateComponent(i, "role", "primary")}
+                        >
+                          Primary
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={comp.role === "secondary" ? "secondary" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs px-2.5"
+                          onClick={() => updateComponent(i, "role", "secondary")}
+                        >
+                          Secondary
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Cost & Pricing — derived from components (BOM) */}
