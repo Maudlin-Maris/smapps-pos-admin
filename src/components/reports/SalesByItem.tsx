@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
 import { CalendarRange, Star, Search, Info } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { aggregateItems, dailySalesShareFor, filterSales, formatCurrency } from "./salesData";
@@ -33,20 +33,21 @@ function ColumnHeader({ label, align = "left" }: { label: string; align?: "left"
     <span className={`inline-flex items-center gap-1 ${align === "right" ? "justify-end w-full" : ""}`}>
       <span>{label}</span>
       {help && (
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <Popover>
+          <PopoverTrigger asChild>
             <button
               type="button"
               aria-label={`What is ${label}?`}
               className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={(e) => e.stopPropagation()}
             >
               <Info className="h-3 w-3" />
             </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[240px] text-xs">
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words normal-case tracking-normal">
             {help}
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       )}
     </span>
   );
@@ -108,7 +109,7 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
   const topPag = usePagination(topItems, 5);
 
   return (
-    <TooltipProvider delayDuration={150}>
+    <>
     <div className="space-y-4 sm:space-y-6">
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
@@ -318,6 +319,6 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
         </DialogContent>
       </Dialog>
     </div>
-    </TooltipProvider>
+    </>
   );
 }
