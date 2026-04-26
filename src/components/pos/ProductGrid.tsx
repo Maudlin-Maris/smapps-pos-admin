@@ -20,6 +20,7 @@ export default function ProductGrid() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
+  const [dialogUnitId, setDialogUnitId] = useState<string | undefined>(undefined);
   const [cameraOpen, setCameraOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
