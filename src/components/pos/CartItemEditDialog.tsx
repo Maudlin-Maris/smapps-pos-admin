@@ -3,7 +3,7 @@ import { type POSCartItem, posProducts } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Trash2, Minus, Plus } from "lucide-react";
+import { Check, Trash2, Minus, Plus, Package, Pill } from "lucide-react";
 
 interface Props {
   item: POSCartItem | null;
@@ -15,25 +15,40 @@ interface Props {
 
 export default function CartItemEditDialog({ item, open, onClose, onSave, onRemove }: Props) {
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>();
+  const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>();
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
 
   const product = item ? posProducts.find(p => p.id === item.productId) : null;
 
   useEffect(() => {
-    if (item && open) {
-      setSelectedVariant(item.variantId);
+    if (item && open && product) {
+      const realVariant = product.variants?.find(v => v.id === item.variantId);
+      const matchedUnit = product.sellableUnits?.find(u => u.id === item.variantId);
+      setSelectedVariant(realVariant?.id);
+      // If item.variantId points to a unit (not a real variant), preselect it.
+      // Otherwise fall back to default unit when product has units.
+      if (matchedUnit) {
+        setSelectedUnitId(matchedUnit.id);
+      } else if (product.sellableUnits && product.sellableUnits.length > 0) {
+        const def = product.sellableUnits.find(u => u.isDefault) || product.sellableUnits[0];
+        setSelectedUnitId(def.id);
+      } else {
+        setSelectedUnitId(undefined);
+      }
       const qtyMap: Record<string, number> = {};
       item.extras.forEach(e => { qtyMap[e.id] = e.quantity || 1; });
       setExtraQuantities(qtyMap);
     }
-  }, [item, open]);
+  }, [item, open, product]);
 
   if (!item || !product) return null;
 
   const hasVariants = product.variants && product.variants.length > 0;
   const hasExtras = product.extras && product.extras.length > 0;
+  const hasUnits = !!(product.sellableUnits && product.sellableUnits.length > 0);
   const variant = product.variants?.find(v => v.id === selectedVariant);
-  const basePrice = variant?.price ?? product.price;
+  const selectedUnit = product.sellableUnits?.find(u => u.id === selectedUnitId);
+  const basePrice = selectedUnit?.price ?? variant?.price ?? product.price;
   const selectedExtras = product.extras?.filter(e => (extraQuantities[e.id] || 0) > 0) ?? [];
   const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * (extraQuantities[e.id] || 1), 0);
   const totalPrice = (basePrice + extrasTotal) * item.quantity;
@@ -64,10 +79,13 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
   };
 
   const handleSave = () => {
+    const labelParts = [variant?.name, selectedUnit?.name].filter(Boolean) as string[];
+    const finalVariantName = labelParts.length > 0 ? labelParts.join(" · ") : undefined;
+    const finalVariantId = variant?.id ?? selectedUnit?.id;
     onSave(
       item.id,
-      variant?.id,
-      variant?.name,
+      finalVariantId,
+      finalVariantName,
       selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price, quantity: extraQuantities[e.id] || 1 })),
       basePrice
     );
@@ -96,6 +114,45 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
         <DialogHeader>
           <DialogTitle className="text-lg">Edit: {product.name}</DialogTitle>
         </DialogHeader>
+
+        {hasUnits && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Package className="w-3.5 h-3.5 text-primary" />
+                Sell as
+              </p>
+              <span className="text-[11px] text-muted-foreground">Pick the unit the customer wants</span>
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              {product.sellableUnits!.map(u => {
+                const active = selectedUnitId === u.id;
+                return (
+                  <button
+                    key={u.id}
+                    onClick={() => setSelectedUnitId(u.id)}
+                    className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
+                      active
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Pill className={`w-4 h-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
+                      <div>
+                        <p className="text-sm font-medium leading-tight">{u.name}</p>
+                        {u.shortLabel && (
+                          <p className="text-[11px] text-muted-foreground leading-tight">Charged per {u.shortLabel.toLowerCase()}</p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold">{formatNaira(u.price)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {hasVariants && (
           <div className="space-y-2">
