@@ -169,13 +169,13 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
     if (editing) {
       setComposites((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, sellPrice: sellPriceNum, overheadPerUnit: overheadNum } : c))
+        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, sellPrice: sellPriceNum, overheadPerUnit: overheadNum, pricingMethod: form.pricingMethod, pricingValue: form.pricingValue } : c))
       );
       toast.success("Composite item updated");
     } else {
       setComposites((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "", sellPrice: sellPriceNum, overheadPerUnit: overheadNum },
+        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "", sellPrice: sellPriceNum, overheadPerUnit: overheadNum, pricingMethod: form.pricingMethod, pricingValue: form.pricingValue },
       ]);
       toast.success("Composite item created");
     }
