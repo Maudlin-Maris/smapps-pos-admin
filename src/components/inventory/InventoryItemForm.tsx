@@ -192,6 +192,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     setEditing(null);
     const seed = selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "";
     setForm(emptyForm(seed));
+    setSyncToCatalog(true);
     setOpen(true);
   };
 
@@ -205,12 +206,16 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       stock: item.stock,
       minStock: item.minStock,
       costPrice: item.costPrice,
+      sellPrice: item.sellPrice ?? Math.round(item.costPrice * 1.3 * 100) / 100,
+      pricingMethod: item.pricingMethod ?? "markup",
+      pricingValue: item.pricingValue ?? 30,
       conversions: item.conversions || [],
       outletId: item.outletId,
       batchNumber: item.batchNumber || "",
       expiryDate: item.expiryDate || "",
       batches: item.batches || [],
     });
+    setSyncToCatalog(true);
     setOpen(true);
   };
 
