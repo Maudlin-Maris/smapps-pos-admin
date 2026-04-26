@@ -96,7 +96,20 @@ type FormState = Omit<InventoryItem, "id" | "status">;
 
 export const BATCH_EXPIRY_BUSINESS_TYPES = ["pharmacy", "grocery", "supermarket"];
 
-const EXPIRY_SOON_DAYS = 90;
+export const RETAIL_BUSINESS_TYPES: BusinessTypeId[] = [
+  "grocery", "supermarket", "pharmacy", "wine_store", "clothing",
+  "electronics", "hair_seller", "retail",
+];
+
+function calcSellPrice(costPrice: number, method: PricingMethod, value: number): number {
+  if (method === "fixed") return value;
+  if (method === "markup") return costPrice * (1 + value / 100);
+  if (method === "margin") {
+    if (value >= 100) return costPrice * 10;
+    return costPrice / (1 - value / 100);
+  }
+  return costPrice;
+}
 
 const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
@@ -106,6 +119,9 @@ const emptyForm = (outletId: string = ""): FormState => ({
   stock: 0,
   minStock: 0,
   costPrice: 0,
+  sellPrice: 0,
+  pricingMethod: "markup",
+  pricingValue: 30,
   conversions: [],
   outletId,
   batchNumber: "",
