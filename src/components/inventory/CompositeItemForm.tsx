@@ -25,13 +25,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Pencil, Trash2, Layers, X, ChevronsUpDown, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, X, ChevronsUpDown, Check, Tag, TrendingUp, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { formatNaira } from "@/lib/currency";
 
 export type ComponentRole = "primary" | "secondary";
+export type CompositePricingMethod = "markup" | "margin" | "fixed";
 
 export interface CompositeComponent {
   inventoryItemId: string;
@@ -52,6 +55,20 @@ export interface CompositeItem {
   /** Per-recipe override for packaging + staff + power allocation per unit produced.
    *  Falls back to the outlet-level default when undefined. */
   overheadPerUnit?: number;
+  /** Pricing strategy used to derive sellPrice from total cost. */
+  pricingMethod?: CompositePricingMethod;
+  /** Value paired with pricingMethod (% for markup/margin, ₦ for fixed). */
+  pricingValue?: number;
+}
+
+function calcCompositeSellPrice(totalCost: number, method: CompositePricingMethod, value: number): number {
+  if (method === "fixed") return value;
+  if (method === "markup") return totalCost * (1 + value / 100);
+  if (method === "margin") {
+    if (value >= 100) return totalCost * 10;
+    return totalCost / (1 - value / 100);
+  }
+  return totalCost;
 }
 
 interface Props {
