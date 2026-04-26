@@ -566,6 +566,17 @@ export default function InventoryManagement() {
           selectedOutletId={selectedOutletId}
           filterLowStock={showLowStock}
           filterExpiryStatus={showExpired ? "expired" : showExpiringSoon ? "expiring" : undefined}
+          profitability={profitability.rawMaterials}
+        />
+      )}
+      {tab === "profitability" && (
+        <ProfitabilityView
+          inventoryItems={outletItems}
+          composites={outletComposites}
+          units={units}
+          outletOverheadDefaults={outletOverheadDefaults}
+          setOutletOverheadDefaults={setOutletOverheadDefaults}
+          selectedOutletId={selectedOutletId}
         />
       )}
       {tab === "adjustments" && (
