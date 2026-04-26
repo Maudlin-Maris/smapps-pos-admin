@@ -3,7 +3,7 @@ import { type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Minus, Plus } from "lucide-react";
+import { Check, Minus, Plus, Package, Pill } from "lucide-react";
 
 interface Props {
   product: POSProduct | null;
@@ -12,6 +12,8 @@ interface Props {
   onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
   initialVariantId?: string;
   initialExtras?: { id: string; quantity: number }[];
+  /** Preselect a sellable unit (e.g. when scanning a sachet barcode) */
+  initialSellableUnitId?: string;
 }
 
 export default function VariantExtrasDialog({ product, open, onClose, onConfirm, initialVariantId, initialExtras }: Props) {
