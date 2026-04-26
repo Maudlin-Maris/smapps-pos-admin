@@ -147,41 +147,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     return o ? BATCH_EXPIRY_BUSINESS_TYPES.includes(o.businessType) : false;
   };
 
-  // Ensure every selected outlet has a stock entry; remove unselected ones.
-  useEffect(() => {
-    setOutletStocks((prev) => {
-      const next: typeof prev = {};
-      selectedOutletIds.forEach((oid) => {
-        next[oid] = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      });
-      return next;
-    });
-  }, [selectedOutletIds]);
-
-  const updateOutletStock = (oid: string, patch: Partial<{ stock: number; minStock: number; batches: ItemBatch[] }>) => {
-    setOutletStocks((prev) => ({ ...prev, [oid]: { ...(prev[oid] ?? { stock: 0, minStock: 0, batches: [] }), ...patch } }));
-  };
-
-  const addOutletBatch = (oid: string) => {
-    setOutletStocks((prev) => {
-      const cur = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      return { ...prev, [oid]: { ...cur, batches: [...cur.batches, { id: crypto.randomUUID(), batchNumber: "", expiryDate: "", quantity: 0 }] } };
-    });
-  };
-
-  const updateOutletBatch = (oid: string, idx: number, patch: Partial<ItemBatch>) => {
-    setOutletStocks((prev) => {
-      const cur = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      return { ...prev, [oid]: { ...cur, batches: cur.batches.map((b, i) => (i === idx ? { ...b, ...patch } : b)) } };
-    });
-  };
-
-  const removeOutletBatch = (oid: string, idx: number) => {
-    setOutletStocks((prev) => {
-      const cur = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      return { ...prev, [oid]: { ...cur, batches: cur.batches.filter((_, i) => i !== idx) } };
-    });
-  };
 
   const toggleBatchExpand = (itemId: string) => {
     setExpandedBatches(prev => {
