@@ -54,6 +54,9 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
   };
 
   const totalQty = visibleItems.reduce((s, i) => s + i.qty, 0);
+  const totalGross = visibleItems.reduce((s, i) => s + i.grossRevenue, 0);
+  const totalDiscount = visibleItems.reduce((s, i) => s + i.discount, 0);
+  const totalTax = visibleItems.reduce((s, i) => s + i.tax, 0);
   const totalRevenue = visibleItems.reduce((s, i) => s + i.revenue, 0);
   const totalCost = visibleItems.reduce((s, i) => s + i.cost, 0);
   const totalProfit = totalRevenue - totalCost;
@@ -76,17 +79,21 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
           <p className="text-lg sm:text-2xl font-bold">{totalQty}</p>
         </Card>
         <Card className="p-3 sm:p-4">
-          <p className="text-xs text-muted-foreground">Total Revenue</p>
+          <p className="text-xs text-muted-foreground">Net Revenue</p>
           <p className="text-lg sm:text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Gross {formatCurrency(totalGross)} − Disc {formatCurrency(totalDiscount)}
+          </p>
         </Card>
         <Card className="p-3 sm:p-4">
           <p className="text-xs text-muted-foreground">Total Cost (COGS)</p>
           <p className="text-lg sm:text-2xl font-bold">{formatCurrency(totalCost)}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Tax collected {formatCurrency(totalTax)}</p>
         </Card>
         <Card className="p-3 sm:p-4 col-span-2 md:col-span-3 lg:col-span-1">
           <p className="text-xs text-muted-foreground">True Profit</p>
           <p className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(totalProfit)}</p>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Margin {overallMargin.toFixed(1)}%</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Margin {overallMargin.toFixed(1)}% • Net of disc, ex-tax</p>
         </Card>
       </div>
 
@@ -172,12 +179,15 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Item</TableHead>
+                  <TableHead className="text-xs sticky left-0 z-20 bg-card shadow-[1px_0_0_0_hsl(var(--border))] min-w-[180px]">Item</TableHead>
                   <TableHead className="text-xs">Category</TableHead>
                   <TableHead className="text-right text-xs">Qty</TableHead>
                   <TableHead className="text-right text-xs">Unit Cost</TableHead>
                   <TableHead className="text-right text-xs">Total Cost</TableHead>
-                  <TableHead className="text-right text-xs">Revenue</TableHead>
+                  <TableHead className="text-right text-xs">Gross Rev.</TableHead>
+                  <TableHead className="text-right text-xs">Discount</TableHead>
+                  <TableHead className="text-right text-xs">Tax</TableHead>
+                  <TableHead className="text-right text-xs">Net Revenue</TableHead>
                   <TableHead className="text-right text-xs">Profit</TableHead>
                   <TableHead className="text-right text-xs">Margin</TableHead>
                   <TableHead className="text-right text-xs w-[60px]">Daily</TableHead>
@@ -186,12 +196,17 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
               <TableBody>
                 {itemsPag.paginatedItems.length > 0 ? (
                   itemsPag.paginatedItems.map((item) => (
-                    <TableRow key={item.name}>
-                      <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{item.name}</TableCell>
+                    <TableRow key={item.name} className="group">
+                      <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap sticky left-0 z-10 bg-card group-hover:bg-muted/50 shadow-[1px_0_0_0_hsl(var(--border))] min-w-[180px]">{item.name}</TableCell>
                       <TableCell className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{item.category}</TableCell>
                       <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
                       <TableCell className="text-right text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{formatCurrency(item.unitCost)}</TableCell>
                       <TableCell className="text-right text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{formatCurrency(item.cost)}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm whitespace-nowrap">{formatCurrency(item.grossRevenue)}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm text-destructive whitespace-nowrap">
+                        {item.discount > 0 ? `−${formatCurrency(item.discount)}` : formatCurrency(0)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{formatCurrency(item.tax)}</TableCell>
                       <TableCell className="text-right font-semibold text-xs sm:text-sm whitespace-nowrap">{formatCurrency(item.revenue)}</TableCell>
                       <TableCell className={`text-right font-semibold text-xs sm:text-sm whitespace-nowrap ${item.profit >= 0 ? "text-primary" : "text-destructive"}`}>
                         {formatCurrency(item.profit)}
@@ -215,7 +230,7 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground text-xs">No items match</TableCell>
+                    <TableCell colSpan={12} className="text-center text-muted-foreground text-xs">No items match</TableCell>
                   </TableRow>
                 )}
               </TableBody>
