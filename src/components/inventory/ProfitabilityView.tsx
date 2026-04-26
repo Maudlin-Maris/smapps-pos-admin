@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronDown, ChevronUp, TrendingUp, Info, Settings2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { computeProfitability } from "@/lib/profitability";
@@ -99,7 +99,7 @@ export default function ProfitabilityView({
     usePagination(rows);
 
   return (
-    <TooltipProvider delayDuration={150}>
+    <>
       <div className="space-y-4">
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -346,7 +346,7 @@ export default function ProfitabilityView({
           Profit / unit raw = recipe profit ÷ qty of raw material per serving. Weighted average across recipes is weighted by the qty each recipe consumes.
         </p>
       </div>
-    </TooltipProvider>
+    </>
   );
 }
 
@@ -366,14 +366,16 @@ function KpiCard({
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
         {icon}
         <span>{label}</span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Info className="h-3 w-3 cursor-help opacity-60" />
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[240px] text-xs">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" aria-label={`What is ${label}?`} className="text-muted-foreground hover:text-foreground transition-colors">
+              <Info className="h-3 w-3 opacity-60" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
             {hint}
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
       <div className="font-heading font-bold text-lg truncate">{value}</div>
     </Card>
@@ -384,14 +386,16 @@ function HeaderHint({ label, hint }: { label: string; hint: string }) {
   return (
     <span className="inline-flex items-center gap-1 justify-end">
       {label}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Info className="h-3 w-3 cursor-help opacity-60" />
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-[240px] text-xs normal-case tracking-normal">
+      <Popover>
+        <PopoverTrigger asChild>
+          <button type="button" aria-label={`What is ${label}?`} onClick={(e) => e.stopPropagation()} className="text-muted-foreground hover:text-foreground transition-colors">
+            <Info className="h-3 w-3 opacity-60" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="bottom" align="end" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words normal-case tracking-normal">
           {hint}
-        </TooltipContent>
-      </Tooltip>
+        </PopoverContent>
+      </Popover>
     </span>
   );
 }
