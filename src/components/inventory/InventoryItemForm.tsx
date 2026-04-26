@@ -553,6 +553,22 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     </p>
                     <p className="text-xs text-muted-foreground">Min: {item.minStock}</p>
                   </div>
+                  {(() => {
+                    const p = profitability?.[item.id];
+                    if (!p || !p.hasAnyPricedRecipe) return null;
+                    const ppu = p.weightedProfitPerUnit;
+                    const total = p.totalContribution;
+                    const positive = ppu >= 0;
+                    return (
+                      <div className="text-right hidden md:block" title={`Weighted profit per ${unit?.abbreviation || "unit"} across ${p.recipesUsing.length} recipe(s)`}>
+                        <p className={cn("text-sm font-heading font-bold", positive ? "text-success" : "text-destructive")}>
+                          ₦{ppu.toFixed(2)}
+                          <span className="text-muted-foreground font-normal text-xs">/{unit?.abbreviation || "u"}</span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">Stock value: ₦{total.toFixed(0)}</p>
+                      </div>
+                    );
+                  })()}
                   <Badge
                     variant={item.status === "good" ? "default" : "secondary"}
                     className={cn(
