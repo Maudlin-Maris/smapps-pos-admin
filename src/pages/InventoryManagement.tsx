@@ -34,6 +34,8 @@ import StockAdjustmentHistory, {
   type AdjustmentType,
 } from "@/components/inventory/StockAdjustmentHistory";
 import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialog";
+import ProfitabilityView from "@/components/inventory/ProfitabilityView";
+import { computeProfitability } from "@/lib/profitability";
 
 const defaultItems: InventoryItem[] = [
   // Restaurant (outlet-1, outlet-3)
@@ -154,7 +156,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 type MenuItemOption = { id: string; name: string; variants: { id: string; name: string }[] };
 
-type Tab = "stock" | "categories" | "units" | "composite" | "adjustments";
+type Tab = "stock" | "categories" | "units" | "composite" | "adjustments" | "profitability";
 
 const sampleMenuItems: MenuItemOption[] = [
   // Restaurant
