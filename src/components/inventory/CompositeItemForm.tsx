@@ -191,6 +191,53 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   };
 
   const getItemName = (id: string) => inventoryItems.find((i) => i.id === id)?.name || "Unknown";
+  const getItem = (id: string) => inventoryItems.find((i) => i.id === id);
+  const getUnitAbbr = (unitId?: string) =>
+    unitId ? units.find((u) => u.id === unitId)?.abbreviation || "" : "";
+  /** Abbreviation for a component's selected unit (falls back to base unit). */
+  const getComponentUnitAbbr = (comp: CompositeComponent) => {
+    const item = getItem(comp.inventoryItemId);
+    if (!item) return "";
+    const unitId = comp.unitId || item.unitId;
+    return getUnitAbbr(unitId);
+  };
+  /** Unit options available for a component: base unit + every conversion target. */
+  const getComponentUnitOptions = (itemId: string) => {
+    const item = getItem(itemId);
+    if (!item) return [] as { id: string; label: string; baseUnitsPer: number }[];
+    const baseUnit = units.find((u) => u.id === item.unitId);
+    const opts: { id: string; label: string; baseUnitsPer: number }[] = [
+      {
+        id: item.unitId,
+        label: baseUnit ? `${baseUnit.name} (${baseUnit.abbreviation})` : "Base unit",
+        baseUnitsPer: 1,
+      },
+    ];
+    (item.conversions || []).forEach((c) => {
+      if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0) return;
+      const u = units.find((x) => x.id === c.toUnitId);
+      if (!u) return;
+      // 1 sub-unit = fromQuantity / toQuantity base units
+      opts.push({
+        id: c.toUnitId,
+        label: `${u.name} (${u.abbreviation})`,
+        baseUnitsPer: c.fromQuantity / c.toQuantity,
+      });
+    });
+    return opts;
+  };
+  /** Cost per 1 of the component's selected unit. */
+  const getComponentUnitCost = (comp: CompositeComponent) => {
+    const item = getItem(comp.inventoryItemId);
+    if (!item) return 0;
+    const baseCost = item.costPrice ?? 0;
+    if (!comp.unitId || comp.unitId === item.unitId) return baseCost;
+    const opt = getComponentUnitOptions(comp.inventoryItemId).find((o) => o.id === comp.unitId);
+    return baseCost * (opt?.baseUnitsPer ?? 1);
+  };
+  const getComponentLineCost = (comp: CompositeComponent) =>
+    getComponentUnitCost(comp) * (comp.quantity || 0);
+  // Back-compat for card list rendering
   const getItemUnit = (id: string) => {
     const item = inventoryItems.find((i) => i.id === id);
     if (!item) return "";
@@ -200,12 +247,8 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
   // Live cost economics for the form being edited.
   const rawCost = useMemo(
-    () =>
-      form.components.reduce(
-        (sum, c) => sum + (c.inventoryItemId ? getItemCost(c.inventoryItemId) * (c.quantity || 0) : 0),
-        0
-      ),
-    [form.components, inventoryItems]
+    () => form.components.reduce((sum, c) => sum + getComponentLineCost(c), 0),
+    [form.components, inventoryItems, units]
   );
   const overheadValue = form.overheadPerUnit === "" ? 0 : Number(form.overheadPerUnit) || 0;
   const totalCost = rawCost + overheadValue;
