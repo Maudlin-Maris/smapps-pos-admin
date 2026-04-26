@@ -31,7 +31,34 @@ export default function ProductGrid() {
   const handleBarcodeScan = useCallback((barcode: string) => {
     const outletProducts = posProducts.filter(p => !currentOutlet || p.outletId === currentOutlet.id);
 
-    // First check variant SKUs
+    // 1) Check sellable-unit barcodes (e.g. scanning a single sachet barcode adds a sachet)
+    for (const product of outletProducts) {
+      if (!product.inStock || !product.sellableUnits) continue;
+      const matchedUnit = product.sellableUnits.find(u => u.barcode === barcode);
+      if (matchedUnit) {
+        // If the product also has variants/extras, open the dialog with the unit preselected.
+        if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
+          setDialogUnitId(matchedUnit.id);
+          setDialogProduct(product);
+        } else {
+          addToCart({
+            productId: product.id,
+            productName: product.name,
+            categoryId: product.categoryId,
+            variantId: matchedUnit.id,
+            variantName: matchedUnit.name,
+            extras: [],
+            quantity: 1,
+            unitPrice: matchedUnit.price,
+            totalPrice: matchedUnit.price,
+          });
+          toast.success(`Added ${product.name} — ${matchedUnit.shortLabel ?? matchedUnit.name}`);
+        }
+        return true;
+      }
+    }
+
+    // 2) Check variant SKUs
     for (const product of outletProducts) {
       if (!product.inStock) continue;
       if (product.variants) {
@@ -54,10 +81,15 @@ export default function ProductGrid() {
       }
     }
 
-    // Then check product barcode
+    // 3) Check product barcode
     const found = outletProducts.find(p => p.barcode === barcode && p.inStock);
     if (found) {
-      if ((found.variants && found.variants.length > 0) || (found.extras && found.extras.length > 0)) {
+      const needsPicker =
+        (found.variants && found.variants.length > 0) ||
+        (found.extras && found.extras.length > 0) ||
+        (found.sellableUnits && found.sellableUnits.length > 1);
+      if (needsPicker) {
+        setDialogUnitId(undefined);
         setDialogProduct(found);
       } else {
         addToCart({
