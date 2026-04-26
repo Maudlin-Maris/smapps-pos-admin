@@ -237,6 +237,36 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   };
   const getComponentLineCost = (comp: CompositeComponent) =>
     getComponentUnitCost(comp) * (comp.quantity || 0);
+  /** Base units consumed per 1 composite unit produced. */
+  const getComponentBaseUnitsConsumed = (comp: CompositeComponent) => {
+    const item = getItem(comp.inventoryItemId);
+    if (!item) return 0;
+    let baseUnitsPer = 1;
+    if (comp.unitId && comp.unitId !== item.unitId) {
+      const opt = getComponentUnitOptions(comp.inventoryItemId).find((o) => o.id === comp.unitId);
+      baseUnitsPer = opt?.baseUnitsPer ?? 1;
+    }
+    return (comp.quantity || 0) * baseUnitsPer;
+  };
+  /** Max producible composite units given current component stocks.
+   *  Returns { producible, limitingComponentId } — producible = Infinity if no valid components. */
+  const getProducibleQty = (components: CompositeComponent[]) => {
+    let min = Infinity;
+    let limitingId: string | undefined;
+    for (const c of components) {
+      if (!c.inventoryItemId) continue;
+      const consumed = getComponentBaseUnitsConsumed(c);
+      if (consumed <= 0) continue;
+      const item = getItem(c.inventoryItemId);
+      const stock = item?.stock ?? 0;
+      const possible = Math.floor(stock / consumed);
+      if (possible < min) {
+        min = possible;
+        limitingId = c.inventoryItemId;
+      }
+    }
+    return { producible: min === Infinity ? 0 : min, limitingId, hasComponents: min !== Infinity };
+  };
   // Back-compat for card list rendering
   const getItemUnit = (id: string) => {
     const item = inventoryItems.find((i) => i.id === id);
