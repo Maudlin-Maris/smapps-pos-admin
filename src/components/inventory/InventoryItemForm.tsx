@@ -59,6 +59,9 @@ export interface InventoryItem {
   stock: number;
   minStock: number;
   costPrice: number;
+  sellPrice?: number;
+  pricingMethod?: PricingMethod;
+  pricingValue?: number;
   status: "good" | "low" | "critical";
   conversions: ItemConversion[];
   outletId: string;
