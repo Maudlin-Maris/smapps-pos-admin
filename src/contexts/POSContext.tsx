@@ -59,7 +59,7 @@ interface POSContextType {
 
   // Orders
   orders: POSOrder[];
-  createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number, loyaltyRedemption?: LoyaltyRedemption) => POSOrder;
+  createOrder: (type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number, loyaltyRedemption?: LoyaltyRedemption, customerPhone?: string) => POSOrder;
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updateItemStatus: (orderId: string, itemId: string, status: ItemStatus) => void;
   addItemsToOrder: (orderId: string, items: POSCartItem[]) => void;
@@ -300,7 +300,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number, loyaltyRedemption?: LoyaltyRedemption) => {
+  const createOrder = useCallback((type: OrderType, tableNumber?: string, customerName?: string, payNow?: boolean, tipAmount?: number, discountAmount?: number, discountName?: string, notes?: string, appliedFees?: AppliedFee[], feesTotal?: number, loyaltyRedemption?: LoyaltyRedemption, customerPhone?: string) => {
     const num = orderCounter;
     setOrderCounter(n => n + 1);
     const order: POSOrder = {
@@ -312,6 +312,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       tableNumber,
       locationName: tableNumber,
       customerName: customerName || (type === "dine_in" && tableNumber ? tableNumber : undefined),
+      customerPhone,
       payments: [],
       totalAmount: cartTotal - (discountAmount || 0) - (loyaltyRedemption?.discountValue || 0) + (feesTotal || 0),
       paidAmount: 0,
