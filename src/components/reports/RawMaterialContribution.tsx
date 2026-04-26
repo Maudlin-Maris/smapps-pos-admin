@@ -362,13 +362,31 @@ export default function RawMaterialContribution({
             </TableHeader>
             <TableBody>
               {paginatedItems.map((r) => (
-                <TableRow key={r.id}>
+                <TableRow
+                  key={r.id}
+                  onClick={() => setDrillRow(r)}
+                  className="cursor-pointer hover:bg-muted/50 focus:bg-muted/50 outline-none"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setDrillRow(r);
+                    }
+                  }}
+                  role="button"
+                  aria-label={`View menu items using ${r.name}`}
+                >
                   <TableCell className="font-medium text-sm">
-                    <div className="flex flex-col">
-                      <span>{r.name}</span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {r.share.toFixed(1)}% of COGS
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col min-w-0">
+                        <span className="inline-flex items-center gap-1">
+                          {r.name}
+                          <ChevronRightIcon className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {r.share.toFixed(1)}% of COGS
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right text-sm font-mono">
