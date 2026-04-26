@@ -605,6 +605,7 @@ export default function InventoryManagement() {
         onOpenChange={setAdjustOpen}
         item={adjustItem}
         onAdjust={handleAdjustStock}
+        outletName={outlets.find((o) => o.id === selectedOutletId)?.name}
       />
 
       <BulkReceiveStockDialog
