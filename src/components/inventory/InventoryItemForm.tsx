@@ -764,6 +764,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 ))}
               </div>
             )}
+                </>
+              );
+            })()}
 
 
             <div className="space-y-3 border-t pt-4">
