@@ -193,6 +193,22 @@ export default function CompositeItemForm({ composites, setComposites, inventory
     if (!item) return "";
     return units.find((u) => u.id === item.unitId)?.abbreviation || "";
   };
+  const getItemCost = (id: string) => inventoryItems.find((i) => i.id === id)?.costPrice ?? 0;
+
+  // Live cost economics for the form being edited.
+  const rawCost = useMemo(
+    () =>
+      form.components.reduce(
+        (sum, c) => sum + (c.inventoryItemId ? getItemCost(c.inventoryItemId) * (c.quantity || 0) : 0),
+        0
+      ),
+    [form.components, inventoryItems]
+  );
+  const overheadValue = form.overheadPerUnit === "" ? 0 : Number(form.overheadPerUnit) || 0;
+  const totalCost = rawCost + overheadValue;
+  const sellNum = form.sellPrice === "" ? 0 : Number(form.sellPrice) || 0;
+  const profit = sellNum - totalCost;
+  const profitPositive = profit >= 0;
 
   const filtered = composites.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
