@@ -34,6 +34,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [selectedLocation, setSelectedLocation] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
   const [splitCount, setSplitCount] = useState(2);
@@ -142,6 +143,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setStep(existingOrderId ? "discount" : "type");
     setSelectedLocation("");
     setCustomerName("");
+    setCustomerPhone("");
     setPaymentMethod("cash");
     setSplitMode(null);
     setSplitCount(2);
