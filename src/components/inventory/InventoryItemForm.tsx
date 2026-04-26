@@ -73,6 +73,16 @@ interface Props {
   selectedOutletId?: string;
   filterLowStock?: boolean;
   filterExpiryStatus?: "expired" | "expiring";
+  /** Per-raw-material profit metrics keyed by inventory item id. */
+  profitability?: Record<
+    string,
+    {
+      weightedProfitPerUnit: number;
+      totalContribution: number;
+      hasAnyPricedRecipe: boolean;
+      recipesUsing: { recipeId: string }[];
+    }
+  >;
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
@@ -120,7 +130,7 @@ export function getBatchExpiryStats(batches?: ItemBatch[]) {
   return { expired, expiringSoon, valid, totalBatches: batches.length };
 }
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock, filterExpiryStatus }: Props) {
+export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock, filterExpiryStatus, profitability }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
@@ -543,6 +553,22 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     </p>
                     <p className="text-xs text-muted-foreground">Min: {item.minStock}</p>
                   </div>
+                  {(() => {
+                    const p = profitability?.[item.id];
+                    if (!p || !p.hasAnyPricedRecipe) return null;
+                    const ppu = p.weightedProfitPerUnit;
+                    const total = p.totalContribution;
+                    const positive = ppu >= 0;
+                    return (
+                      <div className="text-right hidden md:block" title={`Weighted profit per ${unit?.abbreviation || "unit"} across ${p.recipesUsing.length} recipe(s)`}>
+                        <p className={cn("text-sm font-heading font-bold", positive ? "text-success" : "text-destructive")}>
+                          ₦{ppu.toFixed(2)}
+                          <span className="text-muted-foreground font-normal text-xs">/{unit?.abbreviation || "u"}</span>
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">Stock value: ₦{total.toFixed(0)}</p>
+                      </div>
+                    );
+                  })()}
                   <Badge
                     variant={item.status === "good" ? "default" : "secondary"}
                     className={cn(

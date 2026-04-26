@@ -47,6 +47,11 @@ export interface CompositeItem {
   description: string;
   components: CompositeComponent[];
   outletId: string;
+  /** Selling price per single serving / unit produced. Required for profit calc. */
+  sellPrice?: number;
+  /** Per-recipe override for packaging + staff + power allocation per unit produced.
+   *  Falls back to the outlet-level default when undefined. */
+  overheadPerUnit?: number;
 }
 
 interface Props {
@@ -65,6 +70,8 @@ const emptyForm = () => ({
   menuVariantId: "" as string,
   description: "",
   components: [] as CompositeComponent[],
+  sellPrice: "" as string | number,
+  overheadPerUnit: "" as string | number,
 });
 
 export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems, readOnly, selectedOutletId }: Props) {
@@ -81,7 +88,15 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
   const openEdit = (item: CompositeItem) => {
     setEditing(item);
-    setForm({ name: item.name, menuItemId: item.menuItemId || "", menuVariantId: item.menuVariantId || "", description: item.description, components: [...item.components] });
+    setForm({
+      name: item.name,
+      menuItemId: item.menuItemId || "",
+      menuVariantId: item.menuVariantId || "",
+      description: item.description,
+      components: [...item.components],
+      sellPrice: item.sellPrice ?? "",
+      overheadPerUnit: item.overheadPerUnit ?? "",
+    });
     setOpen(true);
   };
 
@@ -122,15 +137,24 @@ export default function CompositeItemForm({ composites, setComposites, inventory
       return;
     }
 
+    const sellPriceNum =
+      form.sellPrice === "" || form.sellPrice === null
+        ? undefined
+        : Number(form.sellPrice);
+    const overheadNum =
+      form.overheadPerUnit === "" || form.overheadPerUnit === null
+        ? undefined
+        : Number(form.overheadPerUnit);
+
     if (editing) {
       setComposites((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents } : c))
+        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, sellPrice: sellPriceNum, overheadPerUnit: overheadNum } : c))
       );
       toast.success("Composite item updated");
     } else {
       setComposites((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "" },
+        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "", sellPrice: sellPriceNum, overheadPerUnit: overheadNum },
       ]);
       toast.success("Composite item created");
     }
@@ -243,6 +267,37 @@ export default function CompositeItemForm({ composites, setComposites, inventory
             <div className="space-y-2">
               <label className="text-sm font-medium">Description</label>
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Selling price (₦)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.sellPrice}
+                  onChange={(e) =>
+                    setForm({ ...form, sellPrice: e.target.value === "" ? "" : Number(e.target.value) })
+                  }
+                  placeholder="e.g. 1000"
+                />
+                <p className="text-[11px] text-muted-foreground">Per single unit produced. Required to compute profit.</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Overhead override (₦)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.overheadPerUnit}
+                  onChange={(e) =>
+                    setForm({ ...form, overheadPerUnit: e.target.value === "" ? "" : Number(e.target.value) })
+                  }
+                  placeholder="Use outlet default"
+                />
+                <p className="text-[11px] text-muted-foreground">Packaging + staff + power per unit. Leave blank to inherit outlet default.</p>
+              </div>
             </div>
 
             <div className="space-y-3">
