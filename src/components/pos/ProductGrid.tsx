@@ -199,7 +199,12 @@ export default function ProductGrid() {
   };
 
   const handleProductClick = (product: POSProduct) => {
-    if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
+    const hasUnits = product.sellableUnits && product.sellableUnits.length > 0;
+    const hasVariantsOrExtras =
+      (product.variants && product.variants.length > 0) ||
+      (product.extras && product.extras.length > 0);
+    if (hasVariantsOrExtras || hasUnits) {
+      setDialogUnitId(undefined);
       setDialogProduct(product);
     } else {
       addToCart({
@@ -234,7 +239,11 @@ export default function ProductGrid() {
       unitPrice: total,
       totalPrice: total,
     });
+    // NOTE: dialog is closed by VariantExtrasDialog itself only after the user
+    // confirms; we close here too so multi-qty unit adds (loop in dialog) all run
+    // before close. The dialog calls onConfirm N times then we reset.
     setDialogProduct(null);
+    setDialogUnitId(undefined);
   };
 
   // Detect mobile device for camera facing mode
