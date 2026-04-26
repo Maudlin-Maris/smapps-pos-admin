@@ -110,9 +110,11 @@ interface AdjustDialogProps {
   ) => void;
   /** Current catalog sell price for the item, if known */
   currentSellPrice?: number;
+  /** Name of the outlet currently being worked on */
+  outletName?: string;
 }
 
-export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentSellPrice }: AdjustDialogProps) {
+export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentSellPrice, outletName }: AdjustDialogProps) {
   const [type, setType] = useState<AdjustmentType>("add");
   const [quantity, setQuantity] = useState(0);
   const [reason, setReason] = useState("");
