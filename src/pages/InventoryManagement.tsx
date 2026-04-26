@@ -216,6 +216,8 @@ export default function InventoryManagement() {
   const [showLowStock, setShowLowStock] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
   const [showExpiringSoon, setShowExpiringSoon] = useState(false);
+  const [outletOverheadDefaults, setOutletOverheadDefaults] =
+    useState<Record<string, number>>(DEFAULT_OUTLET_OVERHEAD);
 
   const isAllOutlets = selectedOutletId === "all";
 
@@ -406,8 +408,19 @@ export default function InventoryManagement() {
     setAdjustOpen(true);
   };
 
+  const profitability = useMemo(
+    () =>
+      computeProfitability({
+        inventoryItems: outletItems,
+        composites: outletComposites,
+        outletOverheadDefaults,
+      }),
+    [outletItems, outletComposites, outletOverheadDefaults]
+  );
+
   const tabs: { key: Tab; label: string }[] = [
     { key: "stock", label: "Stock Items" },
+    { key: "profitability", label: "Profitability" },
     { key: "adjustments", label: `Adjustments${outletAdjustments.length > 0 ? ` (${outletAdjustments.length})` : ""}` },
     { key: "categories", label: "Categories" },
     { key: "units", label: "Units" },
