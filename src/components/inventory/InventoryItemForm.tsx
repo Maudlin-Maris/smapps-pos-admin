@@ -769,7 +769,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 <div className="space-y-3 border-t pt-4">
                   <div className="flex items-center gap-2">
                     <Tag className="h-4 w-4 text-primary" />
-                    <label className="text-sm font-medium">Sell Price & Markup</label>
+                    <label className="text-sm font-medium">Sell Price & Markup (per Base Unit)</label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Sell Price & Markup?">
@@ -777,7 +777,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                         </button>
                       </PopoverTrigger>
                       <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
-                        <p>Set the retail sell price using <strong>Markup %</strong> (added on top of cost), <strong>Margin %</strong> (profit as a share of the sell price), or a <strong>Fixed Price</strong>. The sell price recalculates automatically when you change the method or value.</p>
+                        <p>Set the retail sell price for one <strong>base unit</strong> (e.g. one Pack) using <strong>Markup %</strong>, <strong>Margin %</strong>, or a <strong>Fixed Price</strong>. To also sell smaller sub-units (e.g. per Sachet), set their prices in the <em>Selling Units</em> section below.</p>
                       </PopoverContent>
                     </Popover>
                   </div>
