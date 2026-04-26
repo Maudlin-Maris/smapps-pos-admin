@@ -279,7 +279,8 @@ export default function RawMaterialContribution({
             to each material's cost. Example: 5kg of coffee beans costing
             ₦62.50, used in a cappuccino sold at a 30% markup, earns ₦81.25
             (₦62.50 × 1.30) — its share of the sale's revenue, separate from
-            the finished product's profit.
+            the finished product's profit. <span className="font-medium">Tip:</span>{" "}
+            click any row to see which sold composite/menu items used it.
           </p>
         </div>
 
