@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { outlets } from "@/data/outlets";
 import { Label } from "@/components/ui/label";
 import BarcodeScanner from "./BarcodeScanner";
