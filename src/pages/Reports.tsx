@@ -678,10 +678,7 @@ export default function Reports() {
             </div>
           </div>
 
-          {/* COGS Breakdown */}
-          <COGSBreakdown adjustments={filteredAdjustments} itemNames={itemNames} />
-
-          {/* Raw Material Contribution to Profit */}
+          {/* Raw Material Financial Contribution (replaces COGS Breakdown by Item) */}
           <RawMaterialContribution
             adjustments={filteredAdjustments}
             itemNames={itemNames}
