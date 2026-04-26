@@ -318,5 +318,6 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 }
