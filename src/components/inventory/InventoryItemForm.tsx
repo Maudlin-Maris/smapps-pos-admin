@@ -96,6 +96,8 @@ type FormState = Omit<InventoryItem, "id" | "status">;
 
 export const BATCH_EXPIRY_BUSINESS_TYPES = ["pharmacy", "grocery", "supermarket"];
 
+const EXPIRY_SOON_DAYS = 90;
+
 export const RETAIL_BUSINESS_TYPES: BusinessTypeId[] = [
   "grocery", "supermarket", "pharmacy", "wine_store", "clothing",
   "electronics", "hair_seller", "retail",
