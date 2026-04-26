@@ -107,7 +107,26 @@ export default function RawMaterialContribution({
   itemUnits = {},
   totalRevenue,
   totalCOGS: totalCOGSProp,
+  usageMap = {},
+  transactions = [],
+  dateFrom,
+  dateTo,
 }: Props) {
+  const [drillRow, setDrillRow] = useState<Row | null>(null);
+
+  // Pre-aggregate qty sold per menu item across the in-scope transactions.
+  // Lower-cased keys for tolerant matching against the synthetic recipe map.
+  const soldQtyByItem = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of transactions) {
+      for (const it of t.items ?? []) {
+        const key = it.name.trim().toLowerCase();
+        map.set(key, (map.get(key) ?? 0) + (Number(it.qty) || 0));
+      }
+    }
+    return map;
+  }, [transactions]);
+
   const { rows, totalCOGS, totalProfit, markupMultiplier } = useMemo(() => {
     const consumption = adjustments.filter((a) =>
       CONSUMPTION_TYPES.includes(a.type)
