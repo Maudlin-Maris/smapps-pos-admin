@@ -85,8 +85,9 @@ export default function RawMaterialContribution({
   itemNames,
   itemUnits = {},
   totalRevenue,
+  totalCOGS: totalCOGSProp,
 }: Props) {
-  const { rows, totalCOGS, totalProfit } = useMemo(() => {
+  const { rows, totalCOGS, totalProfit, markupMultiplier } = useMemo(() => {
     const consumption = adjustments.filter((a) =>
       CONSUMPTION_TYPES.includes(a.type)
     );
@@ -110,12 +111,19 @@ export default function RawMaterialContribution({
       grouped[id].cost += a.costTotal;
     }
 
-    const totalCOGS = Object.values(grouped).reduce((s, g) => s + g.cost, 0);
+    const consumedCost = Object.values(grouped).reduce((s, g) => s + g.cost, 0);
+    // Use P&L total COGS when provided so the markup matches the P&L view.
+    const cogsForMarkup =
+      totalCOGSProp && totalCOGSProp > 0 ? totalCOGSProp : consumedCost;
+    const markupMultiplier =
+      cogsForMarkup > 0 ? totalRevenue / cogsForMarkup : 0;
 
     const rows: Row[] = Object.entries(grouped)
       .map(([id, g]) => {
-        const share = totalCOGS > 0 ? g.cost / totalCOGS : 0;
-        const attributedRevenue = totalRevenue * share;
+        const share = consumedCost > 0 ? g.cost / consumedCost : 0;
+        // Revenue earned = material cost × overall markup multiplier.
+        // E.g., cost ₦62.50 with 1.3× markup → ₦81.25.
+        const attributedRevenue = g.cost * markupMultiplier;
         const profit = attributedRevenue - g.cost;
         const margin =
           attributedRevenue > 0 ? (profit / attributedRevenue) * 100 : 0;
@@ -136,8 +144,8 @@ export default function RawMaterialContribution({
 
     const totalProfit = rows.reduce((s, r) => s + r.profit, 0);
 
-    return { rows, totalCOGS, totalProfit };
-  }, [adjustments, itemNames, itemUnits, totalRevenue]);
+    return { rows, totalCOGS: consumedCost, totalProfit, markupMultiplier };
+  }, [adjustments, itemNames, itemUnits, totalRevenue, totalCOGSProp]);
 
   const {
     page,
