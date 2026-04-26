@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,8 +15,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import {
   Select,
@@ -27,7 +34,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
 import type { StoredAdjustment } from "@/hooks/use-financial-data";
+import type { Transaction } from "@/components/TransactionsTable";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", {
@@ -48,6 +57,12 @@ interface ItemUnitMap {
   [id: string]: string;
 }
 
+export interface RawMaterialUsageEntry {
+  menuItem: string;
+  /** Quantity of the raw material (in its base unit) consumed per one unit sold. */
+  qtyPerUnit: number;
+}
+
 interface Props {
   adjustments: StoredAdjustment[];
   itemNames: ItemNameMap;
@@ -56,6 +71,12 @@ interface Props {
   /** Period total inventory COGS from P&L. Used as the markup denominator so
    *  Revenue Earned per material = cost × (totalRevenue / totalCOGS). */
   totalCOGS?: number;
+  /** Map of inventory item id → list of menu/composite items that use it. */
+  usageMap?: Record<string, RawMaterialUsageEntry[]>;
+  /** Transactions in scope (date + outlet + cashier) used to count menu items sold. */
+  transactions?: Transaction[];
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 interface Row {
