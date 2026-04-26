@@ -392,59 +392,94 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               {form.components.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-lg">No components added yet</p>
               )}
-              {form.components.map((comp, i) => (
-                <div key={i} className="space-y-2 p-3 border rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <ItemCombobox
-                      inventoryItems={inventoryItems}
-                      value={comp.inventoryItemId}
-                      onSelect={(v) => updateComponent(i, "inventoryItemId", v)}
-                    />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      className="w-24"
-                      value={comp.quantity}
-                      onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
-                      min={0}
-                      step={0.1}
-                      placeholder="Qty"
-                    />
-                    <span className="text-xs text-muted-foreground w-10 shrink-0">
-                      {getItemUnit(comp.inventoryItemId)}
-                    </span>
-                    {comp.inventoryItemId && (
-                      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-                        @ {formatNaira(getItemCost(comp.inventoryItemId))} = <span className="font-medium text-foreground">{formatNaira(getItemCost(comp.inventoryItemId) * (comp.quantity || 0))}</span>
-                      </span>
-                    )}
-                    <div className="flex gap-1 ml-auto">
-                      <Button
-                        type="button"
-                        variant={comp.role === "primary" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs px-2.5"
-                        onClick={() => updateComponent(i, "role", "primary")}
-                      >
-                        Primary
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={comp.role === "secondary" ? "secondary" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs px-2.5"
-                        onClick={() => updateComponent(i, "role", "secondary")}
-                      >
-                        Secondary
+              {form.components.map((comp, i) => {
+                const unitOptions = comp.inventoryItemId
+                  ? getComponentUnitOptions(comp.inventoryItemId)
+                  : [];
+                const item = getItem(comp.inventoryItemId);
+                const activeUnitId = comp.unitId || item?.unitId || "";
+                const unitCost = getComponentUnitCost(comp);
+                const lineCost = unitCost * (comp.quantity || 0);
+                return (
+                  <div key={i} className="space-y-2 p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <ItemCombobox
+                        inventoryItems={inventoryItems}
+                        value={comp.inventoryItemId}
+                        onSelect={(v) => {
+                          // Reset unit when the underlying item changes so we
+                          // don't carry over a unitId that's no longer valid.
+                          setForm((f) => {
+                            const updated = [...f.components];
+                            updated[i] = { ...updated[i], inventoryItemId: v, unitId: undefined };
+                            return { ...f, components: updated };
+                          });
+                        }}
+                      />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
+                        <X className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Input
+                        type="number"
+                        className="w-20"
+                        value={comp.quantity}
+                        onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
+                        min={0}
+                        step={0.1}
+                        placeholder="Qty"
+                      />
+                      {comp.inventoryItemId && unitOptions.length > 0 ? (
+                        <Select
+                          value={activeUnitId}
+                          onValueChange={(v) => updateComponent(i, "unitId", v)}
+                        >
+                          <SelectTrigger className="h-9 w-32">
+                            <SelectValue placeholder="Unit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {unitOptions.map((opt) => (
+                              <SelectItem key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-xs text-muted-foreground w-10 shrink-0">
+                          {getItemUnit(comp.inventoryItemId)}
+                        </span>
+                      )}
+                      {comp.inventoryItemId && (
+                        <span className="text-[11px] text-muted-foreground tabular-nums">
+                          @ {formatNaira(unitCost)} = <span className="font-medium text-foreground">{formatNaira(lineCost)}</span>
+                        </span>
+                      )}
+                      <div className="flex gap-1 ml-auto">
+                        <Button
+                          type="button"
+                          variant={comp.role === "primary" ? "default" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs px-2.5"
+                          onClick={() => updateComponent(i, "role", "primary")}
+                        >
+                          Primary
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={comp.role === "secondary" ? "secondary" : "outline"}
+                          size="sm"
+                          className="h-7 text-xs px-2.5"
+                          onClick={() => updateComponent(i, "role", "secondary")}
+                        >
+                          Secondary
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Cost & Pricing — derived from components (BOM) */}
