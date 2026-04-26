@@ -148,6 +148,89 @@ export default function Reports() {
     i7: "tubes", i8: "pairs", i9: "loaves", i10: "packs",
   }), []);
 
+  // Synthetic recipe map: which sold menu/composite items use each raw material,
+  // and how much of the material's base unit is consumed per one unit sold.
+  // Used for the Raw Material drill-down. Names match items in
+  // `initialReportTransactions` so counts can be derived directly.
+  const rawMaterialUsage: Record<
+    string,
+    { menuItem: string; qtyPerUnit: number }[]
+  > = useMemo(() => ({
+    i1: [ // Coffee Beans (kg)
+      { menuItem: "Burger Meal", qtyPerUnit: 0.02 },
+      { menuItem: "Milkshake", qtyPerUnit: 0.015 },
+      { menuItem: "Fresh Juice", qtyPerUnit: 0.01 },
+    ],
+    i2: [ // Whole Milk (L)
+      { menuItem: "Milkshake", qtyPerUnit: 0.25 },
+      { menuItem: "Fresh Juice", qtyPerUnit: 0.1 },
+      { menuItem: "Dessert Bowl", qtyPerUnit: 0.15 },
+    ],
+    i3: [ // Sugar (kg)
+      { menuItem: "Milkshake", qtyPerUnit: 0.03 },
+      { menuItem: "Dessert Bowl", qtyPerUnit: 0.04 },
+      { menuItem: "Fresh Juice", qtyPerUnit: 0.02 },
+    ],
+    i4: [ // Paper Cups
+      { menuItem: "Fresh Juice", qtyPerUnit: 1 },
+      { menuItem: "Milkshake", qtyPerUnit: 1 },
+      { menuItem: "Soft Drinks Pack", qtyPerUnit: 4 },
+    ],
+    i5: [ // Croissant Dough (kg)
+      { menuItem: "Sandwich", qtyPerUnit: 0.12 },
+      { menuItem: "Burger Meal", qtyPerUnit: 0.1 },
+    ],
+    i6: [ // Shampoo (bottles)
+      { menuItem: "Haircut - Men", qtyPerUnit: 0.05 },
+      { menuItem: "Manicure", qtyPerUnit: 0.02 },
+    ],
+    i7: [ // Hair Color (tubes)
+      { menuItem: "Haircut - Men", qtyPerUnit: 0.1 },
+      { menuItem: "Eyebrow Threading", qtyPerUnit: 0.05 },
+    ],
+    i8: [ // Disposable Gloves (pairs)
+      { menuItem: "Haircut - Men", qtyPerUnit: 1 },
+      { menuItem: "Manicure", qtyPerUnit: 1 },
+      { menuItem: "Beard Trim", qtyPerUnit: 1 },
+      { menuItem: "Eyebrow Threading", qtyPerUnit: 1 },
+    ],
+    i9: [ // Sandwich Bread (loaves)
+      { menuItem: "Sandwich", qtyPerUnit: 0.5 },
+      { menuItem: "Bread Loaf", qtyPerUnit: 1 },
+      { menuItem: "Burger Meal", qtyPerUnit: 0.25 },
+      { menuItem: "Family Platter", qtyPerUnit: 0.5 },
+    ],
+    i10: [ // Napkins (packs)
+      { menuItem: "Burger Meal", qtyPerUnit: 0.05 },
+      { menuItem: "Family Platter", qtyPerUnit: 0.2 },
+      { menuItem: "Grilled Chicken Combo", qtyPerUnit: 0.1 },
+    ],
+  }), []);
+
+  // Transactions in scope of the current Reports filters (date range + outlet
+  // via location-name match). Used by the raw-material drill-down to count
+  // how many times each menu item that uses the material was sold.
+  const filteredTransactions = useMemo(() => {
+    const fromTime = startOfDay(dateFrom).getTime();
+    const toTime = endOfDay(dateTo).getTime();
+    const allowedLocations = isAllOutlets
+      ? null
+      : new Set(
+          outlets
+            .filter((o) => outletIds.includes(o.id))
+            .map((o) => o.name.toLowerCase())
+        );
+    return initialReportTransactions.filter((t) => {
+      const ts = new Date(t.date).getTime();
+      if (Number.isFinite(ts) && (ts < fromTime || ts > toTime)) return false;
+      if (allowedLocations && !allowedLocations.has(t.location.toLowerCase()))
+        return false;
+      if (selectedCashier !== "all" && t.cashier !== selectedCashier)
+        return false;
+      return true;
+    });
+  }, [dateFrom, dateTo, isAllOutlets, outletIds, selectedCashier]);
+
   // Available cashiers within current outlet scope (date-independent so filter is always usable)
   const availableCashiers = useMemo(() => {
     const names = new Set<string>();
@@ -605,6 +688,10 @@ export default function Reports() {
             itemUnits={itemUnits}
             totalRevenue={totalRevenue}
             totalCOGS={data.costOfGoods.inventory}
+            usageMap={rawMaterialUsage}
+            transactions={filteredTransactions}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
           />
 
           {/* Outlet Comparison */}

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,8 +15,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import {
   Select,
@@ -27,7 +34,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
 import type { StoredAdjustment } from "@/hooks/use-financial-data";
+import type { Transaction } from "@/components/TransactionsTable";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", {
@@ -48,6 +57,12 @@ interface ItemUnitMap {
   [id: string]: string;
 }
 
+export interface RawMaterialUsageEntry {
+  menuItem: string;
+  /** Quantity of the raw material (in its base unit) consumed per one unit sold. */
+  qtyPerUnit: number;
+}
+
 interface Props {
   adjustments: StoredAdjustment[];
   itemNames: ItemNameMap;
@@ -56,6 +71,12 @@ interface Props {
   /** Period total inventory COGS from P&L. Used as the markup denominator so
    *  Revenue Earned per material = cost × (totalRevenue / totalCOGS). */
   totalCOGS?: number;
+  /** Map of inventory item id → list of menu/composite items that use it. */
+  usageMap?: Record<string, RawMaterialUsageEntry[]>;
+  /** Transactions in scope (date + outlet + cashier) used to count menu items sold. */
+  transactions?: Transaction[];
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 interface Row {
@@ -86,7 +107,26 @@ export default function RawMaterialContribution({
   itemUnits = {},
   totalRevenue,
   totalCOGS: totalCOGSProp,
+  usageMap = {},
+  transactions = [],
+  dateFrom,
+  dateTo,
 }: Props) {
+  const [drillRow, setDrillRow] = useState<Row | null>(null);
+
+  // Pre-aggregate qty sold per menu item across the in-scope transactions.
+  // Lower-cased keys for tolerant matching against the synthetic recipe map.
+  const soldQtyByItem = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of transactions) {
+      for (const it of t.items ?? []) {
+        const key = it.name.trim().toLowerCase();
+        map.set(key, (map.get(key) ?? 0) + (Number(it.qty) || 0));
+      }
+    }
+    return map;
+  }, [transactions]);
+
   const { rows, totalCOGS, totalProfit, markupMultiplier } = useMemo(() => {
     const consumption = adjustments.filter((a) =>
       CONSUMPTION_TYPES.includes(a.type)
@@ -239,7 +279,8 @@ export default function RawMaterialContribution({
             to each material's cost. Example: 5kg of coffee beans costing
             ₦62.50, used in a cappuccino sold at a 30% markup, earns ₦81.25
             (₦62.50 × 1.30) — its share of the sale's revenue, separate from
-            the finished product's profit.
+            the finished product's profit. <span className="font-medium">Tip:</span>{" "}
+            click any row to see which sold composite/menu items used it.
           </p>
         </div>
 
@@ -322,13 +363,31 @@ export default function RawMaterialContribution({
             </TableHeader>
             <TableBody>
               {paginatedItems.map((r) => (
-                <TableRow key={r.id}>
+                <TableRow
+                  key={r.id}
+                  onClick={() => setDrillRow(r)}
+                  className="cursor-pointer hover:bg-muted/50 focus:bg-muted/50 outline-none"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setDrillRow(r);
+                    }
+                  }}
+                  role="button"
+                  aria-label={`View menu items using ${r.name}`}
+                >
                   <TableCell className="font-medium text-sm">
-                    <div className="flex flex-col">
-                      <span>{r.name}</span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {r.share.toFixed(1)}% of COGS
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col min-w-0">
+                        <span className="inline-flex items-center gap-1">
+                          {r.name}
+                          <ChevronRightIcon className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {r.share.toFixed(1)}% of COGS
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right text-sm font-mono">
@@ -374,6 +433,102 @@ export default function RawMaterialContribution({
           </Table>
         </div>
       </Card>
+
+      <Dialog open={!!drillRow} onOpenChange={(o) => !o && setDrillRow(null)}>
+        <DialogContent className="max-w-2xl">
+          {drillRow && (() => {
+            const recipes = usageMap[drillRow.id] ?? [];
+            const breakdown = recipes
+              .map((r) => {
+                const sold = soldQtyByItem.get(r.menuItem.toLowerCase()) ?? 0;
+                const consumed = sold * r.qtyPerUnit;
+                return { ...r, sold, consumed };
+              })
+              .filter((r) => r.sold > 0)
+              .sort((a, b) => b.consumed - a.consumed);
+
+            const totalSold = breakdown.reduce((s, r) => s + r.sold, 0);
+            const totalConsumed = breakdown.reduce(
+              (s, r) => s + r.consumed,
+              0
+            );
+            const periodLabel =
+              dateFrom && dateTo
+                ? `${format(dateFrom, "MMM d, yyyy")} – ${format(dateTo, "MMM d, yyyy")}`
+                : "the selected period";
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-base">
+                    {drillRow.name} — Used in Sold Items
+                  </DialogTitle>
+                  <DialogDescription className="text-xs">
+                    Composite and menu items sold during {periodLabel} that
+                    consumed this raw material.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {breakdown.length} item{breakdown.length !== 1 && "s"}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {totalSold} sold
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {totalConsumed.toFixed(2)} {drillRow.unit} consumed
+                  </Badge>
+                </div>
+
+                {breakdown.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    No sold menu or composite items recorded for this raw
+                    material in the selected period.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto -mx-6 px-6 mt-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Menu / Composite Item</TableHead>
+                          <TableHead className="text-right">Times Sold</TableHead>
+                          <TableHead className="text-right">Per Unit</TableHead>
+                          <TableHead className="text-right">Total Used</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {breakdown.map((r) => (
+                          <TableRow key={r.menuItem}>
+                            <TableCell className="text-sm font-medium">
+                              {r.menuItem}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-mono">
+                              {r.sold}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-mono text-muted-foreground">
+                              {r.qtyPerUnit} {drillRow.unit}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-mono font-semibold">
+                              {r.consumed.toFixed(2)} {drillRow.unit}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                  "Times Sold" counts each occurrence of the item across
+                  in-scope transactions. "Total Used" multiplies that count by
+                  the recipe quantity per unit.
+                </p>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }
