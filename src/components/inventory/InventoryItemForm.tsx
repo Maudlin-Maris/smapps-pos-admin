@@ -158,7 +158,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
   const openNew = () => {
     setEditing(null);
-    setForm(emptyForm(selectedOutletId));
+    const seed = selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "";
+    setForm(emptyForm(seed));
     setOpen(true);
   };
 
