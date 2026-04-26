@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -227,8 +227,8 @@ export default function ProfitabilityView({
                   const profitPositive = row.weightedProfitPerUnit > 0;
                   const profitNegative = row.weightedProfitPerUnit < 0;
                   return (
-                    <>
-                      <tr key={row.item.id} className="border-t">
+                    <Fragment key={row.item.id}>
+                      <tr className="border-t">
                         <td className="px-3 py-2 text-muted-foreground">{rank}</td>
                         <td className="px-3 py-2">
                           <div className="font-medium">{row.item.name}</div>
@@ -334,7 +334,7 @@ export default function ProfitabilityView({
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
