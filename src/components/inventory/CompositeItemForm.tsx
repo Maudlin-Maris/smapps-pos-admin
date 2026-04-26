@@ -306,36 +306,118 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Selling price (₦)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.sellPrice}
-                  onChange={(e) =>
-                    setForm({ ...form, sellPrice: e.target.value === "" ? "" : Number(e.target.value) })
-                  }
-                  placeholder="e.g. 1000"
-                />
-                <p className="text-[11px] text-muted-foreground">Per single unit produced. Required to compute profit.</p>
+            {/* Cost & Pricing — derived from components (BOM) */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-primary" />
+                <label className="text-sm font-medium">Cost & Selling Price</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="How is cost calculated?">
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                    <p>Raw cost is auto-calculated from each component's WAC × quantity. Add an optional overhead (packaging, staff, power) per unit produced. Then pick a pricing method — <strong>Markup %</strong>, <strong>Margin %</strong>, or <strong>Fixed Price</strong> — to derive the selling price.</p>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium">Overhead override (₦)</label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.overheadPerUnit}
-                  onChange={(e) =>
-                    setForm({ ...form, overheadPerUnit: e.target.value === "" ? "" : Number(e.target.value) })
-                  }
-                  placeholder="Use outlet default"
-                />
-                <p className="text-[11px] text-muted-foreground">Packaging + staff + power per unit. Leave blank to inherit outlet default.</p>
+
+              {/* Cost summary */}
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Raw materials cost</span>
+                  <span className="font-medium tabular-nums">{formatNaira(rawCost)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground shrink-0">Overhead override (₦)</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.overheadPerUnit}
+                    onChange={(e) =>
+                      setForm({ ...form, overheadPerUnit: e.target.value === "" ? "" : Number(e.target.value) })
+                    }
+                    placeholder="Outlet default"
+                    className="h-7 max-w-[120px] text-right"
+                  />
+                </div>
+                <div className="flex items-center justify-between border-t pt-1.5 mt-1">
+                  <span className="font-medium">Total cost / unit</span>
+                  <span className="font-semibold tabular-nums">{formatNaira(totalCost)}</span>
+                </div>
               </div>
+
+              {/* Pricing method */}
+              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                  <Select
+                    value={form.pricingMethod}
+                    onValueChange={(v) => {
+                      const method = v as CompositePricingMethod;
+                      const newSell = totalCost > 0
+                        ? Math.round(calcCompositeSellPrice(totalCost, method, form.pricingValue) * 100) / 100
+                        : sellNum;
+                      setForm({ ...form, pricingMethod: method, sellPrice: newSell });
+                    }}
+                  >
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="markup">Markup %</SelectItem>
+                      <SelectItem value="margin">Margin %</SelectItem>
+                      <SelectItem value="fixed">Fixed Price</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                    {form.pricingMethod === "fixed" ? "Price" : "%"}
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.pricingValue}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      const newSell = totalCost > 0
+                        ? Math.round(calcCompositeSellPrice(totalCost, form.pricingMethod, val) * 100) / 100
+                        : sellNum;
+                      setForm({ ...form, pricingValue: val, sellPrice: newSell });
+                    }}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={form.sellPrice}
+                    onChange={(e) =>
+                      setForm({ ...form, sellPrice: e.target.value === "" ? "" : Number(e.target.value) })
+                    }
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              {totalCost > 0 && sellNum > 0 && (
+                <div className="flex items-center gap-2 text-xs">
+                  <TrendingUp className={cn("h-3.5 w-3.5", profitPositive ? "text-success" : "text-destructive")} />
+                  <span className={cn("font-medium", profitPositive ? "text-success" : "text-destructive")}>
+                    {formatNaira(profit)}/unit profit
+                  </span>
+                  <span className="text-muted-foreground">
+                    ({((profit / totalCost) * 100).toFixed(1)}% markup · {((profit / sellNum) * 100).toFixed(1)}% margin)
+                  </span>
+                </div>
+              )}
             </div>
+
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
