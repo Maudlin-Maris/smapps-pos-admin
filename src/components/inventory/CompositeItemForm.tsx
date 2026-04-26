@@ -237,6 +237,36 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   };
   const getComponentLineCost = (comp: CompositeComponent) =>
     getComponentUnitCost(comp) * (comp.quantity || 0);
+  /** Base units consumed per 1 composite unit produced. */
+  const getComponentBaseUnitsConsumed = (comp: CompositeComponent) => {
+    const item = getItem(comp.inventoryItemId);
+    if (!item) return 0;
+    let baseUnitsPer = 1;
+    if (comp.unitId && comp.unitId !== item.unitId) {
+      const opt = getComponentUnitOptions(comp.inventoryItemId).find((o) => o.id === comp.unitId);
+      baseUnitsPer = opt?.baseUnitsPer ?? 1;
+    }
+    return (comp.quantity || 0) * baseUnitsPer;
+  };
+  /** Max producible composite units given current component stocks.
+   *  Returns { producible, limitingComponentId } — producible = Infinity if no valid components. */
+  const getProducibleQty = (components: CompositeComponent[]) => {
+    let min = Infinity;
+    let limitingId: string | undefined;
+    for (const c of components) {
+      if (!c.inventoryItemId) continue;
+      const consumed = getComponentBaseUnitsConsumed(c);
+      if (consumed <= 0) continue;
+      const item = getItem(c.inventoryItemId);
+      const stock = item?.stock ?? 0;
+      const possible = Math.floor(stock / consumed);
+      if (possible < min) {
+        min = possible;
+        limitingId = c.inventoryItemId;
+      }
+    }
+    return { producible: min === Infinity ? 0 : min, limitingId, hasComponents: min !== Infinity };
+  };
   // Back-compat for card list rendering
   const getItemUnit = (id: string) => {
     const item = inventoryItems.find((i) => i.id === id);
@@ -255,6 +285,13 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   const sellNum = form.sellPrice === "" ? 0 : Number(form.sellPrice) || 0;
   const profit = sellNum - totalCost;
   const profitPositive = profit >= 0;
+  const producibleInfo = useMemo(
+    () => getProducibleQty(form.components),
+    [form.components, inventoryItems, units]
+  );
+  const limitingItemName = producibleInfo.limitingId
+    ? getItemName(producibleInfo.limitingId)
+    : "";
 
   const filtered = composites.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
@@ -346,6 +383,28 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                       </div>
                     </div>
                   )}
+                </div>
+              );
+            })()}
+            {(() => {
+              const info = getProducibleQty(item.components);
+              if (!info.hasComponents) return null;
+              return (
+                <div className="mt-2 flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Producible now</span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "tabular-nums font-semibold",
+                      info.producible === 0
+                        ? "border-destructive/50 text-destructive"
+                        : info.producible < 5
+                          ? "border-warning/50 text-warning"
+                          : "border-success/50 text-success"
+                    )}
+                  >
+                    {info.producible} units
+                  </Badge>
                 </div>
               );
             })()}
@@ -480,6 +539,35 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                   </div>
                 );
               })}
+
+              {producibleInfo.hasComponents && (
+                <div className={cn(
+                  "rounded-lg border p-3 flex items-center justify-between gap-3 text-xs",
+                  producibleInfo.producible === 0
+                    ? "border-destructive/40 bg-destructive/5"
+                    : producibleInfo.producible < 5
+                      ? "border-warning/40 bg-warning/5"
+                      : "border-success/40 bg-success/5"
+                )}>
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="text-muted-foreground">Producible from current stock</div>
+                    {limitingItemName && (
+                      <div className="text-[11px] text-muted-foreground truncate">
+                        Limited by <span className="font-medium text-foreground">{limitingItemName}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={cn(
+                      "text-lg font-bold tabular-nums leading-none",
+                      producibleInfo.producible === 0 ? "text-destructive" : "text-foreground"
+                    )}>
+                      {producibleInfo.producible}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">units</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Cost & Pricing — derived from components (BOM) */}
