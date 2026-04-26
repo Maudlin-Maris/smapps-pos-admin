@@ -48,6 +48,7 @@ const ThermalReceipt = forwardRef<HTMLDivElement, Props>(({ order, outlet }, ref
           {order.locationName && <span>{order.locationName}</span>}
         </div>
         {order.customerName && <p>Customer: {order.customerName}</p>}
+        {order.customerPhone && <p>Phone: {order.customerPhone}</p>}
         {order.notes && (
           <p style={{ fontSize: "10px", fontStyle: "italic", marginTop: "2px" }}>
             Notes: {order.notes}

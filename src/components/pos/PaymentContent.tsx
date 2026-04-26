@@ -34,6 +34,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [selectedLocation, setSelectedLocation] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
   const [splitCount, setSplitCount] = useState(2);
@@ -142,6 +143,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setStep(existingOrderId ? "discount" : "type");
     setSelectedLocation("");
     setCustomerName("");
+    setCustomerPhone("");
     setPaymentMethod("cash");
     setSplitMode(null);
     setSplitCount(2);
@@ -174,7 +176,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handleProceedToPayment = () => {
     if (!payNow && !existingOrderId) {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
       setStep("complete");
       return;
@@ -188,7 +190,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       addPayment(order.id, { method: paymentMethod, amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
@@ -205,7 +207,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
@@ -398,6 +400,18 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             <div className="space-y-2">
               <label className="text-sm font-medium">Customer Name (optional)</label>
               <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Customer name" />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Customer Phone (optional)</label>
+              <Input
+                type="tel"
+                inputMode="tel"
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value.replace(/[^\d+\-\s()]/g, "").slice(0, 20))}
+                placeholder="e.g. 0801 234 5678"
+                autoComplete="tel"
+              />
             </div>
 
             <div className="space-y-2">
