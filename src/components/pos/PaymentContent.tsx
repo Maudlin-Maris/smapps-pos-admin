@@ -403,6 +403,18 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">Customer Phone (optional)</label>
+              <Input
+                type="tel"
+                inputMode="tel"
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value.replace(/[^\d+\-\s()]/g, "").slice(0, 20))}
+                placeholder="e.g. 0801 234 5678"
+                autoComplete="tel"
+              />
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Notes & Special Instructions (optional)</label>
               <Textarea
                 value={customerNotes}
