@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store, Check } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store } from "lucide-react";
 import { outlets } from "@/data/outlets";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
@@ -134,8 +133,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
-  const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
-  const [outletStocks, setOutletStocks] = useState<Record<string, { stock: number; minStock: number; batches: ItemBatch[] }>>({});
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterExpiry, setFilterExpiry] = useState("all");
@@ -149,41 +146,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     return o ? BATCH_EXPIRY_BUSINESS_TYPES.includes(o.businessType) : false;
   };
 
-  // Ensure every selected outlet has a stock entry; remove unselected ones.
-  useEffect(() => {
-    setOutletStocks((prev) => {
-      const next: typeof prev = {};
-      selectedOutletIds.forEach((oid) => {
-        next[oid] = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      });
-      return next;
-    });
-  }, [selectedOutletIds]);
-
-  const updateOutletStock = (oid: string, patch: Partial<{ stock: number; minStock: number; batches: ItemBatch[] }>) => {
-    setOutletStocks((prev) => ({ ...prev, [oid]: { ...(prev[oid] ?? { stock: 0, minStock: 0, batches: [] }), ...patch } }));
-  };
-
-  const addOutletBatch = (oid: string) => {
-    setOutletStocks((prev) => {
-      const cur = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      return { ...prev, [oid]: { ...cur, batches: [...cur.batches, { id: crypto.randomUUID(), batchNumber: "", expiryDate: "", quantity: 0 }] } };
-    });
-  };
-
-  const updateOutletBatch = (oid: string, idx: number, patch: Partial<ItemBatch>) => {
-    setOutletStocks((prev) => {
-      const cur = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      return { ...prev, [oid]: { ...cur, batches: cur.batches.map((b, i) => (i === idx ? { ...b, ...patch } : b)) } };
-    });
-  };
-
-  const removeOutletBatch = (oid: string, idx: number) => {
-    setOutletStocks((prev) => {
-      const cur = prev[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      return { ...prev, [oid]: { ...cur, batches: cur.batches.filter((_, i) => i !== idx) } };
-    });
-  };
 
   const toggleBatchExpand = (itemId: string) => {
     setExpandedBatches(prev => {
@@ -197,9 +159,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm(selectedOutletId));
-    const initialOutlets = selectedOutletId && selectedOutletId !== "all" ? [selectedOutletId] : [];
-    setSelectedOutletIds(initialOutlets);
-    setOutletStocks(Object.fromEntries(initialOutlets.map((oid) => [oid, { stock: 0, minStock: 0, batches: [] }])));
     setOpen(true);
   };
 
@@ -219,8 +178,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       expiryDate: item.expiryDate || "",
       batches: item.batches || [],
     });
-    setSelectedOutletIds(item.outletId ? [item.outletId] : []);
-    setOutletStocks(item.outletId ? { [item.outletId]: { stock: item.stock, minStock: item.minStock, batches: item.batches ?? [] } } : {});
     setOpen(true);
   };
 
@@ -246,8 +203,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       toast.error("Category and unit are required");
       return;
     }
-    if (selectedOutletIds.length === 0) {
-      toast.error("Select at least one outlet");
+    const targetOutletId = editing?.outletId || form.outletId || (selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "");
+    if (!targetOutletId) {
+      toast.error("Select an outlet before registering items");
       return;
     }
     if (form.conversions.length === 0) {
@@ -260,82 +218,45 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       return;
     }
 
-    // Resolve per-outlet stock + batches.
-    const resolveOutletPayload = (oid: string) => {
-      const entry = outletStocks[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      const batchTracked = isOutletBatchTracked(oid);
-      const usesBatches = batchTracked && entry.batches.length > 0;
-      const stock = usesBatches
-        ? entry.batches.reduce((sum, b) => sum + b.quantity, 0)
-        : entry.stock;
-      return {
-        stock,
-        minStock: entry.minStock,
-        batches: batchTracked ? entry.batches.map((b) => ({ ...b, id: crypto.randomUUID() })) : undefined,
-        status: computeStatus(stock, entry.minStock),
-      };
-    };
-
-    // Helper: build a fresh per-outlet payload with unique batch & conversion ids
-    const buildForOutlet = (outletId: string, reuseId?: string, reuseSku?: boolean): InventoryItem => {
-      const payload = resolveOutletPayload(outletId);
-      return {
-        id: reuseId ?? crypto.randomUUID(),
-        ...form,
-        sku: reuseSku ? form.sku : "",
-        outletId,
-        stock: payload.stock,
-        minStock: payload.minStock,
-        status: payload.status,
-        conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
-        batches: payload.batches,
-      };
-    };
+    const batchTracked = isOutletBatchTracked(targetOutletId);
+    const usesBatches = batchTracked && (form.batches?.length ?? 0) > 0;
+    const resolvedStock = usesBatches
+      ? (form.batches ?? []).reduce((sum, b) => sum + b.quantity, 0)
+      : form.stock;
+    const resolvedBatches = batchTracked
+      ? (form.batches ?? []).map((b) => ({ ...b, id: b.id || crypto.randomUUID() }))
+      : undefined;
 
     if (editing) {
-      // Update the edited item in its current outlet, then add clones for any
-      // additional outlets that were selected.
-      const editingOutlet = editing.outletId;
-      const includesOriginal = selectedOutletIds.includes(editingOutlet);
-      const additionalOutlets = selectedOutletIds.filter((o) => o !== editingOutlet);
-
-      setItems((prev) => {
-        let next = prev.map((i) => {
-          if (i.id !== editing.id) return i;
-          if (!includesOriginal) return i;
-          const payload = resolveOutletPayload(editingOutlet);
-          return {
-            ...i,
-            ...form,
-            outletId: editingOutlet,
-            stock: payload.stock,
-            minStock: payload.minStock,
-            status: payload.status,
-            batches: payload.batches,
-          };
-        });
-        const targets = includesOriginal ? additionalOutlets : selectedOutletIds;
-        const clones = targets.map((oid) => buildForOutlet(oid));
-        next = [...next, ...clones];
-        return next;
-      });
-
-      const copyCount = (includesOriginal ? additionalOutlets : selectedOutletIds).length;
-      if (copyCount > 0) {
-        toast.success(`Item updated and copied to ${copyCount} additional outlet${copyCount > 1 ? "s" : ""}`);
-      } else {
-        toast.success("Item updated");
-      }
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === editing.id
+            ? {
+                ...i,
+                ...form,
+                outletId: targetOutletId,
+                stock: resolvedStock,
+                minStock: form.minStock,
+                status: computeStatus(resolvedStock, form.minStock),
+                batches: resolvedBatches,
+              }
+            : i,
+        ),
+      );
+      toast.success("Item updated");
     } else {
-      const newItems = selectedOutletIds.map((oid, idx) =>
-        buildForOutlet(oid, undefined, idx === 0),
-      );
-      setItems((prev) => [...prev, ...newItems]);
-      toast.success(
-        selectedOutletIds.length > 1
-          ? `Item registered in ${selectedOutletIds.length} outlets`
-          : "Item registered",
-      );
+      const newItem: InventoryItem = {
+        id: crypto.randomUUID(),
+        ...form,
+        outletId: targetOutletId,
+        stock: resolvedStock,
+        minStock: form.minStock,
+        status: computeStatus(resolvedStock, form.minStock),
+        conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
+        batches: resolvedBatches,
+      };
+      setItems((prev) => [...prev, newItem]);
+      toast.success("Item registered");
     }
     setOpen(false);
   };
@@ -667,88 +588,29 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <DialogTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                <Store className="h-3.5 w-3.5" /> Outlets *
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between font-normal h-auto min-h-10 py-1.5">
-                    <div className="flex flex-wrap gap-1 items-center">
-                      {selectedOutletIds.length === 0 ? (
-                        <span className="text-muted-foreground text-sm">Select outlets...</span>
-                      ) : (
-                        selectedOutletIds.map((id) => {
-                          const o = outlets.find((x) => x.id === id);
-                          if (!o) return null;
-                          return (
-                            <Badge key={id} variant="secondary" className="text-xs gap-1">
-                              {o.name}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedOutletIds((prev) => prev.filter((p) => p !== id));
-                                }}
-                                className="hover:text-destructive"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          );
-                        })
-                      )}
+            {(() => {
+              const targetOutletId = editing?.outletId || (selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "");
+              const targetOutlet = targetOutletId ? outlets.find((o) => o.id === targetOutletId) : null;
+              return (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5" /> Outlet
+                  </Label>
+                  {targetOutlet ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/40">
+                      <span className="text-sm font-medium flex-1 truncate">{targetOutlet.name}</span>
+                      <Badge variant="outline" className="text-[10px] capitalize">
+                        {targetOutlet.businessType.replace(/_/g, " ")}
+                      </Badge>
                     </div>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-1 max-h-72 overflow-y-auto" align="start">
-                  <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
-                    <span>{selectedOutletIds.length} selected</span>
-                    <button
-                      type="button"
-                      className="hover:text-foreground underline"
-                      onClick={() =>
-                        setSelectedOutletIds(
-                          selectedOutletIds.length === outlets.length ? [] : outlets.map((o) => o.id),
-                        )
-                      }
-                    >
-                      {selectedOutletIds.length === outlets.length ? "Clear all" : "Select all"}
-                    </button>
-                  </div>
-                  {outlets.map((o) => {
-                    const checked = selectedOutletIds.includes(o.id);
-                    return (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedOutletIds((prev) =>
-                            checked ? prev.filter((p) => p !== o.id) : [...prev, o.id],
-                          )
-                        }
-                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground text-left"
-                      >
-                        <div className={cn("h-4 w-4 rounded border flex items-center justify-center", checked ? "bg-primary border-primary text-primary-foreground" : "border-input")}>
-                          {checked && <Check className="h-3 w-3" />}
-                        </div>
-                        <span className="flex-1">{o.name}</span>
-                      </button>
-                    );
-                  })}
-                </PopoverContent>
-              </Popover>
-              {editing && selectedOutletIds.length > 1 && (
-                <p className="text-[11px] text-muted-foreground">
-                  Selecting additional outlets will create copies of this item in those outlets.
-                </p>
-              )}
-              {!editing && selectedOutletIds.length > 1 && (
-                <p className="text-[11px] text-muted-foreground">
-                  This item will be registered in {selectedOutletIds.length} outlets. SKU will only apply to the first; set unique SKUs per outlet later.
-                </p>
-              )}
-            </div>
+                  ) : (
+                    <p className="text-xs text-destructive">
+                      Select a specific outlet from the page header before registering items.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
             <div className="space-y-2">
               <label className="text-sm font-medium">Item Name *</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
@@ -784,144 +646,99 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Cost per Unit</label>
-              <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Applied to every selected outlet. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
+              <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
-            {/* Per-outlet stock + batches */}
-            {selectedOutletIds.length > 0 && (
-              <div className="space-y-3 border-t pt-4">
-                <div>
-                  <label className="text-sm font-medium">Stock per Outlet</label>
-                  <p className="text-xs text-muted-foreground">
-                    Set the starting quantity for each selected outlet. Batch-tracked outlets (pharmacy, grocery, supermarket) use batch quantities.
-                  </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
+                </label>
+                {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
+                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                    {batchStockTotal}
+                  </div>
+                ) : (
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.stock}
+                    onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Stock</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.minStock}
+                  onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {showBatchExpiry && (
+              <div className="space-y-2 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Batches</label>
+                    <p className="text-xs text-muted-foreground">Track expiry per shipment.</p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addBatch} className="h-7 text-xs">
+                    <Plus className="h-3 w-3 mr-1" /> Add Batch
+                  </Button>
                 </div>
-
-                {selectedOutletIds.map((oid) => {
-                  const outlet = outlets.find((o) => o.id === oid);
-                  if (!outlet) return null;
-                  const entry = outletStocks[oid] ?? { stock: 0, minStock: 0, batches: [] };
-                  const batchTracked = isOutletBatchTracked(oid);
-                  const usesBatches = batchTracked && entry.batches.length > 0;
-                  const batchTotal = entry.batches.reduce((sum, b) => sum + b.quantity, 0);
-                  return (
-                    <Card key={oid} className="p-3 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Store className="h-3.5 w-3.5 text-muted-foreground" />
-                        <p className="text-sm font-medium flex-1 truncate">{outlet.name}</p>
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {outlet.businessType.replace(/_/g, " ")}
-                        </Badge>
-                      </div>
-
-                      {!usesBatches && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Current Stock</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={entry.stock}
-                              onChange={(e) => updateOutletStock(oid, { stock: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Min Stock</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={entry.minStock}
-                              onChange={(e) => updateOutletStock(oid, { minStock: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {usesBatches && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Total Stock (from batches)</label>
-                            <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                              {batchTotal}
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Min Stock</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={entry.minStock}
-                              onChange={(e) => updateOutletStock(oid, { minStock: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {batchTracked && (
-                        <div className="space-y-2 border-t pt-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-muted-foreground">Batches</p>
-                            <Button type="button" variant="outline" size="sm" onClick={() => addOutletBatch(oid)} className="h-6 text-[11px] px-2">
-                              <Plus className="h-3 w-3 mr-1" /> Add Batch
-                            </Button>
-                          </div>
-                          {entry.batches.length === 0 && (
-                            <p className="text-[11px] text-muted-foreground text-center py-2 border border-dashed rounded-md">
-                              No batches. Add one to track expiry per shipment.
-                            </p>
-                          )}
-                          {entry.batches.map((batch, idx) => (
-                            <div key={batch.id} className="grid grid-cols-[1fr_1fr_70px_28px] gap-1.5 items-end">
-                              <div className="space-y-0.5">
-                                <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Batch #</label>
-                                <Input
-                                  value={batch.batchNumber}
-                                  onChange={(e) => updateOutletBatch(oid, idx, { batchNumber: e.target.value })}
-                                  placeholder="BT-001"
-                                  className="h-7 text-xs"
-                                />
-                              </div>
-                              <div className="space-y-0.5">
-                                <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Expiry</label>
-                                <Input
-                                  type="date"
-                                  value={batch.expiryDate}
-                                  onChange={(e) => updateOutletBatch(oid, idx, { expiryDate: e.target.value })}
-                                  className="h-7 text-xs"
-                                />
-                              </div>
-                              <div className="space-y-0.5">
-                                <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Qty</label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  value={batch.quantity}
-                                  onChange={(e) => updateOutletBatch(oid, idx, { quantity: Number(e.target.value) })}
-                                  className="h-7 text-xs"
-                                />
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={() => removeOutletBatch(oid, idx)}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
+                {(form.batches?.length ?? 0) === 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center py-2 border border-dashed rounded-md">
+                    No batches added yet.
+                  </p>
+                )}
+                {(form.batches ?? []).map((batch, idx) => (
+                  <div key={batch.id} className="grid grid-cols-[1fr_1fr_70px_28px] gap-1.5 items-end">
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Batch #</label>
+                      <Input
+                        value={batch.batchNumber}
+                        onChange={(e) => updateBatch(idx, { batchNumber: e.target.value })}
+                        placeholder="BT-001"
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Expiry</label>
+                      <Input
+                        type="date"
+                        value={batch.expiryDate}
+                        onChange={(e) => updateBatch(idx, { expiryDate: e.target.value })}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Qty</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={batch.quantity}
+                        onChange={(e) => updateBatch(idx, { quantity: Number(e.target.value) })}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => removeBatch(idx)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
+
 
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
