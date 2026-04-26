@@ -115,6 +115,8 @@ export default function CompositeItemForm({ composites, setComposites, inventory
       components: [...item.components],
       sellPrice: item.sellPrice ?? "",
       overheadPerUnit: item.overheadPerUnit ?? "",
+      pricingMethod: item.pricingMethod ?? "markup",
+      pricingValue: item.pricingValue ?? 30,
     });
     setOpen(true);
   };
