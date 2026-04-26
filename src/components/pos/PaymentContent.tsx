@@ -176,7 +176,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handleProceedToPayment = () => {
     if (!payNow && !existingOrderId) {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, false, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       setCompletedOrder({ orderNumber: order.orderNumber, total: order.totalAmount, id: order.id });
       setStep("complete");
       return;
@@ -190,7 +190,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       addPayment(order.id, { method: paymentMethod, amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
@@ -207,7 +207,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
-      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined);
+      const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
