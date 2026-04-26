@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store, Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { outlets } from "@/data/outlets";
 import { Label } from "@/components/ui/label";
 import BarcodeScanner from "./BarcodeScanner";
@@ -681,18 +682,16 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     <div className="space-y-2">
                       <label className="text-sm font-medium flex items-center gap-1.5">
                         {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Current Stock?">
-                                <Info className="h-3.5 w-3.5" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <p>The quantity of this item currently available at the selected outlet, expressed in its base unit (e.g., grams, ml, pieces). {formShowBatchExpiry ? "When batches are added, this is auto-calculated from the sum of all batch quantities." : ""}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Current Stock?">
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
+                            <p>The quantity of this item currently available at the selected outlet, expressed in its base unit (e.g., grams, ml, pieces). {formShowBatchExpiry ? "When batches are added, this is auto-calculated from the sum of all batch quantities." : ""}</p>
+                          </PopoverContent>
+                        </Popover>
                       </label>
                       {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
                         <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
@@ -710,18 +709,16 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                     <div className="space-y-2">
                       <label className="text-sm font-medium flex items-center gap-1.5">
                         Min Stock
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Min Stock?">
-                                <Info className="h-3.5 w-3.5" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="max-w-xs">
-                              <p>The reorder threshold. When current stock falls to or below this level, the item is flagged as "Low Stock" so you know to restock before running out.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Min Stock?">
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" align="end" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
+                            <p>The reorder threshold. When current stock falls to or below this level, the item is flagged as "Low Stock" so you know to restock before running out.</p>
+                          </PopoverContent>
+                        </Popover>
                       </label>
                       <Input
                         type="number"
