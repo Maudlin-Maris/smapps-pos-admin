@@ -336,6 +336,71 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description" />
             </div>
 
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Components</label>
+                <Button type="button" variant="outline" size="sm" onClick={addComponent}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                </Button>
+              </div>
+              {form.components.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-lg">No components added yet</p>
+              )}
+              {form.components.map((comp, i) => (
+                <div key={i} className="space-y-2 p-3 border rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <ItemCombobox
+                      inventoryItems={inventoryItems}
+                      value={comp.inventoryItemId}
+                      onSelect={(v) => updateComponent(i, "inventoryItemId", v)}
+                    />
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      className="w-24"
+                      value={comp.quantity}
+                      onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
+                      min={0}
+                      step={0.1}
+                      placeholder="Qty"
+                    />
+                    <span className="text-xs text-muted-foreground w-10 shrink-0">
+                      {getItemUnit(comp.inventoryItemId)}
+                    </span>
+                    {comp.inventoryItemId && (
+                      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                        @ {formatNaira(getItemCost(comp.inventoryItemId))} = <span className="font-medium text-foreground">{formatNaira(getItemCost(comp.inventoryItemId) * (comp.quantity || 0))}</span>
+                      </span>
+                    )}
+                    <div className="flex gap-1 ml-auto">
+                      <Button
+                        type="button"
+                        variant={comp.role === "primary" ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs px-2.5"
+                        onClick={() => updateComponent(i, "role", "primary")}
+                      >
+                        Primary
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={comp.role === "secondary" ? "secondary" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs px-2.5"
+                        onClick={() => updateComponent(i, "role", "secondary")}
+                      >
+                        Secondary
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             {/* Cost & Pricing — derived from components (BOM) */}
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center gap-2">
@@ -448,71 +513,6 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               )}
             </div>
 
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Components</label>
-                <Button type="button" variant="outline" size="sm" onClick={addComponent}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                </Button>
-              </div>
-              {form.components.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-lg">No components added yet</p>
-              )}
-              {form.components.map((comp, i) => (
-                <div key={i} className="space-y-2 p-3 border rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <ItemCombobox
-                      inventoryItems={inventoryItems}
-                      value={comp.inventoryItemId}
-                      onSelect={(v) => updateComponent(i, "inventoryItemId", v)}
-                    />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeComponent(i)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      className="w-24"
-                      value={comp.quantity}
-                      onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
-                      min={0}
-                      step={0.1}
-                      placeholder="Qty"
-                    />
-                    <span className="text-xs text-muted-foreground w-10 shrink-0">
-                      {getItemUnit(comp.inventoryItemId)}
-                    </span>
-                    {comp.inventoryItemId && (
-                      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-                        @ {formatNaira(getItemCost(comp.inventoryItemId))} = <span className="font-medium text-foreground">{formatNaira(getItemCost(comp.inventoryItemId) * (comp.quantity || 0))}</span>
-                      </span>
-                    )}
-                    <div className="flex gap-1 ml-auto">
-                      <Button
-                        type="button"
-                        variant={comp.role === "primary" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs px-2.5"
-                        onClick={() => updateComponent(i, "role", "primary")}
-                      >
-                        Primary
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={comp.role === "secondary" ? "secondary" : "outline"}
-                        size="sm"
-                        className="h-7 text-xs px-2.5"
-                        onClick={() => updateComponent(i, "role", "secondary")}
-                      >
-                        Secondary
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
