@@ -729,8 +729,119 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <div className="space-y-2">
               <label className="text-sm font-medium">Cost per Unit</label>
               <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
-              <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
+              <Input
+                type="number"
+                step="0.01"
+                value={form.costPrice}
+                onChange={(e) => {
+                  const cp = Number(e.target.value);
+                  const method = form.pricingMethod ?? "markup";
+                  const val = form.pricingValue ?? 0;
+                  const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val) * 100) / 100 : form.sellPrice;
+                  setForm({ ...form, costPrice: cp, sellPrice: newSell });
+                }}
+                placeholder="0.00"
+              />
             </div>
+
+            {/* Sell Price & Markup — retail businesses only */}
+            {isOutletRetail(form.outletId) && (() => {
+              const cost = form.costPrice || 0;
+              const sell = form.sellPrice || 0;
+              const profit = sell - cost;
+              const profitPositive = profit >= 0;
+              return (
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-primary" />
+                    <label className="text-sm font-medium">Sell Price & Markup</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Sell Price & Markup?">
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                        <p>Set the retail sell price using <strong>Markup %</strong> (added on top of cost), <strong>Margin %</strong> (profit as a share of the sell price), or a <strong>Fixed Price</strong>. The sell price recalculates automatically when you change the method or value.</p>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                      <Select
+                        value={form.pricingMethod ?? "markup"}
+                        onValueChange={(v) => {
+                          const method = v as PricingMethod;
+                          const val = form.pricingValue ?? 0;
+                          const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
+                          setForm({ ...form, pricingMethod: method, sellPrice: newSell });
+                        }}
+                      >
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="markup">Markup %</SelectItem>
+                          <SelectItem value="margin">Margin %</SelectItem>
+                          <SelectItem value="fixed">Fixed Price</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                        {form.pricingMethod === "fixed" ? "Price" : "%"}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={form.pricingValue ?? 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          const method = form.pricingMethod ?? "markup";
+                          const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
+                          setForm({ ...form, pricingValue: val, sellPrice: newSell });
+                        }}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={form.sellPrice ?? 0}
+                        onChange={(e) => setForm({ ...form, sellPrice: Number(e.target.value) })}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                  {cost > 0 && sell > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <TrendingUp className={cn("h-3.5 w-3.5", profitPositive ? "text-success" : "text-destructive")} />
+                      <span className={cn("font-medium", profitPositive ? "text-success" : "text-destructive")}>
+                        ₦{profit.toFixed(2)}/unit profit
+                      </span>
+                      <span className="text-muted-foreground">
+                        ({cost > 0 ? ((profit / cost) * 100).toFixed(1) : "0"}% markup)
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
+                        Auto-update catalog
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Sync this item's sell price to the product catalog automatically
+                      </p>
+                    </div>
+                    <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
+                  </div>
+                </div>
+              );
+            })()}
+
 
             {(() => {
               const formShowBatchExpiry = isOutletBatchTracked(form.outletId);
