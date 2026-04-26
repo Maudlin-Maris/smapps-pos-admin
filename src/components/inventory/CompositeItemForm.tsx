@@ -386,6 +386,28 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                 </div>
               );
             })()}
+            {(() => {
+              const info = getProducibleQty(item.components);
+              if (!info.hasComponents) return null;
+              return (
+                <div className="mt-2 flex items-center justify-between text-[11px]">
+                  <span className="text-muted-foreground">Producible now</span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "tabular-nums font-semibold",
+                      info.producible === 0
+                        ? "border-destructive/50 text-destructive"
+                        : info.producible < 5
+                          ? "border-warning/50 text-warning"
+                          : "border-success/50 text-success"
+                    )}
+                  >
+                    {info.producible} units
+                  </Badge>
+                </div>
+              );
+            })()}
 
           </Card>
         ))}
