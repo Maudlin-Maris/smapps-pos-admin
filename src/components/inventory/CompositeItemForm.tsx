@@ -313,7 +313,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               {item.components.map((comp, i) => (
                 <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
                   <div className={cn("h-1.5 w-1.5 rounded-full", comp.role === "primary" ? "bg-primary" : "bg-muted-foreground/40")} />
-                  {getItemName(comp.inventoryItemId)} — {comp.quantity} {getItemUnit(comp.inventoryItemId)}
+                  {getItemName(comp.inventoryItemId)} — {comp.quantity} {getComponentUnitAbbr(comp) || getItemUnit(comp.inventoryItemId)}
                   <Badge variant={comp.role === "primary" ? "default" : "secondary"} className="text-[10px] px-1.5 py-0 h-4 ml-auto">
                     {comp.role}
                   </Badge>
@@ -322,7 +322,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
             </ul>
             {(() => {
               const cardCost = item.components.reduce(
-                (s, c) => s + getItemCost(c.inventoryItemId) * (c.quantity || 0),
+                (s, c) => s + getComponentLineCost(c),
                 0
               ) + (item.overheadPerUnit ?? 0);
               const cardSell = item.sellPrice ?? 0;
