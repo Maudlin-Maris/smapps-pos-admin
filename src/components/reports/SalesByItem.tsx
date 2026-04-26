@@ -175,18 +175,32 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
                   <TableHead className="text-xs">Item</TableHead>
                   <TableHead className="text-xs">Category</TableHead>
                   <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Unit Cost</TableHead>
+                  <TableHead className="text-right text-xs">Total Cost</TableHead>
                   <TableHead className="text-right text-xs">Revenue</TableHead>
-                  <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
+                  <TableHead className="text-right text-xs">Profit</TableHead>
+                  <TableHead className="text-right text-xs">Margin</TableHead>
+                  <TableHead className="text-right text-xs w-[60px]">Daily</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {itemsPag.paginatedItems.length > 0 ? (
                   itemsPag.paginatedItems.map((item) => (
                     <TableRow key={item.name}>
-                      <TableCell className="font-medium text-xs sm:text-sm">{item.name}</TableCell>
-                      <TableCell className="text-xs sm:text-sm text-muted-foreground">{item.category}</TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{item.name}</TableCell>
+                      <TableCell className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{item.category}</TableCell>
                       <TableCell className="text-right text-xs sm:text-sm">{item.qty}</TableCell>
-                      <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(item.revenue)}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{formatCurrency(item.unitCost)}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{formatCurrency(item.cost)}</TableCell>
+                      <TableCell className="text-right font-semibold text-xs sm:text-sm whitespace-nowrap">{formatCurrency(item.revenue)}</TableCell>
+                      <TableCell className={`text-right font-semibold text-xs sm:text-sm whitespace-nowrap ${item.profit >= 0 ? "text-primary" : "text-destructive"}`}>
+                        {formatCurrency(item.profit)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">
+                        <Badge variant={item.margin >= 30 ? "default" : item.margin >= 10 ? "secondary" : "destructive"} className="text-[10px] px-1.5 py-0">
+                          {item.margin.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
@@ -201,7 +215,7 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No items match</TableCell>
+                    <TableCell colSpan={9} className="text-center text-muted-foreground text-xs">No items match</TableCell>
                   </TableRow>
                 )}
               </TableBody>
