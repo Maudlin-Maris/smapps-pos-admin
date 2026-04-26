@@ -55,6 +55,9 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
 
   const totalQty = visibleItems.reduce((s, i) => s + i.qty, 0);
   const totalRevenue = visibleItems.reduce((s, i) => s + i.revenue, 0);
+  const totalCost = visibleItems.reduce((s, i) => s + i.cost, 0);
+  const totalProfit = totalRevenue - totalCost;
+  const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
   const topItems = useMemo(() => allItems.slice(0, 5), [allItems]);
 
   const itemsPag = usePagination(visibleItems, 10);
@@ -63,7 +66,7 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Card className="p-3 sm:p-4">
           <p className="text-xs text-muted-foreground">Unique Items</p>
           <p className="text-lg sm:text-2xl font-bold">{visibleItems.length}</p>
@@ -72,9 +75,18 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
           <p className="text-xs text-muted-foreground">Total Qty Sold</p>
           <p className="text-lg sm:text-2xl font-bold">{totalQty}</p>
         </Card>
-        <Card className="p-3 sm:p-4 col-span-2 md:col-span-1">
+        <Card className="p-3 sm:p-4">
           <p className="text-xs text-muted-foreground">Total Revenue</p>
           <p className="text-lg sm:text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+        </Card>
+        <Card className="p-3 sm:p-4">
+          <p className="text-xs text-muted-foreground">Total Cost (COGS)</p>
+          <p className="text-lg sm:text-2xl font-bold">{formatCurrency(totalCost)}</p>
+        </Card>
+        <Card className="p-3 sm:p-4 col-span-2 md:col-span-3 lg:col-span-1">
+          <p className="text-xs text-muted-foreground">True Profit</p>
+          <p className="text-lg sm:text-2xl font-bold text-primary">{formatCurrency(totalProfit)}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Margin {overallMargin.toFixed(1)}%</p>
         </Card>
       </div>
 
