@@ -1,43 +1,44 @@
 // Shared sample data for Sales tabs (item-level + payment splits)
+// unitCost = cost of production / acquisition per single unit (WAC-based)
 
 export const outletItemSales: Record<
   string,
-  { name: string; category: string; qty: number; revenue: number }[]
+  { name: string; category: string; qty: number; revenue: number; unitCost: number }[]
 > = {
   "outlet-1": [
-    { name: "Detergent 2kg", category: "Household", qty: 42, revenue: 6300 },
-    { name: "Rice 5kg", category: "Groceries", qty: 38, revenue: 5700 },
-    { name: "Cooking Oil 1L", category: "Groceries", qty: 56, revenue: 4480 },
-    { name: "Bread (White)", category: "Bakery", qty: 120, revenue: 3600 },
-    { name: "Eggs (Tray)", category: "Groceries", qty: 34, revenue: 3400 },
-    { name: "Sugar 1kg", category: "Groceries", qty: 62, revenue: 2480 },
-    { name: "Milk 1L", category: "Dairy", qty: 48, revenue: 1920 },
-    { name: "Butter 250g", category: "Dairy", qty: 30, revenue: 1500 },
+    { name: "Detergent 2kg", category: "Household", qty: 42, revenue: 6300, unitCost: 110 },
+    { name: "Rice 5kg", category: "Groceries", qty: 38, revenue: 5700, unitCost: 120 },
+    { name: "Cooking Oil 1L", category: "Groceries", qty: 56, revenue: 4480, unitCost: 60 },
+    { name: "Bread (White)", category: "Bakery", qty: 120, revenue: 3600, unitCost: 18 },
+    { name: "Eggs (Tray)", category: "Groceries", qty: 34, revenue: 3400, unitCost: 75 },
+    { name: "Sugar 1kg", category: "Groceries", qty: 62, revenue: 2480, unitCost: 28 },
+    { name: "Milk 1L", category: "Dairy", qty: 48, revenue: 1920, unitCost: 26 },
+    { name: "Butter 250g", category: "Dairy", qty: 30, revenue: 1500, unitCost: 32 },
   ],
   "outlet-2": [
-    { name: "Grilled Chicken Combo", category: "Main Dishes", qty: 86, revenue: 12900 },
-    { name: "Espresso Coffee", category: "Beverages", qty: 142, revenue: 7100 },
-    { name: "Fresh Juice (L)", category: "Beverages", qty: 112, revenue: 6720 },
-    { name: "Burger Meal", category: "Main Dishes", qty: 64, revenue: 5760 },
-    { name: "Fried Rice", category: "Main Dishes", qty: 48, revenue: 4320 },
-    { name: "Meat Pie", category: "Snacks", qty: 90, revenue: 2700 },
-    { name: "Chin Chin Pack", category: "Snacks", qty: 65, revenue: 1950 },
+    { name: "Grilled Chicken Combo", category: "Main Dishes", qty: 86, revenue: 12900, unitCost: 75 },
+    { name: "Espresso Coffee", category: "Beverages", qty: 142, revenue: 7100, unitCost: 18 },
+    { name: "Fresh Juice (L)", category: "Beverages", qty: 112, revenue: 6720, unitCost: 22 },
+    { name: "Burger Meal", category: "Main Dishes", qty: 64, revenue: 5760, unitCost: 38 },
+    { name: "Fried Rice", category: "Main Dishes", qty: 48, revenue: 4320, unitCost: 32 },
+    { name: "Meat Pie", category: "Snacks", qty: 90, revenue: 2700, unitCost: 12 },
+    { name: "Chin Chin Pack", category: "Snacks", qty: 65, revenue: 1950, unitCost: 10 },
   ],
   "outlet-3": [
-    { name: "Premium Haircut", category: "Hair Services", qty: 24, revenue: 7200 },
-    { name: "Hair Treatment", category: "Hair Services", qty: 18, revenue: 9000 },
-    { name: "Manicure & Pedicure", category: "Nail Services", qty: 22, revenue: 6600 },
-    { name: "Hair Coloring", category: "Hair Services", qty: 8, revenue: 6400 },
-    { name: "Beard Trim", category: "Grooming", qty: 32, revenue: 4800 },
-    { name: "Facial Treatment", category: "Skin Care", qty: 12, revenue: 3600 },
+    { name: "Premium Haircut", category: "Hair Services", qty: 24, revenue: 7200, unitCost: 60 },
+    { name: "Hair Treatment", category: "Hair Services", qty: 18, revenue: 9000, unitCost: 140 },
+    { name: "Manicure & Pedicure", category: "Nail Services", qty: 22, revenue: 6600, unitCost: 70 },
+    { name: "Hair Coloring", category: "Hair Services", qty: 8, revenue: 6400, unitCost: 220 },
+    { name: "Beard Trim", category: "Grooming", qty: 32, revenue: 4800, unitCost: 30 },
+    { name: "Facial Treatment", category: "Skin Care", qty: 12, revenue: 3600, unitCost: 90 },
   ],
   "outlet-4": [
-    { name: "Travel Snack Pack", category: "Snacks", qty: 68, revenue: 6800 },
-    { name: "Neck Pillow", category: "Travel", qty: 22, revenue: 5500 },
-    { name: "Earphones", category: "Electronics", qty: 18, revenue: 5400 },
-    { name: "Magazine", category: "Media", qty: 44, revenue: 4400 },
-    { name: "Bottled Water", category: "Beverages", qty: 120, revenue: 3600 },
-    { name: "Chewing Gum", category: "Snacks", qty: 80, revenue: 1600 },
+    { name: "Travel Snack Pack", category: "Snacks", qty: 68, revenue: 6800, unitCost: 45 },
+    { name: "Neck Pillow", category: "Travel", qty: 22, revenue: 5500, unitCost: 110 },
+    { name: "Earphones", category: "Electronics", qty: 18, revenue: 5400, unitCost: 160 },
+    { name: "Magazine", category: "Media", qty: 44, revenue: 4400, unitCost: 55 },
+    { name: "Bottled Water", category: "Beverages", qty: 120, revenue: 3600, unitCost: 12 },
+    { name: "Chewing Gum", category: "Snacks", qty: 80, revenue: 1600, unitCost: 6 },
   ],
 };
 
@@ -80,19 +81,42 @@ export function filterSales<T extends { outletId: string; date: string; cashier?
 }
 
 export function aggregateItems(selectedOutlets: string[]) {
-  const itemMap: Record<string, { name: string; category: string; qty: number; revenue: number }> = {};
+  const itemMap: Record<
+    string,
+    { name: string; category: string; qty: number; revenue: number; cost: number; unitCost: number; profit: number; margin: number }
+  > = {};
   selectedOutlets.forEach((outletId) => {
     const items = outletItemSales[outletId] || [];
     items.forEach((item) => {
+      const cost = item.unitCost * item.qty;
       if (!itemMap[item.name]) {
-        itemMap[item.name] = { ...item };
+        itemMap[item.name] = {
+          name: item.name,
+          category: item.category,
+          qty: item.qty,
+          revenue: item.revenue,
+          cost,
+          unitCost: item.unitCost,
+          profit: 0,
+          margin: 0,
+        };
       } else {
-        itemMap[item.name].qty += item.qty;
-        itemMap[item.name].revenue += item.revenue;
+        const existing = itemMap[item.name];
+        existing.qty += item.qty;
+        existing.revenue += item.revenue;
+        existing.cost += cost;
+        // Weighted average unit cost across outlets
+        existing.unitCost = existing.qty > 0 ? existing.cost / existing.qty : item.unitCost;
       }
     });
   });
-  return Object.values(itemMap).sort((a, b) => b.revenue - a.revenue);
+  return Object.values(itemMap)
+    .map((i) => {
+      const profit = i.revenue - i.cost;
+      const margin = i.revenue > 0 ? (profit / i.revenue) * 100 : 0;
+      return { ...i, profit, margin };
+    })
+    .sort((a, b) => b.revenue - a.revenue);
 }
 
 export function dailySalesShareFor(filteredSales: { date: string; totalSales: number }[]) {
