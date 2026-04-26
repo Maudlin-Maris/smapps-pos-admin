@@ -75,7 +75,7 @@ const COLUMN_DEFINITIONS: { label: string; description: string }[] = [
   { label: "Raw Material", description: "Inventory item consumed during the period (with its share of total COGS)." },
   { label: "Qty Used", description: "Total quantity consumed during the period, shown in the item's base unit (e.g., g, kg, loaves)." },
   { label: "Avg Cost", description: "Total cost of all units consumed during the period, valued at Weighted Average Cost (WAC)." },
-  { label: "Revenue Earned", description: "Revenue attributed to this raw material based on its share of total cost of goods sold for the period." },
+  { label: "Revenue Earned", description: "Material cost multiplied by the period's overall markup (Total Revenue ÷ Total COGS). Example: ₦62.50 of coffee beans at a 1.3× markup → ₦81.25 earned." },
   { label: "Profit", description: "Revenue earned minus the total cost. Positive values mean the material contributed profit." },
   { label: "Margin", description: "Profit as a percentage of attributed revenue for this raw material." },
 ];
