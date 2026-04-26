@@ -110,9 +110,11 @@ interface AdjustDialogProps {
   ) => void;
   /** Current catalog sell price for the item, if known */
   currentSellPrice?: number;
+  /** Name of the outlet currently being worked on */
+  outletName?: string;
 }
 
-export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentSellPrice }: AdjustDialogProps) {
+export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentSellPrice, outletName }: AdjustDialogProps) {
   const [type, setType] = useState<AdjustmentType>("add");
   const [quantity, setQuantity] = useState(0);
   const [reason, setReason] = useState("");
@@ -255,6 +257,11 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
           <DialogTitle>
             {isAddType && showRetailPricing ? "Receive Stock" : "Adjust Stock"} — {item?.name}
           </DialogTitle>
+          {outletName && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Outlet: <span className="font-medium text-foreground">{outletName}</span>
+            </p>
+          )}
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
