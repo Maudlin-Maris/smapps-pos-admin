@@ -517,6 +517,35 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                   </div>
                 );
               })}
+
+              {producibleInfo.hasComponents && (
+                <div className={cn(
+                  "rounded-lg border p-3 flex items-center justify-between gap-3 text-xs",
+                  producibleInfo.producible === 0
+                    ? "border-destructive/40 bg-destructive/5"
+                    : producibleInfo.producible < 5
+                      ? "border-warning/40 bg-warning/5"
+                      : "border-success/40 bg-success/5"
+                )}>
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="text-muted-foreground">Producible from current stock</div>
+                    {limitingItemName && (
+                      <div className="text-[11px] text-muted-foreground truncate">
+                        Limited by <span className="font-medium text-foreground">{limitingItemName}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={cn(
+                      "text-lg font-bold tabular-nums leading-none",
+                      producibleInfo.producible === 0 ? "text-destructive" : "text-foreground"
+                    )}>
+                      {producibleInfo.producible}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">units</div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Cost & Pricing — derived from components (BOM) */}
