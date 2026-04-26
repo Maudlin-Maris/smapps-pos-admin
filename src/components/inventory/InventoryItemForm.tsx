@@ -335,7 +335,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const addConversion = () => {
     setForm((prev) => ({
       ...prev,
-      conversions: [...prev.conversions, { id: crypto.randomUUID(), fromQuantity: 1, toQuantity: 1, toUnitId: "" }],
+      conversions: [...prev.conversions, { id: crypto.randomUUID(), fromQuantity: 1, toQuantity: 1, toUnitId: "", sellable: true, sellPrice: 0 }],
     }));
   };
 
