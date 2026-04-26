@@ -109,7 +109,7 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
   const topPag = usePagination(topItems, 5);
 
   return (
-    <TooltipProvider delayDuration={150}>
+    <>
     <div className="space-y-4 sm:space-y-6">
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
@@ -319,6 +319,6 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
         </DialogContent>
       </Dialog>
     </div>
-    </TooltipProvider>
+    </>
   );
 }
