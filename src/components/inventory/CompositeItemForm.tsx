@@ -88,7 +88,15 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
   const openEdit = (item: CompositeItem) => {
     setEditing(item);
-    setForm({ name: item.name, menuItemId: item.menuItemId || "", menuVariantId: item.menuVariantId || "", description: item.description, components: [...item.components] });
+    setForm({
+      name: item.name,
+      menuItemId: item.menuItemId || "",
+      menuVariantId: item.menuVariantId || "",
+      description: item.description,
+      components: [...item.components],
+      sellPrice: item.sellPrice ?? "",
+      overheadPerUnit: item.overheadPerUnit ?? "",
+    });
     setOpen(true);
   };
 
@@ -129,15 +137,24 @@ export default function CompositeItemForm({ composites, setComposites, inventory
       return;
     }
 
+    const sellPriceNum =
+      form.sellPrice === "" || form.sellPrice === null
+        ? undefined
+        : Number(form.sellPrice);
+    const overheadNum =
+      form.overheadPerUnit === "" || form.overheadPerUnit === null
+        ? undefined
+        : Number(form.overheadPerUnit);
+
     if (editing) {
       setComposites((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents } : c))
+        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, sellPrice: sellPriceNum, overheadPerUnit: overheadNum } : c))
       );
       toast.success("Composite item updated");
     } else {
       setComposites((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "" },
+        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "", sellPrice: sellPriceNum, overheadPerUnit: overheadNum },
       ]);
       toast.success("Composite item created");
     }
