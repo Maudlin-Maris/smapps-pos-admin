@@ -580,7 +580,8 @@ export default function ProductGrid() {
       <VariantExtrasDialog
         product={dialogProduct}
         open={!!dialogProduct}
-        onClose={() => setDialogProduct(null)}
+        initialSellableUnitId={dialogUnitId}
+        onClose={() => { setDialogProduct(null); setDialogUnitId(undefined); }}
         onConfirm={handleConfirmVariantExtras}
       />
 
