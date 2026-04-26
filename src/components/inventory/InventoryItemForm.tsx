@@ -38,6 +38,10 @@ export interface ItemConversion {
   fromQuantity: number;
   toQuantity: number;
   toUnitId: string;
+  /** Whether this sub-unit can be sold individually at the POS. */
+  sellable?: boolean;
+  /** Sell price per single sub-unit (e.g. price per sachet). */
+  sellPrice?: number;
 }
 
 export interface ItemBatch {
@@ -331,7 +335,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const addConversion = () => {
     setForm((prev) => ({
       ...prev,
-      conversions: [...prev.conversions, { id: crypto.randomUUID(), fromQuantity: 1, toQuantity: 1, toUnitId: "" }],
+      conversions: [...prev.conversions, { id: crypto.randomUUID(), fromQuantity: 1, toQuantity: 1, toUnitId: "", sellable: true, sellPrice: 0 }],
     }));
   };
 
@@ -727,8 +731,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cost per Unit</label>
-              <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                Cost per Base Unit
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Cost per Base Unit?">
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                    <p>Purchase cost for one <strong>base unit</strong> (the unit you selected above, e.g. one Pack). If you also sell smaller sub-units like sachets, the per-sachet cost is derived automatically from your unit conversions.</p>
+                  </PopoverContent>
+                </Popover>
+              </label>
               <Input
                 type="number"
                 step="0.01"
@@ -754,7 +769,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 <div className="space-y-3 border-t pt-4">
                   <div className="flex items-center gap-2">
                     <Tag className="h-4 w-4 text-primary" />
-                    <label className="text-sm font-medium">Sell Price & Markup</label>
+                    <label className="text-sm font-medium">Sell Price & Markup (per Base Unit)</label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Sell Price & Markup?">
@@ -762,7 +777,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                         </button>
                       </PopoverTrigger>
                       <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
-                        <p>Set the retail sell price using <strong>Markup %</strong> (added on top of cost), <strong>Margin %</strong> (profit as a share of the sell price), or a <strong>Fixed Price</strong>. The sell price recalculates automatically when you change the method or value.</p>
+                        <p>Set the retail sell price for one <strong>base unit</strong> (e.g. one Pack) using <strong>Markup %</strong>, <strong>Margin %</strong>, or a <strong>Fixed Price</strong>. To also sell smaller sub-units (e.g. per Sachet), set their prices in the <em>Selling Units</em> section below.</p>
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -962,87 +977,187 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             })()}
 
 
-            <div className="space-y-3 border-t pt-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium">Unit Conversions</label>
-                  <p className="text-xs text-muted-foreground">How this item's unit converts to other measuring units</p>
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={addConversion} className="h-7 text-xs">
-                  <Plus className="h-3 w-3 mr-1" /> Add
-                </Button>
-              </div>
-
-              {form.conversions.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
-                  No conversions added yet
-                </p>
-              )}
-
-              {form.conversions.map((conv, idx) => {
-                const itemUnit = getUnit(form.unitId);
-                const toUnit = getUnit(conv.toUnitId);
-                return (
-                  <Card key={conv.id} className="p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-muted-foreground">Conversion {idx + 1}</p>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeConversion(idx)}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
+            {(() => {
+              const retail = isOutletRetail(form.outletId);
+              const baseUnit = getUnit(form.unitId);
+              const baseSell = form.sellPrice ?? 0;
+              return (
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <label className="text-sm font-medium flex items-center gap-1.5">
+                        Selling Units & Conversions
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What are Selling Units?">
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[300px] text-xs leading-relaxed whitespace-normal break-words">
+                            <p className="mb-2">Define how your base unit breaks down into smaller sub-units, and which of those sub-units can be sold individually at the POS.</p>
+                            <p className="text-muted-foreground"><strong>Example:</strong> Paracetamol — base unit is <em>Pack</em>, with stock of 10 packs. Add a conversion <em>1 Pack = 6 Sachets</em>, mark <em>Sellable</em>, and set a per-sachet price. Cashiers can then sell either by Pack or by Sachet, and stock deducts proportionally.</p>
+                          </PopoverContent>
+                        </Popover>
+                      </label>
+                      <p className="text-xs text-muted-foreground">Add sub-units (e.g. Sachet, Tablet) and optionally enable per-unit retail sale.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={conv.fromQuantity}
-                          onChange={(e) => updateConversion(idx, { fromQuantity: Number(e.target.value) })}
-                          className="h-8 text-sm"
-                        />
+                    <Button type="button" variant="outline" size="sm" onClick={addConversion} className="h-7 text-xs shrink-0">
+                      <Plus className="h-3 w-3 mr-1" /> Add
+                    </Button>
+                  </div>
+
+                  {/* Base unit summary row */}
+                  {baseUnit && (
+                    <div className="flex items-center justify-between p-2.5 rounded-md bg-primary/5 border border-primary/15 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary">Base</Badge>
+                        <span className="font-medium truncate">1 {baseUnit.name} ({baseUnit.abbreviation})</span>
                       </div>
-                      <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
-                        <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                          {itemUnit ? itemUnit.abbreviation : "—"}
+                      {retail && baseSell > 0 && (
+                        <span className="text-muted-foreground shrink-0">₦{baseSell.toFixed(2)} / {baseUnit.abbreviation}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {form.conversions.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
+                      No sub-units added yet
+                    </p>
+                  )}
+
+                  {form.conversions.map((conv, idx) => {
+                    const itemUnit = getUnit(form.unitId);
+                    const toUnit = getUnit(conv.toUnitId);
+                    const sellable = conv.sellable ?? true;
+                    // Suggested per-sub-unit price = base sell / (toQty per fromQty)
+                    const ratio = conv.fromQuantity > 0 && conv.toQuantity > 0
+                      ? conv.toQuantity / conv.fromQuantity
+                      : 0;
+                    const suggested = ratio > 0 && baseSell > 0
+                      ? Math.round((baseSell / ratio) * 100) / 100
+                      : 0;
+                    return (
+                      <Card key={conv.id} className="p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-medium text-muted-foreground">Sub-unit {idx + 1}</p>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeConversion(idx)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
-                      </div>
-                      <span className="text-sm font-medium text-muted-foreground pt-4">=</span>
-                      <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={conv.toQuantity}
-                          onChange={(e) => updateConversion(idx, { toQuantity: Number(e.target.value) })}
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
-                        <Select value={conv.toUnitId} onValueChange={(v) => updateConversion(idx, { toUnitId: v })}>
-                          <SelectTrigger className="h-8 text-sm">
-                            <SelectValue placeholder="Select unit" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {units.filter(u => u.id !== form.unitId).map((u) => (
-                              <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    {itemUnit && toUnit && (
-                      <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
-                        {conv.fromQuantity} {itemUnit.abbreviation} = {conv.toQuantity} {toUnit.abbreviation}
-                      </p>
-                    )}
-                  </Card>
-                );
-              })}
-            </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              value={conv.fromQuantity}
+                              onChange={(e) => updateConversion(idx, { fromQuantity: Number(e.target.value) })}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
+                            <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                              {itemUnit ? itemUnit.abbreviation : "—"}
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium text-muted-foreground pt-4">=</span>
+                          <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              value={conv.toQuantity}
+                              onChange={(e) => updateConversion(idx, { toQuantity: Number(e.target.value) })}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
+                            <Select value={conv.toUnitId} onValueChange={(v) => updateConversion(idx, { toUnitId: v })}>
+                              <SelectTrigger className="h-8 text-sm">
+                                <SelectValue placeholder="Select unit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {units.filter(u => u.id !== form.unitId).map((u) => (
+                                  <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        {itemUnit && toUnit && (
+                          <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+                            {conv.fromQuantity} {itemUnit.abbreviation} = {conv.toQuantity} {toUnit.abbreviation}
+                          </p>
+                        )}
+
+                        {retail && (
+                          <div className="rounded-md border border-dashed p-2.5 space-y-2 bg-accent/5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="space-y-0.5 min-w-0">
+                                <Label htmlFor={`sellable-${conv.id}`} className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                                  Sellable at POS
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What does Sellable mean?">
+                                        <Info className="h-3 w-3" />
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
+                                      <p>When enabled, cashiers can ring up this item by the sub-unit{toUnit ? ` (e.g. per ${toUnit.name})` : ""}. Stock is automatically deducted from the base unit using the conversion above.</p>
+                                    </PopoverContent>
+                                  </Popover>
+                                </Label>
+                                <p className="text-[11px] text-muted-foreground">
+                                  {toUnit ? `Allow selling individual ${toUnit.name.toLowerCase()}s at the POS` : "Allow selling this sub-unit individually at the POS"}
+                                </p>
+                              </div>
+                              <Switch
+                                id={`sellable-${conv.id}`}
+                                checked={sellable}
+                                onCheckedChange={(checked) => updateConversion(idx, { sellable: checked })}
+                              />
+                            </div>
+                            {sellable && (
+                              <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    Sell Price per {toUnit ? toUnit.abbreviation : "sub-unit"} (₦)
+                                  </label>
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    step="0.01"
+                                    value={conv.sellPrice ?? 0}
+                                    onChange={(e) => updateConversion(idx, { sellPrice: Number(e.target.value) })}
+                                    className="h-8 text-sm"
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                                {suggested > 0 && (conv.sellPrice ?? 0) !== suggested && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-[11px]"
+                                    onClick={() => updateConversion(idx, { sellPrice: suggested })}
+                                  >
+                                    Use ₦{suggested.toFixed(2)}
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Card>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
