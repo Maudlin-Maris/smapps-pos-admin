@@ -542,8 +542,21 @@ export default function ProductGrid() {
                   )}
                   <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
                   <span className="text-xs text-muted-foreground mt-1">
-                    {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
+                    {product.sellableUnits?.length
+                      ? `From ${formatNaira(Math.min(...product.sellableUnits.map(u => u.price)))}`
+                      : product.variants?.length
+                        ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}`
+                        : formatNaira(product.price)}
                   </span>
+                  {product.sellableUnits && product.sellableUnits.length > 1 && (
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {product.sellableUnits.map(u => (
+                        <span key={u.id} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                          {u.shortLabel ?? u.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {product.variants && product.variants.length > 0 && (
                     <div className="flex gap-1 mt-1.5 flex-wrap">
                       {product.variants.map(v => (
