@@ -6,10 +6,51 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
-import { CalendarRange, Star, Search } from "lucide-react";
+import { CalendarRange, Star, Search, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { aggregateItems, dailySalesShareFor, filterSales, formatCurrency } from "./salesData";
+
+const COLUMN_HELP: Record<string, string> = {
+  Item: "Product or service name. Pinned column — scroll horizontally to see all metrics.",
+  Category: "Catalog category the item belongs to.",
+  Qty: "Total units sold across the selected outlets and date range.",
+  "Unit Cost": "Weighted average cost per unit (WAC) based on actual stock receipts.",
+  "Total Cost": "Quantity × Unit Cost — total cost of goods sold for this item (COGS).",
+  "Gross Rev.": "Revenue before any discounts or taxes are applied (list price × qty).",
+  Discount: "Item-level discounts applied at checkout. Subtracted from gross revenue.",
+  Tax: "Tax collected on this item. Pass-through to authorities — excluded from profit.",
+  "Net Revenue": "Gross Revenue − Discount. The actual amount kept (excludes tax).",
+  Profit: "Net Revenue − Total Cost. True profit after discounts and cost of goods.",
+  Margin: "Profit ÷ Net Revenue × 100. Color-coded: ≥30% strong, 10–29% ok, <10% low.",
+  Daily: "Open a daily breakdown of quantity and revenue across the selected period.",
+};
+
+function ColumnHeader({ label, align = "left" }: { label: string; align?: "left" | "right" }) {
+  const help = COLUMN_HELP[label];
+  return (
+    <span className={`inline-flex items-center gap-1 ${align === "right" ? "justify-end w-full" : ""}`}>
+      <span>{label}</span>
+      {help && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={`What is ${label}?`}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Info className="h-3 w-3" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[240px] text-xs">
+            {help}
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </span>
+  );
+}
 
 interface Props {
   sales: SalesRecord[];
