@@ -89,6 +89,8 @@ const emptyForm = () => ({
   components: [] as CompositeComponent[],
   sellPrice: "" as string | number,
   overheadPerUnit: "" as string | number,
+  pricingMethod: "markup" as CompositePricingMethod,
+  pricingValue: 30 as number,
 });
 
 export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems, readOnly, selectedOutletId }: Props) {
