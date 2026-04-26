@@ -672,36 +672,40 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
-                </label>
-                {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
-                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                    {batchStockTotal}
+            {(() => {
+              const formShowBatchExpiry = isOutletBatchTracked(form.outletId);
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
+                      </label>
+                      {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
+                        <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                          {batchStockTotal}
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.stock}
+                          onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Min Stock</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.minStock}
+                        onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.stock}
-                    onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min Stock</label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.minStock}
-                  onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
-                />
-              </div>
-            </div>
 
-            {showBatchExpiry && (
+                  {formShowBatchExpiry && (
               <div className="space-y-2 border-t pt-4">
                 <div className="flex items-center justify-between">
                   <div>
