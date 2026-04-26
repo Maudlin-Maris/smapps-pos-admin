@@ -232,11 +232,14 @@ export default function RawMaterialContribution({
         <div className="flex items-start gap-2 px-4 py-2.5 bg-muted/40 border-b text-[11px] text-muted-foreground">
           <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <p className="leading-relaxed">
-            Example: if you sold a sandwich made with 2 loaves of bread, the
-            row for <span className="font-medium">Bread</span> shows the cost
-            of those 2 loaves, and the share of sandwich revenue attributed to
-            them — letting you isolate profit from each ingredient, separate
-            from the finished product's profit.
+            Revenue Earned applies the period's overall markup
+            {markupMultiplier > 0 && (
+              <> ({markupMultiplier.toFixed(2)}×)</>
+            )}{" "}
+            to each material's cost. Example: 5kg of coffee beans costing
+            ₦62.50, used in a cappuccino sold at a 30% markup, earns ₦81.25
+            (₦62.50 × 1.30) — its share of the sale's revenue, separate from
+            the finished product's profit.
           </p>
         </div>
 
