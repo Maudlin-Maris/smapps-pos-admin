@@ -28,6 +28,25 @@ export interface POSExtra {
   category?: string;
 }
 
+/**
+ * A sellable unit lets the same physical item be sold in different package sizes
+ * (e.g. a card of Paracetamol could be sold as a full Pack of 6 sachets,
+ *  or broken down and sold per single Sachet).
+ */
+export interface POSSellableUnit {
+  id: string;
+  /** Display label e.g. "Pack of 6", "Sachet" */
+  name: string;
+  /** Short tag shown on the cart line e.g. "Pack", "Sachet" */
+  shortLabel?: string;
+  /** Unit price */
+  price: number;
+  /** Optional barcode / SKU specific to this unit (so scanning a sachet adds a sachet) */
+  barcode?: string;
+  /** True for the default unit (preselected in the picker) */
+  isDefault?: boolean;
+}
+
 export interface POSProduct {
   id: string;
   name: string;
@@ -38,6 +57,8 @@ export interface POSProduct {
   barcode?: string;
   variants?: POSVariant[];
   extras?: POSExtra[];
+  /** Multi-unit selling (pack vs sachet, carton vs bottle, etc.) */
+  sellableUnits?: POSSellableUnit[];
   inStock: boolean;
   outletId: string;
 }
@@ -347,8 +368,16 @@ const restaurantProducts: POSProduct[] = [
 
 // Pharmacy products (outlet-4)
 const pharmacyProducts: POSProduct[] = [
-  { id: "ph1", name: "Paracetamol 500mg", price: 350, categoryId: "pcat-1", subcategoryId: "psub-1b", barcode: "PH001", inStock: true, outletId: "outlet-4" },
-  { id: "ph2", name: "Ibuprofen 400mg", price: 550, categoryId: "pcat-1", subcategoryId: "psub-1b", barcode: "PH002", inStock: true, outletId: "outlet-4" },
+  { id: "ph1", name: "Paracetamol 500mg", price: 350, categoryId: "pcat-1", subcategoryId: "psub-1b", barcode: "PH001", inStock: true, outletId: "outlet-4",
+    sellableUnits: [
+      { id: "ph1-pack", name: "Pack of 6 sachets", shortLabel: "Pack", price: 350, barcode: "PH001", isDefault: true },
+      { id: "ph1-sachet", name: "Single sachet", shortLabel: "Sachet", price: 70, barcode: "PH001-S" },
+    ] },
+  { id: "ph2", name: "Ibuprofen 400mg", price: 550, categoryId: "pcat-1", subcategoryId: "psub-1b", barcode: "PH002", inStock: true, outletId: "outlet-4",
+    sellableUnits: [
+      { id: "ph2-pack", name: "Pack of 10 tabs", shortLabel: "Pack", price: 550, barcode: "PH002", isDefault: true },
+      { id: "ph2-tab", name: "Single tablet", shortLabel: "Tab", price: 60, barcode: "PH002-T" },
+    ] },
   { id: "ph3", name: "Amoxicillin 250mg", price: 2800, categoryId: "pcat-1", subcategoryId: "psub-1a", barcode: "PH003", inStock: true, outletId: "outlet-4" },
   { id: "ph4", name: "Metformin 500mg", price: 3500, categoryId: "pcat-1", subcategoryId: "psub-1a", inStock: true, outletId: "outlet-4" },
   { id: "ph5", name: "Cough Syrup 100ml", price: 1800, categoryId: "pcat-1", subcategoryId: "psub-1b", barcode: "PH005", inStock: true, outletId: "outlet-4" },

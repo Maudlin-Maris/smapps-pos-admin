@@ -20,6 +20,7 @@ export default function ProductGrid() {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
+  const [dialogUnitId, setDialogUnitId] = useState<string | undefined>(undefined);
   const [cameraOpen, setCameraOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
@@ -30,7 +31,34 @@ export default function ProductGrid() {
   const handleBarcodeScan = useCallback((barcode: string) => {
     const outletProducts = posProducts.filter(p => !currentOutlet || p.outletId === currentOutlet.id);
 
-    // First check variant SKUs
+    // 1) Check sellable-unit barcodes (e.g. scanning a single sachet barcode adds a sachet)
+    for (const product of outletProducts) {
+      if (!product.inStock || !product.sellableUnits) continue;
+      const matchedUnit = product.sellableUnits.find(u => u.barcode === barcode);
+      if (matchedUnit) {
+        // If the product also has variants/extras, open the dialog with the unit preselected.
+        if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
+          setDialogUnitId(matchedUnit.id);
+          setDialogProduct(product);
+        } else {
+          addToCart({
+            productId: product.id,
+            productName: product.name,
+            categoryId: product.categoryId,
+            variantId: matchedUnit.id,
+            variantName: matchedUnit.name,
+            extras: [],
+            quantity: 1,
+            unitPrice: matchedUnit.price,
+            totalPrice: matchedUnit.price,
+          });
+          toast.success(`Added ${product.name} — ${matchedUnit.shortLabel ?? matchedUnit.name}`);
+        }
+        return true;
+      }
+    }
+
+    // 2) Check variant SKUs
     for (const product of outletProducts) {
       if (!product.inStock) continue;
       if (product.variants) {
@@ -53,10 +81,15 @@ export default function ProductGrid() {
       }
     }
 
-    // Then check product barcode
+    // 3) Check product barcode
     const found = outletProducts.find(p => p.barcode === barcode && p.inStock);
     if (found) {
-      if ((found.variants && found.variants.length > 0) || (found.extras && found.extras.length > 0)) {
+      const needsPicker =
+        (found.variants && found.variants.length > 0) ||
+        (found.extras && found.extras.length > 0) ||
+        (found.sellableUnits && found.sellableUnits.length > 1);
+      if (needsPicker) {
+        setDialogUnitId(undefined);
         setDialogProduct(found);
       } else {
         addToCart({
@@ -117,7 +150,18 @@ export default function ProductGrid() {
   // Filter products for current outlet
   const products = isBundlesTab ? [] : posProducts.filter(p => {
     if (currentOutlet && p.outletId !== currentOutlet.id) return false;
-    if (search) return p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search);
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.barcode?.includes(search) ||
+        p.sellableUnits?.some(u =>
+          u.name.toLowerCase().includes(q) ||
+          u.shortLabel?.toLowerCase().includes(q) ||
+          u.barcode === search
+        )
+      );
+    }
     if (!selectedCategory) return true;
     if (selectedSubcategory) return p.categoryId === selectedCategory && p.subcategoryId === selectedSubcategory;
     return p.categoryId === selectedCategory;
@@ -166,7 +210,12 @@ export default function ProductGrid() {
   };
 
   const handleProductClick = (product: POSProduct) => {
-    if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {
+    const hasUnits = product.sellableUnits && product.sellableUnits.length > 0;
+    const hasVariantsOrExtras =
+      (product.variants && product.variants.length > 0) ||
+      (product.extras && product.extras.length > 0);
+    if (hasVariantsOrExtras || hasUnits) {
+      setDialogUnitId(undefined);
       setDialogProduct(product);
     } else {
       addToCart({
@@ -201,7 +250,11 @@ export default function ProductGrid() {
       unitPrice: total,
       totalPrice: total,
     });
+    // NOTE: dialog is closed by VariantExtrasDialog itself only after the user
+    // confirms; we close here too so multi-qty unit adds (loop in dialog) all run
+    // before close. The dialog calls onConfirm N times then we reset.
     setDialogProduct(null);
+    setDialogUnitId(undefined);
   };
 
   // Detect mobile device for camera facing mode
@@ -500,8 +553,21 @@ export default function ProductGrid() {
                   )}
                   <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
                   <span className="text-xs text-muted-foreground mt-1">
-                    {product.variants?.length ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}` : formatNaira(product.price)}
+                    {product.sellableUnits?.length
+                      ? `From ${formatNaira(Math.min(...product.sellableUnits.map(u => u.price)))}`
+                      : product.variants?.length
+                        ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}`
+                        : formatNaira(product.price)}
                   </span>
+                  {product.sellableUnits && product.sellableUnits.length > 1 && (
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {product.sellableUnits.map(u => (
+                        <span key={u.id} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">
+                          {u.shortLabel ?? u.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {product.variants && product.variants.length > 0 && (
                     <div className="flex gap-1 mt-1.5 flex-wrap">
                       {product.variants.map(v => (
@@ -525,7 +591,8 @@ export default function ProductGrid() {
       <VariantExtrasDialog
         product={dialogProduct}
         open={!!dialogProduct}
-        onClose={() => setDialogProduct(null)}
+        initialSellableUnitId={dialogUnitId}
+        onClose={() => { setDialogProduct(null); setDialogUnitId(undefined); }}
         onConfirm={handleConfirmVariantExtras}
       />
 
