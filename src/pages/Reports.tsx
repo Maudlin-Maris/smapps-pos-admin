@@ -688,6 +688,10 @@ export default function Reports() {
             itemUnits={itemUnits}
             totalRevenue={totalRevenue}
             totalCOGS={data.costOfGoods.inventory}
+            usageMap={rawMaterialUsage}
+            transactions={filteredTransactions}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
           />
 
           {/* Outlet Comparison */}
