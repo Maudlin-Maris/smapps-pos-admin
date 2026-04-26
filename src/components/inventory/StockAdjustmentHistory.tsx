@@ -257,6 +257,11 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
           <DialogTitle>
             {isAddType && showRetailPricing ? "Receive Stock" : "Adjust Stock"} — {item?.name}
           </DialogTitle>
+          {outletName && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Outlet: <span className="font-medium text-foreground">{outletName}</span>
+            </p>
+          )}
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
