@@ -38,6 +38,10 @@ export interface ItemConversion {
   fromQuantity: number;
   toQuantity: number;
   toUnitId: string;
+  /** Whether this sub-unit can be sold individually at the POS. */
+  sellable?: boolean;
+  /** Sell price per single sub-unit (e.g. price per sachet). */
+  sellPrice?: number;
 }
 
 export interface ItemBatch {
