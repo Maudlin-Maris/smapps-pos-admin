@@ -731,8 +731,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cost per Unit</label>
-              <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                Cost per Base Unit
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Cost per Base Unit?">
+                      <Info className="h-3.5 w-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                    <p>Purchase cost for one <strong>base unit</strong> (the unit you selected above, e.g. one Pack). If you also sell smaller sub-units like sachets, the per-sachet cost is derived automatically from your unit conversions.</p>
+                  </PopoverContent>
+                </Popover>
+              </label>
               <Input
                 type="number"
                 step="0.01"
