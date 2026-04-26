@@ -285,6 +285,13 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   const sellNum = form.sellPrice === "" ? 0 : Number(form.sellPrice) || 0;
   const profit = sellNum - totalCost;
   const profitPositive = profit >= 0;
+  const producibleInfo = useMemo(
+    () => getProducibleQty(form.components),
+    [form.components, inventoryItems, units]
+  );
+  const limitingItemName = producibleInfo.limitingId
+    ? getItemName(producibleInfo.limitingId)
+    : "";
 
   const filtered = composites.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase())
