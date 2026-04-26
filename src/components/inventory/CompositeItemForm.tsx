@@ -274,6 +274,36 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                 </li>
               ))}
             </ul>
+            {(() => {
+              const cardCost = item.components.reduce(
+                (s, c) => s + getItemCost(c.inventoryItemId) * (c.quantity || 0),
+                0
+              ) + (item.overheadPerUnit ?? 0);
+              const cardSell = item.sellPrice ?? 0;
+              const cardProfit = cardSell - cardCost;
+              const positive = cardProfit >= 0;
+              return (
+                <div className="mt-3 pt-3 border-t flex items-center justify-between text-xs">
+                  <div className="space-y-0.5">
+                    <div className="text-muted-foreground">Cost / unit</div>
+                    <div className="font-medium tabular-nums">{formatNaira(cardCost)}</div>
+                  </div>
+                  <div className="space-y-0.5 text-right">
+                    <div className="text-muted-foreground">Sell / unit</div>
+                    <div className="font-medium tabular-nums">{cardSell > 0 ? formatNaira(cardSell) : "—"}</div>
+                  </div>
+                  {cardSell > 0 && (
+                    <div className="space-y-0.5 text-right">
+                      <div className="text-muted-foreground">Profit</div>
+                      <div className={cn("font-semibold tabular-nums", positive ? "text-success" : "text-destructive")}>
+                        {formatNaira(cardProfit)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
           </Card>
         ))}
         {filtered.length === 0 && (
