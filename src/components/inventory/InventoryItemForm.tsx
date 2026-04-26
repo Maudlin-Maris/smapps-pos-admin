@@ -589,88 +589,29 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <DialogTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                <Store className="h-3.5 w-3.5" /> Outlets *
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between font-normal h-auto min-h-10 py-1.5">
-                    <div className="flex flex-wrap gap-1 items-center">
-                      {selectedOutletIds.length === 0 ? (
-                        <span className="text-muted-foreground text-sm">Select outlets...</span>
-                      ) : (
-                        selectedOutletIds.map((id) => {
-                          const o = outlets.find((x) => x.id === id);
-                          if (!o) return null;
-                          return (
-                            <Badge key={id} variant="secondary" className="text-xs gap-1">
-                              {o.name}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedOutletIds((prev) => prev.filter((p) => p !== id));
-                                }}
-                                className="hover:text-destructive"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          );
-                        })
-                      )}
+            {(() => {
+              const targetOutletId = editing?.outletId || (selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "");
+              const targetOutlet = targetOutletId ? outlets.find((o) => o.id === targetOutletId) : null;
+              return (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5" /> Outlet
+                  </Label>
+                  {targetOutlet ? (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/40">
+                      <span className="text-sm font-medium flex-1 truncate">{targetOutlet.name}</span>
+                      <Badge variant="outline" className="text-[10px] capitalize">
+                        {targetOutlet.businessType.replace(/_/g, " ")}
+                      </Badge>
                     </div>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-1 max-h-72 overflow-y-auto" align="start">
-                  <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
-                    <span>{selectedOutletIds.length} selected</span>
-                    <button
-                      type="button"
-                      className="hover:text-foreground underline"
-                      onClick={() =>
-                        setSelectedOutletIds(
-                          selectedOutletIds.length === outlets.length ? [] : outlets.map((o) => o.id),
-                        )
-                      }
-                    >
-                      {selectedOutletIds.length === outlets.length ? "Clear all" : "Select all"}
-                    </button>
-                  </div>
-                  {outlets.map((o) => {
-                    const checked = selectedOutletIds.includes(o.id);
-                    return (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedOutletIds((prev) =>
-                            checked ? prev.filter((p) => p !== o.id) : [...prev, o.id],
-                          )
-                        }
-                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground text-left"
-                      >
-                        <div className={cn("h-4 w-4 rounded border flex items-center justify-center", checked ? "bg-primary border-primary text-primary-foreground" : "border-input")}>
-                          {checked && <Check className="h-3 w-3" />}
-                        </div>
-                        <span className="flex-1">{o.name}</span>
-                      </button>
-                    );
-                  })}
-                </PopoverContent>
-              </Popover>
-              {editing && selectedOutletIds.length > 1 && (
-                <p className="text-[11px] text-muted-foreground">
-                  Selecting additional outlets will create copies of this item in those outlets.
-                </p>
-              )}
-              {!editing && selectedOutletIds.length > 1 && (
-                <p className="text-[11px] text-muted-foreground">
-                  This item will be registered in {selectedOutletIds.length} outlets. SKU will only apply to the first; set unique SKUs per outlet later.
-                </p>
-              )}
-            </div>
+                  ) : (
+                    <p className="text-xs text-destructive">
+                      Select a specific outlet from the page header before registering items.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
             <div className="space-y-2">
               <label className="text-sm font-medium">Item Name *</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
@@ -706,7 +647,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Cost per Unit</label>
-              <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Applied to every selected outlet. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
+              <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
