@@ -679,8 +679,20 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">
+                      <label className="text-sm font-medium flex items-center gap-1.5">
                         {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Current Stock?">
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p>The quantity of this item currently available at the selected outlet, expressed in its base unit (e.g., grams, ml, pieces). {formShowBatchExpiry ? "When batches are added, this is auto-calculated from the sum of all batch quantities." : ""}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </label>
                       {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
                         <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
@@ -696,7 +708,21 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                       )}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Min Stock</label>
+                      <label className="text-sm font-medium flex items-center gap-1.5">
+                        Min Stock
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Min Stock?">
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <p>The reorder threshold. When current stock falls to or below this level, the item is flagged as "Low Stock" so you know to restock before running out.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </label>
                       <Input
                         type="number"
                         min={0}
