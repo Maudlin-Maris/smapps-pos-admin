@@ -158,7 +158,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
   const openNew = () => {
     setEditing(null);
-    setForm(emptyForm(selectedOutletId));
+    const seed = selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "";
+    setForm(emptyForm(seed));
     setOpen(true);
   };
 
@@ -589,23 +590,44 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
           </DialogHeader>
           <div className="grid gap-4">
             {(() => {
-              const targetOutletId = editing?.outletId || (selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "");
-              const targetOutlet = targetOutletId ? outlets.find((o) => o.id === targetOutletId) : null;
+              const formOutlet = form.outletId ? outlets.find((o) => o.id === form.outletId) : null;
               return (
                 <div className="space-y-2">
                   <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <Store className="h-3.5 w-3.5" /> Outlet
+                    <Store className="h-3.5 w-3.5" /> Outlet *
                   </Label>
-                  {targetOutlet ? (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/40">
-                      <span className="text-sm font-medium flex-1 truncate">{targetOutlet.name}</span>
-                      <Badge variant="outline" className="text-[10px] capitalize">
-                        {targetOutlet.businessType.replace(/_/g, " ")}
-                      </Badge>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-destructive">
-                      Select a specific outlet from the page header before registering items.
+                  <Select
+                    value={form.outletId || undefined}
+                    onValueChange={(v) => setForm({ ...form, outletId: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an outlet">
+                        {formOutlet && (
+                          <div className="flex items-center gap-2">
+                            <span className="truncate">{formOutlet.name}</span>
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {formOutlet.businessType.replace(/_/g, " ")}
+                            </Badge>
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {outlets.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{o.name}</span>
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {o.businessType.replace(/_/g, " ")}
+                            </Badge>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {editing && form.outletId && form.outletId !== editing.outletId && (
+                    <p className="text-[11px] text-muted-foreground">
+                      This item will be moved to the selected outlet on save.
                     </p>
                   )}
                 </div>
@@ -650,36 +672,40 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
-                </label>
-                {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
-                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                    {batchStockTotal}
+            {(() => {
+              const formShowBatchExpiry = isOutletBatchTracked(form.outletId);
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
+                      </label>
+                      {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
+                        <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                          {batchStockTotal}
+                        </div>
+                      ) : (
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.stock}
+                          onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Min Stock</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.minStock}
+                        onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.stock}
-                    onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
-                  />
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Min Stock</label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.minStock}
-                  onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
-                />
-              </div>
-            </div>
 
-            {showBatchExpiry && (
+                  {formShowBatchExpiry && (
               <div className="space-y-2 border-t pt-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -738,6 +764,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 ))}
               </div>
             )}
+                </>
+              );
+            })()}
 
 
             <div className="space-y-3 border-t pt-4">
