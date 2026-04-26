@@ -33,20 +33,21 @@ function ColumnHeader({ label, align = "left" }: { label: string; align?: "left"
     <span className={`inline-flex items-center gap-1 ${align === "right" ? "justify-end w-full" : ""}`}>
       <span>{label}</span>
       {help && (
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <Popover>
+          <PopoverTrigger asChild>
             <button
               type="button"
               aria-label={`What is ${label}?`}
               className="text-muted-foreground hover:text-foreground transition-colors"
+              onClick={(e) => e.stopPropagation()}
             >
               <Info className="h-3 w-3" />
             </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[240px] text-xs">
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words normal-case tracking-normal">
             {help}
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       )}
     </span>
   );
