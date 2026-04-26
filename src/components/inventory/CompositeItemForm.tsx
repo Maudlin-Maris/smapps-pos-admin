@@ -40,6 +40,9 @@ export interface CompositeComponent {
   inventoryItemId: string;
   quantity: number;
   role: ComponentRole;
+  /** Unit the quantity is expressed in. Undefined = the item's base unit.
+   *  Otherwise must match one of the item's conversion `toUnitId`s. */
+  unitId?: string;
 }
 
 export interface CompositeItem {
