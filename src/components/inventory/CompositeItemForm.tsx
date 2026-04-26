@@ -484,6 +484,11 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                     <span className="text-xs text-muted-foreground w-10 shrink-0">
                       {getItemUnit(comp.inventoryItemId)}
                     </span>
+                    {comp.inventoryItemId && (
+                      <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
+                        @ {formatNaira(getItemCost(comp.inventoryItemId))} = <span className="font-medium text-foreground">{formatNaira(getItemCost(comp.inventoryItemId) * (comp.quantity || 0))}</span>
+                      </span>
+                    )}
                     <div className="flex gap-1 ml-auto">
                       <Button
                         type="button"
