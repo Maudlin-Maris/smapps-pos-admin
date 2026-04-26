@@ -73,6 +73,16 @@ interface Props {
   selectedOutletId?: string;
   filterLowStock?: boolean;
   filterExpiryStatus?: "expired" | "expiring";
+  /** Per-raw-material profit metrics keyed by inventory item id. */
+  profitability?: Record<
+    string,
+    {
+      weightedProfitPerUnit: number;
+      totalContribution: number;
+      hasAnyPricedRecipe: boolean;
+      recipesUsing: { recipeId: string }[];
+    }
+  >;
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
