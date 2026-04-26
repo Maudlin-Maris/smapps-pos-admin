@@ -651,140 +651,95 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
             </div>
 
-            {/* Per-outlet stock + batches */}
-            {selectedOutletIds.length > 0 && (
-              <div className="space-y-3 border-t pt-4">
-                <div>
-                  <label className="text-sm font-medium">Stock per Outlet</label>
-                  <p className="text-xs text-muted-foreground">
-                    Set the starting quantity for each selected outlet. Batch-tracked outlets (pharmacy, grocery, supermarket) use batch quantities.
-                  </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
+                </label>
+                {showBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
+                  <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                    {batchStockTotal}
+                  </div>
+                ) : (
+                  <Input
+                    type="number"
+                    min={0}
+                    value={form.stock}
+                    onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Stock</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.minStock}
+                  onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            {showBatchExpiry && (
+              <div className="space-y-2 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-sm font-medium">Batches</label>
+                    <p className="text-xs text-muted-foreground">Track expiry per shipment.</p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addBatch} className="h-7 text-xs">
+                    <Plus className="h-3 w-3 mr-1" /> Add Batch
+                  </Button>
                 </div>
-
-                {selectedOutletIds.map((oid) => {
-                  const outlet = outlets.find((o) => o.id === oid);
-                  if (!outlet) return null;
-                  const entry = outletStocks[oid] ?? { stock: 0, minStock: 0, batches: [] };
-                  const batchTracked = isOutletBatchTracked(oid);
-                  const usesBatches = batchTracked && entry.batches.length > 0;
-                  const batchTotal = entry.batches.reduce((sum, b) => sum + b.quantity, 0);
-                  return (
-                    <Card key={oid} className="p-3 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Store className="h-3.5 w-3.5 text-muted-foreground" />
-                        <p className="text-sm font-medium flex-1 truncate">{outlet.name}</p>
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {outlet.businessType.replace(/_/g, " ")}
-                        </Badge>
-                      </div>
-
-                      {!usesBatches && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Current Stock</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={entry.stock}
-                              onChange={(e) => updateOutletStock(oid, { stock: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Min Stock</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={entry.minStock}
-                              onChange={(e) => updateOutletStock(oid, { minStock: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {usesBatches && (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Total Stock (from batches)</label>
-                            <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                              {batchTotal}
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Min Stock</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={entry.minStock}
-                              onChange={(e) => updateOutletStock(oid, { minStock: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {batchTracked && (
-                        <div className="space-y-2 border-t pt-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-muted-foreground">Batches</p>
-                            <Button type="button" variant="outline" size="sm" onClick={() => addOutletBatch(oid)} className="h-6 text-[11px] px-2">
-                              <Plus className="h-3 w-3 mr-1" /> Add Batch
-                            </Button>
-                          </div>
-                          {entry.batches.length === 0 && (
-                            <p className="text-[11px] text-muted-foreground text-center py-2 border border-dashed rounded-md">
-                              No batches. Add one to track expiry per shipment.
-                            </p>
-                          )}
-                          {entry.batches.map((batch, idx) => (
-                            <div key={batch.id} className="grid grid-cols-[1fr_1fr_70px_28px] gap-1.5 items-end">
-                              <div className="space-y-0.5">
-                                <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Batch #</label>
-                                <Input
-                                  value={batch.batchNumber}
-                                  onChange={(e) => updateOutletBatch(oid, idx, { batchNumber: e.target.value })}
-                                  placeholder="BT-001"
-                                  className="h-7 text-xs"
-                                />
-                              </div>
-                              <div className="space-y-0.5">
-                                <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Expiry</label>
-                                <Input
-                                  type="date"
-                                  value={batch.expiryDate}
-                                  onChange={(e) => updateOutletBatch(oid, idx, { expiryDate: e.target.value })}
-                                  className="h-7 text-xs"
-                                />
-                              </div>
-                              <div className="space-y-0.5">
-                                <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Qty</label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  value={batch.quantity}
-                                  onChange={(e) => updateOutletBatch(oid, idx, { quantity: Number(e.target.value) })}
-                                  className="h-7 text-xs"
-                                />
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive"
-                                onClick={() => removeOutletBatch(oid, idx)}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
+                {(form.batches?.length ?? 0) === 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center py-2 border border-dashed rounded-md">
+                    No batches added yet.
+                  </p>
+                )}
+                {(form.batches ?? []).map((batch, idx) => (
+                  <div key={batch.id} className="grid grid-cols-[1fr_1fr_70px_28px] gap-1.5 items-end">
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Batch #</label>
+                      <Input
+                        value={batch.batchNumber}
+                        onChange={(e) => updateBatch(idx, { batchNumber: e.target.value })}
+                        placeholder="BT-001"
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Expiry</label>
+                      <Input
+                        type="date"
+                        value={batch.expiryDate}
+                        onChange={(e) => updateBatch(idx, { expiryDate: e.target.value })}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-0.5">
+                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Qty</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={batch.quantity}
+                        onChange={(e) => updateBatch(idx, { quantity: Number(e.target.value) })}
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => removeBatch(idx)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
+
 
             <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
