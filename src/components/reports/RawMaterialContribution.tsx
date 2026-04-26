@@ -53,6 +53,9 @@ interface Props {
   itemNames: ItemNameMap;
   itemUnits?: ItemUnitMap;
   totalRevenue: number;
+  /** Period total inventory COGS from P&L. Used as the markup denominator so
+   *  Revenue Earned per material = cost × (totalRevenue / totalCOGS). */
+  totalCOGS?: number;
 }
 
 interface Row {
