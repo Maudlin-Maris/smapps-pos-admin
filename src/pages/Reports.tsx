@@ -604,6 +604,7 @@ export default function Reports() {
             itemNames={itemNames}
             itemUnits={itemUnits}
             totalRevenue={totalRevenue}
+            totalCOGS={data.costOfGoods.inventory}
           />
 
           {/* Outlet Comparison */}

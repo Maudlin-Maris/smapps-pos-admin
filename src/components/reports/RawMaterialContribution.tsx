@@ -53,6 +53,9 @@ interface Props {
   itemNames: ItemNameMap;
   itemUnits?: ItemUnitMap;
   totalRevenue: number;
+  /** Period total inventory COGS from P&L. Used as the markup denominator so
+   *  Revenue Earned per material = cost × (totalRevenue / totalCOGS). */
+  totalCOGS?: number;
 }
 
 interface Row {
@@ -72,7 +75,7 @@ const COLUMN_DEFINITIONS: { label: string; description: string }[] = [
   { label: "Raw Material", description: "Inventory item consumed during the period (with its share of total COGS)." },
   { label: "Qty Used", description: "Total quantity consumed during the period, shown in the item's base unit (e.g., g, kg, loaves)." },
   { label: "Avg Cost", description: "Total cost of all units consumed during the period, valued at Weighted Average Cost (WAC)." },
-  { label: "Revenue Earned", description: "Revenue attributed to this raw material based on its share of total cost of goods sold for the period." },
+  { label: "Revenue Earned", description: "Material cost multiplied by the period's overall markup (Total Revenue ÷ Total COGS). Example: ₦62.50 of coffee beans at a 1.3× markup → ₦81.25 earned." },
   { label: "Profit", description: "Revenue earned minus the total cost. Positive values mean the material contributed profit." },
   { label: "Margin", description: "Profit as a percentage of attributed revenue for this raw material." },
 ];
@@ -82,8 +85,9 @@ export default function RawMaterialContribution({
   itemNames,
   itemUnits = {},
   totalRevenue,
+  totalCOGS: totalCOGSProp,
 }: Props) {
-  const { rows, totalCOGS, totalProfit } = useMemo(() => {
+  const { rows, totalCOGS, totalProfit, markupMultiplier } = useMemo(() => {
     const consumption = adjustments.filter((a) =>
       CONSUMPTION_TYPES.includes(a.type)
     );
@@ -107,12 +111,19 @@ export default function RawMaterialContribution({
       grouped[id].cost += a.costTotal;
     }
 
-    const totalCOGS = Object.values(grouped).reduce((s, g) => s + g.cost, 0);
+    const consumedCost = Object.values(grouped).reduce((s, g) => s + g.cost, 0);
+    // Use P&L total COGS when provided so the markup matches the P&L view.
+    const cogsForMarkup =
+      totalCOGSProp && totalCOGSProp > 0 ? totalCOGSProp : consumedCost;
+    const markupMultiplier =
+      cogsForMarkup > 0 ? totalRevenue / cogsForMarkup : 0;
 
     const rows: Row[] = Object.entries(grouped)
       .map(([id, g]) => {
-        const share = totalCOGS > 0 ? g.cost / totalCOGS : 0;
-        const attributedRevenue = totalRevenue * share;
+        const share = consumedCost > 0 ? g.cost / consumedCost : 0;
+        // Revenue earned = material cost × overall markup multiplier.
+        // E.g., cost ₦62.50 with 1.3× markup → ₦81.25.
+        const attributedRevenue = g.cost * markupMultiplier;
         const profit = attributedRevenue - g.cost;
         const margin =
           attributedRevenue > 0 ? (profit / attributedRevenue) * 100 : 0;
@@ -133,8 +144,8 @@ export default function RawMaterialContribution({
 
     const totalProfit = rows.reduce((s, r) => s + r.profit, 0);
 
-    return { rows, totalCOGS, totalProfit };
-  }, [adjustments, itemNames, itemUnits, totalRevenue]);
+    return { rows, totalCOGS: consumedCost, totalProfit, markupMultiplier };
+  }, [adjustments, itemNames, itemUnits, totalRevenue, totalCOGSProp]);
 
   const {
     page,
@@ -221,11 +232,14 @@ export default function RawMaterialContribution({
         <div className="flex items-start gap-2 px-4 py-2.5 bg-muted/40 border-b text-[11px] text-muted-foreground">
           <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <p className="leading-relaxed">
-            Example: if you sold a sandwich made with 2 loaves of bread, the
-            row for <span className="font-medium">Bread</span> shows the cost
-            of those 2 loaves, and the share of sandwich revenue attributed to
-            them — letting you isolate profit from each ingredient, separate
-            from the finished product's profit.
+            Revenue Earned applies the period's overall markup
+            {markupMultiplier > 0 && (
+              <> ({markupMultiplier.toFixed(2)}×)</>
+            )}{" "}
+            to each material's cost. Example: 5kg of coffee beans costing
+            ₦62.50, used in a cappuccino sold at a 30% markup, earns ₦81.25
+            (₦62.50 × 1.30) — its share of the sale's revenue, separate from
+            the finished product's profit.
           </p>
         </div>
 
