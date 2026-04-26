@@ -19,7 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store, Info } from "lucide-react";
+import { Plus, Search, Pencil, Copy, Trash2, Package, ArrowLeftRight, X, Calendar, ChevronDown, ChevronUp, AlertTriangle, Store, Info, TrendingUp, Tag } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import type { BusinessTypeId } from "@/data/businessTypes";
+import type { PricingMethod } from "./StockAdjustmentHistory";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { outlets } from "@/data/outlets";
@@ -56,6 +59,9 @@ export interface InventoryItem {
   stock: number;
   minStock: number;
   costPrice: number;
+  sellPrice?: number;
+  pricingMethod?: PricingMethod;
+  pricingValue?: number;
   status: "good" | "low" | "critical";
   conversions: ItemConversion[];
   outletId: string;
@@ -92,6 +98,21 @@ export const BATCH_EXPIRY_BUSINESS_TYPES = ["pharmacy", "grocery", "supermarket"
 
 const EXPIRY_SOON_DAYS = 90;
 
+export const RETAIL_BUSINESS_TYPES: BusinessTypeId[] = [
+  "grocery", "supermarket", "pharmacy", "wine_store", "clothing",
+  "electronics", "hair_seller", "retail",
+];
+
+function calcSellPrice(costPrice: number, method: PricingMethod, value: number): number {
+  if (method === "fixed") return value;
+  if (method === "markup") return costPrice * (1 + value / 100);
+  if (method === "margin") {
+    if (value >= 100) return costPrice * 10;
+    return costPrice / (1 - value / 100);
+  }
+  return costPrice;
+}
+
 const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
   sku: "",
@@ -100,6 +121,9 @@ const emptyForm = (outletId: string = ""): FormState => ({
   stock: 0,
   minStock: 0,
   costPrice: 0,
+  sellPrice: 0,
+  pricingMethod: "markup",
+  pricingValue: 30,
   conversions: [],
   outletId,
   batchNumber: "",
@@ -139,6 +163,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterExpiry, setFilterExpiry] = useState("all");
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [syncToCatalog, setSyncToCatalog] = useState(true);
 
   const selectedOutlet = selectedOutletId && selectedOutletId !== "all" ? outlets.find(o => o.id === selectedOutletId) : null;
   const showBatchExpiry = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
@@ -146,6 +171,11 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const isOutletBatchTracked = (oid: string) => {
     const o = outlets.find((x) => x.id === oid);
     return o ? BATCH_EXPIRY_BUSINESS_TYPES.includes(o.businessType) : false;
+  };
+
+  const isOutletRetail = (oid: string) => {
+    const o = outlets.find((x) => x.id === oid);
+    return o ? RETAIL_BUSINESS_TYPES.includes(o.businessType) : false;
   };
 
 
@@ -162,6 +192,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     setEditing(null);
     const seed = selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "";
     setForm(emptyForm(seed));
+    setSyncToCatalog(true);
     setOpen(true);
   };
 
@@ -175,12 +206,16 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       stock: item.stock,
       minStock: item.minStock,
       costPrice: item.costPrice,
+      sellPrice: item.sellPrice ?? Math.round(item.costPrice * 1.3 * 100) / 100,
+      pricingMethod: item.pricingMethod ?? "markup",
+      pricingValue: item.pricingValue ?? 30,
       conversions: item.conversions || [],
       outletId: item.outletId,
       batchNumber: item.batchNumber || "",
       expiryDate: item.expiryDate || "",
       batches: item.batches || [],
     });
+    setSyncToCatalog(true);
     setOpen(true);
   };
 
@@ -222,6 +257,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     }
 
     const batchTracked = isOutletBatchTracked(targetOutletId);
+    const retail = isOutletRetail(targetOutletId);
     const usesBatches = batchTracked && (form.batches?.length ?? 0) > 0;
     const resolvedStock = usesBatches
       ? (form.batches ?? []).reduce((sum, b) => sum + b.quantity, 0)
@@ -230,6 +266,18 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       ? (form.batches ?? []).map((b) => ({ ...b, id: b.id || crypto.randomUUID() }))
       : undefined;
 
+    const pricingFields = retail
+      ? {
+          sellPrice: form.sellPrice,
+          pricingMethod: form.pricingMethod,
+          pricingValue: form.pricingValue,
+        }
+      : {
+          sellPrice: undefined,
+          pricingMethod: undefined,
+          pricingValue: undefined,
+        };
+
     if (editing) {
       setItems((prev) =>
         prev.map((i) =>
@@ -237,6 +285,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             ? {
                 ...i,
                 ...form,
+                ...pricingFields,
                 outletId: targetOutletId,
                 stock: resolvedStock,
                 minStock: form.minStock,
@@ -246,11 +295,16 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             : i,
         ),
       );
-      toast.success("Item updated");
+      if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
+        toast.success(`Item updated | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
+      } else {
+        toast.success("Item updated");
+      }
     } else {
       const newItem: InventoryItem = {
         id: crypto.randomUUID(),
         ...form,
+        ...pricingFields,
         outletId: targetOutletId,
         stock: resolvedStock,
         minStock: form.minStock,
@@ -259,7 +313,11 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
         batches: resolvedBatches,
       };
       setItems((prev) => [...prev, newItem]);
-      toast.success("Item registered");
+      if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
+        toast.success(`Item registered | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
+      } else {
+        toast.success("Item registered");
+      }
     }
     setOpen(false);
   };
@@ -671,8 +729,119 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <div className="space-y-2">
               <label className="text-sm font-medium">Cost per Unit</label>
               <p className="text-xs text-muted-foreground">The purchase cost for a single unit of this item. Updates automatically via Weighted Average Cost when new stock is added at a different price.</p>
-              <Input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: Number(e.target.value) })} placeholder="0.00" />
+              <Input
+                type="number"
+                step="0.01"
+                value={form.costPrice}
+                onChange={(e) => {
+                  const cp = Number(e.target.value);
+                  const method = form.pricingMethod ?? "markup";
+                  const val = form.pricingValue ?? 0;
+                  const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val) * 100) / 100 : form.sellPrice;
+                  setForm({ ...form, costPrice: cp, sellPrice: newSell });
+                }}
+                placeholder="0.00"
+              />
             </div>
+
+            {/* Sell Price & Markup — retail businesses only */}
+            {isOutletRetail(form.outletId) && (() => {
+              const cost = form.costPrice || 0;
+              const sell = form.sellPrice || 0;
+              const profit = sell - cost;
+              const profitPositive = profit >= 0;
+              return (
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-primary" />
+                    <label className="text-sm font-medium">Sell Price & Markup</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Sell Price & Markup?">
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                        <p>Set the retail sell price using <strong>Markup %</strong> (added on top of cost), <strong>Margin %</strong> (profit as a share of the sell price), or a <strong>Fixed Price</strong>. The sell price recalculates automatically when you change the method or value.</p>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                      <Select
+                        value={form.pricingMethod ?? "markup"}
+                        onValueChange={(v) => {
+                          const method = v as PricingMethod;
+                          const val = form.pricingValue ?? 0;
+                          const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
+                          setForm({ ...form, pricingMethod: method, sellPrice: newSell });
+                        }}
+                      >
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="markup">Markup %</SelectItem>
+                          <SelectItem value="margin">Margin %</SelectItem>
+                          <SelectItem value="fixed">Fixed Price</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                        {form.pricingMethod === "fixed" ? "Price" : "%"}
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={form.pricingValue ?? 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          const method = form.pricingMethod ?? "markup";
+                          const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
+                          setForm({ ...form, pricingValue: val, sellPrice: newSell });
+                        }}
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={form.sellPrice ?? 0}
+                        onChange={(e) => setForm({ ...form, sellPrice: Number(e.target.value) })}
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                  {cost > 0 && sell > 0 && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <TrendingUp className={cn("h-3.5 w-3.5", profitPositive ? "text-success" : "text-destructive")} />
+                      <span className={cn("font-medium", profitPositive ? "text-success" : "text-destructive")}>
+                        ₦{profit.toFixed(2)}/unit profit
+                      </span>
+                      <span className="text-muted-foreground">
+                        ({cost > 0 ? ((profit / cost) * 100).toFixed(1) : "0"}% markup)
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
+                        Auto-update catalog
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Sync this item's sell price to the product catalog automatically
+                      </p>
+                    </div>
+                    <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
+                  </div>
+                </div>
+              );
+            })()}
+
 
             {(() => {
               const formShowBatchExpiry = isOutletBatchTracked(form.outletId);
