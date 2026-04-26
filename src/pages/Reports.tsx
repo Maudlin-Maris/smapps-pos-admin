@@ -602,6 +602,7 @@ export default function Reports() {
           <RawMaterialContribution
             adjustments={filteredAdjustments}
             itemNames={itemNames}
+            itemUnits={itemUnits}
             totalRevenue={totalRevenue}
           />
 
