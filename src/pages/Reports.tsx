@@ -25,6 +25,7 @@ import { outlets } from "@/data/outlets";
 import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
 import PnLStatement from "@/components/reports/PnLStatement";
 import COGSBreakdown from "@/components/reports/COGSBreakdown";
+import RawMaterialContribution from "@/components/reports/RawMaterialContribution";
 import SalesReport from "@/components/reports/SalesReport";
 import SalesByItem from "@/components/reports/SalesByItem";
 import SalesByCategory from "@/components/reports/SalesByCategory";
@@ -589,6 +590,13 @@ export default function Reports() {
 
           {/* COGS Breakdown */}
           <COGSBreakdown adjustments={filteredAdjustments} itemNames={itemNames} />
+
+          {/* Raw Material Contribution to Profit */}
+          <RawMaterialContribution
+            adjustments={filteredAdjustments}
+            itemNames={itemNames}
+            totalRevenue={totalRevenue}
+          />
 
           {/* Outlet Comparison */}
           {isAllOutlets && outletComparison.length > 0 && (
