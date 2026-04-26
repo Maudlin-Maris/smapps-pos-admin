@@ -220,18 +220,18 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs sticky left-0 z-20 bg-card shadow-[1px_0_0_0_hsl(var(--border))] min-w-[180px]">Item</TableHead>
-                  <TableHead className="text-xs">Category</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
-                  <TableHead className="text-right text-xs">Unit Cost</TableHead>
-                  <TableHead className="text-right text-xs">Total Cost</TableHead>
-                  <TableHead className="text-right text-xs">Gross Rev.</TableHead>
-                  <TableHead className="text-right text-xs">Discount</TableHead>
-                  <TableHead className="text-right text-xs">Tax</TableHead>
-                  <TableHead className="text-right text-xs">Net Revenue</TableHead>
-                  <TableHead className="text-right text-xs">Profit</TableHead>
-                  <TableHead className="text-right text-xs">Margin</TableHead>
-                  <TableHead className="text-right text-xs w-[60px]">Daily</TableHead>
+                  <TableHead className="text-xs sticky left-0 z-20 bg-card shadow-[1px_0_0_0_hsl(var(--border))] min-w-[180px]"><ColumnHeader label="Item" /></TableHead>
+                  <TableHead className="text-xs"><ColumnHeader label="Category" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Qty" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Unit Cost" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Total Cost" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Gross Rev." align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Discount" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Tax" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Net Revenue" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Profit" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs"><ColumnHeader label="Margin" align="right" /></TableHead>
+                  <TableHead className="text-right text-xs w-[60px]"><ColumnHeader label="Daily" align="right" /></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
