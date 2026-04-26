@@ -134,8 +134,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryItem | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
-  const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
-  const [outletStocks, setOutletStocks] = useState<Record<string, { stock: number; minStock: number; batches: ItemBatch[] }>>({});
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterExpiry, setFilterExpiry] = useState("all");
