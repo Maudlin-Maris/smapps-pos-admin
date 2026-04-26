@@ -257,6 +257,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     }
 
     const batchTracked = isOutletBatchTracked(targetOutletId);
+    const retail = isOutletRetail(targetOutletId);
     const usesBatches = batchTracked && (form.batches?.length ?? 0) > 0;
     const resolvedStock = usesBatches
       ? (form.batches ?? []).reduce((sum, b) => sum + b.quantity, 0)
@@ -265,6 +266,18 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       ? (form.batches ?? []).map((b) => ({ ...b, id: b.id || crypto.randomUUID() }))
       : undefined;
 
+    const pricingFields = retail
+      ? {
+          sellPrice: form.sellPrice,
+          pricingMethod: form.pricingMethod,
+          pricingValue: form.pricingValue,
+        }
+      : {
+          sellPrice: undefined,
+          pricingMethod: undefined,
+          pricingValue: undefined,
+        };
+
     if (editing) {
       setItems((prev) =>
         prev.map((i) =>
@@ -272,6 +285,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             ? {
                 ...i,
                 ...form,
+                ...pricingFields,
                 outletId: targetOutletId,
                 stock: resolvedStock,
                 minStock: form.minStock,
@@ -281,11 +295,16 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             : i,
         ),
       );
-      toast.success("Item updated");
+      if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
+        toast.success(`Item updated | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
+      } else {
+        toast.success("Item updated");
+      }
     } else {
       const newItem: InventoryItem = {
         id: crypto.randomUUID(),
         ...form,
+        ...pricingFields,
         outletId: targetOutletId,
         stock: resolvedStock,
         minStock: form.minStock,
@@ -294,7 +313,11 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
         batches: resolvedBatches,
       };
       setItems((prev) => [...prev, newItem]);
-      toast.success("Item registered");
+      if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
+        toast.success(`Item registered | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
+      } else {
+        toast.success("Item registered");
+      }
     }
     setOpen(false);
   };
