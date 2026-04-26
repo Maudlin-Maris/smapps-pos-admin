@@ -28,6 +28,25 @@ export interface POSExtra {
   category?: string;
 }
 
+/**
+ * A sellable unit lets the same physical item be sold in different package sizes
+ * (e.g. a card of Paracetamol could be sold as a full Pack of 6 sachets,
+ *  or broken down and sold per single Sachet).
+ */
+export interface POSSellableUnit {
+  id: string;
+  /** Display label e.g. "Pack of 6", "Sachet" */
+  name: string;
+  /** Short tag shown on the cart line e.g. "Pack", "Sachet" */
+  shortLabel?: string;
+  /** Unit price */
+  price: number;
+  /** Optional barcode / SKU specific to this unit (so scanning a sachet adds a sachet) */
+  barcode?: string;
+  /** True for the default unit (preselected in the picker) */
+  isDefault?: boolean;
+}
+
 export interface POSProduct {
   id: string;
   name: string;
@@ -38,6 +57,8 @@ export interface POSProduct {
   barcode?: string;
   variants?: POSVariant[];
   extras?: POSExtra[];
+  /** Multi-unit selling (pack vs sachet, carton vs bottle, etc.) */
+  sellableUnits?: POSSellableUnit[];
   inStock: boolean;
   outletId: string;
 }
