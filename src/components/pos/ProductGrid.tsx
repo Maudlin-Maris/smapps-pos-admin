@@ -150,7 +150,18 @@ export default function ProductGrid() {
   // Filter products for current outlet
   const products = isBundlesTab ? [] : posProducts.filter(p => {
     if (currentOutlet && p.outletId !== currentOutlet.id) return false;
-    if (search) return p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search);
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.barcode?.includes(search) ||
+        p.sellableUnits?.some(u =>
+          u.name.toLowerCase().includes(q) ||
+          u.shortLabel?.toLowerCase().includes(q) ||
+          u.barcode === search
+        )
+      );
+    }
     if (!selectedCategory) return true;
     if (selectedSubcategory) return p.categoryId === selectedCategory && p.subcategoryId === selectedSubcategory;
     return p.categoryId === selectedCategory;
