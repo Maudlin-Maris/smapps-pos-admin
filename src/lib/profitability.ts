@@ -104,10 +104,13 @@ export function computeProfitability({
       };
     });
 
-    const overhead =
-      c.overheadPerUnit ??
-      outletOverheadDefaults[c.outletId] ??
-      0;
+    // Use the recipe's explicit overhead. Falling back to an outlet default
+    // here would diverge from the live profit preview shown in the Composite
+    // Item form (which only reads c.overheadPerUnit), causing the same recipe
+    // to look profitable in the form but loss-making in the Profitability
+    // table. Treat a missing/blank overhead as 0 — same as the form.
+    const overhead = c.overheadPerUnit ?? 0;
+    void outletOverheadDefaults;
     const totalCost = rawCost + overhead;
 
     let profit: number | undefined;
