@@ -47,6 +47,11 @@ export interface CompositeItem {
   description: string;
   components: CompositeComponent[];
   outletId: string;
+  /** Selling price per single serving / unit produced. Required for profit calc. */
+  sellPrice?: number;
+  /** Per-recipe override for packaging + staff + power allocation per unit produced.
+   *  Falls back to the outlet-level default when undefined. */
+  overheadPerUnit?: number;
 }
 
 interface Props {
@@ -65,6 +70,8 @@ const emptyForm = () => ({
   menuVariantId: "" as string,
   description: "",
   components: [] as CompositeComponent[],
+  sellPrice: "" as string | number,
+  overheadPerUnit: "" as string | number,
 });
 
 export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems, readOnly, selectedOutletId }: Props) {
