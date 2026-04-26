@@ -141,6 +141,13 @@ export default function Reports() {
     i7: "Hair Color Mix", i8: "Disposable Gloves", i9: "Sandwich Bread", i10: "Napkins",
   }), []);
 
+  // Base unit per inventory item (used for display in the Qty Used column)
+  const itemUnits: Record<string, string> = useMemo(() => ({
+    i1: "kg", i2: "L", i3: "kg",
+    i4: "pcs", i5: "kg", i6: "bottles",
+    i7: "tubes", i8: "pairs", i9: "loaves", i10: "packs",
+  }), []);
+
   // Available cashiers within current outlet scope (date-independent so filter is always usable)
   const availableCashiers = useMemo(() => {
     const names = new Set<string>();
