@@ -163,6 +163,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterExpiry, setFilterExpiry] = useState("all");
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [syncToCatalog, setSyncToCatalog] = useState(true);
 
   const selectedOutlet = selectedOutletId && selectedOutletId !== "all" ? outlets.find(o => o.id === selectedOutletId) : null;
   const showBatchExpiry = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
@@ -170,6 +171,11 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const isOutletBatchTracked = (oid: string) => {
     const o = outlets.find((x) => x.id === oid);
     return o ? BATCH_EXPIRY_BUSINESS_TYPES.includes(o.businessType) : false;
+  };
+
+  const isOutletRetail = (oid: string) => {
+    const o = outlets.find((x) => x.id === oid);
+    return o ? RETAIL_BUSINESS_TYPES.includes(o.businessType) : false;
   };
 
 
