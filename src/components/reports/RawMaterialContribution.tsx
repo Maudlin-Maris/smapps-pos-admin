@@ -432,6 +432,102 @@ export default function RawMaterialContribution({
           </Table>
         </div>
       </Card>
+
+      <Dialog open={!!drillRow} onOpenChange={(o) => !o && setDrillRow(null)}>
+        <DialogContent className="max-w-2xl">
+          {drillRow && (() => {
+            const recipes = usageMap[drillRow.id] ?? [];
+            const breakdown = recipes
+              .map((r) => {
+                const sold = soldQtyByItem.get(r.menuItem.toLowerCase()) ?? 0;
+                const consumed = sold * r.qtyPerUnit;
+                return { ...r, sold, consumed };
+              })
+              .filter((r) => r.sold > 0)
+              .sort((a, b) => b.consumed - a.consumed);
+
+            const totalSold = breakdown.reduce((s, r) => s + r.sold, 0);
+            const totalConsumed = breakdown.reduce(
+              (s, r) => s + r.consumed,
+              0
+            );
+            const periodLabel =
+              dateFrom && dateTo
+                ? `${format(dateFrom, "MMM d, yyyy")} – ${format(dateTo, "MMM d, yyyy")}`
+                : "the selected period";
+
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-base">
+                    {drillRow.name} — Used in Sold Items
+                  </DialogTitle>
+                  <DialogDescription className="text-xs">
+                    Composite and menu items sold during {periodLabel} that
+                    consumed this raw material.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {breakdown.length} item{breakdown.length !== 1 && "s"}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {totalSold} sold
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    {totalConsumed.toFixed(2)} {drillRow.unit} consumed
+                  </Badge>
+                </div>
+
+                {breakdown.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">
+                    No sold menu or composite items recorded for this raw
+                    material in the selected period.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto -mx-6 px-6 mt-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Menu / Composite Item</TableHead>
+                          <TableHead className="text-right">Times Sold</TableHead>
+                          <TableHead className="text-right">Per Unit</TableHead>
+                          <TableHead className="text-right">Total Used</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {breakdown.map((r) => (
+                          <TableRow key={r.menuItem}>
+                            <TableCell className="text-sm font-medium">
+                              {r.menuItem}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-mono">
+                              {r.sold}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-mono text-muted-foreground">
+                              {r.qtyPerUnit} {drillRow.unit}
+                            </TableCell>
+                            <TableCell className="text-right text-sm font-mono font-semibold">
+                              {r.consumed.toFixed(2)} {drillRow.unit}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                  "Times Sold" counts each occurrence of the item across
+                  in-scope transactions. "Total Used" multiplies that count by
+                  the recipe quantity per unit.
+                </p>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }
