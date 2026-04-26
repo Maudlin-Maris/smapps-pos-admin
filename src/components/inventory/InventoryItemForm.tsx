@@ -160,9 +160,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm(selectedOutletId));
-    const initialOutlets = selectedOutletId && selectedOutletId !== "all" ? [selectedOutletId] : [];
-    setSelectedOutletIds(initialOutlets);
-    setOutletStocks(Object.fromEntries(initialOutlets.map((oid) => [oid, { stock: 0, minStock: 0, batches: [] }])));
     setOpen(true);
   };
 
@@ -182,8 +179,6 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       expiryDate: item.expiryDate || "",
       batches: item.batches || [],
     });
-    setSelectedOutletIds(item.outletId ? [item.outletId] : []);
-    setOutletStocks(item.outletId ? { [item.outletId]: { stock: item.stock, minStock: item.minStock, batches: item.batches ?? [] } } : {});
     setOpen(true);
   };
 
@@ -209,8 +204,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       toast.error("Category and unit are required");
       return;
     }
-    if (selectedOutletIds.length === 0) {
-      toast.error("Select at least one outlet");
+    const targetOutletId = editing?.outletId || form.outletId || (selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "");
+    if (!targetOutletId) {
+      toast.error("Select an outlet before registering items");
       return;
     }
     if (form.conversions.length === 0) {
@@ -223,82 +219,45 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       return;
     }
 
-    // Resolve per-outlet stock + batches.
-    const resolveOutletPayload = (oid: string) => {
-      const entry = outletStocks[oid] ?? { stock: 0, minStock: 0, batches: [] };
-      const batchTracked = isOutletBatchTracked(oid);
-      const usesBatches = batchTracked && entry.batches.length > 0;
-      const stock = usesBatches
-        ? entry.batches.reduce((sum, b) => sum + b.quantity, 0)
-        : entry.stock;
-      return {
-        stock,
-        minStock: entry.minStock,
-        batches: batchTracked ? entry.batches.map((b) => ({ ...b, id: crypto.randomUUID() })) : undefined,
-        status: computeStatus(stock, entry.minStock),
-      };
-    };
-
-    // Helper: build a fresh per-outlet payload with unique batch & conversion ids
-    const buildForOutlet = (outletId: string, reuseId?: string, reuseSku?: boolean): InventoryItem => {
-      const payload = resolveOutletPayload(outletId);
-      return {
-        id: reuseId ?? crypto.randomUUID(),
-        ...form,
-        sku: reuseSku ? form.sku : "",
-        outletId,
-        stock: payload.stock,
-        minStock: payload.minStock,
-        status: payload.status,
-        conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
-        batches: payload.batches,
-      };
-    };
+    const batchTracked = isOutletBatchTracked(targetOutletId);
+    const usesBatches = batchTracked && (form.batches?.length ?? 0) > 0;
+    const resolvedStock = usesBatches
+      ? (form.batches ?? []).reduce((sum, b) => sum + b.quantity, 0)
+      : form.stock;
+    const resolvedBatches = batchTracked
+      ? (form.batches ?? []).map((b) => ({ ...b, id: b.id || crypto.randomUUID() }))
+      : undefined;
 
     if (editing) {
-      // Update the edited item in its current outlet, then add clones for any
-      // additional outlets that were selected.
-      const editingOutlet = editing.outletId;
-      const includesOriginal = selectedOutletIds.includes(editingOutlet);
-      const additionalOutlets = selectedOutletIds.filter((o) => o !== editingOutlet);
-
-      setItems((prev) => {
-        let next = prev.map((i) => {
-          if (i.id !== editing.id) return i;
-          if (!includesOriginal) return i;
-          const payload = resolveOutletPayload(editingOutlet);
-          return {
-            ...i,
-            ...form,
-            outletId: editingOutlet,
-            stock: payload.stock,
-            minStock: payload.minStock,
-            status: payload.status,
-            batches: payload.batches,
-          };
-        });
-        const targets = includesOriginal ? additionalOutlets : selectedOutletIds;
-        const clones = targets.map((oid) => buildForOutlet(oid));
-        next = [...next, ...clones];
-        return next;
-      });
-
-      const copyCount = (includesOriginal ? additionalOutlets : selectedOutletIds).length;
-      if (copyCount > 0) {
-        toast.success(`Item updated and copied to ${copyCount} additional outlet${copyCount > 1 ? "s" : ""}`);
-      } else {
-        toast.success("Item updated");
-      }
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === editing.id
+            ? {
+                ...i,
+                ...form,
+                outletId: targetOutletId,
+                stock: resolvedStock,
+                minStock: form.minStock,
+                status: computeStatus(resolvedStock, form.minStock),
+                batches: resolvedBatches,
+              }
+            : i,
+        ),
+      );
+      toast.success("Item updated");
     } else {
-      const newItems = selectedOutletIds.map((oid, idx) =>
-        buildForOutlet(oid, undefined, idx === 0),
-      );
-      setItems((prev) => [...prev, ...newItems]);
-      toast.success(
-        selectedOutletIds.length > 1
-          ? `Item registered in ${selectedOutletIds.length} outlets`
-          : "Item registered",
-      );
+      const newItem: InventoryItem = {
+        id: crypto.randomUUID(),
+        ...form,
+        outletId: targetOutletId,
+        stock: resolvedStock,
+        minStock: form.minStock,
+        status: computeStatus(resolvedStock, form.minStock),
+        conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
+        batches: resolvedBatches,
+      };
+      setItems((prev) => [...prev, newItem]);
+      toast.success("Item registered");
     }
     setOpen(false);
   };
