@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,7 @@ import logoLight from "@/assets/logo-light.png";
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signIn, resetPassword } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,14 +36,10 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await signIn(email, password);
     setSubmitting(false);
     if (error) {
-      toast({
-        title: "Sign in failed",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Sign in failed", description: error, variant: "destructive" });
       return;
     }
     navigate("/", { replace: true });
@@ -53,21 +48,15 @@ export default function Auth() {
   const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     setForgotLoading(true);
-    const { data, error } = await supabase.functions.invoke("reset-password", {
-      body: { email: forgotEmail },
-    });
+    const { error, newPassword } = await resetPassword(forgotEmail);
     setForgotLoading(false);
-    if (error || (data as any)?.error) {
-      toast({
-        title: "Reset failed",
-        description: (data as any)?.error || error?.message || "Please try again.",
-        variant: "destructive",
-      });
+    if (error) {
+      toast({ title: "Reset failed", description: error, variant: "destructive" });
       return;
     }
     toast({
-      title: "Password reset",
-      description: "If an account exists, a new password has been emailed.",
+      title: "New password sent",
+      description: `A new password has been emailed to ${forgotEmail}. (Demo: ${newPassword})`,
     });
     setForgotOpen(false);
     setForgotEmail("");
@@ -150,11 +139,7 @@ export default function Auth() {
               disabled={submitting || !email || !password}
               className="w-full h-11 bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))] hover:bg-[hsl(var(--accent))]/90 font-semibold"
             >
-              {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                "Sign in"
-              )}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign in"}
             </Button>
           </form>
 
@@ -166,6 +151,9 @@ export default function Auth() {
 
         <p className="text-center text-xs text-[hsl(210,3%,55%)] mt-6">
           Need an account? Contact your system administrator.
+        </p>
+        <p className="text-center text-[10px] text-[hsl(210,3%,45%)] mt-2">
+          Demo: <span className="text-[hsl(var(--accent))]">admin@smapps.com</span> / admin123
         </p>
       </div>
 

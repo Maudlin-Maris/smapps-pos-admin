@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, User as UserIcon, KeyRound, Mail } from "lucide-react";
 
 export default function Profile() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, updateProfile, changePassword } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
@@ -20,24 +20,16 @@ export default function Profile() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
-    setDisplayName(profile?.display_name || "");
-    setPhone(profile?.phone || "");
-  }, [profile]);
+    setDisplayName(user?.display_name || "");
+    setPhone(user?.phone || "");
+  }, [user]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
     setSavingProfile(true);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ display_name: displayName, phone })
-      .eq("user_id", user.id);
+    await new Promise((r) => setTimeout(r, 300));
+    updateProfile({ display_name: displayName, phone });
     setSavingProfile(false);
-    if (error) {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
-      return;
-    }
-    await refreshProfile();
     toast({ title: "Profile updated" });
   };
 
@@ -48,25 +40,19 @@ export default function Profile() {
       return;
     }
     if (newPassword.length < 8) {
-      toast({ title: "Password too short", description: "Use at least 8 characters.", variant: "destructive" });
+      toast({
+        title: "Password too short",
+        description: "Use at least 8 characters.",
+        variant: "destructive",
+      });
       return;
     }
-    if (!user?.email) return;
     setSavingPassword(true);
-    // Verify current password by re-authenticating
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    });
-    if (authError) {
-      setSavingPassword(false);
-      toast({ title: "Current password is incorrect", variant: "destructive" });
-      return;
-    }
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    await new Promise((r) => setTimeout(r, 300));
+    const { error } = changePassword(currentPassword, newPassword);
     setSavingPassword(false);
     if (error) {
-      toast({ title: "Could not change password", description: error.message, variant: "destructive" });
+      toast({ title: error, variant: "destructive" });
       return;
     }
     setCurrentPassword("");
@@ -75,7 +61,7 @@ export default function Profile() {
     toast({ title: "Password updated" });
   };
 
-  const initial = (profile?.display_name || user?.email || "?").charAt(0).toUpperCase();
+  const initial = (user?.display_name || user?.email || "?").charAt(0).toUpperCase();
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -92,15 +78,20 @@ export default function Profile() {
             <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold shrink-0">
               {initial}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <CardTitle className="truncate text-lg">
-                {profile?.display_name || "Unnamed user"}
+                {user?.display_name || "Unnamed user"}
               </CardTitle>
               <CardDescription className="flex items-center gap-1.5 text-xs mt-1">
                 <Mail className="w-3 h-3" />
                 <span className="truncate">{user?.email}</span>
               </CardDescription>
             </div>
+            {user?.role && (
+              <Badge variant="secondary" className="capitalize shrink-0">
+                {user.role}
+              </Badge>
+            )}
           </div>
         </CardHeader>
       </Card>
