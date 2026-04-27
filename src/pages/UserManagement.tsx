@@ -6,10 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -20,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Copy, Search, ShieldAlert } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Copy, Search, ShieldAlert, Mail, Store, Building2, ShieldCheck } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 interface FormState {
@@ -185,105 +183,154 @@ export default function UserManagement() {
     }));
   };
 
+  const initials = (name: string) => {
+    const parts = name.trim().split(/\s+/);
+    return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div className="space-y-6 pb-20 lg:pb-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Users</h1>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">Users</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage portal users, their roles and assigned outlets.
+            Manage portal users, their roles and assigned outlets
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="w-4 h-4 mr-2" /> New user
+        <Button size="sm" className="w-fit" onClick={openCreate}>
+          <Plus className="h-4 w-4 mr-1" /> Add User
         </Button>
       </div>
 
-      <Card>
-        <CardContent className="p-4 space-y-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email"
-              className="pl-9"
-            />
-          </div>
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search users..."
+          className="pl-9"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Outlets</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">
-                      No users found.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {filtered.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">
+      {/* User Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {filtered.map((u) => {
+          const isSelf = currentUser?.id === u.id;
+          const assignedOutlets = u.outlet_ids.length
+            ? outlets.filter((o) => u.outlet_ids.includes(o.id))
+            : [];
+          return (
+            <Card key={u.id} className="p-5 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
+                    {initials(u.display_name)}
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-semibold text-sm">
                       {u.display_name}
-                      {currentUser?.id === u.id && (
-                        <span className="ml-2 text-xs text-muted-foreground">(you)</span>
+                      {isSelf && (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">(you)</span>
                       )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{roleName(u.role_id)}</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {outletLabel(u.outlet_ids)}
-                    </TableCell>
-                    <TableCell>
-                      {u.status === "active" ? (
-                        <Badge className="bg-success/15 text-success hover:bg-success/15 border-success/20">
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Inactive
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(u)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={currentUser?.id === u.id}
-                          title={currentUser?.id === u.id ? "You can't deactivate yourself" : undefined}
-                          onClick={() => setConfirmDeactivate(u)}
-                        >
-                          {u.status === "active" ? (
-                            <UserX className="w-4 h-4 text-destructive" />
-                          ) : (
-                            <UserCheck className="w-4 h-4 text-success" />
-                          )}
-                        </Button>
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {u.outlet_ids.length === 0
+                        ? "All outlets"
+                        : `${u.outlet_ids.length} outlet${u.outlet_ids.length !== 1 ? "s" : ""}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Edit user"
+                    onClick={() => openEdit(u)}
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={isSelf}
+                    title={
+                      isSelf
+                        ? "You can't deactivate yourself"
+                        : u.status === "active"
+                        ? "Deactivate user"
+                        : "Reactivate user"
+                    }
+                    onClick={() => setConfirmDeactivate(u)}
+                  >
+                    {u.status === "active" ? (
+                      <UserX className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                    ) : (
+                      <UserCheck className="h-4 w-4 text-success" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-sm mb-3">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Mail className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate text-xs">{u.email}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                  <span className="text-xs">{roleName(u.role_id)}</span>
+                </div>
+              </div>
+
+              <Separator className="mb-3" />
+
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-2 flex-1 min-w-0">
+                  {assignedOutlets.length === 0 ? (
+                    <div className="flex items-center gap-2 text-xs">
+                      <Store className="h-3.5 w-3.5 text-accent shrink-0" />
+                      <span className="font-medium">All outlets</span>
+                    </div>
+                  ) : (
+                    assignedOutlets.slice(0, 3).map((o) => (
+                      <div key={o.id} className="flex items-center gap-2 text-xs">
+                        <Store className="h-3.5 w-3.5 text-accent shrink-0" />
+                        <span className="font-medium truncate">{o.name}</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    ))
+                  )}
+                  {assignedOutlets.length > 3 && (
+                    <p className="text-[10px] text-muted-foreground pl-5">
+                      +{assignedOutlets.length - 3} more
+                    </p>
+                  )}
+                </div>
+                {u.status === "active" ? (
+                  <Badge className="bg-success/15 text-success hover:bg-success/15 border-success/20 shrink-0">
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground shrink-0">
+                    Inactive
+                  </Badge>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+
+        {filtered.length === 0 && (
+          <div className="sm:col-span-2 lg:col-span-3 text-center py-12">
+            <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">
+              {search ? "No users match your search" : "No users yet"}
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
