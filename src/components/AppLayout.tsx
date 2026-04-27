@@ -29,6 +29,8 @@ import {
 import { useState } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import UserMenu from "@/components/UserMenu";
 
 interface NavItem {
   title: string;
@@ -64,8 +66,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   const navItems = coreNavItems;
+  const sidebarInitial = (user?.display_name || user?.email || "A").charAt(0).toUpperCase();
+  const sidebarName = user?.display_name || user?.email?.split("@")[0] || "Admin User";
+  const sidebarEmail = user?.email || "admin@retailpos.com";
 
   // Group items by section
   const grouped: { section: string; items: NavItem[] }[] = [];
@@ -161,11 +167,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="border-t border-pos-sidebar-border p-4">
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pos-sidebar-accent text-xs font-bold text-pos-sidebar-fg-active shrink-0">
-                A
+                {sidebarInitial}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-pos-sidebar-fg-active truncate">Admin User</p>
-                <p className="text-xs text-pos-sidebar-fg truncate">admin@retailpos.com</p>
+                <p className="text-sm font-medium text-pos-sidebar-fg-active truncate">{sidebarName}</p>
+                <p className="text-xs text-pos-sidebar-fg truncate">{sidebarEmail}</p>
               </div>
             </div>
           </div>
@@ -173,7 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {collapsed && (
           <div className="border-t border-pos-sidebar-border p-2 flex justify-center">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pos-sidebar-accent text-xs font-bold text-pos-sidebar-fg-active">
-              A
+              {sidebarInitial}
             </div>
           </div>
         )}
@@ -197,9 +203,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
-            <div className="hidden sm:block text-sm text-muted-foreground">
+            <div className="hidden md:block text-sm text-muted-foreground">
               Today: {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             </div>
+            <UserMenu />
           </div>
         </header>
 

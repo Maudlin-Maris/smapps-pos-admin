@@ -13,13 +13,13 @@ import { toast } from "@/hooks/use-toast";
 
 export default function UserMenu() {
   const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
-  const initial = (profile?.display_name || user?.email || "?").charAt(0).toUpperCase();
-  const displayName = profile?.display_name || user?.email?.split("@")[0] || "User";
+  const initial = (user?.display_name || user?.email || "?").charAt(0).toUpperCase();
+  const displayName = user?.display_name || user?.email?.split("@")[0] || "User";
 
-  const handleLogout = async () => {
-    await signOut();
+  const handleLogout = () => {
+    signOut();
     toast({ title: "Signed out" });
     navigate("/auth", { replace: true });
   };
@@ -54,7 +54,10 @@ export default function UserMenu() {
           <Settings className="w-4 h-4 mr-2" /> Account settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="text-destructive focus:text-destructive"
+        >
           <LogOut className="w-4 h-4 mr-2" /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
