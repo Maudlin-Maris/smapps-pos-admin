@@ -15,6 +15,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Lock, Mail, Loader2, ShieldCheck } from "lucide-react";
 import logoLight from "@/assets/logo-light.png";
+import authHero from "@/assets/auth-hero.jpg";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -63,8 +64,45 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)] px-4 py-8">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen w-full flex bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)]">
+      {/* Left: hero panel (hidden on small screens) */}
+      <div className="hidden lg:flex relative w-1/2 xl:w-3/5 overflow-hidden border-r border-[hsl(233,30%,24%)]">
+        <img
+          src={authHero}
+          alt="Retail point of sale illustration"
+          className="absolute inset-0 w-full h-full object-cover opacity-90"
+        />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(233,37%,10%)]/80 via-transparent to-[hsl(293,52%,20%)]/40" />
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          <img src={logoLight} alt="Smapps" className="h-9 w-auto" />
+          <div className="space-y-4 max-w-md">
+            <h2 className="text-4xl xl:text-5xl font-bold text-white tracking-tight leading-tight">
+              Run your retail business with confidence.
+            </h2>
+            <p className="text-base text-[hsl(210,3%,80%)] leading-relaxed">
+              One unified platform for sales, inventory, customers and insights — across every outlet.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-2">
+              {["Multi-outlet", "Loyalty", "Real-time reports", "Inventory"].map((tag) => (
+                <span
+                  key={tag}
+                  className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 backdrop-blur-sm text-white border border-white/15"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-[hsl(210,3%,60%)]">© {new Date().getFullYear()} Smapps. All rights reserved.</p>
+        </div>
+      </div>
+
+      {/* Right: form panel */}
+      <div className="flex-1 flex items-center justify-center px-4 py-8 relative">
+        {/* Decorative blobs for mobile/tablet */}
+        <div className="lg:hidden absolute -top-24 -right-24 w-72 h-72 rounded-full bg-[hsl(var(--accent))]/20 blur-3xl pointer-events-none" />
+        <div className="lg:hidden absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-[hsl(293,52%,40%)]/30 blur-3xl pointer-events-none" />
+      <div className="w-full max-w-md relative">
         <div className="text-center mb-8">
           <img src={logoLight} alt="Smapps" className="h-9 mx-auto mb-5" />
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
@@ -155,6 +193,7 @@ export default function Auth() {
         <p className="text-center text-[10px] text-[hsl(210,3%,45%)] mt-2">
           Demo: <span className="text-[hsl(var(--accent))]">admin@smapps.com</span> / admin123
         </p>
+      </div>
       </div>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>

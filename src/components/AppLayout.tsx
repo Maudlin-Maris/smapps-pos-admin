@@ -30,7 +30,17 @@ import { useState } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import UserMenu from "@/components/UserMenu";
+import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { User as UserIcon, KeyRound, LogOut } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface NavItem {
   title: string;
@@ -66,7 +76,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    signOut();
+    toast({ title: "Signed out" });
+    navigate("/auth", { replace: true });
+  };
 
   const navItems = coreNavItems;
   const sidebarInitial = (user?.display_name || user?.email || "A").charAt(0).toUpperCase();
@@ -163,26 +180,52 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
         </button>
 
-        {!collapsed && (
-          <div className="border-t border-pos-sidebar-border p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pos-sidebar-accent text-xs font-bold text-pos-sidebar-fg-active shrink-0">
-                {sidebarInitial}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            {!collapsed ? (
+              <button className="flex items-center gap-3 border-t border-pos-sidebar-border p-4 hover:bg-pos-sidebar-accent/40 transition-colors text-left w-full">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pos-sidebar-accent text-xs font-bold text-pos-sidebar-fg-active shrink-0">
+                  {sidebarInitial}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-pos-sidebar-fg-active truncate">{sidebarName}</p>
+                  <p className="text-xs text-pos-sidebar-fg truncate">{sidebarEmail}</p>
+                </div>
+              </button>
+            ) : (
+              <button
+                title={sidebarName}
+                className="border-t border-pos-sidebar-border p-2 flex justify-center hover:bg-pos-sidebar-accent/40 transition-colors w-full"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pos-sidebar-accent text-xs font-bold text-pos-sidebar-fg-active">
+                  {sidebarInitial}
+                </div>
+              </button>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="end" className="w-56">
+            <DropdownMenuLabel className="font-normal">
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold truncate">{sidebarName}</p>
+                <p className="text-xs text-muted-foreground truncate">{sidebarEmail}</p>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-pos-sidebar-fg-active truncate">{sidebarName}</p>
-                <p className="text-xs text-pos-sidebar-fg truncate">{sidebarEmail}</p>
-              </div>
-            </div>
-          </div>
-        )}
-        {collapsed && (
-          <div className="border-t border-pos-sidebar-border p-2 flex justify-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pos-sidebar-accent text-xs font-bold text-pos-sidebar-fg-active">
-              {sidebarInitial}
-            </div>
-          </div>
-        )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
+              <UserIcon className="w-4 h-4 mr-2" /> View profile
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/profile")}>
+              <KeyRound className="w-4 h-4 mr-2" /> Change password
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="w-4 h-4 mr-2" /> Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </aside>
 
       {/* Main content */}
@@ -206,7 +249,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="hidden md:block text-sm text-muted-foreground">
               Today: {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             </div>
-            <UserMenu />
           </div>
         </header>
 
