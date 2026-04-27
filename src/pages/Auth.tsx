@@ -83,16 +83,21 @@ export default function Auth() {
   const hasError = !!formError;
 
   return (
-    <div className="min-h-screen w-full flex bg-[hsl(230,20%,98%)]">
+    <div className="min-h-screen w-full flex bg-[#F7F7F8]">
       {/* Left: illustration panel (hidden on small screens) */}
-      <aside className="hidden lg:flex relative w-1/2 xl:w-[55%] flex-col justify-between p-12 bg-[hsl(230,30%,96%)] border-r border-[hsl(230,15%,90%)]">
-        <div className="flex items-center gap-2">
+      <aside className="hidden lg:flex relative w-1/2 xl:w-[55%] flex-col justify-between p-12 bg-[#FAFAFB] border-r border-[#DCDDDE] overflow-hidden">
+        {/* Soft accent glows */}
+        <div className="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-[#55C2F0]/20 blur-3xl" />
+        <div className="pointer-events-none absolute top-1/3 -right-20 w-72 h-72 rounded-full bg-[#E6B322]/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/4 w-96 h-96 rounded-full bg-[#D8245C]/10 blur-3xl" />
+
+        <div className="relative flex items-center gap-2">
           <img src={logoDark} alt="Smapps" className="h-7 w-auto" />
         </div>
 
-        <div className="flex-1 flex items-center justify-center py-8">
+        <div className="relative flex-1 flex items-center justify-center py-8">
           <div className="relative w-full max-w-lg aspect-square">
-            <div className="absolute inset-0 rounded-[32px] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_32px_-8px_rgba(16,24,40,0.08)] border border-[hsl(230,15%,92%)]" />
+            <div className="absolute inset-0 rounded-[32px] bg-white shadow-[0_1px_2px_rgba(26,32,66,0.04),0_8px_32px_-8px_rgba(26,32,66,0.10)] border border-[#DCDDDE]" />
             <img
               src={authHero}
               alt="Retail point of sale illustration"
@@ -105,14 +110,14 @@ export default function Auth() {
           </div>
         </div>
 
-        <div className="max-w-md space-y-3">
-          <h2 className="text-2xl font-semibold text-[hsl(233,37%,18%)] tracking-tight">
+        <div className="relative max-w-md space-y-3">
+          <h2 className="text-2xl font-semibold text-[#1A2042] tracking-tight">
             Everything your store needs, in one place.
           </h2>
-          <p className="text-sm text-[hsl(233,10%,46%)] leading-relaxed">
+          <p className="text-sm text-[#1A2042]/65 leading-relaxed">
             Sales, inventory, customers and reports — designed for daily operations across every outlet.
           </p>
-          <p className="text-xs text-[hsl(233,10%,55%)] pt-4">
+          <p className="text-xs text-[#1A2042]/55 pt-4">
             © {new Date().getFullYear()} Smapps. All rights reserved.
           </p>
         </div>
