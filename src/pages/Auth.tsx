@@ -194,6 +194,7 @@ export default function Auth() {
           Demo: <span className="text-[hsl(var(--accent))]">admin@smapps.com</span> / admin123
         </p>
       </div>
+      </div>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent className="sm:max-w-md">
