@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { OutletProvider } from "@/contexts/OutletContext";
 import { POSProvider } from "@/contexts/POSContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
@@ -23,40 +25,51 @@ import CashierManagement from "@/pages/CashierManagement";
 import LoyaltyManagement from "@/pages/LoyaltyManagement";
 import POSMain from "@/pages/POS/POSMain";
 import PromoBundleManagement from "@/pages/PromoBundleManagement";
+import Auth from "@/pages/Auth";
+import Profile from "@/pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+const Protected = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <AppLayout>{children}</AppLayout>
+  </ProtectedRoute>
+);
 
 const App = () => (
   <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <OutletProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
-            <Route path="/menu" element={<AppLayout><MenuManagement /></AppLayout>} />
-            <Route path="/bundles" element={<AppLayout><PromoBundleManagement /></AppLayout>} />
-            
-            <Route path="/inventory" element={<AppLayout><InventoryManagement /></AppLayout>} />
-            <Route path="/inventory/advanced" element={<AppLayout><AdvancedInventory /></AppLayout>} />
-            <Route path="/purchase-orders" element={<AppLayout><PurchaseOrders /></AppLayout>} />
-            <Route path="/customers" element={<AppLayout><CustomerManagement /></AppLayout>} />
-            <Route path="/loyalty" element={<AppLayout><LoyaltyManagement /></AppLayout>} />
-            <Route path="/insights" element={<AppLayout><AdvancedReports /></AppLayout>} />
-            <Route path="/reports" element={<AppLayout><Reports /></AppLayout>} />
-            <Route path="/expenses" element={<AppLayout><ExpenseManagement /></AppLayout>} />
-            <Route path="/outlets" element={<AppLayout><OutletManagement /></AppLayout>} />
-            <Route path="/cashiers" element={<AppLayout><CashierManagement /></AppLayout>} />
-            <Route path="/subscription" element={<AppLayout><SubscriptionManagement /></AppLayout>} />
-            <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
+        <AuthProvider>
+          <OutletProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={<Protected><Dashboard /></Protected>} />
+                <Route path="/profile" element={<Protected><Profile /></Protected>} />
+                <Route path="/menu" element={<Protected><MenuManagement /></Protected>} />
+                <Route path="/bundles" element={<Protected><PromoBundleManagement /></Protected>} />
+                <Route path="/inventory" element={<Protected><InventoryManagement /></Protected>} />
+                <Route path="/inventory/advanced" element={<Protected><AdvancedInventory /></Protected>} />
+                <Route path="/purchase-orders" element={<Protected><PurchaseOrders /></Protected>} />
+                <Route path="/customers" element={<Protected><CustomerManagement /></Protected>} />
+                <Route path="/loyalty" element={<Protected><LoyaltyManagement /></Protected>} />
+                <Route path="/insights" element={<Protected><AdvancedReports /></Protected>} />
+                <Route path="/reports" element={<Protected><Reports /></Protected>} />
+                <Route path="/expenses" element={<Protected><ExpenseManagement /></Protected>} />
+                <Route path="/outlets" element={<Protected><OutletManagement /></Protected>} />
+                <Route path="/cashiers" element={<Protected><CashierManagement /></Protected>} />
+                <Route path="/subscription" element={<Protected><SubscriptionManagement /></Protected>} />
+                <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-        </OutletProvider>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </OutletProvider>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </ThemeProvider>
