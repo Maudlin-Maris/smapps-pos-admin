@@ -83,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasPermission } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -92,7 +92,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     navigate("/auth", { replace: true });
   };
 
-  const navItems = coreNavItems;
+  const navItems = coreNavItems.filter((i) => !i.permission || hasPermission(i.permission));
   const sidebarInitial = (user?.display_name || user?.email || "A").charAt(0).toUpperCase();
   const sidebarName = user?.display_name || user?.email?.split("@")[0] || "Admin User";
   const sidebarEmail = user?.email || "admin@retailpos.com";
