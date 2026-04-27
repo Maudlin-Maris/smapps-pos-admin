@@ -18,7 +18,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Copy, Search, ShieldAlert } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Copy, Search, ShieldAlert, Mail, Store, Building2, ShieldCheck } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 interface FormState {
