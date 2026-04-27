@@ -83,16 +83,21 @@ export default function Auth() {
   const hasError = !!formError;
 
   return (
-    <div className="min-h-screen w-full flex bg-[hsl(230,20%,98%)]">
+    <div className="min-h-screen w-full flex bg-[#F7F7F8]">
       {/* Left: illustration panel (hidden on small screens) */}
-      <aside className="hidden lg:flex relative w-1/2 xl:w-[55%] flex-col justify-between p-12 bg-[hsl(230,30%,96%)] border-r border-[hsl(230,15%,90%)]">
-        <div className="flex items-center gap-2">
+      <aside className="hidden lg:flex relative w-1/2 xl:w-[55%] flex-col justify-between p-12 bg-[#FAFAFB] border-r border-[#DCDDDE] overflow-hidden">
+        {/* Soft accent glows */}
+        <div className="pointer-events-none absolute -top-24 -left-24 w-80 h-80 rounded-full bg-[#55C2F0]/20 blur-3xl" />
+        <div className="pointer-events-none absolute top-1/3 -right-20 w-72 h-72 rounded-full bg-[#E6B322]/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/4 w-96 h-96 rounded-full bg-[#D8245C]/10 blur-3xl" />
+
+        <div className="relative flex items-center gap-2">
           <img src={logoDark} alt="Smapps" className="h-7 w-auto" />
         </div>
 
-        <div className="flex-1 flex items-center justify-center py-8">
+        <div className="relative flex-1 flex items-center justify-center py-8">
           <div className="relative w-full max-w-lg aspect-square">
-            <div className="absolute inset-0 rounded-[32px] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_32px_-8px_rgba(16,24,40,0.08)] border border-[hsl(230,15%,92%)]" />
+            <div className="absolute inset-0 rounded-[32px] bg-white shadow-[0_1px_2px_rgba(26,32,66,0.04),0_8px_32px_-8px_rgba(26,32,66,0.10)] border border-[#DCDDDE]" />
             <img
               src={authHero}
               alt="Retail point of sale illustration"
@@ -105,14 +110,14 @@ export default function Auth() {
           </div>
         </div>
 
-        <div className="max-w-md space-y-3">
-          <h2 className="text-2xl font-semibold text-[hsl(233,37%,18%)] tracking-tight">
+        <div className="relative max-w-md space-y-3">
+          <h2 className="text-2xl font-semibold text-[#1A2042] tracking-tight">
             Everything your store needs, in one place.
           </h2>
-          <p className="text-sm text-[hsl(233,10%,46%)] leading-relaxed">
+          <p className="text-sm text-[#1A2042]/65 leading-relaxed">
             Sales, inventory, customers and reports — designed for daily operations across every outlet.
           </p>
-          <p className="text-xs text-[hsl(233,10%,55%)] pt-4">
+          <p className="text-xs text-[#1A2042]/55 pt-4">
             © {new Date().getFullYear()} Smapps. All rights reserved.
           </p>
         </div>
@@ -120,27 +125,27 @@ export default function Auth() {
 
       {/* Right: form panel */}
       <main className="flex-1 flex items-center justify-center px-4 sm:px-8 py-10">
-        <div className="w-full max-w-[400px]">
+        <div className="w-full max-w-[420px] bg-white lg:bg-transparent lg:shadow-none lg:border-0 lg:p-0 rounded-2xl border border-[#DCDDDE] shadow-sm p-6 sm:p-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex justify-center mb-8">
             <img src={logoDark} alt="Smapps" className="h-8 w-auto" />
           </div>
 
           <div className="mb-8">
-            <p className="text-xs font-medium text-[hsl(196,84%,40%)] uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-[#D8245C] uppercase tracking-wider mb-2">
               Login as Admin
             </p>
-            <h1 className="text-[28px] leading-tight font-semibold text-[hsl(233,37%,18%)] tracking-tight">
+            <h1 className="text-[28px] leading-tight font-semibold text-[#1A2042] tracking-tight">
               Welcome back
             </h1>
-            <p className="text-sm text-[hsl(233,10%,46%)] mt-2">
+            <p className="text-sm text-[#1A2042]/65 mt-2">
               Sign in to your admin portal to continue.
             </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5" noValidate>
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-sm font-medium text-[hsl(233,37%,18%)]">
+              <Label htmlFor="email" className="text-sm font-medium text-[#1A2042]">
                 Email
               </Label>
               <Input
@@ -156,16 +161,16 @@ export default function Auth() {
                 autoComplete="email"
                 aria-invalid={hasError}
                 className={cn(
-                  "h-11 rounded-[10px] bg-white border-[hsl(230,15%,88%)] text-[hsl(233,37%,18%)] placeholder:text-[hsl(233,10%,60%)] transition-colors",
-                  "focus-visible:ring-2 focus-visible:ring-[hsl(196,84%,55%)]/30 focus-visible:border-[hsl(196,84%,55%)] focus-visible:ring-offset-0",
-                  hasError && "border-[hsl(341,73%,55%)] focus-visible:border-[hsl(341,73%,55%)] focus-visible:ring-[hsl(341,73%,55%)]/25",
+                  "h-11 rounded-[10px] bg-white border-[#DCDDDE] text-[#1A2042] placeholder:text-[#1A2042]/40 transition-colors",
+                  "focus-visible:ring-2 focus-visible:ring-[#D8245C]/25 focus-visible:border-[#D8245C] focus-visible:ring-offset-0",
+                  hasError && "border-[#D8245C] focus-visible:border-[#D8245C] focus-visible:ring-[#D8245C]/25",
                 )}
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-sm font-medium text-[hsl(233,37%,18%)]">
+                <Label htmlFor="password" className="text-sm font-medium text-[#1A2042]">
                   Password
                 </Label>
                 <button
@@ -174,7 +179,7 @@ export default function Auth() {
                     setForgotEmail(email);
                     setForgotOpen(true);
                   }}
-                  className="text-xs font-medium text-[hsl(196,84%,40%)] hover:text-[hsl(196,84%,32%)] transition-colors"
+                  className="text-xs font-medium text-[#47184E] hover:text-[#47184E]/80 hover:underline underline-offset-2 transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -193,22 +198,22 @@ export default function Auth() {
                   autoComplete="current-password"
                   aria-invalid={hasError}
                   className={cn(
-                    "h-11 rounded-[10px] bg-white border-[hsl(230,15%,88%)] pr-10 text-[hsl(233,37%,18%)] placeholder:text-[hsl(233,10%,60%)] transition-colors",
-                    "focus-visible:ring-2 focus-visible:ring-[hsl(196,84%,55%)]/30 focus-visible:border-[hsl(196,84%,55%)] focus-visible:ring-offset-0",
-                    hasError && "border-[hsl(341,73%,55%)] focus-visible:border-[hsl(341,73%,55%)] focus-visible:ring-[hsl(341,73%,55%)]/25",
+                    "h-11 rounded-[10px] bg-white border-[#DCDDDE] pr-10 text-[#1A2042] placeholder:text-[#1A2042]/40 transition-colors",
+                    "focus-visible:ring-2 focus-visible:ring-[#D8245C]/25 focus-visible:border-[#D8245C] focus-visible:ring-offset-0",
+                    hasError && "border-[#D8245C] focus-visible:border-[#D8245C] focus-visible:ring-[#D8245C]/25",
                   )}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(233,10%,55%)] hover:text-[hsl(233,37%,18%)] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1A2042]/55 hover:text-[#1A2042] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {hasError && (
-                <p className="flex items-center gap-1.5 text-xs text-[hsl(341,73%,49%)] mt-1">
+                <p className="flex items-center gap-1.5 text-xs text-[#D8245C] mt-1">
                   <AlertCircle className="w-3.5 h-3.5" />
                   {formError}
                 </p>
@@ -220,9 +225,9 @@ export default function Auth() {
                 id="remember"
                 checked={remember}
                 onCheckedChange={(v) => setRemember(v === true)}
-                className="h-4 w-4 rounded border-[hsl(230,15%,80%)] data-[state=checked]:bg-[hsl(196,84%,45%)] data-[state=checked]:border-[hsl(196,84%,45%)]"
+                className="h-4 w-4 rounded border-[#DCDDDE] data-[state=checked]:bg-[#D8245C] data-[state=checked]:border-[#D8245C]"
               />
-              <Label htmlFor="remember" className="text-sm font-normal text-[hsl(233,10%,40%)] cursor-pointer">
+              <Label htmlFor="remember" className="text-sm font-normal text-[#1A2042]/75 cursor-pointer">
                 Remember me on this device
               </Label>
             </div>
@@ -232,9 +237,9 @@ export default function Auth() {
               disabled={submitting || !email || !password}
               className={cn(
                 "w-full h-11 rounded-[10px] font-semibold text-[15px]",
-                "bg-[hsl(233,37%,18%)] text-white shadow-sm",
-                "hover:bg-[hsl(233,37%,24%)] hover:shadow-md",
-                "active:bg-[hsl(233,37%,14%)]",
+                "bg-[#D8245C] text-white shadow-sm",
+                "hover:bg-[#B81E4E] hover:shadow-md",
+                "active:bg-[#9F1A43]",
                 "transition-all duration-150",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
               )}
@@ -250,11 +255,11 @@ export default function Auth() {
             </Button>
           </form>
 
-          <p className="text-center text-xs text-[hsl(233,10%,55%)] mt-8">
+          <p className="text-center text-xs text-[#1A2042]/60 mt-8">
             Need an account? Contact your system administrator.
           </p>
-          <p className="text-center text-[11px] text-[hsl(233,10%,60%)] mt-2">
-            Demo: <span className="font-medium text-[hsl(196,84%,40%)]">admin@smapps.com</span> / admin123
+          <p className="text-center text-[11px] text-[#1A2042]/55 mt-2">
+            Demo: <span className="font-medium text-[#47184E]">admin@smapps.com</span> / admin123
           </p>
         </div>
       </main>
@@ -287,7 +292,7 @@ export default function Auth() {
               <Button
                 type="submit"
                 disabled={forgotLoading || !forgotEmail}
-                className="rounded-[10px] bg-[hsl(233,37%,18%)] hover:bg-[hsl(233,37%,24%)] text-white"
+                className="rounded-[10px] bg-[#D8245C] hover:bg-[#B81E4E] text-white"
               >
                 {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send new password"}
               </Button>
