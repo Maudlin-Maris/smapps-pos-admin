@@ -81,13 +81,12 @@ export default function Auth() {
         />
         <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[hsl(233,40%,9%)] to-transparent pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[hsl(233,40%,9%)] to-transparent pointer-events-none" />
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          <img src={logoLight} alt="Smapps" className="h-9 w-auto" />
-          <div className="space-y-4 max-w-md">
-            <h2 className="text-4xl xl:text-5xl font-bold text-white tracking-tight leading-tight">
+        <div className="relative z-10 flex flex-col justify-end p-12 w-full">
+          <div className="space-y-4 max-w-md rounded-2xl bg-[hsl(233,40%,8%)]/70 backdrop-blur-md border border-white/10 p-6 shadow-2xl">
+            <h2 className="text-4xl xl:text-5xl font-bold text-white tracking-tight leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
               Run your retail business with confidence.
             </h2>
-            <p className="text-base text-[hsl(210,3%,80%)] leading-relaxed">
+            <p className="text-base text-[hsl(210,3%,85%)] leading-relaxed">
               One unified platform for sales, inventory, customers and insights — across every outlet.
             </p>
             <div className="flex flex-wrap gap-2 pt-2">
@@ -100,8 +99,8 @@ export default function Auth() {
                 </span>
               ))}
             </div>
+            <p className="text-xs text-[hsl(210,3%,65%)] pt-2">© {new Date().getFullYear()} Smapps. All rights reserved.</p>
           </div>
-          <p className="text-xs text-[hsl(210,3%,60%)]">© {new Date().getFullYear()} Smapps. All rights reserved.</p>
         </div>
       </div>
 
