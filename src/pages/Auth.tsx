@@ -292,7 +292,7 @@ export default function Auth() {
               <Button
                 type="submit"
                 disabled={forgotLoading || !forgotEmail}
-                className="rounded-[10px] bg-[hsl(233,37%,18%)] hover:bg-[hsl(233,37%,24%)] text-white"
+                className="rounded-[10px] bg-[#D8245C] hover:bg-[#B81E4E] text-white"
               >
                 {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send new password"}
               </Button>
