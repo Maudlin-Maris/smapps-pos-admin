@@ -66,13 +66,21 @@ export default function Auth() {
   return (
     <div className="min-h-screen w-full flex bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)]">
       {/* Left: hero panel (hidden on small screens) */}
-      <div className="hidden lg:flex relative w-1/2 xl:w-3/5 overflow-hidden border-r border-[hsl(233,30%,24%)]">
+      <div className="hidden lg:flex relative w-1/2 xl:w-3/5 overflow-hidden border-r border-[hsl(233,30%,24%)] bg-[hsl(233,40%,9%)]">
+        {/* Ambient color glows behind the artwork */}
+        <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-[hsl(var(--accent))]/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-40 -right-32 w-[32rem] h-[32rem] rounded-full bg-[hsl(293,52%,40%)]/25 blur-3xl pointer-events-none" />
         <img
           src={authHero}
-          alt="Retail point of sale illustration"
-          className="absolute inset-0 w-full h-full object-cover opacity-90"
+          alt="Isometric retail point of sale illustration"
+          width={1280}
+          height={1600}
+          loading="eager"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-contain object-center pointer-events-none select-none [image-rendering:auto]"
         />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[hsl(233,37%,10%)]/80 via-transparent to-[hsl(293,52%,20%)]/40" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[hsl(233,40%,9%)] to-transparent pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[hsl(233,40%,9%)] to-transparent pointer-events-none" />
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           <img src={logoLight} alt="Smapps" className="h-9 w-auto" />
           <div className="space-y-4 max-w-md">
