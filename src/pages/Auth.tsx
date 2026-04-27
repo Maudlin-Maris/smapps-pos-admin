@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +14,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Lock, Mail, Loader2, ShieldCheck } from "lucide-react";
-import logoLight from "@/assets/logo-light.png";
+import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import logoDark from "@/assets/logo-dark.png";
 import authHero from "@/assets/auth-hero.jpg";
+
+const REMEMBER_KEY = "smapps_remember_email";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -23,8 +27,10 @@ export default function Auth() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -34,15 +40,26 @@ export default function Auth() {
     if (!authLoading && user) navigate("/", { replace: true });
   }, [user, authLoading, navigate]);
 
+  useEffect(() => {
+    const remembered = localStorage.getItem(REMEMBER_KEY);
+    if (remembered) {
+      setEmail(remembered);
+      setRemember(true);
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     setSubmitting(true);
     const { error } = await signIn(email, password);
     setSubmitting(false);
     if (error) {
-      toast({ title: "Sign in failed", description: error, variant: "destructive" });
+      setFormError(error);
       return;
     }
+    if (remember) localStorage.setItem(REMEMBER_KEY, email);
+    else localStorage.removeItem(REMEMBER_KEY);
     navigate("/", { replace: true });
   };
 
@@ -63,87 +80,92 @@ export default function Auth() {
     setForgotEmail("");
   };
 
+  const hasError = !!formError;
+
   return (
-    <div className="min-h-screen w-full flex bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)]">
-      {/* Left: hero panel (hidden on small screens) */}
-      <div className="hidden lg:flex relative w-1/2 xl:w-3/5 overflow-hidden border-r border-[hsl(233,30%,24%)] bg-[hsl(233,40%,9%)]">
-        {/* Ambient color glows behind the artwork */}
-        <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-[hsl(var(--accent))]/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-40 -right-32 w-[32rem] h-[32rem] rounded-full bg-[hsl(293,52%,40%)]/25 blur-3xl pointer-events-none" />
-        <img
-          src={authHero}
-          alt="Isometric retail point of sale illustration"
-          width={1280}
-          height={1600}
-          loading="eager"
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-contain object-center pointer-events-none select-none [image-rendering:auto]"
-        />
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[hsl(233,40%,9%)] to-transparent pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-[hsl(233,40%,9%)] to-transparent pointer-events-none" />
-        <div className="relative z-10 flex flex-col justify-end p-12 w-full">
-          <div className="space-y-4 max-w-md rounded-2xl bg-[hsl(233,40%,8%)]/70 backdrop-blur-md border border-white/10 p-6 shadow-2xl">
-            <h2 className="text-4xl xl:text-5xl font-bold text-white tracking-tight leading-tight drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
-              Run your retail business with confidence.
-            </h2>
-            <p className="text-base text-[hsl(210,3%,85%)] leading-relaxed">
-              One unified platform for sales, inventory, customers and insights — across every outlet.
-            </p>
-            <div className="flex flex-wrap gap-2 pt-2">
-              {["Multi-outlet", "Loyalty", "Real-time reports", "Inventory"].map((tag) => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 rounded-full text-xs font-medium bg-white/10 backdrop-blur-sm text-white border border-white/15"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-            <p className="text-xs text-[hsl(210,3%,65%)] pt-2">© {new Date().getFullYear()} Smapps. All rights reserved.</p>
+    <div className="min-h-screen w-full flex bg-[hsl(230,20%,98%)]">
+      {/* Left: illustration panel (hidden on small screens) */}
+      <aside className="hidden lg:flex relative w-1/2 xl:w-[55%] flex-col justify-between p-12 bg-[hsl(230,30%,96%)] border-r border-[hsl(230,15%,90%)]">
+        <div className="flex items-center gap-2">
+          <img src={logoDark} alt="Smapps" className="h-7 w-auto" />
+        </div>
+
+        <div className="flex-1 flex items-center justify-center py-8">
+          <div className="relative w-full max-w-lg aspect-square">
+            <div className="absolute inset-0 rounded-[32px] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04),0_8px_32px_-8px_rgba(16,24,40,0.08)] border border-[hsl(230,15%,92%)]" />
+            <img
+              src={authHero}
+              alt="Retail point of sale illustration"
+              width={1024}
+              height={1024}
+              loading="eager"
+              decoding="async"
+              className="relative w-full h-full object-contain p-6"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Right: form panel */}
-      <div className="flex-1 flex items-center justify-center px-4 py-8 relative">
-        {/* Decorative blobs for mobile/tablet */}
-        <div className="lg:hidden absolute -top-24 -right-24 w-72 h-72 rounded-full bg-[hsl(var(--accent))]/20 blur-3xl pointer-events-none" />
-        <div className="lg:hidden absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-[hsl(293,52%,40%)]/30 blur-3xl pointer-events-none" />
-      <div className="w-full max-w-md relative">
-        <div className="text-center mb-8">
-          <img src={logoLight} alt="Smapps" className="h-9 mx-auto mb-5" />
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Admin Portal
-          </h1>
-          <p className="text-sm text-[hsl(210,3%,70%)] mt-2">
-            Sign in to manage your retail operations
+        <div className="max-w-md space-y-3">
+          <h2 className="text-2xl font-semibold text-[hsl(233,37%,18%)] tracking-tight">
+            Everything your store needs, in one place.
+          </h2>
+          <p className="text-sm text-[hsl(233,10%,46%)] leading-relaxed">
+            Sales, inventory, customers and reports — designed for daily operations across every outlet.
+          </p>
+          <p className="text-xs text-[hsl(233,10%,55%)] pt-4">
+            © {new Date().getFullYear()} Smapps. All rights reserved.
           </p>
         </div>
+      </aside>
 
-        <div className="bg-[hsl(233,37%,14%)]/80 backdrop-blur-xl border border-[hsl(233,30%,24%)] rounded-2xl p-6 sm:p-8 shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-[hsl(210,3%,80%)] text-sm">
-                Email address
+      {/* Right: form panel */}
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-8 py-10">
+        <div className="w-full max-w-[400px]">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex justify-center mb-8">
+            <img src={logoDark} alt="Smapps" className="h-8 w-auto" />
+          </div>
+
+          <div className="mb-8">
+            <p className="text-xs font-medium text-[hsl(196,84%,40%)] uppercase tracking-wider mb-2">
+              Login as Admin
+            </p>
+            <h1 className="text-[28px] leading-tight font-semibold text-[hsl(233,37%,18%)] tracking-tight">
+              Welcome back
+            </h1>
+            <p className="text-sm text-[hsl(233,10%,46%)] mt-2">
+              Sign in to your admin portal to continue.
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5" noValidate>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-sm font-medium text-[hsl(233,37%,18%)]">
+                Email
               </Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(210,3%,50%)]" />
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  autoComplete="email"
-                  className="pl-10 h-11 bg-[hsl(233,37%,10%)] border-[hsl(233,30%,24%)] text-white placeholder:text-[hsl(210,3%,40%)] focus-visible:ring-[hsl(var(--accent))]"
-                />
-              </div>
+              <Input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (formError) setFormError(null);
+                }}
+                placeholder="you@company.com"
+                autoComplete="email"
+                aria-invalid={hasError}
+                className={cn(
+                  "h-11 rounded-[10px] bg-white border-[hsl(230,15%,88%)] text-[hsl(233,37%,18%)] placeholder:text-[hsl(233,10%,60%)] transition-colors",
+                  "focus-visible:ring-2 focus-visible:ring-[hsl(196,84%,55%)]/30 focus-visible:border-[hsl(196,84%,55%)] focus-visible:ring-offset-0",
+                  hasError && "border-[hsl(341,73%,55%)] focus-visible:border-[hsl(341,73%,55%)] focus-visible:ring-[hsl(341,73%,55%)]/25",
+                )}
+              />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-[hsl(210,3%,80%)] text-sm">
+                <Label htmlFor="password" className="text-sm font-medium text-[hsl(233,37%,18%)]">
                   Password
                 </Label>
                 <button
@@ -152,59 +174,93 @@ export default function Auth() {
                     setForgotEmail(email);
                     setForgotOpen(true);
                   }}
-                  className="text-xs text-[hsl(var(--accent))] hover:text-[hsl(196,84%,75%)] transition-colors"
+                  className="text-xs font-medium text-[hsl(196,84%,40%)] hover:text-[hsl(196,84%,32%)] transition-colors"
                 >
                   Forgot password?
                 </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(210,3%,50%)]" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (formError) setFormError(null);
+                  }}
                   placeholder="Enter your password"
                   autoComplete="current-password"
-                  className="pl-10 pr-10 h-11 bg-[hsl(233,37%,10%)] border-[hsl(233,30%,24%)] text-white placeholder:text-[hsl(210,3%,40%)] focus-visible:ring-[hsl(var(--accent))]"
+                  aria-invalid={hasError}
+                  className={cn(
+                    "h-11 rounded-[10px] bg-white border-[hsl(230,15%,88%)] pr-10 text-[hsl(233,37%,18%)] placeholder:text-[hsl(233,10%,60%)] transition-colors",
+                    "focus-visible:ring-2 focus-visible:ring-[hsl(196,84%,55%)]/30 focus-visible:border-[hsl(196,84%,55%)] focus-visible:ring-offset-0",
+                    hasError && "border-[hsl(341,73%,55%)] focus-visible:border-[hsl(341,73%,55%)] focus-visible:ring-[hsl(341,73%,55%)]/25",
+                  )}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(210,3%,50%)] hover:text-white"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(233,10%,55%)] hover:text-[hsl(233,37%,18%)] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {hasError && (
+                <p className="flex items-center gap-1.5 text-xs text-[hsl(341,73%,49%)] mt-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {formError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                id="remember"
+                checked={remember}
+                onCheckedChange={(v) => setRemember(v === true)}
+                className="h-4 w-4 rounded border-[hsl(230,15%,80%)] data-[state=checked]:bg-[hsl(196,84%,45%)] data-[state=checked]:border-[hsl(196,84%,45%)]"
+              />
+              <Label htmlFor="remember" className="text-sm font-normal text-[hsl(233,10%,40%)] cursor-pointer">
+                Remember me on this device
+              </Label>
             </div>
 
             <Button
               type="submit"
               disabled={submitting || !email || !password}
-              className="w-full h-11 bg-[hsl(var(--accent))] text-[hsl(var(--accent-foreground))] hover:bg-[hsl(var(--accent))]/90 font-semibold"
+              className={cn(
+                "w-full h-11 rounded-[10px] font-semibold text-[15px]",
+                "bg-[hsl(233,37%,18%)] text-white shadow-sm",
+                "hover:bg-[hsl(233,37%,24%)] hover:shadow-md",
+                "active:bg-[hsl(233,37%,14%)]",
+                "transition-all duration-150",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign in"}
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in…
+                </span>
+              ) : (
+                "Sign in"
+              )}
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-[hsl(233,30%,24%)] flex items-center justify-center gap-2 text-xs text-[hsl(210,3%,55%)]">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Secure session protected by Smapps</span>
-          </div>
+          <p className="text-center text-xs text-[hsl(233,10%,55%)] mt-8">
+            Need an account? Contact your system administrator.
+          </p>
+          <p className="text-center text-[11px] text-[hsl(233,10%,60%)] mt-2">
+            Demo: <span className="font-medium text-[hsl(196,84%,40%)]">admin@smapps.com</span> / admin123
+          </p>
         </div>
-
-        <p className="text-center text-xs text-[hsl(210,3%,55%)] mt-6">
-          Need an account? Contact your system administrator.
-        </p>
-        <p className="text-center text-[10px] text-[hsl(210,3%,45%)] mt-2">
-          Demo: <span className="text-[hsl(var(--accent))]">admin@smapps.com</span> / admin123
-        </p>
-      </div>
-      </div>
+      </main>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Reset your password</DialogTitle>
             <DialogDescription>
@@ -212,7 +268,7 @@ export default function Auth() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleForgot} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="forgot-email">Email address</Label>
               <Input
                 id="forgot-email"
@@ -221,13 +277,18 @@ export default function Auth() {
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
                 placeholder="you@company.com"
+                className="h-11 rounded-[10px]"
               />
             </div>
             <DialogFooter className="gap-2 sm:gap-2">
-              <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setForgotOpen(false)} className="rounded-[10px]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={forgotLoading || !forgotEmail}>
+              <Button
+                type="submit"
+                disabled={forgotLoading || !forgotEmail}
+                className="rounded-[10px] bg-[hsl(233,37%,18%)] hover:bg-[hsl(233,37%,24%)] text-white"
+              >
                 {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send new password"}
               </Button>
             </DialogFooter>
