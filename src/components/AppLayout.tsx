@@ -24,8 +24,11 @@ import {
   BarChart3,
   Sun,
   Moon,
+  Shield,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
+import type { PermissionId } from "@/lib/rbac";
 import { useState } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -47,28 +50,32 @@ interface NavItem {
   path: string;
   icon: LucideIcon;
   section?: string;
+  permission?: PermissionId;
 }
 
 const coreNavItems: NavItem[] = [
   { title: "Dashboard", path: "/", icon: LayoutDashboard },
   // Sales & Catalog
-  { title: "Catalog", path: "/menu", icon: UtensilsCrossed, section: "Sales" },
-  { title: "Promo Bundles", path: "/bundles", icon: Gift, section: "Sales" },
+  { title: "Catalog", path: "/menu", icon: UtensilsCrossed, section: "Sales", permission: "catalog.view" },
+  { title: "Promo Bundles", path: "/bundles", icon: Gift, section: "Sales", permission: "catalog.bundles.manage" },
   // Inventory & Supply
-  { title: "Inventory", path: "/inventory", icon: Package, section: "Inventory" },
-  { title: "Advanced Inventory", path: "/inventory/advanced", icon: ArrowLeftRight, section: "Inventory" },
-  { title: "Purchase Orders", path: "/purchase-orders", icon: Truck, section: "Inventory" },
+  { title: "Inventory", path: "/inventory", icon: Package, section: "Inventory", permission: "inventory.view" },
+  { title: "Advanced Inventory", path: "/inventory/advanced", icon: ArrowLeftRight, section: "Inventory", permission: "inventory.view" },
+  { title: "Purchase Orders", path: "/purchase-orders", icon: Truck, section: "Inventory", permission: "purchase_orders.manage" },
   // Customers
-  { title: "Customers", path: "/customers", icon: Heart, section: "Customers" },
-  { title: "Loyalty & Rewards", path: "/loyalty", icon: Gift, section: "Customers" },
+  { title: "Customers", path: "/customers", icon: Heart, section: "Customers", permission: "customers.view" },
+  { title: "Loyalty & Rewards", path: "/loyalty", icon: Gift, section: "Customers", permission: "loyalty.manage" },
   // Finance & Reports
-  { title: "Expenses", path: "/expenses", icon: Receipt, section: "Finance" },
-  { title: "Reports", path: "/reports", icon: FileBarChart, section: "Finance" },
-  { title: "Advanced Insights", path: "/insights", icon: BarChart3, section: "Finance" },
+  { title: "Expenses", path: "/expenses", icon: Receipt, section: "Finance", permission: "expenses.manage" },
+  { title: "Reports", path: "/reports", icon: FileBarChart, section: "Finance", permission: "reports.view" },
+  { title: "Advanced Insights", path: "/insights", icon: BarChart3, section: "Finance", permission: "reports.financial" },
   // Settings
-  { title: "Outlets", path: "/outlets", icon: Store, section: "Settings" },
-  { title: "Cashiers", path: "/cashiers", icon: Users, section: "Settings" },
-  { title: "Subscription", path: "/subscription", icon: CreditCard, section: "Settings" },
+  { title: "Outlets", path: "/outlets", icon: Store, section: "Settings", permission: "outlets.manage" },
+  { title: "Cashiers", path: "/cashiers", icon: Users, section: "Settings", permission: "cashiers.manage" },
+  { title: "Subscription", path: "/subscription", icon: CreditCard, section: "Settings", permission: "subscription.manage" },
+  // Administration
+  { title: "Users", path: "/users", icon: UserCog, section: "Administration", permission: "users.manage" },
+  { title: "Roles & Permissions", path: "/roles", icon: Shield, section: "Administration", permission: "roles.manage" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -76,7 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasPermission } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -85,7 +92,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     navigate("/auth", { replace: true });
   };
 
-  const navItems = coreNavItems;
+  const navItems = coreNavItems.filter((i) => !i.permission || hasPermission(i.permission));
   const sidebarInitial = (user?.display_name || user?.email || "A").charAt(0).toUpperCase();
   const sidebarName = user?.display_name || user?.email?.split("@")[0] || "Admin User";
   const sidebarEmail = user?.email || "admin@retailpos.com";

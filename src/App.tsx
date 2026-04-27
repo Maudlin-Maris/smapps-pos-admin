@@ -27,6 +27,8 @@ import POSMain from "@/pages/POS/POSMain";
 import PromoBundleManagement from "@/pages/PromoBundleManagement";
 import Auth from "@/pages/Auth";
 import Profile from "@/pages/Profile";
+import UserManagement from "@/pages/UserManagement";
+import RolesPermissions from "@/pages/RolesPermissions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,6 +65,8 @@ const App = () => (
                 <Route path="/outlets" element={<Protected><OutletManagement /></Protected>} />
                 <Route path="/cashiers" element={<Protected><CashierManagement /></Protected>} />
                 <Route path="/subscription" element={<Protected><SubscriptionManagement /></Protected>} />
+                <Route path="/users" element={<Protected><UserManagement /></Protected>} />
+                <Route path="/roles" element={<Protected><RolesPermissions /></Protected>} />
                 <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
 
                 <Route path="*" element={<NotFound />} />
