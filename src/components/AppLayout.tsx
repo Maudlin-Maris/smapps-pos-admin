@@ -30,7 +30,17 @@ import { useState } from "react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import UserMenu from "@/components/UserMenu";
+import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { User as UserIcon, KeyRound, LogOut } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface NavItem {
   title: string;
@@ -66,7 +76,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    signOut();
+    toast({ title: "Signed out" });
+    navigate("/auth", { replace: true });
+  };
 
   const navItems = coreNavItems;
   const sidebarInitial = (user?.display_name || user?.email || "A").charAt(0).toUpperCase();
