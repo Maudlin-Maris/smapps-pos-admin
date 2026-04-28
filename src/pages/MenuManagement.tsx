@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { outlets } from "@/data/outlets";
 import { defaultInventoryItems } from "@/data/inventoryItems";
+import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 
 const initialCategories: Category[] = [
   {
