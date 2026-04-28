@@ -250,7 +250,7 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [], units = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -271,6 +271,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
   const [linkedInventoryItemId, setLinkedInventoryItemId] = useState<string>("");
   const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
+  const [overheadPerUnit, setOverheadPerUnit] = useState<string>("");
+  const [pricingMethod, setPricingMethod] = useState<CompositePricingMethod>("markup");
+  const [pricingValue, setPricingValue] = useState<number>(30);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
 
