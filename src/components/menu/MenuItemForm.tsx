@@ -198,7 +198,8 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
+  const [itemType, setItemType] = useState<MenuItemType>("simple");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -216,15 +217,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [extras, setExtras] = useState<MenuExtra[]>([]);
   const [trackInventory, setTrackInventory] = useState(false);
   const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
+  const [linkedInventoryItemId, setLinkedInventoryItemId] = useState<string>("");
+  const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
+  const [linkPickerOpen, setLinkPickerOpen] = useState(false);
+  const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
 
   const features = businessType ? getFeatures(businessType) : null;
 
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
 
+  // Filter inventory items to the outlets currently selected on the form so
+  // users only link to/recipe from inventory that actually exists at those
+  // outlets. Falls back to all items when no outlet has been selected yet.
+  const availableInventory = selectedOutletIds.length
+    ? inventoryItems.filter((i) => selectedOutletIds.includes(i.outletId))
+    : inventoryItems;
+
   useEffect(() => {
     if (open) {
       if (item) {
+        setItemType(item.itemType ?? "simple");
         setName(item.name);
         setDescription(item.description);
         setPrice(item.price.toString());
@@ -239,19 +252,70 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setVariants(item.variants ?? []);
         setExtras(item.extras ?? []);
         setTrackInventory(item.trackInventory ?? false);
+        setLinkedInventoryItemId(item.linkedInventoryItemId ?? "");
+        setIngredients(item.ingredients ?? []);
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
         setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
       } else {
+        setItemType("simple");
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
+        setLinkedInventoryItemId(""); setIngredients([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
       }
     }
   }, [open, item, categories, currentOutletId]);
+
+  // When switching item type, clear fields that no longer apply so saved data
+  // stays consistent with the chosen type.
+  const handleTypeChange = (next: MenuItemType) => {
+    if (next === itemType) return;
+    setItemType(next);
+    if (next === "service") {
+      setVariants([]);
+      setExtras([]);
+      setImages([]);
+      setShowSale(false);
+      setSalePrice("");
+      setSalePeriodStart(null);
+      setSalePeriodEnd(null);
+      setTrackInventory(false);
+      setLinkedInventoryItemId("");
+      setIngredients([]);
+    } else if (next === "simple") {
+      // Composite ingredients & track-inventory don't apply
+      setIngredients([]);
+      setTrackInventory(false);
+    } else if (next === "composite") {
+      // Linked inventory item is a Simple-only concept
+      setLinkedInventoryItemId("");
+      setTrackInventory(false);
+    }
+  };
+
+  // Auto-fill from linked inventory item (Simple type). Suggests a category
+  // by name match against the catalog categories — admin can override.
+  const handleLinkInventory = (invId: string) => {
+    setLinkedInventoryItemId(invId);
+    const inv = inventoryItems.find((i) => i.id === invId);
+    if (!inv) return;
+    if (!name.trim()) setName(inv.name);
+    if (!sku.trim()) setSku(inv.sku);
+    // Best-effort category suggestion: find a catalog category whose name
+    // matches the inventory item's name keywords. If none, leave existing.
+    if (!selectedCatId) {
+      const lower = inv.name.toLowerCase();
+      const guess = categories.find((c) =>
+        lower.includes(c.name.toLowerCase().split(" ")[0])
+      );
+      if (guess) setSelectedCatId(guess.id);
+    }
+  };
+
 
   const handleImageUpload = () => {
     if (images.length >= 4) return;
