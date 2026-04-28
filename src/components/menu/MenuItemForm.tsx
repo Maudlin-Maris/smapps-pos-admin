@@ -653,7 +653,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 </PopoverContent>
               </Popover>
               {linkedInventoryItemId && (() => {
-                const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
+                const inv = mergedInventory.find((i) => i.id === linkedInventoryItemId);
                 if (!inv) return null;
                 return (
                   <div className="flex items-center gap-2">
