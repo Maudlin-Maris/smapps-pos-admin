@@ -26,6 +26,7 @@ import {
   Moon,
   Shield,
   UserCog,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 import type { PermissionId } from "@/lib/rbac";
@@ -58,6 +59,7 @@ const coreNavItems: NavItem[] = [
   // Sales & Catalog
   { title: "Catalog", path: "/menu", icon: UtensilsCrossed, section: "Sales", permission: "catalog.view" },
   { title: "Promo Bundles", path: "/bundles", icon: Gift, section: "Sales", permission: "catalog.bundles.manage" },
+  { title: "Modifiers", path: "/modifiers", icon: Layers, section: "Sales", permission: "catalog.modifiers.manage" },
   // Inventory & Supply
   { title: "Inventory", path: "/inventory", icon: Package, section: "Inventory", permission: "inventory.view" },
   { title: "Advanced Inventory", path: "/inventory/advanced", icon: ArrowLeftRight, section: "Inventory", permission: "inventory.view" },

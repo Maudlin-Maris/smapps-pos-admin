@@ -29,6 +29,7 @@ import Auth from "@/pages/Auth";
 import Profile from "@/pages/Profile";
 import UserManagement from "@/pages/UserManagement";
 import RolesPermissions from "@/pages/RolesPermissions";
+import ModifierGroups from "@/pages/ModifierGroups";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/profile" element={<Protected><Profile /></Protected>} />
                 <Route path="/menu" element={<Protected><MenuManagement /></Protected>} />
                 <Route path="/bundles" element={<Protected><PromoBundleManagement /></Protected>} />
+                <Route path="/modifiers" element={<Protected><ModifierGroups /></Protected>} />
                 <Route path="/inventory" element={<Protected><InventoryManagement /></Protected>} />
                 <Route path="/inventory/advanced" element={<Protected><AdvancedInventory /></Protected>} />
                 <Route path="/purchase-orders" element={<Protected><PurchaseOrders /></Protected>} />
