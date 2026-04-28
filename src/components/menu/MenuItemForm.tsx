@@ -36,7 +36,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
 import { formatNaira } from "@/lib/currency";
-import { useMemo } from "react";
+
 
 export type CompositePricingMethod = "markup" | "margin" | "fixed";
 export type ComponentRole = "primary" | "secondary";
