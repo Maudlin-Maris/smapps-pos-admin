@@ -1010,22 +1010,35 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           )}
 
-          {/* Variants — hidden for Service items */}
-          {itemType !== "service" && (
+          {/* Variants — hidden for Service items and Open Price mode */}
+          {itemType !== "service" && pricingStrategy !== "open" && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-medium">Variants</Label>
+                  <Label className="text-sm font-medium">
+                    Variants {pricingStrategy === "variant" && <span className="text-destructive">*</span>}
+                  </Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {variants.length > 0 ? "All pricing and stock is managed per variant." : "Add variants for different sizes, flavors, etc."}
+                    {pricingStrategy === "variant"
+                      ? "Each variant must have a price. The first variant is the POS default."
+                      : variants.length > 0
+                        ? "Variants override the base price and inventory."
+                        : "Optional — add variants for different sizes, flavors, etc."}
                   </p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
                 </Button>
               </div>
-              {variants.map((v) => (
-                <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
+              {variants.map((v, idx) => (
+                <div key={v.id} className="relative">
+                  {idx === 0 && variants.length > 1 && (
+                    <Badge variant="secondary" className="absolute -top-2 left-3 text-[10px] z-10">
+                      Default
+                    </Badge>
+                  )}
+                  <VariantRow variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
+                </div>
               ))}
             </div>
           )}
