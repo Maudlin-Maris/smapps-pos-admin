@@ -25,7 +25,7 @@ import MeasuringUnitManager, {
 import InventoryItemForm, {
   type InventoryItem,
 } from "@/components/inventory/InventoryItemForm";
-import {
+import CompositeItemForm, {
   type CompositeItem,
 } from "@/components/inventory/CompositeItemForm";
 import StockAdjustmentHistory, {
@@ -62,7 +62,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 type MenuItemOption = { id: string; name: string; variants: { id: string; name: string }[] };
 
-type Tab = "stock" | "categories" | "units" | "adjustments" | "profitability";
+type Tab = "stock" | "categories" | "units" | "composite" | "adjustments" | "profitability";
 
 const sampleMenuItems: MenuItemOption[] = [
   // Restaurant
@@ -330,6 +330,7 @@ export default function InventoryManagement() {
     { key: "adjustments", label: `Adjustments${outletAdjustments.length > 0 ? ` (${outletAdjustments.length})` : ""}` },
     { key: "categories", label: "Categories" },
     { key: "units", label: "Units" },
+    { key: "composite", label: "Composite Items" },
   ];
 
   return (
@@ -337,7 +338,7 @@ export default function InventoryManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold tracking-tight">Inventory</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and profitability</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and composite items</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -493,9 +494,17 @@ export default function InventoryManagement() {
       {tab === "units" && (
         <MeasuringUnitManager units={units} setUnits={setUnits} />
       )}
-      {/* Composite items now live in the Catalog → Create/Edit Item form
-          (Item Type = Composite). Cross-page profitability still derives
-          from the seeded composites state above. */}
+      {tab === "composite" && (
+        <CompositeItemForm
+          composites={outletComposites}
+          setComposites={setComposites}
+          inventoryItems={outletItems}
+          units={units}
+          menuItems={sampleMenuItems}
+          readOnly={isAllOutlets}
+          selectedOutletId={selectedOutletId}
+        />
+      )}
 
       <StockAdjustDialog
         open={adjustOpen}

@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { outlets } from "@/data/outlets";
 import { defaultInventoryItems } from "@/data/inventoryItems";
-import { defaultUnits } from "@/components/inventory/MeasuringUnitManager";
 
 const initialCategories: Category[] = [
   {
@@ -304,7 +303,6 @@ export default function MenuManagement() {
           outlets={outlets}
           currentOutletId={selectedOutletId}
           inventoryItems={defaultInventoryItems}
-          units={defaultUnits}
         />
       )}
 
