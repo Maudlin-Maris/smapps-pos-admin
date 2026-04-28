@@ -414,8 +414,58 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     }
   };
 
+  // ----- Inline "create new inventory item" helpers -----
+  const openInlineCreate = () => {
+    setInlineInvName(name.trim());
+    setInlineInvSku(sku.trim());
+    setInlineInvCost("");
+    setInlineInvStock("");
+    setInlineInvBarcode("");
+    setInlineInvMinStock("");
+    setInlineShowAdvanced(false);
+    setInlineCreateOpen(true);
+  };
 
-  const handleImageUpload = () => {
+  const cancelInlineCreate = () => {
+    setInlineCreateOpen(false);
+    setInlineShowAdvanced(false);
+  };
+
+  const confirmInlineCreate = () => {
+    const trimmedName = inlineInvName.trim();
+    if (!trimmedName) return;
+    const stock = parseFloat(inlineInvStock) || 0;
+    const minStock = parseFloat(inlineInvMinStock) || 0;
+    const cost = parseFloat(inlineInvCost) || 0;
+    const status: InventoryItem["status"] =
+      stock <= 0 ? "critical" : stock < minStock ? "low" : "good";
+    const autoSku =
+      inlineInvSku.trim() ||
+      `${trimmedName.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() || "INV"}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    const outletId =
+      selectedOutletIds[0] || currentOutletId || inventoryItems[0]?.outletId || "";
+    const newItem: InventoryItem = {
+      id: `inv-${crypto.randomUUID()}`,
+      name: trimmedName,
+      sku: autoSku,
+      categoryId: inlineInvCategoryId || defaultInventoryCategories[0]?.id || "",
+      unitId: inlineInvUnitId || defaultMeasuringUnits[0]?.id || "",
+      stock,
+      minStock,
+      costPrice: cost,
+      status,
+      conversions: [],
+      outletId,
+      batchNumber: inlineInvBarcode.trim() || undefined,
+    };
+    setLocalInventory((prev) => [...prev, newItem]);
+    onCreateInventoryItem?.(newItem);
+    handleLinkInventory(newItem.id);
+    setInlineCreateOpen(false);
+    setInlineShowAdvanced(false);
+  };
+
+
     if (images.length >= 4) return;
     const input = document.createElement("input");
     input.type = "file";
