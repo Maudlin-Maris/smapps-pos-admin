@@ -226,14 +226,12 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
  *  Used to break the catalog form into clearly scannable groups so admins
  *  can quickly find Basics, Pricing, Variants, Modifiers, etc. */
 function FormSection({
-  step,
   icon: Icon,
   title,
   description,
   required,
   children,
 }: {
-  step: number;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   description?: string;
@@ -243,17 +241,12 @@ function FormSection({
   return (
     <section className="rounded-xl border border-border bg-card overflow-hidden">
       <header className="flex items-start gap-3 px-4 py-3 border-b border-border bg-muted/30">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-          {step}
-        </div>
+        <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold leading-none">
-              {title}
-              {required && <span className="text-destructive ml-1">*</span>}
-            </h3>
-          </div>
+          <h3 className="text-sm font-semibold leading-none">
+            {title}
+            {required && <span className="text-destructive ml-1">*</span>}
+          </h3>
           {description && (
             <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{description}</p>
           )}
