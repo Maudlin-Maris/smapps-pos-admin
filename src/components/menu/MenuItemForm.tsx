@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
