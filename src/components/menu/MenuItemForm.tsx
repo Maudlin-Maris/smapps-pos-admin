@@ -375,6 +375,92 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     }
   };
 
+  // ============================================================
+  // Composite — ingredient unit / cost / producibility helpers.
+  // Mirrors the original CompositeItemForm logic 1:1.
+  // ============================================================
+  const getInvItem = (id: string) => inventoryItems.find((i) => i.id === id);
+  const getUnitAbbr = (unitId?: string) =>
+    unitId ? units.find((u) => u.id === unitId)?.abbreviation || "" : "";
+  const getIngredientUnitOptions = (itemId: string) => {
+    const inv = getInvItem(itemId);
+    if (!inv) return [] as { id: string; label: string; baseUnitsPer: number }[];
+    const baseUnit = units.find((u) => u.id === inv.unitId);
+    const opts: { id: string; label: string; baseUnitsPer: number }[] = [
+      {
+        id: inv.unitId,
+        label: baseUnit ? `${baseUnit.name} (${baseUnit.abbreviation})` : "Base unit",
+        baseUnitsPer: 1,
+      },
+    ];
+    (inv.conversions || []).forEach((c) => {
+      if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0) return;
+      const u = units.find((x) => x.id === c.toUnitId);
+      if (!u) return;
+      opts.push({
+        id: c.toUnitId,
+        label: `${u.name} (${u.abbreviation})`,
+        baseUnitsPer: c.fromQuantity / c.toQuantity,
+      });
+    });
+    return opts;
+  };
+  const getIngredientUnitCost = (g: MenuIngredient) => {
+    const inv = getInvItem(g.inventoryItemId);
+    if (!inv) return 0;
+    const baseCost = inv.costPrice ?? 0;
+    if (!g.unitId || g.unitId === inv.unitId) return baseCost;
+    const opt = getIngredientUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
+    return baseCost * (opt?.baseUnitsPer ?? 1);
+  };
+  const getIngredientLineCost = (g: MenuIngredient) =>
+    getIngredientUnitCost(g) * (g.quantity || 0);
+  const getIngredientBaseUnitsConsumed = (g: MenuIngredient) => {
+    const inv = getInvItem(g.inventoryItemId);
+    if (!inv) return 0;
+    let baseUnitsPer = 1;
+    if (g.unitId && g.unitId !== inv.unitId) {
+      const opt = getIngredientUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
+      baseUnitsPer = opt?.baseUnitsPer ?? 1;
+    }
+    return (g.quantity || 0) * baseUnitsPer;
+  };
+  const producibleInfo = useMemo(() => {
+    let min = Infinity;
+    let limitingId: string | undefined;
+    for (const g of ingredients) {
+      if (!g.inventoryItemId) continue;
+      const consumed = getIngredientBaseUnitsConsumed(g);
+      if (consumed <= 0) continue;
+      const inv = getInvItem(g.inventoryItemId);
+      const stock = inv?.stock ?? 0;
+      const possible = Math.floor(stock / consumed);
+      if (possible < min) {
+        min = possible;
+        limitingId = g.inventoryItemId;
+      }
+    }
+    return {
+      producible: min === Infinity ? 0 : Math.max(0, min),
+      limitingId,
+      hasComponents: min !== Infinity,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ingredients, inventoryItems, units]);
+  const limitingItemName = producibleInfo.limitingId
+    ? getInvItem(producibleInfo.limitingId)?.name ?? ""
+    : "";
+
+  const rawCost = useMemo(
+    () => ingredients.reduce((s, g) => s + getIngredientLineCost(g), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ingredients, inventoryItems, units]
+  );
+  const overheadValue = overheadPerUnit === "" ? 0 : Number(overheadPerUnit) || 0;
+  const totalCost = rawCost + overheadValue;
+  const compSellNum = price === "" ? 0 : Number(price) || 0;
+  const profit = compSellNum - totalCost;
+  const profitPositive = profit >= 0;
 
   const handleImageUpload = () => {
     if (images.length >= 4) return;
