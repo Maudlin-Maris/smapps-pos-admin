@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { outlets } from "@/data/outlets";
 import { defaultInventoryItems } from "@/data/inventoryItems";
-import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 
 const initialCategories: Category[] = [
   {
@@ -115,9 +114,6 @@ const initialMenuItems: MenuItem[] = [
 export default function MenuManagement() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
-  // Local copy of inventory items so the catalog form can inline-create new
-  // ones (Simple item → "Link to Inventory") without leaving the page.
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(defaultInventoryItems);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -305,11 +301,7 @@ export default function MenuManagement() {
         businessType={currentOutlet?.businessType}
         outlets={outlets}
         currentOutletId={isAllOutlets ? undefined : selectedOutletId}
-        inventoryItems={inventoryItems}
-        onCreateInventoryItem={(inv) => {
-          setInventoryItems((prev) => [...prev, inv]);
-          toast.success(`Inventory item "${inv.name}" created`);
-        }}
+        inventoryItems={defaultInventoryItems}
       />
 
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

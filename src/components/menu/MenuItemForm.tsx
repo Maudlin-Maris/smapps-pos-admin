@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, PackagePlus, ChevronDown } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
@@ -31,8 +31,6 @@ import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, Popov
 import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/data/outlets";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
-import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
-import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
@@ -127,10 +125,6 @@ interface MenuItemFormProps {
    *  ("Ingredients") item types. Optional — when omitted those sections
    *  show an empty-state. */
   inventoryItems?: InventoryItem[];
-  /** Called when the user creates a new inventory item inline from the
-   *  Simple "Link to Inventory" section. Parent should persist it so it
-   *  appears in the Inventory page going forward. */
-  onCreateInventoryItem?: (item: InventoryItem) => void;
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
@@ -263,7 +257,7 @@ function FormSection({
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [], onCreateInventoryItem }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -286,22 +280,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
-  /** Locally-created inventory items (this session) so the user can link to
-   *  them immediately without leaving the catalog form. Parents that wire
-   *  `onCreateInventoryItem` will also persist them globally. */
-  const [localInventory, setLocalInventory] = useState<InventoryItem[]>([]);
-  /** Inline "create new inventory item" panel state. Lives directly under
-   *  the picker; shows essentials first with an advanced disclosure. */
-  const [inlineCreateOpen, setInlineCreateOpen] = useState(false);
-  const [inlineShowAdvanced, setInlineShowAdvanced] = useState(false);
-  const [inlineInvName, setInlineInvName] = useState("");
-  const [inlineInvSku, setInlineInvSku] = useState("");
-  const [inlineInvCost, setInlineInvCost] = useState("");
-  const [inlineInvStock, setInlineInvStock] = useState("");
-  const [inlineInvCategoryId, setInlineInvCategoryId] = useState<string>(defaultInventoryCategories[0]?.id ?? "");
-  const [inlineInvUnitId, setInlineInvUnitId] = useState<string>(defaultMeasuringUnits[0]?.id ?? "");
-  const [inlineInvBarcode, setInlineInvBarcode] = useState("");
-  const [inlineInvMinStock, setInlineInvMinStock] = useState("");
   /** Pricing strategy — Toast-inspired:
    *  - "base":    single price, optional per-variant overrides
    *  - "variant": price comes from each variant (no base price)
@@ -317,11 +295,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   // Filter inventory items to the outlets currently selected on the form so
   // users only link to/recipe from inventory that actually exists at those
   // outlets. Falls back to all items when no outlet has been selected yet.
-  // Inline-created items are always shown (the user just made them).
-  const mergedInventory = [...inventoryItems, ...localInventory];
   const availableInventory = selectedOutletIds.length
-    ? mergedInventory.filter((i) => selectedOutletIds.includes(i.outletId) || localInventory.some((l) => l.id === i.id))
-    : mergedInventory;
+    ? inventoryItems.filter((i) => selectedOutletIds.includes(i.outletId))
+    : inventoryItems;
 
   useEffect(() => {
     if (open) {
@@ -364,7 +340,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setLinkedInventoryItemId(""); setIngredients([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
-        setLocalInventory([]); setInlineCreateOpen(false); setInlineShowAdvanced(false);
       }
     }
   }, [open, item, categories, currentOutletId]);
@@ -400,7 +375,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   // by name match against the catalog categories — admin can override.
   const handleLinkInventory = (invId: string) => {
     setLinkedInventoryItemId(invId);
-    const inv = mergedInventory.find((i) => i.id === invId);
+    const inv = inventoryItems.find((i) => i.id === invId);
     if (!inv) return;
     if (!name.trim()) setName(inv.name);
     if (!sku.trim()) setSku(inv.sku);
@@ -415,56 +390,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     }
   };
 
-  // ----- Inline "create new inventory item" helpers -----
-  const openInlineCreate = () => {
-    setInlineInvName(name.trim());
-    setInlineInvSku(sku.trim());
-    setInlineInvCost("");
-    setInlineInvStock("");
-    setInlineInvBarcode("");
-    setInlineInvMinStock("");
-    setInlineShowAdvanced(false);
-    setInlineCreateOpen(true);
-  };
-
-  const cancelInlineCreate = () => {
-    setInlineCreateOpen(false);
-    setInlineShowAdvanced(false);
-  };
-
-  const confirmInlineCreate = () => {
-    const trimmedName = inlineInvName.trim();
-    if (!trimmedName) return;
-    const stock = parseFloat(inlineInvStock) || 0;
-    const minStock = parseFloat(inlineInvMinStock) || 0;
-    const cost = parseFloat(inlineInvCost) || 0;
-    const status: InventoryItem["status"] =
-      stock <= 0 ? "critical" : stock < minStock ? "low" : "good";
-    const autoSku =
-      inlineInvSku.trim() ||
-      `${trimmedName.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() || "INV"}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-    const outletId =
-      selectedOutletIds[0] || currentOutletId || inventoryItems[0]?.outletId || "";
-    const newItem: InventoryItem = {
-      id: `inv-${crypto.randomUUID()}`,
-      name: trimmedName,
-      sku: autoSku,
-      categoryId: inlineInvCategoryId || defaultInventoryCategories[0]?.id || "",
-      unitId: inlineInvUnitId || defaultMeasuringUnits[0]?.id || "",
-      stock,
-      minStock,
-      costPrice: cost,
-      status,
-      conversions: [],
-      outletId,
-      batchNumber: inlineInvBarcode.trim() || undefined,
-    };
-    setLocalInventory((prev) => [...prev, newItem]);
-    onCreateInventoryItem?.(newItem);
-    handleLinkInventory(newItem.id);
-    setInlineCreateOpen(false);
-    setInlineShowAdvanced(false);
-  };
 
   const handleImageUpload = () => {
     if (images.length >= 4) return;
@@ -663,7 +588,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   >
                     {linkedInventoryItemId
                       ? (() => {
-                          const inv = mergedInventory.find((i) => i.id === linkedInventoryItemId);
+                          const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
                           return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
                         })()
                       : <span className="text-muted-foreground">Search inventory...</span>}
@@ -674,30 +599,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   <Command>
                     <CommandInput placeholder="Search by name or SKU..." className="h-9" />
                     <CommandList>
-                      <CommandEmpty>
-                        <div className="px-2 py-3 text-center space-y-2">
-                          <p className="text-xs text-muted-foreground">No inventory items found.</p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            className="h-7 text-xs"
-                            onClick={() => { openInlineCreate(); setLinkPickerOpen(false); }}
-                          >
-                            <PackagePlus className="h-3.5 w-3.5 mr-1.5" />
-                            Create "{name || "new item"}"
-                          </Button>
-                        </div>
-                      </CommandEmpty>
+                      <CommandEmpty>No inventory items found.</CommandEmpty>
                       <CommandGroup>
-                        <CommandItem
-                          value="__create_new__"
-                          onSelect={() => { openInlineCreate(); setLinkPickerOpen(false); }}
-                          className="text-primary"
-                        >
-                          <PackagePlus className="h-3.5 w-3.5 mr-2" />
-                          <span className="text-sm font-medium">+ Create new inventory item</span>
-                        </CommandItem>
                         {linkedInventoryItemId && (
                           <CommandItem
                             value="__clear__"
@@ -725,152 +628,18 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </Command>
                 </PopoverContent>
               </Popover>
-              {linkedInventoryItemId && !inlineCreateOpen && (() => {
-                const inv = mergedInventory.find((i) => i.id === linkedInventoryItemId);
+              {linkedInventoryItemId && (() => {
+                const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
                 if (!inv) return null;
-                const isNew = localInventory.some((l) => l.id === inv.id);
                 return (
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">Linked</Badge>
-                    {isNew && <Badge className="text-[10px]">Newly created</Badge>}
                     <span className="text-[11px] text-muted-foreground">
                       Stock: <span className="font-medium text-foreground tabular-nums">{inv.stock}</span> · Cost: <span className="font-medium text-foreground tabular-nums">{inv.costPrice}</span>
                     </span>
                   </div>
                 );
               })()}
-
-              {/* Inline create-new inventory panel — essentials first, with
-                  a progressive-disclosure for advanced fields. Keeps the
-                  user inside the catalog form. */}
-              {inlineCreateOpen && (
-                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <PackagePlus className="h-4 w-4 text-primary" />
-                      <div>
-                        <p className="text-xs font-semibold">New inventory item</p>
-                        <p className="text-[11px] text-muted-foreground">Quick create — you can edit full details later in Inventory.</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={cancelInlineCreate}
-                      className="p-1 rounded hover:bg-background/60 text-muted-foreground"
-                      aria-label="Cancel"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="sm:col-span-2">
-                      <Label className="text-xs">Item name *</Label>
-                      <Input
-                        className="mt-1 h-9 text-sm"
-                        value={inlineInvName}
-                        onChange={(e) => setInlineInvName(e.target.value)}
-                        placeholder="e.g. Whole Milk"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">SKU</Label>
-                      <Input
-                        className="mt-1 h-9 text-sm"
-                        value={inlineInvSku}
-                        onChange={(e) => setInlineInvSku(e.target.value)}
-                        placeholder="Auto-generated if blank"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Cost price</Label>
-                      <Input
-                        className="mt-1 h-9 text-sm"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={inlineInvCost}
-                        onChange={(e) => setInlineInvCost(e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs">Stock quantity</Label>
-                      <Input
-                        className="mt-1 h-9 text-sm"
-                        type="number"
-                        min="0"
-                        value={inlineInvStock}
-                        onChange={(e) => setInlineInvStock(e.target.value)}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setInlineShowAdvanced((v) => !v)}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
-                  >
-                    <ChevronDown className={cn("h-3 w-3 transition-transform", inlineShowAdvanced && "rotate-180")} />
-                    {inlineShowAdvanced ? "Hide" : "Show"} advanced fields
-                  </button>
-
-                  {inlineShowAdvanced && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                      <div>
-                        <Label className="text-xs">Category</Label>
-                        <Select value={inlineInvCategoryId} onValueChange={setInlineInvCategoryId}>
-                          <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {defaultInventoryCategories.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-xs">Unit</Label>
-                        <Select value={inlineInvUnitId} onValueChange={setInlineInvUnitId}>
-                          <SelectTrigger className="mt-1 h-9 text-sm"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {defaultMeasuringUnits.map((u) => (
-                              <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-xs">Barcode</Label>
-                        <Input
-                          className="mt-1 h-9 text-sm"
-                          value={inlineInvBarcode}
-                          onChange={(e) => setInlineInvBarcode(e.target.value)}
-                          placeholder="Optional"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Min stock</Label>
-                        <Input
-                          className="mt-1 h-9 text-sm"
-                          type="number"
-                          min="0"
-                          value={inlineInvMinStock}
-                          onChange={(e) => setInlineInvMinStock(e.target.value)}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-end gap-2 pt-1">
-                    <Button type="button" variant="ghost" size="sm" onClick={cancelInlineCreate}>Cancel</Button>
-                    <Button type="button" size="sm" onClick={confirmInlineCreate} disabled={!inlineInvName.trim()}>
-                      <Check className="h-3.5 w-3.5 mr-1.5" />
-                      Create & link
-                    </Button>
-                  </div>
-                </div>
-              )}
             </FormSection>
           )}
 
