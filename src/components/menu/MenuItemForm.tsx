@@ -701,76 +701,188 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           {/* Price/Qty/Sale - only when no variants */}
           {variants.length === 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className={cn("grid gap-4", itemType === "service" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
                 <div>
                   <Label htmlFor="item-price-nv">Price *</Label>
                   <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
                 </div>
-                <div>
-                  <Label htmlFor="item-quantity-nv">Quantity</Label>
-                  <Input
-                    id="item-quantity-nv"
-                    className="mt-1"
-                    type="number"
-                    min="0"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="0"
-                    disabled={trackInventory}
-                  />
-                  {trackInventory && (
-                    <p className="text-xs text-muted-foreground mt-1">Managed by inventory</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 border border-border rounded-lg p-3">
-                <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
-                <div className="flex items-center gap-1.5">
-                  <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                {itemType !== "service" && (
                   <div>
-                    <Label className="text-sm font-medium">Track from Inventory</Label>
-                    <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-border rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                  <Label className="text-sm font-medium">On Sale</Label>
-                </div>
-                {showSale && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div>
-                      <Label className="text-xs">Sale Price</Label>
-                      <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
-                    </div>
-                    <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                    <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                    <Label htmlFor="item-quantity-nv">Quantity</Label>
+                    <Input
+                      id="item-quantity-nv"
+                      className="mt-1"
+                      type="number"
+                      min="0"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="0"
+                      disabled={trackInventory || !!linkedInventoryItemId}
+                    />
+                    {(trackInventory || linkedInventoryItemId) && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
+
+              {/* Track from Inventory — only meaningful for Simple items
+                  without a direct inventory link. Composite items consume
+                  inventory via ingredients; Service items have no stock. */}
+              {itemType === "simple" && !linkedInventoryItemId && (
+                <div className="flex items-center gap-2 border border-border rounded-lg p-3">
+                  <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
+                  <div className="flex items-center gap-1.5">
+                    <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <Label className="text-sm font-medium">Track from Inventory</Label>
+                      <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {itemType !== "service" && (
+                <div className="border border-border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                    <Label className="text-sm font-medium">On Sale</Label>
+                  </div>
+                  {showSale && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs">Sale Price</Label>
+                        <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                      </div>
+                      <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                      <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 
-          {/* Variants */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium">Variants</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {variants.length > 0 ? "All pricing and stock is managed per variant." : "Add variants for different sizes, flavors, etc."}
-                </p>
+          {/* Ingredients / Composition — Composite items only */}
+          {itemType === "composite" && (
+            <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <ChefHat className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-medium">Ingredients / Composition *</Label>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Inventory items consumed each time this menu item is sold.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                </Button>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={addVariant}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
-              </Button>
+
+              {ingredients.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3">
+                  No ingredients yet. Add inventory items that make up this dish.
+                </p>
+              )}
+
+              <div className="space-y-2">
+                {ingredients.map((g, idx) => {
+                  const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                  return (
+                    <div key={idx} className="grid grid-cols-[1fr,90px,32px] gap-2 items-center">
+                      <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm w-full">
+                            {inv ? (
+                              <span className="truncate">{inv.name}</span>
+                            ) : (
+                              <span className="text-muted-foreground">Select inventory item...</span>
+                            )}
+                            <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search inventory..." className="h-9" />
+                            <CommandList>
+                              <CommandEmpty>No items found.</CommandEmpty>
+                              <CommandGroup>
+                                {availableInventory.map((it) => (
+                                  <CommandItem
+                                    key={it.id}
+                                    value={`${it.name} ${it.sku}`}
+                                    onSelect={() => {
+                                      setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id } : p));
+                                      setIngredientPickerOpenIdx(null);
+                                    }}
+                                  >
+                                    <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm truncate">{it.name}</div>
+                                      <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={g.quantity || ""}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value) || 0;
+                          setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
+                        }}
+                        placeholder="Qty"
+                        className="h-9 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                        aria-label="Remove ingredient"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            {variants.map((v) => (
-              <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
-            ))}
-          </div>
+          )}
+
+          {/* Variants — hidden for Service items */}
+          {itemType !== "service" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Variants</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {variants.length > 0 ? "All pricing and stock is managed per variant." : "Add variants for different sizes, flavors, etc."}
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
+                </Button>
+              </div>
+              {variants.map((v) => (
+                <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
+              ))}
+            </div>
+          )}
 
           {/* Extras / Sides / Toppings / Add-ons */}
           {features?.hasExtras && (
