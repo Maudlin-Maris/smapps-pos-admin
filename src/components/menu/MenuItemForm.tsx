@@ -383,7 +383,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const inv = inventoryItems.find((i) => i.id === invId);
     if (!inv) return;
     if (!name.trim()) setName(inv.name);
-    if (!sku.trim()) setSku(inv.sku);
+    // Always sync barcode/qty from the linked item — these become read-only.
+    setSku(inv.sku);
+    setQuantity(String(inv.stock));
+    setAddToInventory(false);
     // Best-effort category suggestion: find a catalog category whose name
     // matches the inventory item's name keywords. If none, leave existing.
     if (!selectedCatId) {
