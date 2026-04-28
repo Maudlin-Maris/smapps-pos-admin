@@ -1151,7 +1151,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || selectedOutletIds.length === 0 || (variants.length > 0 && variants.some((v) => !v.name.trim())) || (itemType === "composite" && ingredients.filter((g) => g.inventoryItemId && g.quantity > 0).length === 0)}>
+          <Button onClick={handleSave} disabled={(() => {
+            if (!name.trim() || !subcategory || selectedOutletIds.length === 0) return true;
+            if (itemType === "composite" && ingredients.filter((g) => g.inventoryItemId && g.quantity > 0).length === 0) return true;
+            if (itemType === "service") return !price;
+            if (pricingStrategy === "open") return false;
+            if (pricingStrategy === "variant") {
+              if (variants.length === 0) return true;
+              return variants.some((v) => !v.name.trim() || !v.price);
+            }
+            // base
+            if (!price) return true;
+            if (variants.length > 0 && variants.some((v) => !v.name.trim())) return true;
+            return false;
+          })()}>
             {submitLabel}
           </Button>
         </DialogFooter>
