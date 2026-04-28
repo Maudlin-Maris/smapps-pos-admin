@@ -652,57 +652,56 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormSection>
           )}
 
-          {/* Images — hidden for Service items to keep the form minimal. */}
-          {itemType !== "service" && (
-            <div>
-              <Label className="text-sm font-medium">Images (max 4)</Label>
-              <div className="flex gap-2 mt-2 flex-wrap">
-                {images.map((img, idx) => (
-                  <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X className="h-3 w-3 text-destructive" />
-                    </button>
-                  </div>
-                ))}
-                {images.length < 4 && (
-                  <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-                    <ImagePlus className="h-5 w-5" />
-                    <span className="text-[10px]">Add</span>
-                  </button>
-                )}
+          {/* 3. Basic Info */}
+          <FormSection
+            step={3}
+            icon={FileText}
+            title="Basic Info"
+            description="Name, category and description shown across the catalog."
+            required
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Label htmlFor="item-name">Item Name *</Label>
+                <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
+              </div>
+
+              <div>
+                <Label>Category *</Label>
+                <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategory(""); }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Subcategory *</Label>
+                <Select value={subcategory} onValueChange={setSubcategory} disabled={!selectedCatId}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select subcategory" /></SelectTrigger>
+                  <SelectContent>
+                    {subcategories.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <Label htmlFor="item-desc">Description</Label>
+                <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
               </div>
             </div>
-          )}
+          </FormSection>
 
-          {/* Basic info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <Label htmlFor="item-name">Item Name *</Label>
-              <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
-            </div>
-
+          {/* 4. Availability — outlets + status */}
+          <FormSection
+            step={4}
+            icon={MapPin}
+            title="Availability"
+            description="Outlets that sell this item and whether it's currently active."
+            required
+          >
             <div>
-              <Label>Category *</Label>
-              <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategory(""); }}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Subcategory *</Label>
-              <Select value={subcategory} onValueChange={setSubcategory} disabled={!selectedCatId}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select subcategory" /></SelectTrigger>
-                <SelectContent>
-                  {subcategories.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="sm:col-span-2">
               <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlets *</Label>
               <OutletPopover>
                 <OutletPopoverTrigger asChild>
@@ -779,20 +778,43 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
 
             {variants.length === 0 && (
-              <div className="flex items-center gap-3 self-end pb-1">
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
                 <div>
                   <Label className="text-sm">Status</Label>
-                  <p className="text-xs text-muted-foreground">{isActive ? "Active" : "Inactive"}</p>
+                  <p className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</p>
                 </div>
               </div>
             )}
+          </FormSection>
 
-            <div className="sm:col-span-2">
-              <Label htmlFor="item-desc">Description</Label>
-              <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
-            </div>
-          </div>
+          {/* 5. Images — hidden for Service items */}
+          {itemType !== "service" && (
+            <FormSection
+              step={5}
+              icon={ImageIcon}
+              title="Images"
+              description="Up to 4 photos. The first image is used as the POS thumbnail."
+            >
+              <div className="flex gap-2 flex-wrap">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+                {images.length < 4 && (
+                  <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                    <ImagePlus className="h-5 w-5" />
+                    <span className="text-[10px]">Add</span>
+                  </button>
+                )}
+              </div>
+            </FormSection>
+          )}
+
 
           {/* Service items keep a simple price field — no strategy selector. */}
           {itemType === "service" && (
