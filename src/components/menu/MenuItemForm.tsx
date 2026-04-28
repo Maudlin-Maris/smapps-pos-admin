@@ -612,7 +612,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   >
                     {linkedInventoryItemId
                       ? (() => {
-                          const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
+                          const inv = mergedInventory.find((i) => i.id === linkedInventoryItemId);
                           return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
                         })()
                       : <span className="text-muted-foreground">Search inventory...</span>}
