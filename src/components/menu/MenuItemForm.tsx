@@ -91,6 +91,12 @@ export type MenuItemType = "simple" | "composite" | "service";
 export interface MenuIngredient {
   inventoryItemId: string;
   quantity: number;
+  /** Unit the quantity is expressed in. Undefined = the item's base unit;
+   *  otherwise must match one of the item's conversion `toUnitId`s. */
+  unitId?: string;
+  /** Whether this ingredient is the primary component or a secondary one
+   *  (used for reporting / UI grouping). Defaults to "primary". */
+  role?: ComponentRole;
 }
 
 export interface MenuItem {
@@ -118,6 +124,12 @@ export interface MenuItem {
   linkedInventoryItemId?: string;
   /** For Composite items: recipe components consumed when sold. */
   ingredients?: MenuIngredient[];
+  /** Composite: per-unit overhead override (packaging/staff/power). */
+  overheadPerUnit?: number;
+  /** Composite: pricing strategy used to derive sellPrice from total cost. */
+  pricingMethod?: CompositePricingMethod;
+  /** Composite: value paired with pricingMethod (% for markup/margin, ₦ for fixed). */
+  pricingValue?: number;
   /** IDs of reusable modifier groups attached to this item. At save-time
    *  the form flattens these into `extras` so the existing POS UI continues
    *  to work — the IDs are kept here so admin edits stay in sync. */
