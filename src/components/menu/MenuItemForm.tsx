@@ -286,6 +286,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
+  /** Locally-created inventory items (this session) so the user can link to
+   *  them immediately without leaving the catalog form. Parents that wire
+   *  `onCreateInventoryItem` will also persist them globally. */
+  const [localInventory, setLocalInventory] = useState<InventoryItem[]>([]);
+  /** Inline "create new inventory item" panel state. Lives directly under
+   *  the picker; shows essentials first with an advanced disclosure. */
+  const [inlineCreateOpen, setInlineCreateOpen] = useState(false);
+  const [inlineShowAdvanced, setInlineShowAdvanced] = useState(false);
+  const [inlineInvName, setInlineInvName] = useState("");
+  const [inlineInvSku, setInlineInvSku] = useState("");
+  const [inlineInvCost, setInlineInvCost] = useState("");
+  const [inlineInvStock, setInlineInvStock] = useState("");
+  const [inlineInvCategoryId, setInlineInvCategoryId] = useState<string>(defaultInventoryCategories[0]?.id ?? "");
+  const [inlineInvUnitId, setInlineInvUnitId] = useState<string>(defaultMeasuringUnits[0]?.id ?? "");
+  const [inlineInvBarcode, setInlineInvBarcode] = useState("");
+  const [inlineInvMinStock, setInlineInvMinStock] = useState("");
   /** Pricing strategy — Toast-inspired:
    *  - "base":    single price, optional per-variant overrides
    *  - "variant": price comes from each variant (no base price)
