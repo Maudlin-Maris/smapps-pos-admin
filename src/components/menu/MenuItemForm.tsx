@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Tag, TrendingUp, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
@@ -31,9 +31,25 @@ import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, Popov
 import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/data/outlets";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
+import type { MeasuringUnit } from "@/components/inventory/MeasuringUnitManager";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
+import { formatNaira } from "@/lib/currency";
+import { useMemo } from "react";
+
+export type CompositePricingMethod = "markup" | "margin" | "fixed";
+export type ComponentRole = "primary" | "secondary";
+
+function calcCompositeSellPrice(totalCost: number, method: CompositePricingMethod, value: number): number {
+  if (method === "fixed") return value;
+  if (method === "markup") return totalCost * (1 + value / 100);
+  if (method === "margin") {
+    if (value >= 100) return totalCost * 10;
+    return totalCost / (1 - value / 100);
+  }
+  return totalCost;
+}
 
 /** A single component (inventory item + qty) consumed when a variant of a
  *  composite item is sold. Lets a "Large" pizza burn more cheese than a
