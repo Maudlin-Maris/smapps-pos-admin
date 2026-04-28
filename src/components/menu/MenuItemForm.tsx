@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
@@ -286,6 +286,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
    *  - "open":    price entered at checkout (POS prompt) */
   type PricingStrategy = "base" | "variant" | "open";
   const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>("base");
+  /** Simple items only: when not linked to inventory, lets the admin opt in
+   *  to also create a matching inventory record using the barcode + qty
+   *  entered here. Purely a UI flag — parent decides what to do with it. */
+  const [addToInventory, setAddToInventory] = useState(false);
 
   const features = businessType ? getFeatures(businessType) : null;
 
@@ -340,6 +344,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setLinkedInventoryItemId(""); setIngredients([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
+        setAddToInventory(false);
       }
     }
   }, [open, item, categories, currentOutletId]);
@@ -378,7 +383,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const inv = inventoryItems.find((i) => i.id === invId);
     if (!inv) return;
     if (!name.trim()) setName(inv.name);
-    if (!sku.trim()) setSku(inv.sku);
+    // Always sync barcode/qty from the linked item — these become read-only.
+    setSku(inv.sku);
+    setQuantity(String(inv.stock));
+    setAddToInventory(false);
     // Best-effort category suggestion: find a catalog category whose name
     // matches the inventory item's name keywords. If none, leave existing.
     if (!selectedCatId) {
@@ -643,7 +651,85 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormSection>
           )}
 
-          {/* Basic Info */}
+          {/* Stock & Barcode — Simple items only */}
+          {itemType === "simple" && (() => {
+            const linked = linkedInventoryItemId
+              ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
+              : null;
+            const isLinked = !!linked;
+            return (
+              <FormSection
+                icon={Barcode}
+                title="Stock & Barcode"
+                description={
+                  isLinked
+                    ? "Synced from the linked inventory item — manage stock from Inventory."
+                    : "Scan or enter a barcode and starting quantity for this item."
+                }
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs flex items-center gap-1.5">
+                      Barcode / SKU
+                      {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                    </Label>
+                    {isLinked ? (
+                      <Input
+                        className="mt-1 h-9 text-sm bg-muted/50"
+                        value={sku}
+                        readOnly
+                        disabled
+                      />
+                    ) : (
+                      <div className="mt-1">
+                        <BarcodeScanner
+                          value={sku}
+                          onChange={setSku}
+                          placeholder="Scan or enter barcode"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-xs flex items-center gap-1.5">
+                      Quantity in stock
+                      {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                    </Label>
+                    <Input
+                      className={cn("mt-1 h-9 text-sm", isLinked && "bg-muted/50")}
+                      type="number"
+                      min="0"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="0"
+                      readOnly={isLinked}
+                      disabled={isLinked}
+                    />
+                  </div>
+                </div>
+
+                {!isLinked && (
+                  <div className="flex items-start gap-3 rounded-md border border-dashed border-border bg-muted/20 px-3 py-2.5">
+                    <Switch
+                      id="add-to-inventory"
+                      checked={addToInventory}
+                      onCheckedChange={setAddToInventory}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <Label htmlFor="add-to-inventory" className="text-sm cursor-pointer">
+                        Also add this item to Inventory
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                        Creates a matching inventory record so stock deducts automatically when sold.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </FormSection>
+            );
+          })()}
+
           <FormSection
             icon={FileText}
             title="Basic Info"
