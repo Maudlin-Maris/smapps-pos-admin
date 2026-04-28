@@ -304,6 +304,7 @@ export default function MenuManagement() {
           outlets={outlets}
           currentOutletId={selectedOutletId}
           inventoryItems={defaultInventoryItems}
+          units={defaultUnits}
         />
       )}
 
