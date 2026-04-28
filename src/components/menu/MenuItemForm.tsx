@@ -915,101 +915,299 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </>
           )}
 
-          {/* Ingredients / Composition — Composite items only */}
+          {/* Composition + Cost & Pricing — Composite items only.
+              Mirrors the original CompositeItemForm 1:1 (ingredient builder
+              with units & roles, per-line cost, producibility panel,
+              overhead override, pricing method, profit/margin readout). */}
           {itemType === "composite" && (
-            <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <ChefHat className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-sm font-medium">Ingredients / Composition *</Label>
+            <div className="space-y-4">
+              {/* Ingredients */}
+              <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <ChefHat className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Ingredients / Composition *</Label>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Inventory items consumed each time this item is sold.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Inventory items consumed each time this menu item is sold.
-                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1, role: "primary" }])}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                </Button>
+
+                {ingredients.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-lg">
+                    No ingredients yet. Add inventory items that make up this item.
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  {ingredients.map((g, idx) => {
+                    const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                    const unitOptions = g.inventoryItemId ? getIngredientUnitOptions(g.inventoryItemId) : [];
+                    const activeUnitId = g.unitId || inv?.unitId || "";
+                    const unitCost = getIngredientUnitCost(g);
+                    const lineCost = unitCost * (g.quantity || 0);
+                    const role = g.role ?? "primary";
+                    return (
+                      <div key={idx} className="space-y-2 p-3 border rounded-lg bg-background">
+                        <div className="flex items-center gap-2">
+                          <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
+                            <PopoverTrigger asChild>
+                              <Button type="button" variant="outline" role="combobox" className="flex-1 justify-between font-normal h-9 text-sm">
+                                {inv ? (
+                                  <span className="truncate">{inv.name}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">Select inventory item...</span>
+                                )}
+                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." className="h-9" />
+                                <CommandList>
+                                  <CommandEmpty>No items found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {availableInventory.map((it) => (
+                                      <CommandItem
+                                        key={it.id}
+                                        value={`${it.name} ${it.sku}`}
+                                        onSelect={() => {
+                                          // Reset unit when underlying item changes.
+                                          setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id, unitId: undefined } : p));
+                                          setIngredientPickerOpenIdx(null);
+                                        }}
+                                      >
+                                        <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm truncate">{it.name}</div>
+                                          <div className="text-[11px] text-muted-foreground truncate">{it.sku} · stock {it.stock}</div>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <button
+                            type="button"
+                            onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
+                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
+                            aria-label="Remove ingredient"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Input
+                            type="number"
+                            className="w-20 h-9 text-sm"
+                            value={g.quantity || ""}
+                            min={0}
+                            step={0.01}
+                            placeholder="Qty"
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value) || 0;
+                              setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
+                            }}
+                          />
+                          {g.inventoryItemId && unitOptions.length > 1 ? (
+                            <Select
+                              value={activeUnitId}
+                              onValueChange={(v) => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, unitId: v } : p))}
+                            >
+                              <SelectTrigger className="h-9 w-32 text-sm">
+                                <SelectValue placeholder="Unit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {unitOptions.map((opt) => (
+                                  <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-xs text-muted-foreground w-10 shrink-0">
+                              {getUnitAbbr(inv?.unitId)}
+                            </span>
+                          )}
+                          {g.inventoryItemId && (
+                            <span className="text-[11px] text-muted-foreground tabular-nums">
+                              @ {formatNaira(unitCost)} = <span className="font-medium text-foreground">{formatNaira(lineCost)}</span>
+                            </span>
+                          )}
+                          <div className="flex gap-1 ml-auto">
+                            <Button
+                              type="button"
+                              variant={role === "primary" ? "default" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs px-2.5"
+                              onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "primary" } : p))}
+                            >
+                              Primary
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={role === "secondary" ? "secondary" : "outline"}
+                              size="sm"
+                              className="h-7 text-xs px-2.5"
+                              onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "secondary" } : p))}
+                            >
+                              Secondary
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Producible-from-stock panel */}
+                {producibleInfo.hasComponents && (
+                  <div className={cn(
+                    "rounded-lg border p-3 flex items-center justify-between gap-3 text-xs",
+                    producibleInfo.producible === 0
+                      ? "border-destructive/40 bg-destructive/5"
+                      : producibleInfo.producible < 5
+                        ? "border-warning/40 bg-warning/5"
+                        : "border-success/40 bg-success/5"
+                  )}>
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="text-muted-foreground">Available to sell from current stock</div>
+                      {limitingItemName && (
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          Limited by <span className="font-medium text-foreground">{limitingItemName}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className={cn(
+                        "text-lg font-bold tabular-nums leading-none",
+                        producibleInfo.producible === 0 ? "text-destructive" : "text-foreground"
+                      )}>
+                        {producibleInfo.producible}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">units</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {ingredients.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3">
-                  No ingredients yet. Add inventory items that make up this dish.
-                </p>
-              )}
-
-              <div className="space-y-2">
-                {ingredients.map((g, idx) => {
-                  const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                  return (
-                    <div key={idx} className="grid grid-cols-[1fr,90px,32px] gap-2 items-center">
-                      <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
-                        <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm w-full">
-                            {inv ? (
-                              <span className="truncate">{inv.name}</span>
-                            ) : (
-                              <span className="text-muted-foreground">Select inventory item...</span>
-                            )}
-                            <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search inventory..." className="h-9" />
-                            <CommandList>
-                              <CommandEmpty>No items found.</CommandEmpty>
-                              <CommandGroup>
-                                {availableInventory.map((it) => (
-                                  <CommandItem
-                                    key={it.id}
-                                    value={`${it.name} ${it.sku}`}
-                                    onSelect={() => {
-                                      setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id } : p));
-                                      setIngredientPickerOpenIdx(null);
-                                    }}
-                                  >
-                                    <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm truncate">{it.name}</div>
-                                      <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={g.quantity || ""}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value) || 0;
-                          setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
-                        }}
-                        placeholder="Qty"
-                        className="h-9 text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                        aria-label="Remove ingredient"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
+              {/* Cost & Selling Price — derived from BOM */}
+              <div className="border border-border rounded-lg p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-primary" />
+                  <Label className="text-sm font-medium">Cost & Selling Price</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="How is cost calculated?">
+                        <Info className="h-3.5 w-3.5" />
                       </button>
-                    </div>
-                  );
-                })}
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                      <p>Raw cost is auto-calculated from each ingredient's cost × quantity. Add an optional overhead (packaging, staff, power) per unit produced. Then pick a pricing method — <strong>Markup %</strong>, <strong>Margin %</strong>, or <strong>Fixed Price</strong> — to derive the selling price. Editing the price above also stays in sync.</p>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Raw materials cost</span>
+                    <span className="font-medium tabular-nums">{formatNaira(rawCost)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground shrink-0">Overhead override (₦)</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={overheadPerUnit}
+                      onChange={(e) => setOverheadPerUnit(e.target.value)}
+                      placeholder="Outlet default"
+                      className="h-7 max-w-[120px] text-right"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between border-t pt-1.5 mt-1">
+                    <span className="font-medium">Total cost / unit</span>
+                    <span className="font-semibold tabular-nums">{formatNaira(totalCost)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</Label>
+                    <Select
+                      value={pricingMethod}
+                      onValueChange={(v) => {
+                        const method = v as CompositePricingMethod;
+                        setPricingMethod(method);
+                        if (totalCost > 0) {
+                          const newSell = Math.round(calcCompositeSellPrice(totalCost, method, pricingValue) * 100) / 100;
+                          setPrice(String(newSell));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="markup">Markup %</SelectItem>
+                        <SelectItem value="margin">Margin %</SelectItem>
+                        <SelectItem value="fixed">Fixed Price</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                      {pricingMethod === "fixed" ? "Price" : "%"}
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={pricingValue}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setPricingValue(val);
+                        if (totalCost > 0) {
+                          const newSell = Math.round(calcCompositeSellPrice(totalCost, pricingMethod, val) * 100) / 100;
+                          setPrice(String(newSell));
+                        }
+                      }}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                {totalCost > 0 && compSellNum > 0 && (
+                  <div className="flex items-center gap-2 text-xs flex-wrap">
+                    <TrendingUp className={cn("h-3.5 w-3.5", profitPositive ? "text-success" : "text-destructive")} />
+                    <span className={cn("font-medium", profitPositive ? "text-success" : "text-destructive")}>
+                      {formatNaira(profit)}/unit profit
+                    </span>
+                    <span className="text-muted-foreground">
+                      ({((profit / totalCost) * 100).toFixed(1)}% markup · {((profit / compSellNum) * 100).toFixed(1)}% margin)
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
