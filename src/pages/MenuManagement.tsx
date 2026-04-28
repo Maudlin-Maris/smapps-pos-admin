@@ -258,15 +258,15 @@ export default function MenuManagement() {
               >
                 <Upload className="h-4 w-4" /> Import Excel
               </Button>
-              <Button
-                size="sm"
-                className="w-fit"
-                onClick={() => { setEditingItem(null); setFormMode("add"); setFormOpen(true); }}
-              >
-                <Plus className="h-4 w-4 mr-1" /> Add Item
-              </Button>
             </>
           )}
+          <Button
+            size="sm"
+            className="w-fit"
+            onClick={() => { setEditingItem(null); setFormMode("add"); setFormOpen(true); }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Add Item
+          </Button>
         </div>
       </div>
 
