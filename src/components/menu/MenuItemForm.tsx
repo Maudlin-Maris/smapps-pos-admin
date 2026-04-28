@@ -106,6 +106,9 @@ export interface MenuItem {
    *  the form flattens these into `extras` so the existing POS UI continues
    *  to work — the IDs are kept here so admin edits stay in sync. */
   modifierGroupIds?: string[];
+  /** Pricing strategy: "base" single price (default), "variant" priced per
+   *  variant, "open" entered by cashier at checkout. */
+  pricingStrategy?: "base" | "variant" | "open";
 }
 
 interface MenuItemFormProps {
