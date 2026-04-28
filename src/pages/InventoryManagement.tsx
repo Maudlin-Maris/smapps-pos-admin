@@ -330,7 +330,6 @@ export default function InventoryManagement() {
     { key: "adjustments", label: `Adjustments${outletAdjustments.length > 0 ? ` (${outletAdjustments.length})` : ""}` },
     { key: "categories", label: "Categories" },
     { key: "units", label: "Units" },
-    { key: "composite", label: "Composite Items" },
   ];
 
   return (
