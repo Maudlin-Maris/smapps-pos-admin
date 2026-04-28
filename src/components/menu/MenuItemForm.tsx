@@ -242,6 +242,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
+  /** Pricing strategy — Toast-inspired:
+   *  - "base":    single price, optional per-variant overrides
+   *  - "variant": price comes from each variant (no base price)
+   *  - "open":    price entered at checkout (POS prompt) */
+  type PricingStrategy = "base" | "variant" | "open";
+  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>("base");
 
   const features = businessType ? getFeatures(businessType) : null;
 
