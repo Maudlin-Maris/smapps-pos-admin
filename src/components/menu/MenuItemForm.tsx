@@ -579,17 +579,14 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           </FormSection>
 
-          {/* Link to Inventory — Simple items only */}
+          {/* 2. Link to Inventory — Simple items only */}
           {itemType === "simple" && (
-            <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
-              <div className="flex items-center gap-1.5">
-                <Link2 className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-sm font-medium">Link to Inventory</Label>
-                <span className="text-[11px] text-muted-foreground">(optional)</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category.
-              </p>
+            <FormSection
+              step={2}
+              icon={Link2}
+              title="Link to Inventory"
+              description="Optionally connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category."
+            >
               <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -644,7 +641,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
                 if (!inv) return null;
                 return (
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">Linked</Badge>
                     <span className="text-[11px] text-muted-foreground">
                       Stock: <span className="font-medium text-foreground tabular-nums">{inv.stock}</span> · Cost: <span className="font-medium text-foreground tabular-nums">{inv.costPrice}</span>
@@ -652,7 +649,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 );
               })()}
-            </div>
+            </FormSection>
           )}
 
           {/* Images — hidden for Service items to keep the form minimal. */}
