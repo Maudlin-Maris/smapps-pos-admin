@@ -25,7 +25,7 @@ import MeasuringUnitManager, {
 import InventoryItemForm, {
   type InventoryItem,
 } from "@/components/inventory/InventoryItemForm";
-import CompositeItemForm, {
+import {
   type CompositeItem,
 } from "@/components/inventory/CompositeItemForm";
 import StockAdjustmentHistory, {
