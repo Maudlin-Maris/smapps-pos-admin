@@ -540,13 +540,15 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           <DialogDescription>{formDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Item Type selector — drives which sections are shown below. */}
-          <div>
-            <Label className="text-sm font-medium">Item Type *</Label>
-            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
-              Choose how this item behaves at the POS and in inventory.
-            </p>
+        <div className="space-y-4">
+          {/* 1. Item Type selector */}
+          <FormSection
+            step={1}
+            icon={Package}
+            title="Item Type"
+            description="Choose how this item behaves at the POS and in inventory."
+            required
+          >
             <div className="grid grid-cols-3 gap-2">
               {([
                 { key: "simple", label: "Simple", hint: "Retail / barcode", Icon: Package },
@@ -575,7 +577,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 );
               })}
             </div>
-          </div>
+          </FormSection>
 
           {/* Link to Inventory — Simple items only */}
           {itemType === "simple" && (
