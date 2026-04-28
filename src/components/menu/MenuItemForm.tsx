@@ -536,7 +536,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         <div className="space-y-4">
           {/* 1. Item Type selector */}
           <FormSection
-            step={1}
             icon={Package}
             title="Item Type"
             description="Choose how this item behaves at the POS and in inventory."
@@ -575,7 +574,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           {/* 2. Link to Inventory — Simple items only */}
           {itemType === "simple" && (
             <FormSection
-              step={2}
               icon={Link2}
               title="Link to Inventory"
               description="Optionally connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category."
@@ -647,7 +645,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
           {/* 3. Basic Info */}
           <FormSection
-            step={3}
             icon={FileText}
             title="Basic Info"
             description="Name, category and description shown across the catalog."
@@ -688,7 +685,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
           {/* 4. Availability — outlets + status */}
           <FormSection
-            step={4}
             icon={MapPin}
             title="Availability"
             description="Outlets that sell this item and whether it's currently active."
@@ -784,7 +780,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           {/* 5. Images — hidden for Service items */}
           {itemType !== "service" && (
             <FormSection
-              step={5}
               icon={ImageIcon}
               title="Images"
               description="Up to 4 photos. The first image is used as the POS thumbnail."
@@ -811,7 +806,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
           {/* 6. Pricing */}
           <FormSection
-            step={6}
             icon={DollarSign}
             title="Pricing"
             description={itemType === "service" ? "Set the price charged for this service." : "Pick how this item is priced. You can switch strategies any time."}
@@ -969,7 +963,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           {/* 7. Composition — Composite items only */}
           {itemType === "composite" && (
             <FormSection
-              step={7}
               icon={ChefHat}
               title="Composition"
               description="Inventory items consumed each time this menu item is sold."
@@ -1065,7 +1058,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           {/* 8. Variants */}
           {itemType !== "service" && pricingStrategy !== "open" && (
             <FormSection
-              step={8}
               icon={Layers}
               title="Variants"
               description={
@@ -1103,7 +1095,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           {/* 9. Add-ons / Modifiers */}
           {itemType !== "service" && features?.hasExtras && (
             <FormSection
-              step={9}
               icon={ListPlus}
               title={features.extrasLabel}
               description={
