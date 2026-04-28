@@ -32,6 +32,17 @@ import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/data/outlets";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
+
+/** A single component (inventory item + qty) consumed when a variant of a
+ *  composite item is sold. Lets a "Large" pizza burn more cheese than a
+ *  "Small" without duplicating the whole recipe. Optional — when omitted
+ *  the item-level `ingredients` are used. */
+export interface MenuVariantComponent {
+  inventoryItemId: string;
+  quantity: number;
+}
 
 export interface MenuVariant {
   id: string;
@@ -44,6 +55,12 @@ export interface MenuVariant {
   trackInventory: boolean;
   sku: string;
   status: "active" | "inactive";
+  /** Simple items: link this SKU to a stocked inventory product so stock
+   *  deducts from the correct row when sold. */
+  linkedInventoryItemId?: string;
+  /** Composite items: per-variant recipe. Overrides item-level ingredients
+   *  when present (e.g. Large pizza uses 1.5× cheese). */
+  components?: MenuVariantComponent[];
 }
 
 export interface MenuExtra {
