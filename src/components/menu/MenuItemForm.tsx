@@ -816,23 +816,25 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           )}
 
 
-          {/* Service items keep a simple price field — no strategy selector. */}
-          {itemType === "service" && (
-            <div>
-              <Label htmlFor="item-price-svc">Price *</Label>
-              <Input id="item-price-svc" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-            </div>
-          )}
-
-          {/* Pricing — strategy-driven (Toast-style) */}
-          {itemType !== "service" && (
-            <div className="border border-border rounded-lg p-4 space-y-4">
+          {/* 6. Pricing */}
+          <FormSection
+            step={6}
+            icon={DollarSign}
+            title="Pricing"
+            description={itemType === "service" ? "Set the price charged for this service." : "Pick how this item is priced. You can switch strategies any time."}
+            required
+          >
+            {/* Service items keep a simple price field — no strategy selector. */}
+            {itemType === "service" && (
               <div>
-                <Label className="text-sm font-medium">Pricing Strategy</Label>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Choose how this item is priced. Switch any time.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                <Label htmlFor="item-price-svc">Price *</Label>
+                <Input id="item-price-svc" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+              </div>
+            )}
+
+            {itemType !== "service" && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {([
                     { id: "base", label: "Base Price", desc: "Single price for all", icon: Tag },
                     { id: "variant", label: "Variant Pricing", desc: "Price per variant", icon: Layers },
@@ -856,9 +858,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           if (opt.id === "variant" && variants.length === 0) {
                             addVariant();
                           }
-                          if (opt.id !== "variant" && variants.length === 0) {
-                            // no-op
-                          }
                         }}
                         className={cn(
                           "text-left rounded-lg border p-3 transition-colors",
@@ -876,103 +875,103 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     );
                   })}
                 </div>
-              </div>
 
-              {/* BASE PRICE MODE */}
-              {pricingStrategy === "base" && (
-                <div className="space-y-4 pt-2 border-t border-border">
-                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="item-price-nv">Base Price *</Label>
-                      <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                    </div>
-                    {variants.length === 0 && (
+                {/* BASE PRICE MODE */}
+                {pricingStrategy === "base" && (
+                  <div className="space-y-4 pt-3 border-t border-border">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <Label htmlFor="item-quantity-nv">Quantity</Label>
-                        <Input
-                          id="item-quantity-nv"
-                          className="mt-1"
-                          type="number"
-                          min="0"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
-                          placeholder="0"
-                          disabled={trackInventory || !!linkedInventoryItemId}
-                        />
-                        {(trackInventory || linkedInventoryItemId) && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
-                          </p>
-                        )}
+                        <Label htmlFor="item-price-nv">Base Price *</Label>
+                        <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                      </div>
+                      {variants.length === 0 && (
+                        <div>
+                          <Label htmlFor="item-quantity-nv">Quantity</Label>
+                          <Input
+                            id="item-quantity-nv"
+                            className="mt-1"
+                            type="number"
+                            min="0"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                            placeholder="0"
+                            disabled={trackInventory || !!linkedInventoryItemId}
+                          />
+                          {(trackInventory || linkedInventoryItemId) && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {variants.length > 0 && (
+                      <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
+                        <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground">
+                          Variants below can override the base price. Leave a variant price empty to inherit the base.
+                        </p>
                       </div>
                     )}
-                  </div>
 
-                  {variants.length > 0 && (
-                    <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
-                      <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">
-                        Variants below can override the base price. Leave a variant price empty to inherit the base.
-                      </p>
-                    </div>
-                  )}
-
-                  {itemType === "simple" && !linkedInventoryItemId && variants.length === 0 && (
-                    <div className="flex items-center gap-2 border border-border rounded-lg p-3">
-                      <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
-                      <div className="flex items-center gap-1.5">
-                        <PackageCheck className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <Label className="text-sm font-medium">Track from Inventory</Label>
-                          <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                    {itemType === "simple" && !linkedInventoryItemId && variants.length === 0 && (
+                      <div className="flex items-center gap-2 border border-border rounded-lg p-3">
+                        <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
+                        <div className="flex items-center gap-1.5">
+                          <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <Label className="text-sm font-medium">Track from Inventory</Label>
+                            <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="border border-border rounded-lg p-3 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                      <Label className="text-sm font-medium">On Sale</Label>
-                    </div>
-                    {showSale && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div>
-                          <Label className="text-xs">Sale Price</Label>
-                          <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
-                        </div>
-                        <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                        <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
                       </div>
                     )}
+
+                    <div className="border border-border rounded-lg p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                        <Label className="text-sm font-medium">On Sale</Label>
+                      </div>
+                      {showSale && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs">Sale Price</Label>
+                            <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                          </div>
+                          <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                          <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* VARIANT PRICING MODE — pricing handled in Variants section below */}
-              {pricingStrategy === "variant" && (
-                <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
-                  <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground">
-                    Each variant carries its own price. Add variants below — the first one is used as the default in the POS.
-                  </p>
-                </div>
-              )}
-
-              {/* OPEN PRICE MODE */}
-              {pricingStrategy === "open" && (
-                <div className="rounded-md bg-amber-500/5 border border-amber-500/30 p-3 flex gap-2">
-                  <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Price entered at checkout</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      The cashier will be prompted to enter the price each time this item is added to a sale.
+                {/* VARIANT PRICING MODE — pricing handled in Variants section below */}
+                {pricingStrategy === "variant" && (
+                  <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      Each variant carries its own price. Add variants below — the first one is used as the default in the POS.
                     </p>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+
+                {/* OPEN PRICE MODE */}
+                {pricingStrategy === "open" && (
+                  <div className="rounded-md bg-amber-500/5 border border-amber-500/30 p-3 flex gap-2">
+                    <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Price entered at checkout</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        The cashier will be prompted to enter the price each time this item is added to a sale.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </FormSection>
 
           {/* Ingredients / Composition — Composite items only */}
           {itemType === "composite" && (
