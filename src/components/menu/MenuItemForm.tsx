@@ -1036,43 +1036,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormSection>
           )}
 
-          {/* Variants */}
-          {itemType !== "service" && pricingStrategy !== "open" && (
-            <FormSection
-              icon={Layers}
-              title="Variants"
-              description={
-                pricingStrategy === "variant"
-                  ? "Each variant must have a price. The first variant is the POS default."
-                  : variants.length > 0
-                    ? "Variants override the base price and inventory."
-                    : "Optional — add variants for different sizes, flavors, etc."
-              }
-              required={pricingStrategy === "variant"}
-            >
-              <div className="flex justify-end">
-                <Button type="button" variant="outline" size="sm" onClick={addVariant}>
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
-                </Button>
-              </div>
-              {variants.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
-                  No variants yet.
-                </p>
-              )}
-              {variants.map((v, idx) => (
-                <div key={v.id} className="relative">
-                  {idx === 0 && variants.length > 1 && (
-                    <Badge variant="secondary" className="absolute -top-2 left-3 text-[10px] z-10">
-                      Default
-                    </Badge>
-                  )}
-                  <VariantRow variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
-                </div>
-              ))}
-            </FormSection>
-          )}
-
           {/* Add-ons / Modifiers */}
           {itemType !== "service" && features?.hasExtras && (
             <FormSection
