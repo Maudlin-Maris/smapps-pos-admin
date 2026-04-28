@@ -376,13 +376,24 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   };
 
   const handleSave = () => {
-    const hasVariants = variants.length > 0;
+    const isService = itemType === "service";
+    const isComposite = itemType === "composite";
+    const hasVariants = !isService && variants.length > 0;
     if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
     if (hasVariants && variants.some((v) => !v.name.trim())) return;
     if (selectedOutletIds.length === 0) return;
+    if (isComposite) {
+      // Require at least one valid ingredient on composite items.
+      const valid = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
+      if (valid.length === 0) return;
+    }
     const cat = categories.find((c) => c.id === selectedCatId);
     const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
-    const baseQty = hasVariants ? variants.reduce((sum, v) => sum + v.quantity, 0) : parseInt(quantity) || 0;
+    const baseQty = isService
+      ? 0
+      : hasVariants
+        ? variants.reduce((sum, v) => sum + v.quantity, 0)
+        : parseInt(quantity) || 0;
     const autoSku = generateSku();
     const finalVariants = hasVariants
       ? variants.map((v, i) => ({
@@ -398,15 +409,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       subcategory,
       price: basePrice,
       quantity: baseQty,
-      salePrice: hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
-      salePeriodStart: hasVariants ? null : (showSale ? salePeriodStart : null),
-      salePeriodEnd: hasVariants ? null : (showSale ? salePeriodEnd : null),
+      salePrice: isService || hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
+      salePeriodStart: isService || hasVariants ? null : (showSale ? salePeriodStart : null),
+      salePeriodEnd: isService || hasVariants ? null : (showSale ? salePeriodEnd : null),
       sku: item?.sku || autoSku,
       status: isActive ? "active" : "inactive",
-      images,
-      variants: finalVariants,
-      extras,
-      trackInventory: hasVariants ? false : trackInventory,
+      images: isService ? [] : images,
+      variants: isService ? [] : finalVariants,
+      extras: isService ? [] : extras,
+      trackInventory: isService ? false : (hasVariants ? false : trackInventory),
+      itemType,
+      linkedInventoryItemId: itemType === "simple" && linkedInventoryItemId ? linkedInventoryItemId : undefined,
+      ingredients: itemType === "composite"
+        ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
+        : undefined,
     }, selectedOutletIds);
     onOpenChange(false);
   };
