@@ -568,6 +568,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       ingredients: itemType === "composite"
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
         : undefined,
+      overheadPerUnit: itemType === "composite" && overheadPerUnit !== ""
+        ? Number(overheadPerUnit)
+        : undefined,
+      pricingMethod: itemType === "composite" ? pricingMethod : undefined,
+      pricingValue: itemType === "composite" ? pricingValue : undefined,
     }, selectedOutletIds);
     onOpenChange(false);
   };
