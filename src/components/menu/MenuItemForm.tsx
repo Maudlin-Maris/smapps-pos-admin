@@ -860,6 +860,16 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   })}
                 </div>
 
+                {/* Strategy intro text */}
+                <p className="text-xs text-muted-foreground -mt-1">
+                  {pricingStrategy === "base" &&
+                    "A single fixed price for this item. Best for most products."}
+                  {pricingStrategy === "variant" &&
+                    "Different prices for each variation (e.g. Small, Medium, Large)."}
+                  {pricingStrategy === "open" &&
+                    "No preset price — the cashier enters the amount at checkout. Useful for custom or weighed items."}
+                </p>
+
                 {/* BASE PRICE */}
                 {pricingStrategy === "base" && (
                   <div>
