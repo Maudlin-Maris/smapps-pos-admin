@@ -31,8 +31,9 @@ import {
 } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency } from "@/lib/currency";
-import { loadInventoryItems, type InventoryItem } from "@/data/inventoryItems";
+import { formatNaira } from "@/lib/currency";
+import { defaultInventoryItems } from "@/data/inventoryItems";
+import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import {
   loadModifierGroups,
   saveModifierGroups,
