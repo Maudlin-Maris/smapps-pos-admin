@@ -417,17 +417,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const handleSave = () => {
     const isService = itemType === "service";
     const isComposite = itemType === "composite";
+    const isOpenPrice = !isService && pricingStrategy === "open";
+    const isVariantPriced = !isService && pricingStrategy === "variant";
     const hasVariants = !isService && variants.length > 0;
-    if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
+    if (!name.trim() || !subcategory) return;
+    // Price requirements depend on strategy.
+    if (!isService && !isOpenPrice) {
+      if (isVariantPriced) {
+        if (variants.length === 0) return;
+        if (variants.some((v) => !v.name.trim() || !v.price)) return;
+      } else if (!hasVariants && !price) {
+        return;
+      }
+    }
     if (hasVariants && variants.some((v) => !v.name.trim())) return;
     if (selectedOutletIds.length === 0) return;
     if (isComposite) {
-      // Require at least one valid ingredient on composite items.
       const valid = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
       if (valid.length === 0) return;
     }
     const cat = categories.find((c) => c.id === selectedCatId);
-    const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
+    const basePrice = isOpenPrice
+      ? 0
+      : isVariantPriced
+        ? Math.min(...variants.map((v) => v.price))
+        : parseFloat(price) || 0;
     const baseQty = isService
       ? 0
       : hasVariants
@@ -440,6 +454,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           sku: v.sku || `${autoSku}-V${i + 1}`,
         }))
       : variants;
+    const suppressSale = isService || isOpenPrice || isVariantPriced || hasVariants;
     onSave({
       id: item?.id ?? crypto.randomUUID(),
       name: name.trim(),
@@ -448,9 +463,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       subcategory,
       price: basePrice,
       quantity: baseQty,
-      salePrice: isService || hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
-      salePeriodStart: isService || hasVariants ? null : (showSale ? salePeriodStart : null),
-      salePeriodEnd: isService || hasVariants ? null : (showSale ? salePeriodEnd : null),
+      salePrice: suppressSale ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
+      salePeriodStart: suppressSale ? null : (showSale ? salePeriodStart : null),
+      salePeriodEnd: suppressSale ? null : (showSale ? salePeriodEnd : null),
       sku: item?.sku || autoSku,
       status: isActive ? "active" : "inactive",
       images: isService ? [] : images,
@@ -458,6 +473,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       extras: isService ? [] : extras,
       trackInventory: isService ? false : (hasVariants ? false : trackInventory),
       itemType,
+      pricingStrategy: isService ? undefined : pricingStrategy,
       linkedInventoryItemId: itemType === "simple" && linkedInventoryItemId ? linkedInventoryItemId : undefined,
       ingredients: itemType === "composite"
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
