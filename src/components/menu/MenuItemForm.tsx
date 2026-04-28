@@ -534,7 +534,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* 1. Item Type selector */}
+          {/* Item Type selector */}
           <FormSection
             icon={Package}
             title="Item Type"
@@ -571,7 +571,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           </FormSection>
 
-          {/* 2. Link to Inventory — Simple items only */}
+          {/* Link to Inventory — Simple items only */}
           {itemType === "simple" && (
             <FormSection
               icon={Link2}
@@ -643,7 +643,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormSection>
           )}
 
-          {/* 3. Basic Info */}
+          {/* Basic Info */}
           <FormSection
             icon={FileText}
             title="Basic Info"
@@ -683,7 +683,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           </FormSection>
 
-          {/* 4. Availability — outlets + status */}
+          {/* Availability — outlets + status */}
           <FormSection
             icon={MapPin}
             title="Availability"
@@ -777,7 +777,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             )}
           </FormSection>
 
-          {/* 5. Images — hidden for Service items */}
+          {/* Images — hidden for Service items */}
           {itemType !== "service" && (
             <FormSection
               icon={ImageIcon}
@@ -804,7 +804,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           )}
 
 
-          {/* 6. Pricing */}
+          {/* Pricing */}
           <FormSection
             icon={DollarSign}
             title="Pricing"
@@ -960,7 +960,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             )}
           </FormSection>
 
-          {/* 7. Composition — Composite items only */}
+          {/* Composition — Composite items only */}
           {itemType === "composite" && (
             <FormSection
               icon={ChefHat}
@@ -1055,7 +1055,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormSection>
           )}
 
-          {/* 8. Variants */}
+          {/* Variants */}
           {itemType !== "service" && pricingStrategy !== "open" && (
             <FormSection
               icon={Layers}
@@ -1092,7 +1092,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormSection>
           )}
 
-          {/* 9. Add-ons / Modifiers */}
+          {/* Add-ons / Modifiers */}
           {itemType !== "service" && features?.hasExtras && (
             <FormSection
               icon={ListPlus}
