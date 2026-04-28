@@ -286,6 +286,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
    *  - "open":    price entered at checkout (POS prompt) */
   type PricingStrategy = "base" | "variant" | "open";
   const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>("base");
+  /** Simple items only: when not linked to inventory, lets the admin opt in
+   *  to also create a matching inventory record using the barcode + qty
+   *  entered here. Purely a UI flag — parent decides what to do with it. */
+  const [addToInventory, setAddToInventory] = useState(false);
 
   const features = businessType ? getFeatures(businessType) : null;
 
