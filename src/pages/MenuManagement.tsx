@@ -115,6 +115,9 @@ const initialMenuItems: MenuItem[] = [
 export default function MenuManagement() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
+  // Local copy of inventory items so the catalog form can inline-create new
+  // ones (Simple item → "Link to Inventory") without leaving the page.
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>(defaultInventoryItems);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
