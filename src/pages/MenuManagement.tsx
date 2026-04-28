@@ -305,7 +305,11 @@ export default function MenuManagement() {
         businessType={currentOutlet?.businessType}
         outlets={outlets}
         currentOutletId={isAllOutlets ? undefined : selectedOutletId}
-        inventoryItems={defaultInventoryItems}
+        inventoryItems={inventoryItems}
+        onCreateInventoryItem={(inv) => {
+          setInventoryItems((prev) => [...prev, inv]);
+          toast.success(`Inventory item "${inv.name}" created`);
+        }}
       />
 
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
