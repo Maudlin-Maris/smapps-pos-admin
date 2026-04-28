@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
@@ -106,6 +106,9 @@ export interface MenuItem {
    *  the form flattens these into `extras` so the existing POS UI continues
    *  to work — the IDs are kept here so admin edits stay in sync. */
   modifierGroupIds?: string[];
+  /** Pricing strategy: "base" single price (default), "variant" priced per
+   *  variant, "open" entered by cashier at checkout. */
+  pricingStrategy?: "base" | "variant" | "open";
 }
 
 interface MenuItemFormProps {
@@ -242,6 +245,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
+  /** Pricing strategy — Toast-inspired:
+   *  - "base":    single price, optional per-variant overrides
+   *  - "variant": price comes from each variant (no base price)
+   *  - "open":    price entered at checkout (POS prompt) */
+  type PricingStrategy = "base" | "variant" | "open";
+  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>("base");
 
   const features = businessType ? getFeatures(businessType) : null;
 
@@ -279,6 +288,14 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
         setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
+        // Infer pricing strategy from saved data
+        if (item.pricingStrategy) {
+          setPricingStrategy(item.pricingStrategy);
+        } else if ((item.variants?.length ?? 0) > 0 && (!item.price || item.price === 0)) {
+          setPricingStrategy("variant");
+        } else {
+          setPricingStrategy("base");
+        }
       } else {
         setItemType("simple");
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
@@ -287,6 +304,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
         setLinkedInventoryItemId(""); setIngredients([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
+        setPricingStrategy("base");
       }
     }
   }, [open, item, categories, currentOutletId]);
@@ -399,17 +417,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const handleSave = () => {
     const isService = itemType === "service";
     const isComposite = itemType === "composite";
+    const isOpenPrice = !isService && pricingStrategy === "open";
+    const isVariantPriced = !isService && pricingStrategy === "variant";
     const hasVariants = !isService && variants.length > 0;
-    if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
+    if (!name.trim() || !subcategory) return;
+    // Price requirements depend on strategy.
+    if (!isService && !isOpenPrice) {
+      if (isVariantPriced) {
+        if (variants.length === 0) return;
+        if (variants.some((v) => !v.name.trim() || !v.price)) return;
+      } else if (!hasVariants && !price) {
+        return;
+      }
+    }
     if (hasVariants && variants.some((v) => !v.name.trim())) return;
     if (selectedOutletIds.length === 0) return;
     if (isComposite) {
-      // Require at least one valid ingredient on composite items.
       const valid = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
       if (valid.length === 0) return;
     }
     const cat = categories.find((c) => c.id === selectedCatId);
-    const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
+    const basePrice = isOpenPrice
+      ? 0
+      : isVariantPriced
+        ? Math.min(...variants.map((v) => v.price))
+        : parseFloat(price) || 0;
     const baseQty = isService
       ? 0
       : hasVariants
@@ -422,6 +454,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           sku: v.sku || `${autoSku}-V${i + 1}`,
         }))
       : variants;
+    const suppressSale = isService || isOpenPrice || isVariantPriced || hasVariants;
     onSave({
       id: item?.id ?? crypto.randomUUID(),
       name: name.trim(),
@@ -430,9 +463,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       subcategory,
       price: basePrice,
       quantity: baseQty,
-      salePrice: isService || hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
-      salePeriodStart: isService || hasVariants ? null : (showSale ? salePeriodStart : null),
-      salePeriodEnd: isService || hasVariants ? null : (showSale ? salePeriodEnd : null),
+      salePrice: suppressSale ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
+      salePeriodStart: suppressSale ? null : (showSale ? salePeriodStart : null),
+      salePeriodEnd: suppressSale ? null : (showSale ? salePeriodEnd : null),
       sku: item?.sku || autoSku,
       status: isActive ? "active" : "inactive",
       images: isService ? [] : images,
@@ -440,6 +473,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       extras: isService ? [] : extras,
       trackInventory: isService ? false : (hasVariants ? false : trackInventory),
       itemType,
+      pricingStrategy: isService ? undefined : pricingStrategy,
       linkedInventoryItemId: itemType === "simple" && linkedInventoryItemId ? linkedInventoryItemId : undefined,
       ingredients: itemType === "composite"
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
@@ -719,71 +753,162 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           </div>
 
-          {/* Price/Qty/Sale - only when no variants */}
-          {variants.length === 0 && (
-            <>
-              <div className={cn("grid gap-4", itemType === "service" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
-                <div>
-                  <Label htmlFor="item-price-nv">Price *</Label>
-                  <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+          {/* Service items keep a simple price field — no strategy selector. */}
+          {itemType === "service" && (
+            <div>
+              <Label htmlFor="item-price-svc">Price *</Label>
+              <Input id="item-price-svc" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+            </div>
+          )}
+
+          {/* Pricing — strategy-driven (Toast-style) */}
+          {itemType !== "service" && (
+            <div className="border border-border rounded-lg p-4 space-y-4">
+              <div>
+                <Label className="text-sm font-medium">Pricing Strategy</Label>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Choose how this item is priced. Switch any time.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                  {([
+                    { id: "base", label: "Base Price", desc: "Single price for all", icon: Tag },
+                    { id: "variant", label: "Variant Pricing", desc: "Price per variant", icon: Layers },
+                    { id: "open", label: "Open Price", desc: "Entered at checkout", icon: KeyRound },
+                  ] as const).map((opt) => {
+                    const Icon = opt.icon;
+                    const active = pricingStrategy === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setPricingStrategy(opt.id);
+                          if (opt.id === "open") {
+                            setPrice("");
+                            setShowSale(false);
+                            setSalePrice("");
+                            setSalePeriodStart(null);
+                            setSalePeriodEnd(null);
+                          }
+                          if (opt.id === "variant" && variants.length === 0) {
+                            addVariant();
+                          }
+                          if (opt.id !== "variant" && variants.length === 0) {
+                            // no-op
+                          }
+                        }}
+                        className={cn(
+                          "text-left rounded-lg border p-3 transition-colors",
+                          active
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-border hover:bg-muted/50",
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                          <span className="text-sm font-medium">{opt.label}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
                 </div>
-                {itemType !== "service" && (
-                  <div>
-                    <Label htmlFor="item-quantity-nv">Quantity</Label>
-                    <Input
-                      id="item-quantity-nv"
-                      className="mt-1"
-                      type="number"
-                      min="0"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      placeholder="0"
-                      disabled={trackInventory || !!linkedInventoryItemId}
-                    />
-                    {(trackInventory || linkedInventoryItemId) && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
 
-              {/* Track from Inventory — only meaningful for Simple items
-                  without a direct inventory link. Composite items consume
-                  inventory via ingredients; Service items have no stock. */}
-              {itemType === "simple" && !linkedInventoryItemId && (
-                <div className="flex items-center gap-2 border border-border rounded-lg p-3">
-                  <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
-                  <div className="flex items-center gap-1.5">
-                    <PackageCheck className="h-4 w-4 text-muted-foreground" />
+              {/* BASE PRICE MODE */}
+              {pricingStrategy === "base" && (
+                <div className="space-y-4 pt-2 border-t border-border">
+                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                     <div>
-                      <Label className="text-sm font-medium">Track from Inventory</Label>
-                      <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                      <Label htmlFor="item-price-nv">Base Price *</Label>
+                      <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
                     </div>
+                    {variants.length === 0 && (
+                      <div>
+                        <Label htmlFor="item-quantity-nv">Quantity</Label>
+                        <Input
+                          id="item-quantity-nv"
+                          className="mt-1"
+                          type="number"
+                          min="0"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          placeholder="0"
+                          disabled={trackInventory || !!linkedInventoryItemId}
+                        />
+                        {(trackInventory || linkedInventoryItemId) && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {variants.length > 0 && (
+                    <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
+                      <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <p className="text-xs text-muted-foreground">
+                        Variants below can override the base price. Leave a variant price empty to inherit the base.
+                      </p>
+                    </div>
+                  )}
+
+                  {itemType === "simple" && !linkedInventoryItemId && variants.length === 0 && (
+                    <div className="flex items-center gap-2 border border-border rounded-lg p-3">
+                      <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
+                      <div className="flex items-center gap-1.5">
+                        <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <Label className="text-sm font-medium">Track from Inventory</Label>
+                          <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border border-border rounded-lg p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                      <Label className="text-sm font-medium">On Sale</Label>
+                    </div>
+                    {showSale && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs">Sale Price</Label>
+                          <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                        </div>
+                        <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                        <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {itemType !== "service" && (
-                <div className="border border-border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                    <Label className="text-sm font-medium">On Sale</Label>
-                  </div>
-                  {showSale && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      <div>
-                        <Label className="text-xs">Sale Price</Label>
-                        <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
-                      </div>
-                      <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                      <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
-                    </div>
-                  )}
+              {/* VARIANT PRICING MODE — pricing handled in Variants section below */}
+              {pricingStrategy === "variant" && (
+                <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    Each variant carries its own price. Add variants below — the first one is used as the default in the POS.
+                  </p>
                 </div>
               )}
-            </>
+
+              {/* OPEN PRICE MODE */}
+              {pricingStrategy === "open" && (
+                <div className="rounded-md bg-amber-500/5 border border-amber-500/30 p-3 flex gap-2">
+                  <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium">Price entered at checkout</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      The cashier will be prompted to enter the price each time this item is added to a sale.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Ingredients / Composition — Composite items only */}
@@ -885,22 +1010,35 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           )}
 
-          {/* Variants — hidden for Service items */}
-          {itemType !== "service" && (
+          {/* Variants — hidden for Service items and Open Price mode */}
+          {itemType !== "service" && pricingStrategy !== "open" && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-sm font-medium">Variants</Label>
+                  <Label className="text-sm font-medium">
+                    Variants {pricingStrategy === "variant" && <span className="text-destructive">*</span>}
+                  </Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {variants.length > 0 ? "All pricing and stock is managed per variant." : "Add variants for different sizes, flavors, etc."}
+                    {pricingStrategy === "variant"
+                      ? "Each variant must have a price. The first variant is the POS default."
+                      : variants.length > 0
+                        ? "Variants override the base price and inventory."
+                        : "Optional — add variants for different sizes, flavors, etc."}
                   </p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
                 </Button>
               </div>
-              {variants.map((v) => (
-                <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
+              {variants.map((v, idx) => (
+                <div key={v.id} className="relative">
+                  {idx === 0 && variants.length > 1 && (
+                    <Badge variant="secondary" className="absolute -top-2 left-3 text-[10px] z-10">
+                      Default
+                    </Badge>
+                  )}
+                  <VariantRow variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
+                </div>
               ))}
             </div>
           )}
@@ -1013,7 +1151,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || selectedOutletIds.length === 0 || (variants.length > 0 && variants.some((v) => !v.name.trim())) || (itemType === "composite" && ingredients.filter((g) => g.inventoryItemId && g.quantity > 0).length === 0)}>
+          <Button onClick={handleSave} disabled={(() => {
+            if (!name.trim() || !subcategory || selectedOutletIds.length === 0) return true;
+            if (itemType === "composite" && ingredients.filter((g) => g.inventoryItemId && g.quantity > 0).length === 0) return true;
+            if (itemType === "service") return !price;
+            if (pricingStrategy === "open") return false;
+            if (pricingStrategy === "variant") {
+              if (variants.length === 0) return true;
+              return variants.some((v) => !v.name.trim() || !v.price);
+            }
+            // base
+            if (!price) return true;
+            if (variants.length > 0 && variants.some((v) => !v.name.trim())) return true;
+            return false;
+          })()}>
             {submitLabel}
           </Button>
         </DialogFooter>
