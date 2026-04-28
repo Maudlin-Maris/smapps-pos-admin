@@ -344,6 +344,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setLinkedInventoryItemId(""); setIngredients([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
+        setAddToInventory(false);
       }
     }
   }, [open, item, categories, currentOutletId]);
