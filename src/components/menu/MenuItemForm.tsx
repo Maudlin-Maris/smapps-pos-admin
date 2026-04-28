@@ -117,7 +117,7 @@ interface MenuItemFormProps {
   mode?: "add" | "edit" | "clone";
   businessType?: BusinessTypeId;
   outlets: Outlet[];
-  currentOutletId: string;
+  currentOutletId?: string;
   /** Inventory items used by Simple ("Link to inventory") and Composite
    *  ("Ingredients") item types. Optional — when omitted those sections
    *  show an empty-state. */
