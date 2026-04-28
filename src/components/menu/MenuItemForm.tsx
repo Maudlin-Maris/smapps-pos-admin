@@ -309,6 +309,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setTrackInventory(item.trackInventory ?? false);
         setLinkedInventoryItemId(item.linkedInventoryItemId ?? "");
         setIngredients(item.ingredients ?? []);
+        setOverheadPerUnit(item.overheadPerUnit !== undefined ? String(item.overheadPerUnit) : "");
+        setPricingMethod(item.pricingMethod ?? "markup");
+        setPricingValue(item.pricingValue ?? 30);
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
@@ -320,6 +323,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
         setLinkedInventoryItemId(""); setIngredients([]);
+        setOverheadPerUnit(""); setPricingMethod("markup"); setPricingValue(30);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
       }
     }
