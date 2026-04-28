@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { outlets } from "@/data/outlets";
 import { defaultInventoryItems } from "@/data/inventoryItems";
+import { defaultUnits } from "@/components/inventory/MeasuringUnitManager";
 
 const initialCategories: Category[] = [
   {
