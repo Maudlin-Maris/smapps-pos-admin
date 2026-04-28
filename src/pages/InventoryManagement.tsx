@@ -337,7 +337,7 @@ export default function InventoryManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-heading font-bold tracking-tight">Inventory</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and composite items</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and profitability</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
