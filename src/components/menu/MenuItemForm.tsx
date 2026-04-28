@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
@@ -30,6 +30,8 @@ import { getFeatures, type BusinessTypeId } from "@/data/businessTypes";
 import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, PopoverTrigger as OutletPopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/data/outlets";
+import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 export interface MenuVariant {
   id: string;
@@ -51,6 +53,13 @@ export interface MenuExtra {
   category?: string;
 }
 
+export type MenuItemType = "simple" | "composite" | "service";
+
+export interface MenuIngredient {
+  inventoryItemId: string;
+  quantity: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -69,6 +78,13 @@ export interface MenuItem {
   extras: MenuExtra[];
   trackInventory: boolean;
   outletId?: string;
+  /** Catalog item type — drives form behaviour and POS treatment.
+   *  Defaults to "simple" for legacy items that don't carry the field. */
+  itemType?: MenuItemType;
+  /** For Simple items: optional link to a stocked inventory item. */
+  linkedInventoryItemId?: string;
+  /** For Composite items: recipe components consumed when sold. */
+  ingredients?: MenuIngredient[];
 }
 
 interface MenuItemFormProps {
@@ -81,6 +97,10 @@ interface MenuItemFormProps {
   businessType?: BusinessTypeId;
   outlets: Outlet[];
   currentOutletId: string;
+  /** Inventory items used by Simple ("Link to inventory") and Composite
+   *  ("Ingredients") item types. Optional — when omitted those sections
+   *  show an empty-state. */
+  inventoryItems?: InventoryItem[];
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
@@ -178,7 +198,8 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
   );
 }
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
+  const [itemType, setItemType] = useState<MenuItemType>("simple");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -196,15 +217,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [extras, setExtras] = useState<MenuExtra[]>([]);
   const [trackInventory, setTrackInventory] = useState(false);
   const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
+  const [linkedInventoryItemId, setLinkedInventoryItemId] = useState<string>("");
+  const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
+  const [linkPickerOpen, setLinkPickerOpen] = useState(false);
+  const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
 
   const features = businessType ? getFeatures(businessType) : null;
 
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
 
+  // Filter inventory items to the outlets currently selected on the form so
+  // users only link to/recipe from inventory that actually exists at those
+  // outlets. Falls back to all items when no outlet has been selected yet.
+  const availableInventory = selectedOutletIds.length
+    ? inventoryItems.filter((i) => selectedOutletIds.includes(i.outletId))
+    : inventoryItems;
+
   useEffect(() => {
     if (open) {
       if (item) {
+        setItemType(item.itemType ?? "simple");
         setName(item.name);
         setDescription(item.description);
         setPrice(item.price.toString());
@@ -219,19 +252,70 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setVariants(item.variants ?? []);
         setExtras(item.extras ?? []);
         setTrackInventory(item.trackInventory ?? false);
+        setLinkedInventoryItemId(item.linkedInventoryItemId ?? "");
+        setIngredients(item.ingredients ?? []);
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
         setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
       } else {
+        setItemType("simple");
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
+        setLinkedInventoryItemId(""); setIngredients([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
       }
     }
   }, [open, item, categories, currentOutletId]);
+
+  // When switching item type, clear fields that no longer apply so saved data
+  // stays consistent with the chosen type.
+  const handleTypeChange = (next: MenuItemType) => {
+    if (next === itemType) return;
+    setItemType(next);
+    if (next === "service") {
+      setVariants([]);
+      setExtras([]);
+      setImages([]);
+      setShowSale(false);
+      setSalePrice("");
+      setSalePeriodStart(null);
+      setSalePeriodEnd(null);
+      setTrackInventory(false);
+      setLinkedInventoryItemId("");
+      setIngredients([]);
+    } else if (next === "simple") {
+      // Composite ingredients & track-inventory don't apply
+      setIngredients([]);
+      setTrackInventory(false);
+    } else if (next === "composite") {
+      // Linked inventory item is a Simple-only concept
+      setLinkedInventoryItemId("");
+      setTrackInventory(false);
+    }
+  };
+
+  // Auto-fill from linked inventory item (Simple type). Suggests a category
+  // by name match against the catalog categories — admin can override.
+  const handleLinkInventory = (invId: string) => {
+    setLinkedInventoryItemId(invId);
+    const inv = inventoryItems.find((i) => i.id === invId);
+    if (!inv) return;
+    if (!name.trim()) setName(inv.name);
+    if (!sku.trim()) setSku(inv.sku);
+    // Best-effort category suggestion: find a catalog category whose name
+    // matches the inventory item's name keywords. If none, leave existing.
+    if (!selectedCatId) {
+      const lower = inv.name.toLowerCase();
+      const guess = categories.find((c) =>
+        lower.includes(c.name.toLowerCase().split(" ")[0])
+      );
+      if (guess) setSelectedCatId(guess.id);
+    }
+  };
+
 
   const handleImageUpload = () => {
     if (images.length >= 4) return;
@@ -292,13 +376,24 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   };
 
   const handleSave = () => {
-    const hasVariants = variants.length > 0;
+    const isService = itemType === "service";
+    const isComposite = itemType === "composite";
+    const hasVariants = !isService && variants.length > 0;
     if (!name.trim() || (!hasVariants && !price) || !subcategory) return;
     if (hasVariants && variants.some((v) => !v.name.trim())) return;
     if (selectedOutletIds.length === 0) return;
+    if (isComposite) {
+      // Require at least one valid ingredient on composite items.
+      const valid = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
+      if (valid.length === 0) return;
+    }
     const cat = categories.find((c) => c.id === selectedCatId);
     const basePrice = hasVariants ? Math.min(...variants.map((v) => v.price)) : parseFloat(price);
-    const baseQty = hasVariants ? variants.reduce((sum, v) => sum + v.quantity, 0) : parseInt(quantity) || 0;
+    const baseQty = isService
+      ? 0
+      : hasVariants
+        ? variants.reduce((sum, v) => sum + v.quantity, 0)
+        : parseInt(quantity) || 0;
     const autoSku = generateSku();
     const finalVariants = hasVariants
       ? variants.map((v, i) => ({
@@ -314,15 +409,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       subcategory,
       price: basePrice,
       quantity: baseQty,
-      salePrice: hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
-      salePeriodStart: hasVariants ? null : (showSale ? salePeriodStart : null),
-      salePeriodEnd: hasVariants ? null : (showSale ? salePeriodEnd : null),
+      salePrice: isService || hasVariants ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
+      salePeriodStart: isService || hasVariants ? null : (showSale ? salePeriodStart : null),
+      salePeriodEnd: isService || hasVariants ? null : (showSale ? salePeriodEnd : null),
       sku: item?.sku || autoSku,
       status: isActive ? "active" : "inactive",
-      images,
-      variants: finalVariants,
-      extras,
-      trackInventory: hasVariants ? false : trackInventory,
+      images: isService ? [] : images,
+      variants: isService ? [] : finalVariants,
+      extras: isService ? [] : extras,
+      trackInventory: isService ? false : (hasVariants ? false : trackInventory),
+      itemType,
+      linkedInventoryItemId: itemType === "simple" && linkedInventoryItemId ? linkedInventoryItemId : undefined,
+      ingredients: itemType === "composite"
+        ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
+        : undefined,
     }, selectedOutletIds);
     onOpenChange(false);
   };
@@ -344,26 +444,140 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* Images */}
+          {/* Item Type selector — drives which sections are shown below. */}
           <div>
-            <Label className="text-sm font-medium">Images (max 4)</Label>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {images.map((img, idx) => (
-                <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
-                  <img src={img} alt="" className="h-full w-full object-cover" />
-                  <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X className="h-3 w-3 text-destructive" />
+            <Label className="text-sm font-medium">Item Type *</Label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+              Choose how this item behaves at the POS and in inventory.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { key: "simple", label: "Simple", hint: "Retail / barcode", Icon: Package },
+                { key: "composite", label: "Composite", hint: "Made from ingredients", Icon: ChefHat },
+                { key: "service", label: "Service", hint: "No inventory", Icon: Sparkles },
+              ] as const).map(({ key, label, hint, Icon }) => {
+                const active = itemType === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleTypeChange(key)}
+                    className={cn(
+                      "flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-primary/40 hover:bg-muted/40"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                      <span className="text-sm font-medium">{label}</span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground leading-tight">{hint}</span>
                   </button>
-                </div>
-              ))}
-              {images.length < 4 && (
-                <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-                  <ImagePlus className="h-5 w-5" />
-                  <span className="text-[10px]">Add</span>
-                </button>
-              )}
+                );
+              })}
             </div>
           </div>
+
+          {/* Link to Inventory — Simple items only */}
+          {itemType === "simple" && (
+            <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-1.5">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-sm font-medium">Link to Inventory</Label>
+                <span className="text-[11px] text-muted-foreground">(optional)</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category.
+              </p>
+              <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal h-9 text-sm"
+                  >
+                    {linkedInventoryItemId
+                      ? (() => {
+                          const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
+                          return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
+                        })()
+                      : <span className="text-muted-foreground">Search inventory...</span>}
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search by name or SKU..." className="h-9" />
+                    <CommandList>
+                      <CommandEmpty>No inventory items found.</CommandEmpty>
+                      <CommandGroup>
+                        {linkedInventoryItemId && (
+                          <CommandItem
+                            value="__clear__"
+                            onSelect={() => { setLinkedInventoryItemId(""); setLinkPickerOpen(false); }}
+                          >
+                            <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                            <span className="text-muted-foreground">Clear link</span>
+                          </CommandItem>
+                        )}
+                        {availableInventory.map((inv) => (
+                          <CommandItem
+                            key={inv.id}
+                            value={`${inv.name} ${inv.sku}`}
+                            onSelect={() => { handleLinkInventory(inv.id); setLinkPickerOpen(false); }}
+                          >
+                            <Check className={cn("h-3.5 w-3.5 mr-2", linkedInventoryItemId === inv.id ? "opacity-100" : "opacity-0")} />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm truncate">{inv.name}</div>
+                              <div className="text-[11px] text-muted-foreground truncate">{inv.sku} · stock {inv.stock}</div>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {linkedInventoryItemId && (() => {
+                const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
+                if (!inv) return null;
+                return (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Badge variant="secondary" className="text-[10px]">Linked</Badge>
+                    <span className="text-[11px] text-muted-foreground">
+                      Stock: <span className="font-medium text-foreground tabular-nums">{inv.stock}</span> · Cost: <span className="font-medium text-foreground tabular-nums">{inv.costPrice}</span>
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Images — hidden for Service items to keep the form minimal. */}
+          {itemType !== "service" && (
+            <div>
+              <Label className="text-sm font-medium">Images (max 4)</Label>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+                {images.length < 4 && (
+                  <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                    <ImagePlus className="h-5 w-5" />
+                    <span className="text-[10px]">Add</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Basic info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -487,79 +701,191 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           {/* Price/Qty/Sale - only when no variants */}
           {variants.length === 0 && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className={cn("grid gap-4", itemType === "service" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2")}>
                 <div>
                   <Label htmlFor="item-price-nv">Price *</Label>
                   <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
                 </div>
-                <div>
-                  <Label htmlFor="item-quantity-nv">Quantity</Label>
-                  <Input
-                    id="item-quantity-nv"
-                    className="mt-1"
-                    type="number"
-                    min="0"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="0"
-                    disabled={trackInventory}
-                  />
-                  {trackInventory && (
-                    <p className="text-xs text-muted-foreground mt-1">Managed by inventory</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 border border-border rounded-lg p-3">
-                <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
-                <div className="flex items-center gap-1.5">
-                  <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                {itemType !== "service" && (
                   <div>
-                    <Label className="text-sm font-medium">Track from Inventory</Label>
-                    <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-border rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                  <Label className="text-sm font-medium">On Sale</Label>
-                </div>
-                {showSale && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div>
-                      <Label className="text-xs">Sale Price</Label>
-                      <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
-                    </div>
-                    <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                    <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                    <Label htmlFor="item-quantity-nv">Quantity</Label>
+                    <Input
+                      id="item-quantity-nv"
+                      className="mt-1"
+                      type="number"
+                      min="0"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="0"
+                      disabled={trackInventory || !!linkedInventoryItemId}
+                    />
+                    {(trackInventory || linkedInventoryItemId) && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
+
+              {/* Track from Inventory — only meaningful for Simple items
+                  without a direct inventory link. Composite items consume
+                  inventory via ingredients; Service items have no stock. */}
+              {itemType === "simple" && !linkedInventoryItemId && (
+                <div className="flex items-center gap-2 border border-border rounded-lg p-3">
+                  <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
+                  <div className="flex items-center gap-1.5">
+                    <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <Label className="text-sm font-medium">Track from Inventory</Label>
+                      <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {itemType !== "service" && (
+                <div className="border border-border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                    <Label className="text-sm font-medium">On Sale</Label>
+                  </div>
+                  {showSale && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-xs">Sale Price</Label>
+                        <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                      </div>
+                      <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                      <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 
-          {/* Variants */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium">Variants</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {variants.length > 0 ? "All pricing and stock is managed per variant." : "Add variants for different sizes, flavors, etc."}
-                </p>
+          {/* Ingredients / Composition — Composite items only */}
+          {itemType === "composite" && (
+            <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <ChefHat className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-medium">Ingredients / Composition *</Label>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Inventory items consumed each time this menu item is sold.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                </Button>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={addVariant}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
-              </Button>
+
+              {ingredients.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-3">
+                  No ingredients yet. Add inventory items that make up this dish.
+                </p>
+              )}
+
+              <div className="space-y-2">
+                {ingredients.map((g, idx) => {
+                  const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                  return (
+                    <div key={idx} className="grid grid-cols-[1fr,90px,32px] gap-2 items-center">
+                      <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm w-full">
+                            {inv ? (
+                              <span className="truncate">{inv.name}</span>
+                            ) : (
+                              <span className="text-muted-foreground">Select inventory item...</span>
+                            )}
+                            <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Search inventory..." className="h-9" />
+                            <CommandList>
+                              <CommandEmpty>No items found.</CommandEmpty>
+                              <CommandGroup>
+                                {availableInventory.map((it) => (
+                                  <CommandItem
+                                    key={it.id}
+                                    value={`${it.name} ${it.sku}`}
+                                    onSelect={() => {
+                                      setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id } : p));
+                                      setIngredientPickerOpenIdx(null);
+                                    }}
+                                  >
+                                    <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm truncate">{it.name}</div>
+                                      <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={g.quantity || ""}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value) || 0;
+                          setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
+                        }}
+                        placeholder="Qty"
+                        className="h-9 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
+                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                        aria-label="Remove ingredient"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            {variants.map((v) => (
-              <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
-            ))}
-          </div>
+          )}
+
+          {/* Variants — hidden for Service items */}
+          {itemType !== "service" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-medium">Variants</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {variants.length > 0 ? "All pricing and stock is managed per variant." : "Add variants for different sizes, flavors, etc."}
+                  </p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
+                </Button>
+              </div>
+              {variants.map((v) => (
+                <VariantRow key={v.id} variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
+              ))}
+            </div>
+          )}
 
           {/* Extras / Sides / Toppings / Add-ons */}
-          {features?.hasExtras && (
+          {itemType !== "service" && features?.hasExtras && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -666,7 +992,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || selectedOutletIds.length === 0 || (variants.length > 0 && variants.some((v) => !v.name.trim()))}>
+          <Button onClick={handleSave} disabled={!name.trim() || (variants.length === 0 && !price) || !subcategory || selectedOutletIds.length === 0 || (variants.length > 0 && variants.some((v) => !v.name.trim())) || (itemType === "composite" && ingredients.filter((g) => g.inventoryItemId && g.quantity > 0).length === 0)}>
             {submitLabel}
           </Button>
         </DialogFooter>
