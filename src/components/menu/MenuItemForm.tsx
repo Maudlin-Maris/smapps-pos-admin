@@ -285,6 +285,14 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
         setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
+        // Infer pricing strategy from saved data
+        if ((item as MenuItemFormData & { pricingStrategy?: PricingStrategy }).pricingStrategy) {
+          setPricingStrategy((item as MenuItemFormData & { pricingStrategy?: PricingStrategy }).pricingStrategy!);
+        } else if ((item.variants?.length ?? 0) > 0 && (!item.price || item.price === 0)) {
+          setPricingStrategy("variant");
+        } else {
+          setPricingStrategy("base");
+        }
       } else {
         setItemType("simple");
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
@@ -293,6 +301,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
         setLinkedInventoryItemId(""); setIngredients([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
+        setPricingStrategy("base");
       }
     }
   }, [open, item, categories, currentOutletId]);
