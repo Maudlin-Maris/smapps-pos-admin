@@ -53,6 +53,13 @@ export interface MenuExtra {
   category?: string;
 }
 
+export type MenuItemType = "simple" | "composite" | "service";
+
+export interface MenuIngredient {
+  inventoryItemId: string;
+  quantity: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -71,6 +78,13 @@ export interface MenuItem {
   extras: MenuExtra[];
   trackInventory: boolean;
   outletId?: string;
+  /** Catalog item type — drives form behaviour and POS treatment.
+   *  Defaults to "simple" for legacy items that don't carry the field. */
+  itemType?: MenuItemType;
+  /** For Simple items: optional link to a stocked inventory item. */
+  linkedInventoryItemId?: string;
+  /** For Composite items: recipe components consumed when sold. */
+  ingredients?: MenuIngredient[];
 }
 
 interface MenuItemFormProps {
@@ -83,6 +97,10 @@ interface MenuItemFormProps {
   businessType?: BusinessTypeId;
   outlets: Outlet[];
   currentOutletId: string;
+  /** Inventory items used by Simple ("Link to inventory") and Composite
+   *  ("Ingredients") item types. Optional — when omitted those sections
+   *  show an empty-state. */
+  inventoryItems?: InventoryItem[];
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
