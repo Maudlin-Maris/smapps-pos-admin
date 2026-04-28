@@ -102,6 +102,10 @@ export interface MenuItem {
   linkedInventoryItemId?: string;
   /** For Composite items: recipe components consumed when sold. */
   ingredients?: MenuIngredient[];
+  /** IDs of reusable modifier groups attached to this item. At save-time
+   *  the form flattens these into `extras` so the existing POS UI continues
+   *  to work — the IDs are kept here so admin edits stay in sync. */
+  modifierGroupIds?: string[];
 }
 
 interface MenuItemFormProps {
