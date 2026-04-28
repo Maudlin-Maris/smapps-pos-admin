@@ -1069,26 +1069,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormSection>
           )}
 
-          {/* Variants — hidden for Service items and Open Price mode */}
+          {/* 8. Variants */}
           {itemType !== "service" && pricingStrategy !== "open" && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-medium">
-                    Variants {pricingStrategy === "variant" && <span className="text-destructive">*</span>}
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {pricingStrategy === "variant"
-                      ? "Each variant must have a price. The first variant is the POS default."
-                      : variants.length > 0
-                        ? "Variants override the base price and inventory."
-                        : "Optional — add variants for different sizes, flavors, etc."}
-                  </p>
-                </div>
+            <FormSection
+              step={8}
+              icon={Layers}
+              title="Variants"
+              description={
+                pricingStrategy === "variant"
+                  ? "Each variant must have a price. The first variant is the POS default."
+                  : variants.length > 0
+                    ? "Variants override the base price and inventory."
+                    : "Optional — add variants for different sizes, flavors, etc."
+              }
+              required={pricingStrategy === "variant"}
+            >
+              <div className="flex justify-end">
                 <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
                 </Button>
               </div>
+              {variants.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                  No variants yet.
+                </p>
+              )}
               {variants.map((v, idx) => (
                 <div key={v.id} className="relative">
                   {idx === 0 && variants.length > 1 && (
@@ -1099,21 +1104,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   <VariantRow variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
                 </div>
               ))}
-            </div>
+            </FormSection>
           )}
 
-          {/* Extras / Sides / Toppings / Add-ons */}
+          {/* 9. Add-ons / Modifiers */}
           {itemType !== "service" && features?.hasExtras && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-medium">{features.extrasLabel}</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {extras.length > 0
-                      ? `${extras.length} ${extras.length === 1 ? "item" : "items"} added`
-                      : `Optional add-ons customers can select at checkout`}
-                  </p>
-                </div>
+            <FormSection
+              step={9}
+              icon={ListPlus}
+              title={features.extrasLabel}
+              description={
+                extras.length > 0
+                  ? `${extras.length} ${extras.length === 1 ? "item" : "items"} added`
+                  : "Optional add-ons customers can select at checkout."
+              }
+            >
+              <div className="flex justify-end">
                 <Button
                   type="button"
                   variant="outline"
@@ -1128,6 +1134,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add
                 </Button>
               </div>
+              {extras.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                  No add-ons yet.
+                </p>
+              )}
               {extras.map((extra, idx) => (
                 <div
                   key={extra.id}
@@ -1204,9 +1215,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 </div>
               ))}
-            </div>
+            </FormSection>
           )}
         </div>
+
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
