@@ -805,13 +805,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
 
           {/* Pricing */}
-          <FormSection
-            icon={DollarSign}
-            title="Pricing"
-            description={itemType === "service" ? "Set the price charged for this service." : "Pick how this item is priced. You can switch strategies any time."}
-            required
-          >
-            {/* Service items keep a simple price field — no strategy selector. */}
+          <FormSection icon={DollarSign} title="Pricing" required>
             {itemType === "service" && (
               <div>
                 <Label htmlFor="item-price-svc">Price *</Label>
@@ -821,11 +815,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
             {itemType !== "service" && (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {/* Strategy selector — compact segmented control */}
+                <div className="grid grid-cols-3 gap-2">
                   {([
-                    { id: "base", label: "Base Price", desc: "Single price for all", icon: Tag },
-                    { id: "variant", label: "Variant Pricing", desc: "Price per variant", icon: Layers },
-                    { id: "open", label: "Open Price", desc: "Entered at checkout", icon: KeyRound },
+                    { id: "base", label: "Base Price", icon: Tag },
+                    { id: "variant", label: "Variants", icon: Layers },
+                    { id: "open", label: "Open Price", icon: KeyRound },
                   ] as const).map((opt) => {
                     const Icon = opt.icon;
                     const active = pricingStrategy === opt.id;
@@ -845,120 +840,106 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           if (opt.id === "variant" && variants.length === 0) {
                             addVariant();
                           }
+                          if (opt.id !== "variant") {
+                            // Variant pricing owns the variants list — clear it
+                            // when switching away so the user isn't surprised.
+                            setVariants([]);
+                          }
                         }}
                         className={cn(
-                          "text-left rounded-lg border p-3 transition-colors",
+                          "flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors",
                           active
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border hover:bg-muted/50",
+                            ? "border-primary bg-primary/5 text-primary font-medium"
+                            : "border-border text-muted-foreground hover:bg-muted/50",
                         )}
                       >
-                        <div className="flex items-center gap-2">
-                          <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
-                          <span className="text-sm font-medium">{opt.label}</span>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-1">{opt.desc}</p>
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{opt.label}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                {/* BASE PRICE MODE */}
+                {/* BASE PRICE */}
                 {pricingStrategy === "base" && (
-                  <div className="space-y-4 pt-3 border-t border-border">
-                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                      <div>
-                        <Label htmlFor="item-price-nv">Base Price *</Label>
-                        <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                      </div>
-                      {variants.length === 0 && (
-                        <div>
-                          <Label htmlFor="item-quantity-nv">Quantity</Label>
-                          <Input
-                            id="item-quantity-nv"
-                            className="mt-1"
-                            type="number"
-                            min="0"
-                            value={quantity}
-                            onChange={(e) => setQuantity(e.target.value)}
-                            placeholder="0"
-                            disabled={trackInventory || !!linkedInventoryItemId}
-                          />
-                          {(trackInventory || linkedInventoryItemId) && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {variants.length > 0 && (
-                      <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
-                        <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                        <p className="text-xs text-muted-foreground">
-                          Variants below can override the base price. Leave a variant price empty to inherit the base.
-                        </p>
-                      </div>
-                    )}
-
-                    {itemType === "simple" && !linkedInventoryItemId && variants.length === 0 && (
-                      <div className="flex items-center gap-2 border border-border rounded-lg p-3">
-                        <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
-                        <div className="flex items-center gap-1.5">
-                          <PackageCheck className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <Label className="text-sm font-medium">Track from Inventory</Label>
-                            <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="border border-border rounded-lg p-3 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                        <Label className="text-sm font-medium">On Sale</Label>
-                      </div>
-                      {showSale && (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          <div>
-                            <Label className="text-xs">Sale Price</Label>
-                            <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
-                          </div>
-                          <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                          <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
-                        </div>
-                      )}
-                    </div>
+                  <div>
+                    <Label htmlFor="item-price-nv">Price *</Label>
+                    <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
                   </div>
                 )}
 
-                {/* VARIANT PRICING MODE — pricing handled in Variants section below */}
+                {/* VARIANT PRICING — inline name + price rows */}
                 {pricingStrategy === "variant" && (
-                  <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
-                    <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                    <p className="text-xs text-muted-foreground">
-                      Each variant carries its own price. Add variants below — the first one is used as the default in the POS.
-                    </p>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
+                      <span>Variant name</span>
+                      <span>Price</span>
+                      <span />
+                    </div>
+                    {variants.map((v, idx) => (
+                      <div key={v.id} className="grid grid-cols-[1fr,140px,32px] gap-2 items-center">
+                        <Input
+                          className="h-9 text-sm"
+                          value={v.name}
+                          onChange={(e) => updateVariant(v.id, { ...v, name: e.target.value })}
+                          placeholder={idx === 0 ? "e.g. Small" : "Variant name"}
+                        />
+                        <Input
+                          className="h-9 text-sm"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={v.price || ""}
+                          onChange={(e) => updateVariant(v.id, { ...v, price: parseFloat(e.target.value) || 0 })}
+                          placeholder="0.00"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeVariant(v.id)}
+                          disabled={variants.length === 1}
+                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                          aria-label="Remove variant"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
+                    </Button>
                   </div>
                 )}
 
-                {/* OPEN PRICE MODE */}
+                {/* OPEN PRICE */}
                 {pricingStrategy === "open" && (
-                  <div className="rounded-md bg-amber-500/5 border border-amber-500/30 p-3 flex gap-2">
-                    <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Price entered at checkout</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        The cashier will be prompted to enter the price each time this item is added to a sale.
-                      </p>
+                  <p className="text-xs text-muted-foreground">
+                    Price will be entered at checkout.
+                  </p>
+                )}
+
+                {/* Sale toggle — only meaningful for Base Price */}
+                {pricingStrategy === "base" && (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                      <Label className="text-sm">On Sale</Label>
                     </div>
+                    {showSale && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs">Sale Price</Label>
+                          <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                        </div>
+                        <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                        <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                      </div>
+                    )}
                   </div>
                 )}
               </>
             )}
           </FormSection>
+
 
           {/* Composition — Composite items only */}
           {itemType === "composite" && (
