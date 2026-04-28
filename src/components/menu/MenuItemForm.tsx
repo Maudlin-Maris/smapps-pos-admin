@@ -289,8 +289,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setSubcategory(item.subcategory);
         setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
         // Infer pricing strategy from saved data
-        if ((item as MenuItemFormData & { pricingStrategy?: PricingStrategy }).pricingStrategy) {
-          setPricingStrategy((item as MenuItemFormData & { pricingStrategy?: PricingStrategy }).pricingStrategy!);
+        if (item.pricingStrategy) {
+          setPricingStrategy(item.pricingStrategy);
         } else if ((item.variants?.length ?? 0) > 0 && (!item.price || item.price === 0)) {
           setPricingStrategy("variant");
         } else {
