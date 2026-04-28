@@ -291,20 +291,18 @@ export default function MenuManagement() {
         </div>
       </div>
 
-      {!isAllOutlets && (
-        <MenuItemForm
-          open={formOpen}
-          onOpenChange={(open) => { setFormOpen(open); if (!open) { setEditingItem(null); setFormMode("add"); } }}
-          categories={categories}
-          item={editingItem}
-          onSave={handleSave}
-          mode={formMode}
-          businessType={currentOutlet?.businessType}
-          outlets={outlets}
-          currentOutletId={selectedOutletId}
-          inventoryItems={defaultInventoryItems}
-        />
-      )}
+      <MenuItemForm
+        open={formOpen}
+        onOpenChange={(open) => { setFormOpen(open); if (!open) { setEditingItem(null); setFormMode("add"); } }}
+        categories={categories}
+        item={editingItem}
+        onSave={handleSave}
+        mode={formMode}
+        businessType={currentOutlet?.businessType}
+        outlets={outlets}
+        currentOutletId={isAllOutlets ? undefined : selectedOutletId}
+        inventoryItems={defaultInventoryItems}
+      />
 
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="sm:max-w-sm">
