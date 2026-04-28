@@ -493,17 +493,9 @@ export default function InventoryManagement() {
       {tab === "units" && (
         <MeasuringUnitManager units={units} setUnits={setUnits} />
       )}
-      {tab === "composite" && (
-        <CompositeItemForm
-          composites={outletComposites}
-          setComposites={setComposites}
-          inventoryItems={outletItems}
-          units={units}
-          menuItems={sampleMenuItems}
-          readOnly={isAllOutlets}
-          selectedOutletId={selectedOutletId}
-        />
-      )}
+      {/* Composite items now live in the Catalog → Create/Edit Item form
+          (Item Type = Composite). Cross-page profitability still derives
+          from the seeded composites state above. */}
 
       <StockAdjustDialog
         open={adjustOpen}
