@@ -31,6 +31,8 @@ import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, Popov
 import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/data/outlets";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
+import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
+import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
