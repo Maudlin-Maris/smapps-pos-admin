@@ -23,6 +23,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { outlets } from "@/data/outlets";
+import { defaultInventoryItems } from "@/data/inventoryItems";
 
 const initialCategories: Category[] = [
   {
@@ -301,6 +302,7 @@ export default function MenuManagement() {
           businessType={currentOutlet?.businessType}
           outlets={outlets}
           currentOutletId={selectedOutletId}
+          inventoryItems={defaultInventoryItems}
         />
       )}
 
