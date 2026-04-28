@@ -17,6 +17,7 @@ export type PermissionId =
   | "catalog.view"
   | "catalog.manage"
   | "catalog.bundles.manage"
+  | "catalog.modifiers.manage"
   // Inventory
   | "inventory.view"
   | "inventory.adjust"
@@ -69,6 +70,7 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
       { id: "catalog.view", label: "View catalog", description: "Browse products, categories and variants" },
       { id: "catalog.manage", label: "Manage catalog", description: "Create, edit and delete products" },
       { id: "catalog.bundles.manage", label: "Manage promo bundles", description: "Configure promotional product bundles" },
+      { id: "catalog.modifiers.manage", label: "Manage modifier groups", description: "Configure reusable add-ons (toppings, upgrades, options)" },
     ],
   },
   {
@@ -144,7 +146,7 @@ const ROLES_KEY = "smapps_rbac_roles";
 const MANAGER_PERMISSIONS: PermissionId[] = [
   "sales.process", "sales.refund", "sales.discount.apply", "sales.void",
   "sales.reprint_receipt", "sales.open_cash_drawer",
-  "catalog.view", "catalog.manage", "catalog.bundles.manage",
+  "catalog.view", "catalog.manage", "catalog.bundles.manage", "catalog.modifiers.manage",
   "inventory.view", "inventory.adjust", "inventory.receive", "inventory.transfer",
   "purchase_orders.manage",
   "customers.view", "customers.manage", "loyalty.manage",
