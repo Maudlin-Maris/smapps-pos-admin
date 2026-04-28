@@ -73,7 +73,7 @@ export default function ModifierGroups() {
 
   useEffect(() => {
     setGroups(loadModifierGroups());
-    setInventory(loadInventoryItems());
+    setInventory(defaultInventoryItems);
   }, []);
 
   const persist = (next: ModifierGroup[]) => {
@@ -264,7 +264,7 @@ export default function ModifierGroups() {
                               )}
                             </div>
                             <div className="text-muted-foreground">
-                              {m.price > 0 ? `+${formatCurrency(m.price)}` : "Free"}
+                              {m.price > 0 ? `+${formatNaira(m.price)}` : "Free"}
                             </div>
                           </div>
                         );
