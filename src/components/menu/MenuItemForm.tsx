@@ -317,9 +317,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   // Filter inventory items to the outlets currently selected on the form so
   // users only link to/recipe from inventory that actually exists at those
   // outlets. Falls back to all items when no outlet has been selected yet.
+  // Inline-created items are always shown (the user just made them).
+  const mergedInventory = [...inventoryItems, ...localInventory];
   const availableInventory = selectedOutletIds.length
-    ? inventoryItems.filter((i) => selectedOutletIds.includes(i.outletId))
-    : inventoryItems;
+    ? mergedInventory.filter((i) => selectedOutletIds.includes(i.outletId) || localInventory.some((l) => l.id === i.id))
+    : mergedInventory;
 
   useEffect(() => {
     if (open) {
