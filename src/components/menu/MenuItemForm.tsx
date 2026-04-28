@@ -125,6 +125,10 @@ interface MenuItemFormProps {
    *  ("Ingredients") item types. Optional — when omitted those sections
    *  show an empty-state. */
   inventoryItems?: InventoryItem[];
+  /** Called when the user creates a new inventory item inline from the
+   *  Simple "Link to Inventory" section. Parent should persist it so it
+   *  appears in the Inventory page going forward. */
+  onCreateInventoryItem?: (item: InventoryItem) => void;
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
