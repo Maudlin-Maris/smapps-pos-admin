@@ -399,7 +399,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   // by name match against the catalog categories — admin can override.
   const handleLinkInventory = (invId: string) => {
     setLinkedInventoryItemId(invId);
-    const inv = inventoryItems.find((i) => i.id === invId);
+    const inv = mergedInventory.find((i) => i.id === invId);
     if (!inv) return;
     if (!name.trim()) setName(inv.name);
     if (!sku.trim()) setSku(inv.sku);
