@@ -150,6 +150,9 @@ interface MenuItemFormProps {
    *  ("Ingredients") item types. Optional — when omitted those sections
    *  show an empty-state. */
   inventoryItems?: InventoryItem[];
+  /** Measuring units — used by composite ingredient unit selectors and to
+   *  resolve per-unit costs from inventory conversions. */
+  units?: MeasuringUnit[];
 }
 
 function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
