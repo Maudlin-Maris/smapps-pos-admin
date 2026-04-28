@@ -444,26 +444,140 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* Images */}
+          {/* Item Type selector — drives which sections are shown below. */}
           <div>
-            <Label className="text-sm font-medium">Images (max 4)</Label>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {images.map((img, idx) => (
-                <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
-                  <img src={img} alt="" className="h-full w-full object-cover" />
-                  <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <X className="h-3 w-3 text-destructive" />
+            <Label className="text-sm font-medium">Item Type *</Label>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+              Choose how this item behaves at the POS and in inventory.
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { key: "simple", label: "Simple", hint: "Retail / barcode", Icon: Package },
+                { key: "composite", label: "Composite", hint: "Made from ingredients", Icon: ChefHat },
+                { key: "service", label: "Service", hint: "No inventory", Icon: Sparkles },
+              ] as const).map(({ key, label, hint, Icon }) => {
+                const active = itemType === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => handleTypeChange(key)}
+                    className={cn(
+                      "flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-colors",
+                      active
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-primary/40 hover:bg-muted/40"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
+                      <span className="text-sm font-medium">{label}</span>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground leading-tight">{hint}</span>
                   </button>
-                </div>
-              ))}
-              {images.length < 4 && (
-                <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-                  <ImagePlus className="h-5 w-5" />
-                  <span className="text-[10px]">Add</span>
-                </button>
-              )}
+                );
+              })}
             </div>
           </div>
+
+          {/* Link to Inventory — Simple items only */}
+          {itemType === "simple" && (
+            <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
+              <div className="flex items-center gap-1.5">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-sm font-medium">Link to Inventory</Label>
+                <span className="text-[11px] text-muted-foreground">(optional)</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category.
+              </p>
+              <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal h-9 text-sm"
+                  >
+                    {linkedInventoryItemId
+                      ? (() => {
+                          const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
+                          return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
+                        })()
+                      : <span className="text-muted-foreground">Search inventory...</span>}
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search by name or SKU..." className="h-9" />
+                    <CommandList>
+                      <CommandEmpty>No inventory items found.</CommandEmpty>
+                      <CommandGroup>
+                        {linkedInventoryItemId && (
+                          <CommandItem
+                            value="__clear__"
+                            onSelect={() => { setLinkedInventoryItemId(""); setLinkPickerOpen(false); }}
+                          >
+                            <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                            <span className="text-muted-foreground">Clear link</span>
+                          </CommandItem>
+                        )}
+                        {availableInventory.map((inv) => (
+                          <CommandItem
+                            key={inv.id}
+                            value={`${inv.name} ${inv.sku}`}
+                            onSelect={() => { handleLinkInventory(inv.id); setLinkPickerOpen(false); }}
+                          >
+                            <Check className={cn("h-3.5 w-3.5 mr-2", linkedInventoryItemId === inv.id ? "opacity-100" : "opacity-0")} />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm truncate">{inv.name}</div>
+                              <div className="text-[11px] text-muted-foreground truncate">{inv.sku} · stock {inv.stock}</div>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {linkedInventoryItemId && (() => {
+                const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
+                if (!inv) return null;
+                return (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Badge variant="secondary" className="text-[10px]">Linked</Badge>
+                    <span className="text-[11px] text-muted-foreground">
+                      Stock: <span className="font-medium text-foreground tabular-nums">{inv.stock}</span> · Cost: <span className="font-medium text-foreground tabular-nums">{inv.costPrice}</span>
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* Images — hidden for Service items to keep the form minimal. */}
+          {itemType !== "service" && (
+            <div>
+              <Label className="text-sm font-medium">Images (max 4)</Label>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+                {images.length < 4 && (
+                  <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                    <ImagePlus className="h-5 w-5" />
+                    <span className="text-[10px]">Add</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Basic info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
