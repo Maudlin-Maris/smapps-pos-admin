@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
@@ -219,6 +219,48 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
         </div>
       )}
     </div>
+  );
+}
+
+/** Visual section wrapper — numbered, iconed header + framed content area.
+ *  Used to break the catalog form into clearly scannable groups so admins
+ *  can quickly find Basics, Pricing, Variants, Modifiers, etc. */
+function FormSection({
+  step,
+  icon: Icon,
+  title,
+  description,
+  required,
+  children,
+}: {
+  step: number;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-card overflow-hidden">
+      <header className="flex items-start gap-3 px-4 py-3 border-b border-border bg-muted/30">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
+          {step}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold leading-none">
+              {title}
+              {required && <span className="text-destructive ml-1">*</span>}
+            </h3>
+          </div>
+          {description && (
+            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{description}</p>
+          )}
+        </div>
+      </header>
+      <div className="p-4 space-y-4">{children}</div>
+    </section>
   );
 }
 
@@ -498,13 +540,15 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           <DialogDescription>{formDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Item Type selector — drives which sections are shown below. */}
-          <div>
-            <Label className="text-sm font-medium">Item Type *</Label>
-            <p className="text-xs text-muted-foreground mt-0.5 mb-2">
-              Choose how this item behaves at the POS and in inventory.
-            </p>
+        <div className="space-y-4">
+          {/* 1. Item Type selector */}
+          <FormSection
+            step={1}
+            icon={Package}
+            title="Item Type"
+            description="Choose how this item behaves at the POS and in inventory."
+            required
+          >
             <div className="grid grid-cols-3 gap-2">
               {([
                 { key: "simple", label: "Simple", hint: "Retail / barcode", Icon: Package },
@@ -533,19 +577,16 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 );
               })}
             </div>
-          </div>
+          </FormSection>
 
-          {/* Link to Inventory — Simple items only */}
+          {/* 2. Link to Inventory — Simple items only */}
           {itemType === "simple" && (
-            <div className="border border-border rounded-lg p-3 space-y-2 bg-muted/30">
-              <div className="flex items-center gap-1.5">
-                <Link2 className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-sm font-medium">Link to Inventory</Label>
-                <span className="text-[11px] text-muted-foreground">(optional)</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                Connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category.
-              </p>
+            <FormSection
+              step={2}
+              icon={Link2}
+              title="Link to Inventory"
+              description="Optionally connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category."
+            >
               <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -600,7 +641,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
                 if (!inv) return null;
                 return (
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-[10px]">Linked</Badge>
                     <span className="text-[11px] text-muted-foreground">
                       Stock: <span className="font-medium text-foreground tabular-nums">{inv.stock}</span> · Cost: <span className="font-medium text-foreground tabular-nums">{inv.costPrice}</span>
@@ -608,60 +649,59 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 );
               })()}
-            </div>
+            </FormSection>
           )}
 
-          {/* Images — hidden for Service items to keep the form minimal. */}
-          {itemType !== "service" && (
-            <div>
-              <Label className="text-sm font-medium">Images (max 4)</Label>
-              <div className="flex gap-2 mt-2 flex-wrap">
-                {images.map((img, idx) => (
-                  <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X className="h-3 w-3 text-destructive" />
-                    </button>
-                  </div>
-                ))}
-                {images.length < 4 && (
-                  <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-                    <ImagePlus className="h-5 w-5" />
-                    <span className="text-[10px]">Add</span>
-                  </button>
-                )}
+          {/* 3. Basic Info */}
+          <FormSection
+            step={3}
+            icon={FileText}
+            title="Basic Info"
+            description="Name, category and description shown across the catalog."
+            required
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Label htmlFor="item-name">Item Name *</Label>
+                <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
+              </div>
+
+              <div>
+                <Label>Category *</Label>
+                <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategory(""); }}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Subcategory *</Label>
+                <Select value={subcategory} onValueChange={setSubcategory} disabled={!selectedCatId}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select subcategory" /></SelectTrigger>
+                  <SelectContent>
+                    {subcategories.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <Label htmlFor="item-desc">Description</Label>
+                <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
               </div>
             </div>
-          )}
+          </FormSection>
 
-          {/* Basic info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <Label htmlFor="item-name">Item Name *</Label>
-              <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
-            </div>
-
+          {/* 4. Availability — outlets + status */}
+          <FormSection
+            step={4}
+            icon={MapPin}
+            title="Availability"
+            description="Outlets that sell this item and whether it's currently active."
+            required
+          >
             <div>
-              <Label>Category *</Label>
-              <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategory(""); }}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Subcategory *</Label>
-              <Select value={subcategory} onValueChange={setSubcategory} disabled={!selectedCatId}>
-                <SelectTrigger className="mt-1"><SelectValue placeholder="Select subcategory" /></SelectTrigger>
-                <SelectContent>
-                  {subcategories.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="sm:col-span-2">
               <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlets *</Label>
               <OutletPopover>
                 <OutletPopoverTrigger asChild>
@@ -738,38 +778,63 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
 
             {variants.length === 0 && (
-              <div className="flex items-center gap-3 self-end pb-1">
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
                 <div>
                   <Label className="text-sm">Status</Label>
-                  <p className="text-xs text-muted-foreground">{isActive ? "Active" : "Inactive"}</p>
+                  <p className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</p>
                 </div>
               </div>
             )}
+          </FormSection>
 
-            <div className="sm:col-span-2">
-              <Label htmlFor="item-desc">Description</Label>
-              <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
-            </div>
-          </div>
-
-          {/* Service items keep a simple price field — no strategy selector. */}
-          {itemType === "service" && (
-            <div>
-              <Label htmlFor="item-price-svc">Price *</Label>
-              <Input id="item-price-svc" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-            </div>
+          {/* 5. Images — hidden for Service items */}
+          {itemType !== "service" && (
+            <FormSection
+              step={5}
+              icon={ImageIcon}
+              title="Images"
+              description="Up to 4 photos. The first image is used as the POS thumbnail."
+            >
+              <div className="flex gap-2 flex-wrap">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3 text-destructive" />
+                    </button>
+                  </div>
+                ))}
+                {images.length < 4 && (
+                  <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+                    <ImagePlus className="h-5 w-5" />
+                    <span className="text-[10px]">Add</span>
+                  </button>
+                )}
+              </div>
+            </FormSection>
           )}
 
-          {/* Pricing — strategy-driven (Toast-style) */}
-          {itemType !== "service" && (
-            <div className="border border-border rounded-lg p-4 space-y-4">
+
+          {/* 6. Pricing */}
+          <FormSection
+            step={6}
+            icon={DollarSign}
+            title="Pricing"
+            description={itemType === "service" ? "Set the price charged for this service." : "Pick how this item is priced. You can switch strategies any time."}
+            required
+          >
+            {/* Service items keep a simple price field — no strategy selector. */}
+            {itemType === "service" && (
               <div>
-                <Label className="text-sm font-medium">Pricing Strategy</Label>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Choose how this item is priced. Switch any time.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                <Label htmlFor="item-price-svc">Price *</Label>
+                <Input id="item-price-svc" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+              </div>
+            )}
+
+            {itemType !== "service" && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {([
                     { id: "base", label: "Base Price", desc: "Single price for all", icon: Tag },
                     { id: "variant", label: "Variant Pricing", desc: "Price per variant", icon: Layers },
@@ -793,9 +858,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           if (opt.id === "variant" && variants.length === 0) {
                             addVariant();
                           }
-                          if (opt.id !== "variant" && variants.length === 0) {
-                            // no-op
-                          }
                         }}
                         className={cn(
                           "text-left rounded-lg border p-3 transition-colors",
@@ -813,129 +875,126 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     );
                   })}
                 </div>
-              </div>
 
-              {/* BASE PRICE MODE */}
-              {pricingStrategy === "base" && (
-                <div className="space-y-4 pt-2 border-t border-border">
-                  <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-                    <div>
-                      <Label htmlFor="item-price-nv">Base Price *</Label>
-                      <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                    </div>
-                    {variants.length === 0 && (
+                {/* BASE PRICE MODE */}
+                {pricingStrategy === "base" && (
+                  <div className="space-y-4 pt-3 border-t border-border">
+                    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                       <div>
-                        <Label htmlFor="item-quantity-nv">Quantity</Label>
-                        <Input
-                          id="item-quantity-nv"
-                          className="mt-1"
-                          type="number"
-                          min="0"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
-                          placeholder="0"
-                          disabled={trackInventory || !!linkedInventoryItemId}
-                        />
-                        {(trackInventory || linkedInventoryItemId) && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
-                          </p>
-                        )}
+                        <Label htmlFor="item-price-nv">Base Price *</Label>
+                        <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                      </div>
+                      {variants.length === 0 && (
+                        <div>
+                          <Label htmlFor="item-quantity-nv">Quantity</Label>
+                          <Input
+                            id="item-quantity-nv"
+                            className="mt-1"
+                            type="number"
+                            min="0"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                            placeholder="0"
+                            disabled={trackInventory || !!linkedInventoryItemId}
+                          />
+                          {(trackInventory || linkedInventoryItemId) && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {linkedInventoryItemId ? "Sourced from linked inventory" : "Managed by inventory"}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {variants.length > 0 && (
+                      <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
+                        <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground">
+                          Variants below can override the base price. Leave a variant price empty to inherit the base.
+                        </p>
                       </div>
                     )}
-                  </div>
 
-                  {variants.length > 0 && (
-                    <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
-                      <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                      <p className="text-xs text-muted-foreground">
-                        Variants below can override the base price. Leave a variant price empty to inherit the base.
-                      </p>
-                    </div>
-                  )}
-
-                  {itemType === "simple" && !linkedInventoryItemId && variants.length === 0 && (
-                    <div className="flex items-center gap-2 border border-border rounded-lg p-3">
-                      <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
-                      <div className="flex items-center gap-1.5">
-                        <PackageCheck className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <Label className="text-sm font-medium">Track from Inventory</Label>
-                          <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                    {itemType === "simple" && !linkedInventoryItemId && variants.length === 0 && (
+                      <div className="flex items-center gap-2 border border-border rounded-lg p-3">
+                        <Switch checked={trackInventory} onCheckedChange={setTrackInventory} />
+                        <div className="flex items-center gap-1.5">
+                          <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <Label className="text-sm font-medium">Track from Inventory</Label>
+                            <p className="text-xs text-muted-foreground">Quantity will be managed from Inventory Management</p>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="border border-border rounded-lg p-3 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                      <Label className="text-sm font-medium">On Sale</Label>
-                    </div>
-                    {showSale && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div>
-                          <Label className="text-xs">Sale Price</Label>
-                          <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
-                        </div>
-                        <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                        <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
                       </div>
                     )}
+
+                    <div className="border border-border rounded-lg p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                        <Label className="text-sm font-medium">On Sale</Label>
+                      </div>
+                      {showSale && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div>
+                            <Label className="text-xs">Sale Price</Label>
+                            <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                          </div>
+                          <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                          <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* VARIANT PRICING MODE — pricing handled in Variants section below */}
-              {pricingStrategy === "variant" && (
-                <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
-                  <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground">
-                    Each variant carries its own price. Add variants below — the first one is used as the default in the POS.
-                  </p>
-                </div>
-              )}
-
-              {/* OPEN PRICE MODE */}
-              {pricingStrategy === "open" && (
-                <div className="rounded-md bg-amber-500/5 border border-amber-500/30 p-3 flex gap-2">
-                  <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">Price entered at checkout</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      The cashier will be prompted to enter the price each time this item is added to a sale.
+                {/* VARIANT PRICING MODE — pricing handled in Variants section below */}
+                {pricingStrategy === "variant" && (
+                  <div className="rounded-md bg-muted/40 border border-dashed border-border p-3 flex gap-2">
+                    <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      Each variant carries its own price. Add variants below — the first one is used as the default in the POS.
                     </p>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
 
-          {/* Ingredients / Composition — Composite items only */}
-          {itemType === "composite" && (
-            <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <ChefHat className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-sm font-medium">Ingredients / Composition *</Label>
+                {/* OPEN PRICE MODE */}
+                {pricingStrategy === "open" && (
+                  <div className="rounded-md bg-amber-500/5 border border-amber-500/30 p-3 flex gap-2">
+                    <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Price entered at checkout</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        The cashier will be prompted to enter the price each time this item is added to a sale.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Inventory items consumed each time this menu item is sold.
-                  </p>
-                </div>
+                )}
+              </>
+            )}
+          </FormSection>
+
+          {/* 7. Composition — Composite items only */}
+          {itemType === "composite" && (
+            <FormSection
+              step={7}
+              icon={ChefHat}
+              title="Composition"
+              description="Inventory items consumed each time this menu item is sold."
+              required
+            >
+              <div className="flex justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
                 </Button>
               </div>
 
               {ingredients.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3">
+                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
                   No ingredients yet. Add inventory items that make up this dish.
                 </p>
               )}
@@ -1007,29 +1066,34 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   );
                 })}
               </div>
-            </div>
+            </FormSection>
           )}
 
-          {/* Variants — hidden for Service items and Open Price mode */}
+          {/* 8. Variants */}
           {itemType !== "service" && pricingStrategy !== "open" && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-medium">
-                    Variants {pricingStrategy === "variant" && <span className="text-destructive">*</span>}
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {pricingStrategy === "variant"
-                      ? "Each variant must have a price. The first variant is the POS default."
-                      : variants.length > 0
-                        ? "Variants override the base price and inventory."
-                        : "Optional — add variants for different sizes, flavors, etc."}
-                  </p>
-                </div>
+            <FormSection
+              step={8}
+              icon={Layers}
+              title="Variants"
+              description={
+                pricingStrategy === "variant"
+                  ? "Each variant must have a price. The first variant is the POS default."
+                  : variants.length > 0
+                    ? "Variants override the base price and inventory."
+                    : "Optional — add variants for different sizes, flavors, etc."
+              }
+              required={pricingStrategy === "variant"}
+            >
+              <div className="flex justify-end">
                 <Button type="button" variant="outline" size="sm" onClick={addVariant}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
                 </Button>
               </div>
+              {variants.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                  No variants yet.
+                </p>
+              )}
               {variants.map((v, idx) => (
                 <div key={v.id} className="relative">
                   {idx === 0 && variants.length > 1 && (
@@ -1040,21 +1104,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   <VariantRow variant={v} onChange={(upd) => updateVariant(v.id, upd)} onRemove={() => removeVariant(v.id)} />
                 </div>
               ))}
-            </div>
+            </FormSection>
           )}
 
-          {/* Extras / Sides / Toppings / Add-ons */}
+          {/* 9. Add-ons / Modifiers */}
           {itemType !== "service" && features?.hasExtras && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-medium">{features.extrasLabel}</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {extras.length > 0
-                      ? `${extras.length} ${extras.length === 1 ? "item" : "items"} added`
-                      : `Optional add-ons customers can select at checkout`}
-                  </p>
-                </div>
+            <FormSection
+              step={9}
+              icon={ListPlus}
+              title={features.extrasLabel}
+              description={
+                extras.length > 0
+                  ? `${extras.length} ${extras.length === 1 ? "item" : "items"} added`
+                  : "Optional add-ons customers can select at checkout."
+              }
+            >
+              <div className="flex justify-end">
                 <Button
                   type="button"
                   variant="outline"
@@ -1069,6 +1134,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   <Plus className="h-3.5 w-3.5 mr-1" /> Add
                 </Button>
               </div>
+              {extras.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                  No add-ons yet.
+                </p>
+              )}
               {extras.map((extra, idx) => (
                 <div
                   key={extra.id}
@@ -1145,9 +1215,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 </div>
               ))}
-            </div>
+            </FormSection>
           )}
         </div>
+
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
