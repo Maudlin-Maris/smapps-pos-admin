@@ -465,7 +465,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     setInlineShowAdvanced(false);
   };
 
-
+  const handleImageUpload = () => {
     if (images.length >= 4) return;
     const input = document.createElement("input");
     input.type = "file";
