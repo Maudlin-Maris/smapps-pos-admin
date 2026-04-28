@@ -753,6 +753,14 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           </div>
 
+          {/* Service items keep a simple price field — no strategy selector. */}
+          {itemType === "service" && (
+            <div>
+              <Label htmlFor="item-price-svc">Price *</Label>
+              <Input id="item-price-svc" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+            </div>
+          )}
+
           {/* Pricing — strategy-driven (Toast-style) */}
           {itemType !== "service" && (
             <div className="border border-border rounded-lg p-4 space-y-4">
