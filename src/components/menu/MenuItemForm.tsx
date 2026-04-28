@@ -973,31 +973,28 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             )}
           </FormSection>
 
-          {/* Ingredients / Composition — Composite items only */}
+          {/* 7. Composition — Composite items only */}
           {itemType === "composite" && (
-            <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <ChefHat className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-sm font-medium">Ingredients / Composition *</Label>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Inventory items consumed each time this menu item is sold.
-                  </p>
-                </div>
+            <FormSection
+              step={7}
+              icon={ChefHat}
+              title="Composition"
+              description="Inventory items consumed each time this menu item is sold."
+              required
+            >
+              <div className="flex justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
                 </Button>
               </div>
 
               {ingredients.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-3">
+                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
                   No ingredients yet. Add inventory items that make up this dish.
                 </p>
               )}
@@ -1069,7 +1066,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   );
                 })}
               </div>
-            </div>
+            </FormSection>
           )}
 
           {/* Variants — hidden for Service items and Open Price mode */}
