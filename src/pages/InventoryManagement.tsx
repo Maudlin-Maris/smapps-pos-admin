@@ -36,8 +36,10 @@ import StockAdjustmentHistory, {
 import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialog";
 import ProfitabilityView from "@/components/inventory/ProfitabilityView";
 import { computeProfitability } from "@/lib/profitability";
+import { defaultInventoryItems } from "@/data/inventoryItems";
 
-const defaultItems: InventoryItem[] = [
+const defaultItems: InventoryItem[] = defaultInventoryItems;
+const _OLD_DEFAULT_ITEMS_INLINE: InventoryItem[] = [
   // Restaurant (outlet-1, outlet-3)
   { id: "i1", name: "Coffee Beans (Arabica)", sku: "CB-001", categoryId: "1", unitId: "1", stock: 45, minStock: 20, costPrice: 12.5, status: "good", conversions: [{ id: "cv1", fromQuantity: 1, toQuantity: 50, toUnitId: "5" }], outletId: "outlet-1" },
   { id: "i2", name: "Whole Milk", sku: "ML-001", categoryId: "1", unitId: "3", stock: 12, minStock: 15, costPrice: 1.2, status: "low", conversions: [{ id: "cv2", fromQuantity: 1, toQuantity: 1000, toUnitId: "4" }], outletId: "outlet-1" },
