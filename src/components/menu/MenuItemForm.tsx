@@ -885,7 +885,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           )}
 
           {/* Extras / Sides / Toppings / Add-ons */}
-          {features?.hasExtras && (
+          {itemType !== "service" && features?.hasExtras && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
