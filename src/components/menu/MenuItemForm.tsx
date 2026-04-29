@@ -382,14 +382,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       setTrackInventory(false);
       setLinkedInventoryItemId("");
       setIngredients([]);
+      setSellingUnit("hr");
     } else if (next === "simple") {
       // Composite ingredients & track-inventory don't apply
       setIngredients([]);
       setTrackInventory(false);
+      setSellingUnit((prev) => (SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev));
     } else if (next === "composite") {
       // Linked inventory item is a Simple-only concept
       setLinkedInventoryItemId("");
       setTrackInventory(false);
+      setSellingUnit((prev) => (SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev));
     }
   };
 
