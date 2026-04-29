@@ -766,7 +766,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
               </div>
 
-              <div className="sm:col-span-2">
+              <div>
                 <Label>Category *</Label>
                 <Select value={selectedCatId} onValueChange={(v) => setSelectedCatId(v)}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
@@ -774,6 +774,38 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  Selling Unit
+                  {itemType === "simple" && linkedInventoryItemId && (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </Label>
+                <Select
+                  value={sellingUnit}
+                  onValueChange={setSellingUnit}
+                  disabled={itemType === "simple" && !!linkedInventoryItemId}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
+                      <SelectItem key={u.abbreviation} value={u.abbreviation}>
+                        {u.name} ({u.abbreviation})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                  {itemType === "service"
+                    ? "Time-based unit shown at checkout (e.g. per hour, per session)."
+                    : itemType === "simple" && linkedInventoryItemId
+                      ? "Synced from the linked inventory item."
+                      : "Unit displayed when selling this item (e.g. pcs, kg, L)."}
+                </p>
               </div>
 
               <div className="sm:col-span-2">
