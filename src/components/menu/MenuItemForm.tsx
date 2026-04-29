@@ -771,13 +771,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </div>
 
               <div>
-                <Label>Category *</Label>
-                <Select value={selectedCatId} onValueChange={(v) => setSelectedCatId(v)}>
+                <Label className="flex items-center gap-1.5">
+                  Category *
+                  {itemType === "simple" && linkedInventoryItemId && (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </Label>
+                <Select
+                  value={selectedCatId}
+                  onValueChange={(v) => setSelectedCatId(v)}
+                  disabled={itemType === "simple" && !!linkedInventoryItemId}
+                >
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
+                {itemType === "simple" && linkedInventoryItemId && (
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                    Synced from the linked inventory item.
+                  </p>
+                )}
               </div>
 
               <div>
