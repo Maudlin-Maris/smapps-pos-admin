@@ -570,6 +570,41 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Availability — outlets + status (selected first so downstream sections can filter) */}
+          <FormSection
+            icon={MapPin}
+            title="Availability"
+            description="Choose the outlet that will sell this item. Inventory and other options are filtered based on this selection."
+            required
+          >
+            <div>
+              <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
+              <Select
+                value={selectedOutletIds[0] ?? ""}
+                onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select an outlet..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {outlets.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {variants.length === 0 && (
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <div>
+                  <Label className="text-sm">Status</Label>
+                  <p className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</p>
+                </div>
+              </div>
+            )}
+          </FormSection>
+
           {/* Item Type selector */}
           <FormSection
             icon={Package}
@@ -833,40 +868,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           </FormSection>
 
-          {/* Availability — outlets + status */}
-          <FormSection
-            icon={MapPin}
-            title="Availability"
-            description="Outlets that sell this item and whether it's currently active."
-            required
-          >
-            <div>
-              <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
-              <Select
-                value={selectedOutletIds[0] ?? ""}
-                onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select an outlet..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {outlets.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {variants.length === 0 && (
-              <div className="flex items-center gap-3 pt-2 border-t border-border">
-                <Switch checked={isActive} onCheckedChange={setIsActive} />
-                <div>
-                  <Label className="text-sm">Status</Label>
-                  <p className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</p>
-                </div>
-              </div>
-            )}
-          </FormSection>
 
           {/* Images — hidden for Service items */}
           {itemType !== "service" && (
