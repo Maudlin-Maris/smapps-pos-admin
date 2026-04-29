@@ -238,37 +238,33 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
 /** Visual section wrapper — numbered, iconed header + framed content area.
  *  Used to break the catalog form into clearly scannable groups so admins
  *  can quickly find Basics, Pricing, Variants, Modifiers, etc. */
-function FormSection({
-  icon: Icon,
+/** Lightweight section group — title + thin underline + content. Replaces
+ *  the previous heavy framed FormSection so the form scans as one continuous
+ *  surface instead of stacked cards. */
+function FormGroup({
   title,
-  description,
-  required,
+  hint,
   children,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description?: string;
-  required?: boolean;
+  title?: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <header className="flex items-start gap-3 px-4 py-3 border-b border-border bg-muted/30">
-        <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold leading-none">
+    <section className="space-y-3">
+      {title && (
+        <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {title}
-            {required && <span className="text-destructive ml-1">*</span>}
           </h3>
-          {description && (
-            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{description}</p>
-          )}
+          {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
         </div>
-      </header>
-      <div className="p-4 space-y-4">{children}</div>
+      )}
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
+
 
 export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
