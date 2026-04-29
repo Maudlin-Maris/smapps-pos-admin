@@ -708,6 +708,15 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <Textarea
+                value={form.description || ""}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Add notes, supplier info, or details about this item"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Barcode / SKU</label>
               <BarcodeScanner value={form.sku} onChange={(val) => setForm({ ...form, sku: val })} placeholder="Scan barcode or enter SKU" />
             </div>
