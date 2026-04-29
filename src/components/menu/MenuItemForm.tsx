@@ -777,79 +777,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             required
           >
             <div>
-              <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlets *</Label>
-              <OutletPopover>
-                <OutletPopoverTrigger asChild>
-                  <Button variant="outline" className="w-full mt-1 justify-between font-normal h-auto min-h-10 py-1.5">
-                    <div className="flex flex-wrap gap-1 items-center">
-                      {selectedOutletIds.length === 0 ? (
-                        <span className="text-muted-foreground text-sm">Select outlets...</span>
-                      ) : (
-                        selectedOutletIds.map((id) => {
-                          const o = outlets.find((x) => x.id === id);
-                          if (!o) return null;
-                          return (
-                            <Badge key={id} variant="secondary" className="text-xs gap-1">
-                              {o.name}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedOutletIds((prev) => prev.filter((p) => p !== id));
-                                }}
-                                className="hover:text-destructive"
-                              >
-                                <X className="h-3 w-3" />
-                              </button>
-                            </Badge>
-                          );
-                        })
-                      )}
-                    </div>
-                  </Button>
-                </OutletPopoverTrigger>
-                <OutletPopoverContent className="w-[--radix-popover-trigger-width] p-1 max-h-72 overflow-y-auto" align="start">
-                  <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground">
-                    <span>{selectedOutletIds.length} selected</span>
-                    <button
-                      type="button"
-                      className="hover:text-foreground underline"
-                      onClick={() =>
-                        setSelectedOutletIds(
-                          selectedOutletIds.length === outlets.length ? [] : outlets.map((o) => o.id)
-                        )
-                      }
-                    >
-                      {selectedOutletIds.length === outlets.length ? "Clear all" : "Select all"}
-                    </button>
-                  </div>
-                  {outlets.map((o) => {
-                    const checked = selectedOutletIds.includes(o.id);
-                    return (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() =>
-                          setSelectedOutletIds((prev) =>
-                            checked ? prev.filter((p) => p !== o.id) : [...prev, o.id]
-                          )
-                        }
-                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground text-left"
-                      >
-                        <div className={cn("h-4 w-4 rounded border flex items-center justify-center", checked ? "bg-primary border-primary text-primary-foreground" : "border-input")}>
-                          {checked && <Check className="h-3 w-3" />}
-                        </div>
-                        <span className="flex-1">{o.name}</span>
-                      </button>
-                    );
-                  })}
-                </OutletPopoverContent>
-              </OutletPopover>
-              {mode === "edit" && selectedOutletIds.length > 1 && (
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  Selecting additional outlets will create copies of this item in those outlets.
-                </p>
-              )}
+              <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
+              <Select
+                value={selectedOutletIds[0] ?? ""}
+                onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select an outlet..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {outlets.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {variants.length === 0 && (
