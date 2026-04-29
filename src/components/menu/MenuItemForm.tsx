@@ -796,9 +796,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </div>
           )}
 
-              </FormSection>
-            );
-          })()}
 
           <FormSection
             icon={FileText}
