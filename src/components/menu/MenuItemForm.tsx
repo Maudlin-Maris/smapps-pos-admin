@@ -961,8 +961,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     )}
                   </div>
                 )}
-              </>
-            )}
+                </>
+              );
+            })()}
           </FormGroup>
 
           {/* COMPOSITION — Composite items only */}
