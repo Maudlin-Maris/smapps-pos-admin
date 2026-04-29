@@ -835,21 +835,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
           {/* PRICING */}
           <FormGroup title="Pricing">
-            {itemType === "service" && (
-              <div>
-                <Label htmlFor="item-price-svc" className="text-xs">Price *</Label>
-                <Input id="item-price-svc" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-              </div>
-            )}
-
-            {itemType !== "service" && (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
+            {(() => {
+              const strategyOptions = itemType === "service"
+                ? ([
+                    { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
+                    { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
+                  ] as const)
+                : ([
                     { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
                     { id: "variant", label: "Variants", desc: "Sizes or options", icon: Layers },
                     { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
-                  ] as const).map((opt) => {
+                  ] as const);
+              return (
+                <div className={cn("grid gap-2", itemType === "service" ? "grid-cols-2" : "grid-cols-3")}>
+                  {strategyOptions.map((opt) => {
                     const Icon = opt.icon;
                     const active = pricingStrategy === opt.id;
                     return (
