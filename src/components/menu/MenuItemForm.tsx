@@ -108,7 +108,10 @@ export interface MenuItem {
   modifierGroupIds?: string[];
   /** Pricing strategy: "base" single price (default), "variant" priced per
    *  variant, "open" entered by cashier at checkout. */
-  pricingStrategy?: "base" | "variant" | "open";
+   pricingStrategy?: "base" | "variant" | "open";
+  /** Unit used when selling this item (e.g. "pcs", "kg", "hour"). Drives
+   *  POS display and reporting. Service items typically use time-based units. */
+  sellingUnit?: string;
 }
 
 interface MenuItemFormProps {
