@@ -207,6 +207,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     setEditing(item);
     setForm({
       name: item.name,
+      description: item.description || "",
       sku: item.sku,
       categoryId: item.categoryId,
       unitId: item.unitId,
