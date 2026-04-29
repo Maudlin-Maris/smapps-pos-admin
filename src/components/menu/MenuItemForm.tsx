@@ -407,6 +407,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     setSku(inv.sku);
     setQuantity(String(inv.stock));
     setAddToInventory(false);
+    // Sync selling unit from the linked inventory item if available.
+    const linkedUnit = defaultMeasuringUnits.find((u) => u.id === (inv as { unitId?: string }).unitId);
+    if (linkedUnit) setSellingUnit(linkedUnit.abbreviation);
     // Best-effort category suggestion: find a catalog category whose name
     // matches the inventory item's name keywords. If none, leave existing.
     if (!selectedCatId) {
