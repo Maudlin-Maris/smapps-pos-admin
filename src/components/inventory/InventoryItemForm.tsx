@@ -121,6 +121,7 @@ function calcSellPrice(costPrice: number, method: PricingMethod, value: number):
 
 const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
+  description: "",
   sku: "",
   categoryId: "",
   unitId: "",
