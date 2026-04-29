@@ -742,22 +742,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
               </div>
 
-              <div>
+              <div className="sm:col-span-2">
                 <Label>Category *</Label>
-                <Select value={selectedCatId} onValueChange={(v) => { setSelectedCatId(v); setSubcategory(""); }}>
+                <Select value={selectedCatId} onValueChange={(v) => setSelectedCatId(v)}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label>Subcategory *</Label>
-                <Select value={subcategory} onValueChange={setSubcategory} disabled={!selectedCatId}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select subcategory" /></SelectTrigger>
-                  <SelectContent>
-                    {subcategories.map((s) => (<SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
