@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { usePagination } from "@/hooks/use-pagination";
@@ -57,6 +58,7 @@ export interface ItemBatch {
 export interface InventoryItem {
   id: string;
   name: string;
+  description?: string;
   sku: string;
   categoryId: string;
   unitId: string;
@@ -119,6 +121,7 @@ function calcSellPrice(costPrice: number, method: PricingMethod, value: number):
 
 const emptyForm = (outletId: string = ""): FormState => ({
   name: "",
+  description: "",
   sku: "",
   categoryId: "",
   unitId: "",
@@ -204,6 +207,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     setEditing(item);
     setForm({
       name: item.name,
+      description: item.description || "",
       sku: item.sku,
       categoryId: item.categoryId,
       unitId: item.unitId,
@@ -702,6 +706,15 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <div className="space-y-2">
               <label className="text-sm font-medium">Item Name *</label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optional)</span></label>
+              <Textarea
+                value={form.description || ""}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="Add notes, supplier info, or details about this item"
+                rows={2}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Barcode / SKU</label>
