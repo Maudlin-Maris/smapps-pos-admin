@@ -553,7 +553,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     onOpenChange(false);
   };
 
-  const formTitle = mode === "clone" ? "Clone Menu Item" : mode === "edit" ? "Edit Menu Item" : "Add Menu Item";
+  const formTitle = mode === "clone" ? "Clone Catalog Item" : mode === "edit" ? "Edit Catalog Item" : "Add Catalog Item";
   const formDescription = mode === "clone"
     ? "You're creating a new item based on an existing one. Review and adjust the details before saving."
     : mode === "edit"
