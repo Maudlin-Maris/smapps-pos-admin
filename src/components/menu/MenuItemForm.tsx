@@ -396,6 +396,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       setTrackInventory(false);
       setLinkedInventoryItemId("");
       setIngredients([]);
+      if (pricingStrategy === "variant") setPricingStrategy("base");
       setSellingUnit("hr");
     } else if (next === "simple") {
       // Composite ingredients & track-inventory don't apply
@@ -500,12 +501,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const handleSave = () => {
     const isService = itemType === "service";
     const isComposite = itemType === "composite";
-    const isOpenPrice = !isService && pricingStrategy === "open";
+    const isOpenPrice = pricingStrategy === "open";
     const isVariantPriced = !isService && pricingStrategy === "variant";
     const hasVariants = !isService && variants.length > 0;
     if (!name.trim() || !selectedCatId) return;
     // Price requirements depend on strategy.
-    if (!isService && !isOpenPrice) {
+    if (!isOpenPrice) {
       if (isVariantPriced) {
         if (variants.length === 0) return;
         if (variants.some((v) => !v.name.trim() || !v.price)) return;
@@ -574,7 +575,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       modifierGroupIds: modifierGroupIds.length ? modifierGroupIds : undefined,
       trackInventory: isService ? false : (hasVariants ? false : trackInventory),
       itemType,
-      pricingStrategy: isService ? undefined : pricingStrategy,
+      pricingStrategy: pricingStrategy,
       linkedInventoryItemId: itemType === "simple" && linkedInventoryItemId ? linkedInventoryItemId : undefined,
       ingredients: itemType === "composite"
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
@@ -835,21 +836,21 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
           {/* PRICING */}
           <FormGroup title="Pricing">
-            {itemType === "service" && (
-              <div>
-                <Label htmlFor="item-price-svc" className="text-xs">Price *</Label>
-                <Input id="item-price-svc" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-              </div>
-            )}
-
-            {itemType !== "service" && (
-              <>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
+            {(() => {
+              const strategyOptions = itemType === "service"
+                ? ([
+                    { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
+                    { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
+                  ] as const)
+                : ([
                     { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
                     { id: "variant", label: "Variants", desc: "Sizes or options", icon: Layers },
                     { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
-                  ] as const).map((opt) => {
+                  ] as const);
+              return (
+                <>
+                <div className={cn("grid gap-2", itemType === "service" ? "grid-cols-2" : "grid-cols-3")}>
+                  {strategyOptions.map((opt) => {
                     const Icon = opt.icon;
                     const active = pricingStrategy === opt.id;
                     return (
@@ -896,7 +897,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 )}
 
-                {pricingStrategy === "variant" && (
+                {pricingStrategy === "variant" && itemType !== "service" && (
                   <div className="space-y-2">
                     <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
                       <span>Variant name</span>
@@ -961,8 +962,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     )}
                   </div>
                 )}
-              </>
-            )}
+                </>
+              );
+            })()}
           </FormGroup>
 
           {/* COMPOSITION — Composite items only */}
@@ -1078,23 +1080,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormGroup>
           )}
 
-          {/* ADD-ONS / MODIFIERS — collapsed by default via accordion to save
-              vertical space. Most items don't need add-ons configured. */}
-          {features?.hasExtras && (
-            <FormGroup>
-              <Accordion type="single" collapsible defaultValue={extras.length > 0 ? "extras" : undefined}>
-                <AccordionItem value="extras" className="border-b-0">
-                  <AccordionTrigger className="py-2 hover:no-underline">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      <ListPlus className="h-3.5 w-3.5" />
-                      <span>{features.extrasLabel}</span>
-                      {extras.length > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
-                          {extras.length}
-                        </Badge>
-                      )}
-                    </div>
-                  </AccordionTrigger>
+          {/* ADD-ONS — optional for all outlets, collapsed by default. */}
+          <FormGroup>
+            <Accordion type="single" collapsible defaultValue={extras.length > 0 || modifierGroupIds.length > 0 ? "extras" : undefined}>
+              <AccordionItem value="extras" className="border-b-0">
+                <AccordionTrigger className="py-2 hover:no-underline">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <ListPlus className="h-3.5 w-3.5" />
+                    <span>Add-ons</span>
+                    <span className="font-normal normal-case tracking-normal text-[11px] text-muted-foreground/70">(optional)</span>
+                    {extras.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
+                        {extras.length}
+                      </Badge>
+                    )}
+                  </div>
+                </AccordionTrigger>
                   <AccordionContent className="space-y-4 pt-2">
                     {/* Reusable modifier groups (managed in Admin → Modifier Groups) */}
                     <div className="space-y-2">
@@ -1201,7 +1202,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       <div key={extra.id} className="border border-border rounded-md p-3 space-y-2 bg-muted/20">
                         <div className="flex items-center justify-between">
                           <Label className="text-xs font-medium">
-                            {features.extrasLabel.split("/")[0].trim()} #{idx + 1}
+                            Add-on #{idx + 1}
                           </Label>
                           <button
                             onClick={() => setExtras((prev) => prev.filter((e) => e.id !== extra.id))}
@@ -1251,11 +1252,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       </div>
                     ))}
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </FormGroup>
-          )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </FormGroup>
         </div>
 
 
