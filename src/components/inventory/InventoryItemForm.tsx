@@ -319,6 +319,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       setItems((prev) => [...prev, newItem]);
       if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
         toast.success(`Item registered | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
+      } else if (!retail && syncToCatalog) {
+        toast.success("Item registered and added to catalog");
       } else {
         toast.success("Item registered");
       }
