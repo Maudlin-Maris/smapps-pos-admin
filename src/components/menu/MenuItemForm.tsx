@@ -1202,7 +1202,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       <div key={extra.id} className="border border-border rounded-md p-3 space-y-2 bg-muted/20">
                         <div className="flex items-center justify-between">
                           <Label className="text-xs font-medium">
-                            {features.extrasLabel.split("/")[0].trim()} #{idx + 1}
+                            Add-on #{idx + 1}
                           </Label>
                           <button
                             onClick={() => setExtras((prev) => prev.filter((e) => e.id !== extra.id))}
