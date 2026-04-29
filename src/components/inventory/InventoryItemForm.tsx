@@ -58,6 +58,7 @@ export interface ItemBatch {
 export interface InventoryItem {
   id: string;
   name: string;
+  description?: string;
   sku: string;
   categoryId: string;
   unitId: string;
