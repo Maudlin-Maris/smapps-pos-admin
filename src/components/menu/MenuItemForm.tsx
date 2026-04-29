@@ -34,6 +34,15 @@ import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
+import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
+
+const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
+  { name: "Hour", abbreviation: "hr" },
+  { name: "Minute", abbreviation: "min" },
+  { name: "Session", abbreviation: "session" },
+  { name: "Visit", abbreviation: "visit" },
+  { name: "Day", abbreviation: "day" },
+];
 
 /** A single component (inventory item + qty) consumed when a variant of a
  *  composite item is sold. Lets a "Large" pizza burn more cheese than a
@@ -108,7 +117,10 @@ export interface MenuItem {
   modifierGroupIds?: string[];
   /** Pricing strategy: "base" single price (default), "variant" priced per
    *  variant, "open" entered by cashier at checkout. */
-  pricingStrategy?: "base" | "variant" | "open";
+   pricingStrategy?: "base" | "variant" | "open";
+  /** Unit used when selling this item (e.g. "pcs", "kg", "hour"). Drives
+   *  POS display and reporting. Service items typically use time-based units. */
+  sellingUnit?: string;
 }
 
 interface MenuItemFormProps {
@@ -290,6 +302,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
    *  to also create a matching inventory record using the barcode + qty
    *  entered here. Purely a UI flag — parent decides what to do with it. */
   const [addToInventory, setAddToInventory] = useState(false);
+  /** Unit used when selling — restaurant/retail items: pcs/kg/L etc.,
+   *  service items: hour/session/visit. */
+  const [sellingUnit, setSellingUnit] = useState<string>("pcs");
 
   const features = businessType ? getFeatures(businessType) : null;
 
@@ -335,6 +350,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         } else {
           setPricingStrategy("base");
         }
+        setSellingUnit(item.sellingUnit ?? ((item.itemType ?? "simple") === "service" ? "hr" : "pcs"));
       } else {
         setItemType("simple");
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
@@ -345,6 +361,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
         setAddToInventory(false);
+        setSellingUnit("pcs");
       }
     }
   }, [open, item, categories, currentOutletId]);
@@ -365,14 +382,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       setTrackInventory(false);
       setLinkedInventoryItemId("");
       setIngredients([]);
+      setSellingUnit("hr");
     } else if (next === "simple") {
       // Composite ingredients & track-inventory don't apply
       setIngredients([]);
       setTrackInventory(false);
+      setSellingUnit((prev) => (SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev));
     } else if (next === "composite") {
       // Linked inventory item is a Simple-only concept
       setLinkedInventoryItemId("");
       setTrackInventory(false);
+      setSellingUnit((prev) => (SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev));
     }
   };
 
@@ -387,6 +407,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     setSku(inv.sku);
     setQuantity(String(inv.stock));
     setAddToInventory(false);
+    // Sync selling unit from the linked inventory item if available.
+    const linkedUnit = defaultMeasuringUnits.find((u) => u.id === (inv as { unitId?: string }).unitId);
+    if (linkedUnit) setSellingUnit(linkedUnit.abbreviation);
     // Best-effort category suggestion: find a catalog category whose name
     // matches the inventory item's name keywords. If none, leave existing.
     if (!selectedCatId) {
@@ -521,6 +544,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       ingredients: itemType === "composite"
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
         : undefined,
+      sellingUnit: sellingUnit || undefined,
     }, selectedOutletIds);
     onOpenChange(false);
   };
@@ -742,7 +766,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
               </div>
 
-              <div className="sm:col-span-2">
+              <div>
                 <Label>Category *</Label>
                 <Select value={selectedCatId} onValueChange={(v) => setSelectedCatId(v)}>
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
@@ -750,6 +774,38 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  Selling Unit
+                  {itemType === "simple" && linkedInventoryItemId && (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </Label>
+                <Select
+                  value={sellingUnit}
+                  onValueChange={setSellingUnit}
+                  disabled={itemType === "simple" && !!linkedInventoryItemId}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
+                      <SelectItem key={u.abbreviation} value={u.abbreviation}>
+                        {u.name} ({u.abbreviation})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                  {itemType === "service"
+                    ? "Time-based unit shown at checkout (e.g. per hour, per session)."
+                    : itemType === "simple" && linkedInventoryItemId
+                      ? "Synced from the linked inventory item."
+                      : "Unit displayed when selling this item (e.g. pcs, kg, L)."}
+                </p>
               </div>
 
               <div className="sm:col-span-2">
