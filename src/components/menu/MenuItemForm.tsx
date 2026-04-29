@@ -500,12 +500,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const handleSave = () => {
     const isService = itemType === "service";
     const isComposite = itemType === "composite";
-    const isOpenPrice = !isService && pricingStrategy === "open";
+    const isOpenPrice = pricingStrategy === "open";
     const isVariantPriced = !isService && pricingStrategy === "variant";
     const hasVariants = !isService && variants.length > 0;
     if (!name.trim() || !selectedCatId) return;
     // Price requirements depend on strategy.
-    if (!isService && !isOpenPrice) {
+    if (!isOpenPrice) {
       if (isVariantPriced) {
         if (variants.length === 0) return;
         if (variants.some((v) => !v.name.trim() || !v.price)) return;
