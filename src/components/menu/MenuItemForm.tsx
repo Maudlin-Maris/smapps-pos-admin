@@ -35,6 +35,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
 import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
+import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
   { name: "Hour", abbreviation: "hr" },
@@ -410,14 +411,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     // Sync selling unit from the linked inventory item if available.
     const linkedUnit = defaultMeasuringUnits.find((u) => u.id === (inv as { unitId?: string }).unitId);
     if (linkedUnit) setSellingUnit(linkedUnit.abbreviation);
-    // Best-effort category suggestion: find a catalog category whose name
-    // matches the inventory item's name keywords. If none, leave existing.
-    if (!selectedCatId) {
-      const lower = inv.name.toLowerCase();
-      const guess = categories.find((c) =>
-        lower.includes(c.name.toLowerCase().split(" ")[0])
-      );
-      if (guess) setSelectedCatId(guess.id);
+    // Sync category from the linked inventory item's category. Match the
+    // inventory category name against the catalog categories (case-insensitive,
+    // partial) so admins keep a single source of truth.
+    const invCat = defaultInventoryCategories.find((c) => c.id === (inv as { categoryId?: string }).categoryId);
+    if (invCat) {
+      const lowerCat = invCat.name.toLowerCase();
+      const match =
+        categories.find((c) => c.name.toLowerCase() === lowerCat) ??
+        categories.find((c) => lowerCat.includes(c.name.toLowerCase().split(" ")[0])) ??
+        categories.find((c) => c.name.toLowerCase().includes(lowerCat.split(" ")[0]));
+      if (match) setSelectedCatId(match.id);
     }
   };
 
@@ -767,13 +771,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </div>
 
               <div>
-                <Label>Category *</Label>
-                <Select value={selectedCatId} onValueChange={(v) => setSelectedCatId(v)}>
+                <Label className="flex items-center gap-1.5">
+                  Category *
+                  {itemType === "simple" && linkedInventoryItemId && (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </Label>
+                <Select
+                  value={selectedCatId}
+                  onValueChange={(v) => setSelectedCatId(v)}
+                  disabled={itemType === "simple" && !!linkedInventoryItemId}
+                >
                   <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
+                {itemType === "simple" && linkedInventoryItemId && (
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                    Synced from the linked inventory item.
+                  </p>
+                )}
               </div>
 
               <div>
