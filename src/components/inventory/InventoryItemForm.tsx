@@ -1149,17 +1149,17 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 </div>
               );
             })()}
-            {!editing && !isOutletRetail(form.outletId) && (
+            {!editing && (
               <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
                 <div className="space-y-0.5">
-                  <Label htmlFor="register-add-to-catalog" className="text-sm font-medium cursor-pointer">
-                    Also add to catalog
+                  <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
+                    Auto-update catalog
                   </Label>
                   <p className="text-[11px] text-muted-foreground">
-                    Create a matching catalog item linked to this inventory record
+                    Sync this item's sell price to the product catalog automatically
                   </p>
                 </div>
-                <Switch id="register-add-to-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
+                <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
               </div>
             )}
           </div>
