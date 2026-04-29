@@ -396,6 +396,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       setTrackInventory(false);
       setLinkedInventoryItemId("");
       setIngredients([]);
+      if (pricingStrategy === "variant") setPricingStrategy("base");
       setSellingUnit("hr");
     } else if (next === "simple") {
       // Composite ingredients & track-inventory don't apply
