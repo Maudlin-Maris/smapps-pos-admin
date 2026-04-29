@@ -1252,11 +1252,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       </div>
                     ))}
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </FormGroup>
-          )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </FormGroup>
         </div>
 
 
