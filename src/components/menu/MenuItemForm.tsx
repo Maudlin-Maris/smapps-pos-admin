@@ -34,6 +34,15 @@ import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
+import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
+
+const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
+  { name: "Hour", abbreviation: "hr" },
+  { name: "Minute", abbreviation: "min" },
+  { name: "Session", abbreviation: "session" },
+  { name: "Visit", abbreviation: "visit" },
+  { name: "Day", abbreviation: "day" },
+];
 
 /** A single component (inventory item + qty) consumed when a variant of a
  *  composite item is sold. Lets a "Large" pizza burn more cheese than a
