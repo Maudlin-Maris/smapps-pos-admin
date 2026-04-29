@@ -896,7 +896,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 )}
 
-                {pricingStrategy === "variant" && (
+                {pricingStrategy === "variant" && itemType !== "service" && (
                   <div className="space-y-2">
                     <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
                       <span>Variant name</span>
