@@ -363,7 +363,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
-        setLinkedInventoryItemId(""); setIngredients([]);
+        setLinkedInventoryItemId(""); setIngredients([]); setModifierGroupIds([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
         setAddToInventory(false);
