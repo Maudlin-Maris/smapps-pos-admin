@@ -847,6 +847,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
                   ] as const);
               return (
+                <>
                 <div className={cn("grid gap-2", itemType === "service" ? "grid-cols-2" : "grid-cols-3")}>
                   {strategyOptions.map((opt) => {
                     const Icon = opt.icon;
