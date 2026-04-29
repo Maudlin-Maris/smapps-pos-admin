@@ -302,6 +302,14 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   /** Unit used when selling — restaurant/retail items: pcs/kg/L etc.,
    *  service items: hour/session/visit. */
   const [sellingUnit, setSellingUnit] = useState<string>("pcs");
+  /** Reusable modifier groups attached to this item. */
+  const [modifierGroupIds, setModifierGroupIds] = useState<string[]>([]);
+  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
+  const [modifierPickerOpen, setModifierPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (open) setModifierGroups(loadModifierGroups());
+  }, [open]);
 
   const features = businessType ? getFeatures(businessType) : null;
 
@@ -335,6 +343,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setTrackInventory(item.trackInventory ?? false);
         setLinkedInventoryItemId(item.linkedInventoryItemId ?? "");
         setIngredients(item.ingredients ?? []);
+        setModifierGroupIds(item.modifierGroupIds ?? []);
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
@@ -354,7 +363,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
         setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
         setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
-        setLinkedInventoryItemId(""); setIngredients([]);
+        setLinkedInventoryItemId(""); setIngredients([]); setModifierGroupIds([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
         setAddToInventory(false);
@@ -536,7 +545,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       status: isActive ? "active" : "inactive",
       images: isService ? [] : images,
       variants: isService ? [] : finalVariants,
-      extras: isService ? [] : extras,
+      extras: isService
+        ? []
+        : (() => {
+            // Flatten attached modifier groups into per-item extras so the POS
+            // (which renders extras grouped by category) keeps working without
+            // changes. Manual extras keep their own category.
+            const fromGroups: MenuExtra[] = modifierGroups
+              .filter((g) => modifierGroupIds.includes(g.id))
+              .flatMap((g) =>
+                g.modifiers.map((m) => ({
+                  id: `${g.id}:${m.id}`,
+                  name: m.name,
+                  price: m.price,
+                  category: g.name,
+                })),
+              );
+            // Avoid duplicates if a manual extra shares the same id.
+            const manual = extras.filter((e) => !fromGroups.some((f) => f.id === e.id));
+            return [...fromGroups, ...manual];
+          })(),
+      modifierGroupIds: itemType === "service" ? undefined : (modifierGroupIds.length ? modifierGroupIds : undefined),
       trackInventory: isService ? false : (hasVariants ? false : trackInventory),
       itemType,
       pricingStrategy: isService ? undefined : pricingStrategy,
@@ -1060,22 +1089,103 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       )}
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="space-y-3 pt-2">
-                    <div className="flex justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setExtras((prev) => [
-                            ...prev,
-                            { id: crypto.randomUUID(), name: "", price: 0, category: "" },
-                          ])
-                        }
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                      </Button>
+                  <AccordionContent className="space-y-4 pt-2">
+                    {/* Reusable modifier groups (managed in Admin → Modifier Groups) */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Modifier Groups
+                        </Label>
+                        <Popover open={modifierPickerOpen} onOpenChange={setModifierPickerOpen}>
+                          <PopoverTrigger asChild>
+                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs">
+                              <Plus className="h-3.5 w-3.5 mr-1" /> Attach group
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 p-0" align="end">
+                            <Command>
+                              <CommandInput placeholder="Search modifier groups..." className="h-9" />
+                              <CommandList>
+                                <CommandEmpty>No modifier groups. Create one in Admin.</CommandEmpty>
+                                <CommandGroup>
+                                  {modifierGroups.map((g) => {
+                                    const checked = modifierGroupIds.includes(g.id);
+                                    return (
+                                      <CommandItem
+                                        key={g.id}
+                                        onSelect={() => {
+                                          setModifierGroupIds((prev) =>
+                                            checked ? prev.filter((id) => id !== g.id) : [...prev, g.id],
+                                          );
+                                        }}
+                                        className="flex items-center justify-between gap-2"
+                                      >
+                                        <div className="min-w-0">
+                                          <div className="text-sm truncate">{g.name}</div>
+                                          <div className="text-[10px] text-muted-foreground truncate">
+                                            {g.modifiers.length} options
+                                          </div>
+                                        </div>
+                                        {checked && <Check className="h-4 w-4 text-primary shrink-0" />}
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      {modifierGroupIds.length === 0 ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Attach reusable groups (e.g. Toppings, Coffee Options) so you don't recreate them per item.
+                        </p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {modifierGroupIds.map((id) => {
+                            const g = modifierGroups.find((x) => x.id === id);
+                            if (!g) return null;
+                            return (
+                              <Badge key={id} variant="secondary" className="gap-1 pr-1 text-[11px]">
+                                <span>{g.name}</span>
+                                <span className="text-muted-foreground">· {g.modifiers.length}</span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setModifierGroupIds((prev) => prev.filter((x) => x !== id))
+                                  }
+                                  className="ml-0.5 rounded hover:bg-destructive/15 p-0.5 text-muted-foreground hover:text-destructive"
+                                  aria-label={`Remove ${g.name}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
+
+                    <div className="border-t border-border pt-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          One-off Add-ons
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() =>
+                            setExtras((prev) => [
+                              ...prev,
+                              { id: crypto.randomUUID(), name: "", price: 0, category: "" },
+                            ])
+                          }
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                        </Button>
+                      </div>
                     {extras.length === 0 && (
                       <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
                         No add-ons yet.
@@ -1134,6 +1244,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                         </div>
                       </div>
                     ))}
+                    </div>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
