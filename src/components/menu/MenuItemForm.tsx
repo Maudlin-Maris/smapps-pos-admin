@@ -411,14 +411,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     // Sync selling unit from the linked inventory item if available.
     const linkedUnit = defaultMeasuringUnits.find((u) => u.id === (inv as { unitId?: string }).unitId);
     if (linkedUnit) setSellingUnit(linkedUnit.abbreviation);
-    // Best-effort category suggestion: find a catalog category whose name
-    // matches the inventory item's name keywords. If none, leave existing.
-    if (!selectedCatId) {
-      const lower = inv.name.toLowerCase();
-      const guess = categories.find((c) =>
-        lower.includes(c.name.toLowerCase().split(" ")[0])
-      );
-      if (guess) setSelectedCatId(guess.id);
+    // Sync category from the linked inventory item's category. Match the
+    // inventory category name against the catalog categories (case-insensitive,
+    // partial) so admins keep a single source of truth.
+    const invCat = defaultInventoryCategories.find((c) => c.id === (inv as { categoryId?: string }).categoryId);
+    if (invCat) {
+      const lowerCat = invCat.name.toLowerCase();
+      const match =
+        categories.find((c) => c.name.toLowerCase() === lowerCat) ??
+        categories.find((c) => lowerCat.includes(c.name.toLowerCase().split(" ")[0])) ??
+        categories.find((c) => c.name.toLowerCase().includes(lowerCat.split(" ")[0]));
+      if (match) setSelectedCatId(match.id);
     }
   };
 
