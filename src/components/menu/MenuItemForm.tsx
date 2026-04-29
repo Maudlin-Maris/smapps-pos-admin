@@ -1178,7 +1178,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={(() => {
-            if (!name.trim() || !subcategory || selectedOutletIds.length === 0) return true;
+            if (!name.trim() || !selectedCatId || selectedOutletIds.length === 0) return true;
             if (itemType === "composite" && ingredients.filter((g) => g.inventoryItemId && g.quantity > 0).length === 0) return true;
             if (itemType === "service") return !price;
             if (pricingStrategy === "open") return false;
