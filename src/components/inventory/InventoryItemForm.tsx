@@ -843,10 +843,21 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                         ({cost > 0 ? ((profit / cost) * 100).toFixed(1) : "0"}% markup)
                       </span>
                     </div>
-                   )}
-                 </div>
-               );
-             })()}
+                  )}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
+                        Auto-update catalog
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Sync this item's sell price to the product catalog automatically
+                      </p>
+                    </div>
+                    <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
+                  </div>
+                </div>
+              );
+            })()}
 
 
             {(() => {
@@ -1149,17 +1160,17 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 </div>
               );
             })()}
-            {!editing && (
+            {!editing && !isOutletRetail(form.outletId) && (
               <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
                 <div className="space-y-0.5">
-                  <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
-                    Auto-update catalog
+                  <Label htmlFor="register-add-to-catalog" className="text-sm font-medium cursor-pointer">
+                    Also add to catalog
                   </Label>
                   <p className="text-[11px] text-muted-foreground">
-                    Sync this item's sell price to the product catalog automatically
+                    Create a matching catalog item linked to this inventory record
                   </p>
                 </div>
-                <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
+                <Switch id="register-add-to-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
               </div>
             )}
           </div>
