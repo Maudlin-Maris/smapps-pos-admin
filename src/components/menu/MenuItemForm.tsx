@@ -343,6 +343,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setTrackInventory(item.trackInventory ?? false);
         setLinkedInventoryItemId(item.linkedInventoryItemId ?? "");
         setIngredients(item.ingredients ?? []);
+        setModifierGroupIds(item.modifierGroupIds ?? []);
         const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
