@@ -574,7 +574,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       modifierGroupIds: modifierGroupIds.length ? modifierGroupIds : undefined,
       trackInventory: isService ? false : (hasVariants ? false : trackInventory),
       itemType,
-      pricingStrategy: isService ? undefined : pricingStrategy,
+      pricingStrategy: pricingStrategy,
       linkedInventoryItemId: itemType === "simple" && linkedInventoryItemId ? linkedInventoryItemId : undefined,
       ingredients: itemType === "composite"
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
