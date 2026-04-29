@@ -553,27 +553,25 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       status: isActive ? "active" : "inactive",
       images: isService ? [] : images,
       variants: isService ? [] : finalVariants,
-      extras: isService
-        ? []
-        : (() => {
-            // Flatten attached modifier groups into per-item extras so the POS
-            // (which renders extras grouped by category) keeps working without
-            // changes. Manual extras keep their own category.
-            const fromGroups: MenuExtra[] = modifierGroups
-              .filter((g) => modifierGroupIds.includes(g.id))
-              .flatMap((g) =>
-                g.modifiers.map((m) => ({
-                  id: `${g.id}:${m.id}`,
-                  name: m.name,
-                  price: m.price,
-                  category: g.name,
-                })),
-              );
-            // Avoid duplicates if a manual extra shares the same id.
-            const manual = extras.filter((e) => !fromGroups.some((f) => f.id === e.id));
-            return [...fromGroups, ...manual];
-          })(),
-      modifierGroupIds: itemType === "service" ? undefined : (modifierGroupIds.length ? modifierGroupIds : undefined),
+      extras: (() => {
+        // Flatten attached modifier groups into per-item extras so the POS
+        // (which renders extras grouped by category) keeps working without
+        // changes. Manual extras keep their own category. Available for both
+        // simple items and services (e.g. add-on services for salons).
+        const fromGroups: MenuExtra[] = modifierGroups
+          .filter((g) => modifierGroupIds.includes(g.id))
+          .flatMap((g) =>
+            g.modifiers.map((m) => ({
+              id: `${g.id}:${m.id}`,
+              name: m.name,
+              price: m.price,
+              category: g.name,
+            })),
+          );
+        const manual = extras.filter((e) => !fromGroups.some((f) => f.id === e.id));
+        return [...fromGroups, ...manual];
+      })(),
+      modifierGroupIds: modifierGroupIds.length ? modifierGroupIds : undefined,
       trackInventory: isService ? false : (hasVariants ? false : trackInventory),
       itemType,
       pricingStrategy: isService ? undefined : pricingStrategy,
@@ -1082,7 +1080,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
           {/* ADD-ONS / MODIFIERS — collapsed by default via accordion to save
               vertical space. Most items don't need add-ons configured. */}
-          {itemType !== "service" && features?.hasExtras && (
+          {features?.hasExtras && (
             <FormGroup>
               <Accordion type="single" collapsible defaultValue={extras.length > 0 ? "extras" : undefined}>
                 <AccordionItem value="extras" className="border-b-0">
