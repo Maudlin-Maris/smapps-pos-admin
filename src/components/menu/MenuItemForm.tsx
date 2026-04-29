@@ -302,6 +302,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
    *  to also create a matching inventory record using the barcode + qty
    *  entered here. Purely a UI flag — parent decides what to do with it. */
   const [addToInventory, setAddToInventory] = useState(false);
+  /** Unit used when selling — restaurant/retail items: pcs/kg/L etc.,
+   *  service items: hour/session/visit. */
+  const [sellingUnit, setSellingUnit] = useState<string>("pcs");
 
   const features = businessType ? getFeatures(businessType) : null;
 
