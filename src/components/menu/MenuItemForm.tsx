@@ -463,7 +463,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const isOpenPrice = !isService && pricingStrategy === "open";
     const isVariantPriced = !isService && pricingStrategy === "variant";
     const hasVariants = !isService && variants.length > 0;
-    if (!name.trim() || !subcategory) return;
+    if (!name.trim() || !selectedCatId) return;
     // Price requirements depend on strategy.
     if (!isService && !isOpenPrice) {
       if (isVariantPriced) {
