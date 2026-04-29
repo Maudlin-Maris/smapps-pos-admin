@@ -311,7 +311,15 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     if (open) setModifierGroups(loadModifierGroups());
   }, [open]);
 
-  const features = businessType ? getFeatures(businessType) : null;
+  // Derive business type from the outlet selected inside the form so the
+  // add-ons / modifiers section appears even when the page-level outlet
+  // filter is "All Outlets" (which passes no businessType prop).
+  const effectiveBusinessType: BusinessTypeId | undefined =
+    businessType ??
+    (selectedOutletIds.length
+      ? (outlets.find((o) => o.id === selectedOutletIds[0])?.businessType as BusinessTypeId | undefined)
+      : undefined);
+  const features = effectiveBusinessType ? getFeatures(effectiveBusinessType) : null;
 
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
