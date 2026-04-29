@@ -302,6 +302,14 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   /** Unit used when selling — restaurant/retail items: pcs/kg/L etc.,
    *  service items: hour/session/visit. */
   const [sellingUnit, setSellingUnit] = useState<string>("pcs");
+  /** Reusable modifier groups attached to this item. */
+  const [modifierGroupIds, setModifierGroupIds] = useState<string[]>([]);
+  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
+  const [modifierPickerOpen, setModifierPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (open) setModifierGroups(loadModifierGroups());
+  }, [open]);
 
   const features = businessType ? getFeatures(businessType) : null;
 
