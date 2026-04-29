@@ -1080,23 +1080,22 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             </FormGroup>
           )}
 
-          {/* ADD-ONS / MODIFIERS — collapsed by default via accordion to save
-              vertical space. Most items don't need add-ons configured. */}
-          {features?.hasExtras && (
-            <FormGroup>
-              <Accordion type="single" collapsible defaultValue={extras.length > 0 ? "extras" : undefined}>
-                <AccordionItem value="extras" className="border-b-0">
-                  <AccordionTrigger className="py-2 hover:no-underline">
-                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      <ListPlus className="h-3.5 w-3.5" />
-                      <span>{features.extrasLabel}</span>
-                      {extras.length > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
-                          {extras.length}
-                        </Badge>
-                      )}
-                    </div>
-                  </AccordionTrigger>
+          {/* ADD-ONS — optional for all outlets, collapsed by default. */}
+          <FormGroup>
+            <Accordion type="single" collapsible defaultValue={extras.length > 0 || modifierGroupIds.length > 0 ? "extras" : undefined}>
+              <AccordionItem value="extras" className="border-b-0">
+                <AccordionTrigger className="py-2 hover:no-underline">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <ListPlus className="h-3.5 w-3.5" />
+                    <span>Add-ons</span>
+                    <span className="font-normal normal-case tracking-normal text-[11px] text-muted-foreground/70">(optional)</span>
+                    {extras.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
+                        {extras.length}
+                      </Badge>
+                    )}
+                  </div>
+                </AccordionTrigger>
                   <AccordionContent className="space-y-4 pt-2">
                     {/* Reusable modifier groups (managed in Admin → Modifier Groups) */}
                     <div className="space-y-2">
