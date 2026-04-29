@@ -545,7 +545,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       status: isActive ? "active" : "inactive",
       images: isService ? [] : images,
       variants: isService ? [] : finalVariants,
-      extras: isService ? [] : extras,
+      extras: isService
+        ? []
+        : (() => {
+            // Flatten attached modifier groups into per-item extras so the POS
+            // (which renders extras grouped by category) keeps working without
+            // changes. Manual extras keep their own category.
+            const fromGroups: MenuExtra[] = modifierGroups
+              .filter((g) => modifierGroupIds.includes(g.id))
+              .flatMap((g) =>
+                g.modifiers.map((m) => ({
+                  id: `${g.id}:${m.id}`,
+                  name: m.name,
+                  price: m.price,
+                  category: g.name,
+                })),
+              );
+            // Avoid duplicates if a manual extra shares the same id.
+            const manual = extras.filter((e) => !fromGroups.some((f) => f.id === e.id));
+            return [...fromGroups, ...manual];
+          })(),
+      modifierGroupIds: itemType === "service" ? undefined : (modifierGroupIds.length ? modifierGroupIds : undefined),
       trackInventory: isService ? false : (hasVariants ? false : trackInventory),
       itemType,
       pricingStrategy: isService ? undefined : pricingStrategy,
