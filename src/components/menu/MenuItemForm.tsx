@@ -1080,7 +1080,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
           {/* ADD-ONS / MODIFIERS — collapsed by default via accordion to save
               vertical space. Most items don't need add-ons configured. */}
-          {itemType !== "service" && features?.hasExtras && (
+          {features?.hasExtras && (
             <FormGroup>
               <Accordion type="single" collapsible defaultValue={extras.length > 0 ? "extras" : undefined}>
                 <AccordionItem value="extras" className="border-b-0">
