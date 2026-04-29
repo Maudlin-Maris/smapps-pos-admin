@@ -586,12 +586,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </div>
               <div>
                 <Label className="text-xs">Item Type *</Label>
-                <div className="mt-1 grid grid-cols-3 gap-1.5">
+                 <div className="mt-1 grid grid-cols-3 gap-1.5">
                   {([
-                    { key: "simple", label: "Simple", Icon: Package },
-                    { key: "composite", label: "Composite", Icon: ChefHat },
-                    { key: "service", label: "Service", Icon: Sparkles },
-                  ] as const).map(({ key, label, Icon }) => {
+                    { key: "simple", label: "Simple", desc: "Single stocked product", Icon: Package },
+                    { key: "composite", label: "Composite", desc: "Made from ingredients", Icon: ChefHat },
+                    { key: "service", label: "Service", desc: "Time-based, no stock", Icon: Sparkles },
+                  ] as const).map(({ key, label, desc, Icon }) => {
                     const active = itemType === key;
                     return (
                       <button
@@ -599,14 +599,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                         type="button"
                         onClick={() => handleTypeChange(key)}
                         className={cn(
-                          "flex items-center justify-center gap-1.5 h-9 rounded-md border text-xs transition-colors",
+                          "flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[3.25rem] rounded-md border text-xs transition-colors text-center",
                           active
                             ? "border-primary bg-primary/5 text-primary font-medium"
                             : "border-border text-muted-foreground hover:bg-muted/40"
                         )}
                       >
-                        <Icon className="h-3.5 w-3.5" />
-                        <span>{label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Icon className="h-3.5 w-3.5" />
+                          <span>{label}</span>
+                        </div>
+                        <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{desc}</span>
                       </button>
                     );
                   })}
@@ -808,9 +811,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               <>
                 <div className="grid grid-cols-3 gap-2">
                   {([
-                    { id: "base", label: "Base Price", icon: Tag },
-                    { id: "variant", label: "Variants", icon: Layers },
-                    { id: "open", label: "Open Price", icon: KeyRound },
+                    { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
+                    { id: "variant", label: "Variants", desc: "Sizes or options", icon: Layers },
+                    { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
                   ] as const).map((opt) => {
                     const Icon = opt.icon;
                     const active = pricingStrategy === opt.id;
@@ -835,14 +838,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           }
                         }}
                         className={cn(
-                          "flex items-center justify-center gap-1.5 rounded-md border px-3 h-9 text-xs transition-colors",
+                          "flex flex-col items-center justify-center gap-0.5 rounded-md border px-2 py-1.5 min-h-[3.25rem] text-xs transition-colors text-center",
                           active
                             ? "border-primary bg-primary/5 text-primary font-medium"
                             : "border-border text-muted-foreground hover:bg-muted/50",
                         )}
                       >
-                        <Icon className="h-3.5 w-3.5" />
-                        <span>{opt.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Icon className="h-3.5 w-3.5" />
+                          <span>{opt.label}</span>
+                        </div>
+                        <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{opt.desc}</span>
                       </button>
                     );
                   })}
