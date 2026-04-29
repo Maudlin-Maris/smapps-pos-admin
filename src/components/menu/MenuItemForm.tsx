@@ -544,6 +544,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       ingredients: itemType === "composite"
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
         : undefined,
+      sellingUnit: sellingUnit || undefined,
     }, selectedOutletIds);
     onOpenChange(false);
   };
