@@ -557,8 +557,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const formDescription = mode === "clone"
     ? "You're creating a new item based on an existing one. Review and adjust the details before saving."
     : mode === "edit"
-    ? "Update the details of this menu item."
-    : "Fill in the details to create a new menu item.";
+    ? "Update the details of this catalog item."
+    : "Fill in the details to create a new catalog item.";
   const submitLabel = mode === "clone" ? "Create Clone" : mode === "edit" ? "Update Item" : "Add Item";
 
   return (
