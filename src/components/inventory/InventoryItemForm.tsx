@@ -319,6 +319,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       setItems((prev) => [...prev, newItem]);
       if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
         toast.success(`Item registered | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
+      } else if (!retail && syncToCatalog) {
+        toast.success("Item registered and added to catalog");
       } else {
         toast.success("Item registered");
       }
@@ -1158,6 +1160,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 </div>
               );
             })()}
+            {!editing && !isOutletRetail(form.outletId) && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                <div className="space-y-0.5">
+                  <Label htmlFor="register-add-to-catalog" className="text-sm font-medium cursor-pointer">
+                    Also add to catalog
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Create a matching catalog item linked to this inventory record
+                  </p>
+                </div>
+                <Switch id="register-add-to-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
