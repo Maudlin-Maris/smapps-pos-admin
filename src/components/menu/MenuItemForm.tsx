@@ -238,37 +238,33 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
 /** Visual section wrapper — numbered, iconed header + framed content area.
  *  Used to break the catalog form into clearly scannable groups so admins
  *  can quickly find Basics, Pricing, Variants, Modifiers, etc. */
-function FormSection({
-  icon: Icon,
+/** Lightweight section group — title + thin underline + content. Replaces
+ *  the previous heavy framed FormSection so the form scans as one continuous
+ *  surface instead of stacked cards. */
+function FormGroup({
   title,
-  description,
-  required,
+  hint,
   children,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description?: string;
-  required?: boolean;
+  title?: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border bg-card overflow-hidden">
-      <header className="flex items-start gap-3 px-4 py-3 border-b border-border bg-muted/30">
-        <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold leading-none">
+    <section className="space-y-3">
+      {title && (
+        <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {title}
-            {required && <span className="text-destructive ml-1">*</span>}
           </h3>
-          {description && (
-            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{description}</p>
-          )}
+          {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
         </div>
-      </header>
-      <div className="p-4 space-y-4">{children}</div>
+      )}
+      <div className="space-y-3">{children}</div>
     </section>
   );
 }
+
 
 export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
@@ -563,193 +559,199 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
           <DialogTitle>{formTitle}</DialogTitle>
-          <DialogDescription>{formDescription}</DialogDescription>
+          <DialogDescription className="text-xs">{formDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Availability — outlets + status (selected first so downstream sections can filter) */}
-          <FormSection
-            icon={MapPin}
-            title="Availability"
-            description="Choose the outlet that will sell this item. Inventory and other options are filtered based on this selection."
-            required
-          >
+        <div className="space-y-6">
+          {/* DETAILS — outlet, item type, name, category, unit, description.
+              Merged into one block to reduce vertical noise. */}
+          <FormGroup title="Details">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
+                <Select
+                  value={selectedOutletIds[0] ?? ""}
+                  onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
+                >
+                  <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select outlet" /></SelectTrigger>
+                  <SelectContent>
+                    {outlets.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">Item Type *</Label>
+                <div className="mt-1 grid grid-cols-3 gap-1.5">
+                  {([
+                    { key: "simple", label: "Simple", Icon: Package },
+                    { key: "composite", label: "Composite", Icon: ChefHat },
+                    { key: "service", label: "Service", Icon: Sparkles },
+                  ] as const).map(({ key, label, Icon }) => {
+                    const active = itemType === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => handleTypeChange(key)}
+                        className={cn(
+                          "flex items-center justify-center gap-1.5 h-9 rounded-md border text-xs transition-colors",
+                          active
+                            ? "border-primary bg-primary/5 text-primary font-medium"
+                            : "border-border text-muted-foreground hover:bg-muted/40"
+                        )}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span>{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
             <div>
-              <Label className="flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
-              <Select
-                value={selectedOutletIds[0] ?? ""}
-                onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select an outlet..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {outlets.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="item-name" className="text-xs">Item Name *</Label>
+              <Input id="item-name" className="mt-1 h-9" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs flex items-center gap-1.5">
+                  Category *
+                  {itemType === "simple" && linkedInventoryItemId && (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </Label>
+                <Select
+                  value={selectedCatId}
+                  onValueChange={(v) => setSelectedCatId(v)}
+                  disabled={itemType === "simple" && !!linkedInventoryItemId}
+                >
+                  <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs flex items-center gap-1.5">
+                  Selling Unit
+                  {itemType === "simple" && linkedInventoryItemId && (
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </Label>
+                <Select
+                  value={sellingUnit}
+                  onValueChange={setSellingUnit}
+                  disabled={itemType === "simple" && !!linkedInventoryItemId}
+                >
+                  <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                  <SelectContent>
+                    {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
+                      <SelectItem key={u.abbreviation} value={u.abbreviation}>
+                        {u.name} ({u.abbreviation})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="item-desc" className="text-xs">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
             </div>
 
             {variants.length === 0 && (
-              <div className="flex items-center gap-3 pt-2 border-t border-border">
+              <div className="flex items-center gap-3 pt-1">
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
-                <div>
-                  <Label className="text-sm">Status</Label>
-                  <p className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</p>
-                </div>
+                <Label className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</Label>
               </div>
             )}
-          </FormSection>
+          </FormGroup>
 
-          {/* Item Type selector */}
-          <FormSection
-            icon={Package}
-            title="Item Type"
-            description="Choose how this item behaves at the POS and in inventory."
-            required
-          >
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { key: "simple", label: "Simple", hint: "Retail / barcode", Icon: Package },
-                { key: "composite", label: "Composite", hint: "Made from ingredients", Icon: ChefHat },
-                { key: "service", label: "Service", hint: "No inventory", Icon: Sparkles },
-              ] as const).map(({ key, label, hint, Icon }) => {
-                const active = itemType === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handleTypeChange(key)}
-                    className={cn(
-                      "flex flex-col items-start gap-1 p-3 rounded-lg border text-left transition-colors",
-                      active
-                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                        : "border-border hover:border-primary/40 hover:bg-muted/40"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Icon className={cn("h-4 w-4", active ? "text-primary" : "text-muted-foreground")} />
-                      <span className="text-sm font-medium">{label}</span>
-                    </div>
-                    <span className="text-[11px] text-muted-foreground leading-tight">{hint}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </FormSection>
-
-          {/* Link to Inventory — Simple items only */}
-          {itemType === "simple" && (
-            <FormSection
-              icon={Link2}
-              title="Link to Inventory"
-              description="Optionally connect this catalog item to a stocked product. Auto-fills name, SKU and suggests a category."
-            >
-              <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between font-normal h-9 text-sm"
-                  >
-                    {linkedInventoryItemId
-                      ? (() => {
-                          const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
-                          return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
-                        })()
-                      : <span className="text-muted-foreground">Search inventory...</span>}
-                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search by name or SKU..." className="h-9" />
-                    <CommandList>
-                      <CommandEmpty>No inventory items found.</CommandEmpty>
-                      <CommandGroup>
-                        {linkedInventoryItemId && (
-                          <CommandItem
-                            value="__clear__"
-                            onSelect={() => { setLinkedInventoryItemId(""); setLinkPickerOpen(false); }}
-                          >
-                            <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                            <span className="text-muted-foreground">Clear link</span>
-                          </CommandItem>
-                        )}
-                        {availableInventory.map((inv) => (
-                          <CommandItem
-                            key={inv.id}
-                            value={`${inv.name} ${inv.sku}`}
-                            onSelect={() => { handleLinkInventory(inv.id); setLinkPickerOpen(false); }}
-                          >
-                            <Check className={cn("h-3.5 w-3.5 mr-2", linkedInventoryItemId === inv.id ? "opacity-100" : "opacity-0")} />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm truncate">{inv.name}</div>
-                              <div className="text-[11px] text-muted-foreground truncate">{inv.sku} · stock {inv.stock}</div>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {linkedInventoryItemId && (() => {
-                const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
-                if (!inv) return null;
-                return (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[10px]">Linked</Badge>
-                    <span className="text-[11px] text-muted-foreground">
-                      Stock: <span className="font-medium text-foreground tabular-nums">{inv.stock}</span> · Cost: <span className="font-medium text-foreground tabular-nums">{inv.costPrice}</span>
-                    </span>
-                  </div>
-                );
-              })()}
-            </FormSection>
-          )}
-
-          {/* Stock & Barcode — Simple items only */}
+          {/* INVENTORY — Simple items only. Combines link, stock/barcode, and
+              the "Also add to Inventory" toggle into one compact group. */}
           {itemType === "simple" && (() => {
             const linked = linkedInventoryItemId
               ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
               : null;
             const isLinked = !!linked;
             return (
-              <FormSection
-                icon={Barcode}
-                title="Stock & Barcode"
-                description={
-                  isLinked
-                    ? "Synced from the linked inventory item — manage stock from Inventory."
-                    : "Scan or enter a barcode and starting quantity for this item."
-                }
+              <FormGroup
+                title="Inventory"
+                hint={isLinked ? "Linked — synced from inventory" : undefined}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs">Link to existing inventory item <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between font-normal h-9 text-sm mt-1"
+                      >
+                        {linkedInventoryItemId
+                          ? (() => {
+                              const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
+                              return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
+                            })()
+                          : <span className="text-muted-foreground">Search inventory...</span>}
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search by name or SKU..." className="h-9" />
+                        <CommandList>
+                          <CommandEmpty>No inventory items found.</CommandEmpty>
+                          <CommandGroup>
+                            {linkedInventoryItemId && (
+                              <CommandItem
+                                value="__clear__"
+                                onSelect={() => { setLinkedInventoryItemId(""); setLinkPickerOpen(false); }}
+                              >
+                                <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                                <span className="text-muted-foreground">Clear link</span>
+                              </CommandItem>
+                            )}
+                            {availableInventory.map((inv) => (
+                              <CommandItem
+                                key={inv.id}
+                                value={`${inv.name} ${inv.sku}`}
+                                onSelect={() => { handleLinkInventory(inv.id); setLinkPickerOpen(false); }}
+                              >
+                                <Check className={cn("h-3.5 w-3.5 mr-2", linkedInventoryItemId === inv.id ? "opacity-100" : "opacity-0")} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm truncate">{inv.name}</div>
+                                  <div className="text-[11px] text-muted-foreground truncate">{inv.sku} · stock {inv.stock}</div>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs flex items-center gap-1.5">
                       Barcode / SKU
                       {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
                     </Label>
                     {isLinked ? (
-                      <Input
-                        className="mt-1 h-9 text-sm bg-muted/50"
-                        value={sku}
-                        readOnly
-                        disabled
-                      />
+                      <Input className="mt-1 h-9 text-sm bg-muted/50" value={sku} readOnly disabled />
                     ) : (
                       <div className="mt-1">
-                        <BarcodeScanner
-                          value={sku}
-                          onChange={setSku}
-                          placeholder="Scan or enter barcode"
-                        />
+                        <BarcodeScanner value={sku} onChange={setSku} placeholder="Scan or enter barcode" />
                       </div>
                     )}
                   </div>
@@ -771,147 +773,39 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 </div>
 
-              </FormSection>
+                {!isLinked && (
+                  <div className="flex items-start gap-3 rounded-md bg-muted/40 px-3 py-2">
+                    <Switch
+                      id="add-to-inventory"
+                      checked={addToInventory}
+                      onCheckedChange={setAddToInventory}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <Label htmlFor="add-to-inventory" className="text-xs cursor-pointer">
+                        Also add this item to Inventory
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-snug">
+                        Creates a matching inventory record so stock deducts automatically when sold.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </FormGroup>
             );
           })()}
 
-          {/* Add to Inventory — Simple items only, full-width so it visually
-              applies to all the Simple-item fields above, not just Stock & Barcode. */}
-          {itemType === "simple" && !linkedInventoryItemId && (
-            <div className="flex items-start gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-3">
-              <Switch
-                id="add-to-inventory"
-                checked={addToInventory}
-                onCheckedChange={setAddToInventory}
-                className="mt-0.5"
-              />
-              <div className="flex-1 min-w-0">
-                <Label htmlFor="add-to-inventory" className="text-sm cursor-pointer">
-                  Also add this item to Inventory
-                </Label>
-                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                  Creates a matching inventory record using the details above so stock deducts automatically when sold.
-                </p>
-              </div>
-            </div>
-          )}
-
-
-          <FormSection
-            icon={FileText}
-            title="Basic Info"
-            description="Name, category and description shown across the catalog."
-            required
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <Label htmlFor="item-name">Item Name *</Label>
-                <Input id="item-name" className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
-              </div>
-
-              <div>
-                <Label className="flex items-center gap-1.5">
-                  Category *
-                  {itemType === "simple" && linkedInventoryItemId && (
-                    <Lock className="h-3 w-3 text-muted-foreground" />
-                  )}
-                </Label>
-                <Select
-                  value={selectedCatId}
-                  onValueChange={(v) => setSelectedCatId(v)}
-                  disabled={itemType === "simple" && !!linkedInventoryItemId}
-                >
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-                {itemType === "simple" && linkedInventoryItemId && (
-                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                    Synced from the linked inventory item.
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label className="flex items-center gap-1.5">
-                  Selling Unit
-                  {itemType === "simple" && linkedInventoryItemId && (
-                    <Lock className="h-3 w-3 text-muted-foreground" />
-                  )}
-                </Label>
-                <Select
-                  value={sellingUnit}
-                  onValueChange={setSellingUnit}
-                  disabled={itemType === "simple" && !!linkedInventoryItemId}
-                >
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="Select unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
-                      <SelectItem key={u.abbreviation} value={u.abbreviation}>
-                        {u.name} ({u.abbreviation})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                  {itemType === "service"
-                    ? "Time-based unit shown at checkout (e.g. per hour, per session)."
-                    : itemType === "simple" && linkedInventoryItemId
-                      ? "Synced from the linked inventory item."
-                      : "Unit displayed when selling this item (e.g. pcs, kg, L)."}
-                </p>
-              </div>
-
-              <div className="sm:col-span-2">
-                <Label htmlFor="item-desc">Description</Label>
-                <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
-              </div>
-            </div>
-          </FormSection>
-
-
-          {/* Images — hidden for Service items */}
-          {itemType !== "service" && (
-            <FormSection
-              icon={ImageIcon}
-              title="Images"
-              description="Up to 4 photos. The first image is used as the POS thumbnail."
-            >
-              <div className="flex gap-2 flex-wrap">
-                {images.map((img, idx) => (
-                  <div key={idx} className="relative h-20 w-20 rounded-lg border border-border overflow-hidden group">
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X className="h-3 w-3 text-destructive" />
-                    </button>
-                  </div>
-                ))}
-                {images.length < 4 && (
-                  <button onClick={handleImageUpload} className="h-20 w-20 rounded-lg border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-colors">
-                    <ImagePlus className="h-5 w-5" />
-                    <span className="text-[10px]">Add</span>
-                  </button>
-                )}
-              </div>
-            </FormSection>
-          )}
-
-
-          {/* Pricing */}
-          <FormSection icon={DollarSign} title="Pricing" required>
+          {/* PRICING */}
+          <FormGroup title="Pricing">
             {itemType === "service" && (
               <div>
-                <Label htmlFor="item-price-svc">Price *</Label>
-                <Input id="item-price-svc" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                <Label htmlFor="item-price-svc" className="text-xs">Price *</Label>
+                <Input id="item-price-svc" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
               </div>
             )}
 
             {itemType !== "service" && (
               <>
-                {/* Strategy selector — compact segmented control */}
                 <div className="grid grid-cols-3 gap-2">
                   {([
                     { id: "base", label: "Base Price", icon: Tag },
@@ -937,13 +831,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                             addVariant();
                           }
                           if (opt.id !== "variant") {
-                            // Variant pricing owns the variants list — clear it
-                            // when switching away so the user isn't surprised.
                             setVariants([]);
                           }
                         }}
                         className={cn(
-                          "flex items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors",
+                          "flex items-center justify-center gap-1.5 rounded-md border px-3 h-9 text-xs transition-colors",
                           active
                             ? "border-primary bg-primary/5 text-primary font-medium"
                             : "border-border text-muted-foreground hover:bg-muted/50",
@@ -956,25 +848,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   })}
                 </div>
 
-                {/* Strategy intro text */}
-                <p className="text-xs text-muted-foreground -mt-1">
-                  {pricingStrategy === "base" &&
-                    "A single fixed price for this item. Best for most products."}
-                  {pricingStrategy === "variant" &&
-                    "Different prices for each variation (e.g. Small, Medium, Large)."}
-                  {pricingStrategy === "open" &&
-                    "No preset price — the cashier enters the amount at checkout. Useful for custom or weighed items."}
-                </p>
-
-                {/* BASE PRICE */}
                 {pricingStrategy === "base" && (
                   <div>
-                    <Label htmlFor="item-price-nv">Price *</Label>
-                    <Input id="item-price-nv" className="mt-1" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                    <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
+                    <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
                   </div>
                 )}
 
-                {/* VARIANT PRICING — inline name + price rows */}
                 {pricingStrategy === "variant" && (
                   <div className="space-y-2">
                     <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
@@ -1016,19 +896,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 )}
 
-                {/* OPEN PRICE */}
                 {pricingStrategy === "open" && (
                   <p className="text-xs text-muted-foreground">
                     Price will be entered at checkout.
                   </p>
                 )}
 
-                {/* Sale toggle — only meaningful for Base Price */}
                 {pricingStrategy === "base" && (
                   <div className="space-y-3 pt-1">
                     <div className="flex items-center gap-2">
                       <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                      <Label className="text-sm">On Sale</Label>
+                      <Label className="text-xs">On Sale</Label>
                     </div>
                     {showSale && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1044,17 +922,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 )}
               </>
             )}
-          </FormSection>
+          </FormGroup>
 
-
-          {/* Composition — Composite items only */}
+          {/* COMPOSITION — Composite items only */}
           {itemType === "composite" && (
-            <FormSection
-              icon={ChefHat}
-              title="Composition"
-              description="Inventory items consumed each time this menu item is sold."
-              required
-            >
+            <FormGroup title="Composition" hint="Inventory consumed per sale">
               <div className="flex justify-end">
                 <Button
                   type="button"
@@ -1139,117 +1011,127 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   );
                 })}
               </div>
-            </FormSection>
+            </FormGroup>
           )}
 
-          {/* Add-ons / Modifiers */}
-          {itemType !== "service" && features?.hasExtras && (
-            <FormSection
-              icon={ListPlus}
-              title={features.extrasLabel}
-              description={
-                extras.length > 0
-                  ? `${extras.length} ${extras.length === 1 ? "item" : "items"} added`
-                  : "Optional add-ons customers can select at checkout."
-              }
-            >
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setExtras((prev) => [
-                      ...prev,
-                      { id: crypto.randomUUID(), name: "", price: 0, category: "" },
-                    ])
-                  }
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                </Button>
-              </div>
-              {extras.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
-                  No add-ons yet.
-                </p>
-              )}
-              {extras.map((extra, idx) => (
-                <div
-                  key={extra.id}
-                  className="border border-border rounded-lg p-3 space-y-3 bg-muted/30"
-                >
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">
-                      {features.extrasLabel.split("/")[0].trim()} #{idx + 1}
-                    </Label>
-                    <button
-                      onClick={() =>
-                        setExtras((prev) => prev.filter((e) => e.id !== extra.id))
-                      }
-                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
+          {/* IMAGES — hidden for Service items. Compact thumbnail row, no
+              wrapping section card. */}
+          {itemType !== "service" && (
+            <FormGroup title="Images" hint="Up to 4 — first is the POS thumbnail">
+              <div className="flex gap-2 flex-wrap">
+                {images.map((img, idx) => (
+                  <div key={idx} className="relative h-16 w-16 rounded-md border border-border overflow-hidden group">
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3 text-destructive" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div>
-                      <Label className="text-xs">Name *</Label>
-                      <Input
-                        className="mt-1 h-9 text-sm"
-                        value={extra.name}
-                        onChange={(e) =>
-                          setExtras((prev) =>
-                            prev.map((ex) =>
-                              ex.id === extra.id
-                                ? { ...ex, name: e.target.value }
-                                : ex
-                            )
-                          )
-                        }
-                        placeholder="e.g. Extra cheese"
-                      />
+                ))}
+                {images.length < 4 && (
+                  <button onClick={handleImageUpload} className="h-16 w-16 rounded-md border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-primary transition-colors">
+                    <ImagePlus className="h-4 w-4" />
+                    <span className="text-[10px]">Add</span>
+                  </button>
+                )}
+              </div>
+            </FormGroup>
+          )}
+
+          {/* ADD-ONS / MODIFIERS — collapsed by default via accordion to save
+              vertical space. Most items don't need add-ons configured. */}
+          {itemType !== "service" && features?.hasExtras && (
+            <FormGroup>
+              <Accordion type="single" collapsible defaultValue={extras.length > 0 ? "extras" : undefined}>
+                <AccordionItem value="extras" className="border-b-0">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <ListPlus className="h-3.5 w-3.5" />
+                      <span>{features.extrasLabel}</span>
+                      {extras.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
+                          {extras.length}
+                        </Badge>
+                      )}
                     </div>
-                    <div>
-                      <Label className="text-xs">Price *</Label>
-                      <Input
-                        className="mt-1 h-9 text-sm"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={extra.price || ""}
-                        onChange={(e) =>
-                          setExtras((prev) =>
-                            prev.map((ex) =>
-                              ex.id === extra.id
-                                ? { ...ex, price: parseFloat(e.target.value) || 0 }
-                                : ex
-                            )
-                          )
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3 pt-2">
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setExtras((prev) => [
+                            ...prev,
+                            { id: crypto.randomUUID(), name: "", price: 0, category: "" },
+                          ])
                         }
-                        placeholder="0.00"
-                      />
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Add
+                      </Button>
                     </div>
-                    <div>
-                      <Label className="text-xs">Group (optional)</Label>
-                      <Input
-                        className="mt-1 h-9 text-sm"
-                        value={extra.category || ""}
-                        onChange={(e) =>
-                          setExtras((prev) =>
-                            prev.map((ex) =>
-                              ex.id === extra.id
-                                ? { ...ex, category: e.target.value }
-                                : ex
-                            )
-                          )
-                        }
-                        placeholder="e.g. Toppings"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </FormSection>
+                    {extras.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                        No add-ons yet.
+                      </p>
+                    )}
+                    {extras.map((extra, idx) => (
+                      <div key={extra.id} className="border border-border rounded-md p-3 space-y-2 bg-muted/20">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-medium">
+                            {features.extrasLabel.split("/")[0].trim()} #{idx + 1}
+                          </Label>
+                          <button
+                            onClick={() => setExtras((prev) => prev.filter((e) => e.id !== extra.id))}
+                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-[11px]">Name *</Label>
+                            <Input
+                              className="mt-1 h-8 text-sm"
+                              value={extra.name}
+                              onChange={(e) =>
+                                setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, name: e.target.value } : ex))
+                              }
+                              placeholder="e.g. Extra cheese"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[11px]">Price *</Label>
+                            <Input
+                              className="mt-1 h-8 text-sm"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={extra.price || ""}
+                              onChange={(e) =>
+                                setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, price: parseFloat(e.target.value) || 0 } : ex))
+                              }
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[11px]">Group</Label>
+                            <Input
+                              className="mt-1 h-8 text-sm"
+                              value={extra.category || ""}
+                              onChange={(e) =>
+                                setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, category: e.target.value } : ex))
+                              }
+                              placeholder="e.g. Toppings"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </FormGroup>
           )}
         </div>
 
