@@ -350,6 +350,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         } else {
           setPricingStrategy("base");
         }
+        setSellingUnit(item.sellingUnit ?? ((item.itemType ?? "simple") === "service" ? "hr" : "pcs"));
       } else {
         setItemType("simple");
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
@@ -360,6 +361,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
         setAddToInventory(false);
+        setSellingUnit("pcs");
       }
     }
   }, [open, item, categories, currentOutletId]);
