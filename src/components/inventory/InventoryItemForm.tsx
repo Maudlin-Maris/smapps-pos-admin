@@ -1162,6 +1162,19 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                 <Switch id="register-add-to-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
               </div>
             )}
+            {isOutletRetail(form.outletId) && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                <div className="space-y-0.5">
+                  <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
+                    Auto-update catalog
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Sync this item's sell price to the product catalog automatically
+                  </p>
+                </div>
+                <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
