@@ -771,24 +771,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   </div>
                 </div>
 
-                {!isLinked && (
-                  <div className="flex items-start gap-3 rounded-md border border-dashed border-border bg-muted/20 px-3 py-2.5">
-                    <Switch
-                      id="add-to-inventory"
-                      checked={addToInventory}
-                      onCheckedChange={setAddToInventory}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <Label htmlFor="add-to-inventory" className="text-sm cursor-pointer">
-                        Also add this item to Inventory
-                      </Label>
-                      <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                        Creates a matching inventory record so stock deducts automatically when sold.
-                      </p>
-                    </div>
-                  </div>
-                )}
+              </FormSection>
+            );
+          })()}
+
+          {/* Add to Inventory — Simple items only, full-width so it visually
+              applies to all the Simple-item fields above, not just Stock & Barcode. */}
+          {itemType === "simple" && !linkedInventoryItemId && (
+            <div className="flex items-start gap-3 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-3">
+              <Switch
+                id="add-to-inventory"
+                checked={addToInventory}
+                onCheckedChange={setAddToInventory}
+                className="mt-0.5"
+              />
+              <div className="flex-1 min-w-0">
+                <Label htmlFor="add-to-inventory" className="text-sm cursor-pointer">
+                  Also add this item to Inventory
+                </Label>
+                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                  Creates a matching inventory record using the details above so stock deducts automatically when sold.
+                </p>
+              </div>
+            </div>
+          )}
+
               </FormSection>
             );
           })()}
