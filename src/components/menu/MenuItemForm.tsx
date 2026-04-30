@@ -321,6 +321,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   /** Unit used when selling — restaurant/retail items: pcs/kg/L etc.,
    *  service items: hour/session/visit. */
   const [sellingUnit, setSellingUnit] = useState<string>("pcs");
+  /** Simple-item cost & markup state (used when not linked to inventory). */
+  const [costPrice, setCostPrice] = useState<string>("");
+  const [menuPricingMethod, setMenuPricingMethod] = useState<PricingMethod>("markup");
+  const [menuPricingValue, setMenuPricingValue] = useState<string>("30");
   /** Reusable modifier groups attached to this item. */
   const [modifierGroupIds, setModifierGroupIds] = useState<string[]>([]);
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
