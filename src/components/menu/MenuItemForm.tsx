@@ -47,6 +47,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
 import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
+import { formatNaira } from "@/lib/currency";
 import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
