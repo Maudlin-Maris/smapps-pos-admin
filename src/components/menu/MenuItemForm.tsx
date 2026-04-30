@@ -466,6 +466,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         categories.find((c) => c.name.toLowerCase().includes(lowerCat.split(" ")[0]));
       if (match) setSelectedCatId(match.id);
     }
+    // Sync cost / sell price / markup from inventory record. Sell price
+    // becomes the catalog Price, and the cost+markup pair drives the
+    // read-only profit summary shown in the Pricing section.
+    setCostPrice(inv.costPrice != null ? String(inv.costPrice) : "");
+    if (inv.sellPrice != null && inv.sellPrice > 0) setPrice(String(inv.sellPrice));
+    if (inv.pricingMethod) setMenuPricingMethod(inv.pricingMethod);
+    if (inv.pricingValue != null) setMenuPricingValue(String(inv.pricingValue));
   };
 
 
