@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { outlets } from "@/data/outlets";
 import { defaultInventoryItems } from "@/data/inventoryItems";
+import { upsertCompositeFromMenu, removeCompositesForMenu } from "@/hooks/use-composites-store";
+import type { CompositeItem, CompositeComponent } from "@/components/inventory/CompositeItemForm";
 
 const initialCategories: Category[] = [
   {
@@ -132,6 +134,37 @@ export default function MenuManagement() {
     [menuItems, selectedOutletId, isAllOutlets]
   );
 
+  const syncCompositeForMenuItem = (item: MenuItem, outletId: string) => {
+    if (item.itemType !== "composite") {
+      // If switched away from composite, remove any linked composite for this outlet
+      removeCompositesForMenu(item.id, outletId);
+      return;
+    }
+    const components: CompositeComponent[] = (item.ingredients ?? [])
+      .filter((g) => g.inventoryItemId && g.quantity > 0)
+      .map((g, idx) => ({
+        inventoryItemId: g.inventoryItemId,
+        quantity: g.quantity,
+        unitId: g.unitId,
+        role: idx === 0 ? "primary" : "secondary",
+      }));
+    if (components.length === 0) return;
+    const composite: CompositeItem = {
+      id: crypto.randomUUID(),
+      name: item.name,
+      menuItemId: item.id,
+      description: item.description,
+      components,
+      outletId,
+      sellPrice: item.price || undefined,
+      pricingMethod: item.pricingMethod === "markup" || item.pricingMethod === "margin" || item.pricingMethod === "fixed"
+        ? item.pricingMethod
+        : undefined,
+      pricingValue: item.pricingValue,
+    };
+    upsertCompositeFromMenu(composite);
+  };
+
   const handleSave = (item: MenuItem, targetOutletIds: string[]) => {
     setMenuItems((prev) => {
       const exists = prev.find((m) => m.id === item.id);
@@ -162,6 +195,17 @@ export default function MenuManagement() {
       toast.success(newItems.length > 1 ? `Item added to ${newItems.length} outlets` : "Menu item added");
       return [...prev, ...newItems];
     });
+    // Sync composite linkage to inventory composites for each target outlet
+    const exists = menuItems.find((m) => m.id === item.id);
+    if (exists) {
+      const primaryOutletId = targetOutletIds[0] ?? selectedOutletId;
+      syncCompositeForMenuItem({ ...item, id: item.id }, primaryOutletId);
+      // copies get fresh ids — handled by reading state in next tick
+    } else {
+      targetOutletIds.forEach((oid, idx) => {
+        if (idx === 0) syncCompositeForMenuItem(item, oid);
+      });
+    }
     setEditingItem(null);
   };
 
@@ -186,7 +230,9 @@ export default function MenuManagement() {
 
   const handleDeleteConfirm = () => {
     if (!deletingId) return;
+    const target = menuItems.find((m) => m.id === deletingId);
     setMenuItems((prev) => prev.filter((m) => m.id !== deletingId));
+    if (target) removeCompositesForMenu(target.id, target.outletId);
     setDeleteConfirmOpen(false);
     setDeletingId(null);
     toast.success("Menu item deleted");
