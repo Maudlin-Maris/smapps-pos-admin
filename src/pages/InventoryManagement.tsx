@@ -37,6 +37,7 @@ import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialo
 import ProfitabilityView from "@/components/inventory/ProfitabilityView";
 import { computeProfitability } from "@/lib/profitability";
 import { defaultInventoryItems } from "@/data/inventoryItems";
+import { useCompositesStore } from "@/hooks/use-composites-store";
 
 const defaultItems: InventoryItem[] = defaultInventoryItems;
 
