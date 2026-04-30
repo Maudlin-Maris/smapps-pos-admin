@@ -941,44 +941,64 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
                     : null;
 
-                  // LINKED → read-only summary sourced from inventory record
+                  // LINKED → suggested price from inventory + manual override
                   if (linkedInv) {
                     const cost = linkedInv.costPrice ?? 0;
-                    const sell = linkedInv.sellPrice ?? (parseFloat(price) || 0);
+                    const suggested = linkedInv.sellPrice ?? 0;
+                    const sell = parseFloat(price) || 0;
                     const profit = sell - cost;
                     const markupPct = cost > 0 ? (profit / cost) * 100 : 0;
-                    const methodLabel =
-                      linkedInv.pricingMethod === "margin" ? "Margin"
-                      : linkedInv.pricingMethod === "fixed" ? "Fixed"
-                      : "Markup";
+                    const matchesSuggested = suggested > 0 && Math.abs(sell - suggested) < 0.005;
                     return (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                            <Lock className="h-3 w-3" /> Synced from inventory
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                              <TrendingUp className="h-3 w-3" /> Suggested from inventory
+                            </div>
+                            {suggested > 0 && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={matchesSuggested ? "secondary" : "outline"}
+                                className="h-7 text-xs"
+                                onClick={() => setPrice(suggested.toFixed(2))}
+                                disabled={matchesSuggested}
+                              >
+                                {matchesSuggested ? "Using suggested" : `Use ₦${suggested.toFixed(2)}`}
+                              </Button>
+                            )}
                           </div>
-                          <div className="grid grid-cols-3 gap-3 text-sm">
+                          <div className="grid grid-cols-2 gap-3 text-sm">
                             <div>
                               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cost / unit</p>
                               <p className="font-medium tabular-nums">₦{cost.toFixed(2)}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{methodLabel}{linkedInv.pricingMethod !== "fixed" ? " %" : ""}</p>
-                              <p className="font-medium tabular-nums">
-                                {linkedInv.pricingValue != null
-                                  ? (linkedInv.pricingMethod === "fixed"
-                                      ? `₦${Number(linkedInv.pricingValue).toFixed(2)}`
-                                      : `${Number(linkedInv.pricingValue).toFixed(1)}%`)
-                                  : `${markupPct.toFixed(1)}%`}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell Price</p>
-                              <p className="font-medium tabular-nums text-primary">₦{sell.toFixed(2)}</p>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Suggested Sell</p>
+                              <p className="font-medium tabular-nums text-primary">{suggested > 0 ? `₦${suggested.toFixed(2)}` : "—"}</p>
                             </div>
                           </div>
-                          {cost > 0 && sell > 0 && (
-                            <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-border/60">
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="menu-linked-price" className="text-xs font-medium">
+                            Sell Price <span className="text-destructive">*</span>
+                          </Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₦</span>
+                            <Input
+                              id="menu-linked-price"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={price}
+                              onChange={(e) => setPrice(e.target.value)}
+                              placeholder={suggested > 0 ? suggested.toFixed(2) : "0.00"}
+                              className="pl-7"
+                            />
+                          </div>
+                          {sell > 0 && cost > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs pt-0.5">
                               <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
                               <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
                                 ₦{profit.toFixed(2)}/unit profit
