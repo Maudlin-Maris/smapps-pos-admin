@@ -1425,9 +1425,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
                     <div className="border-t border-border pt-3 space-y-3">
                       <div className="flex items-center justify-between">
-                        <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                          One-off Add-ons
-                        </Label>
+                        <div className="flex items-center gap-1.5">
+                          <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            One-off Add-ons
+                          </Label>
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground hover:text-foreground transition-colors"
+                                  aria-label="What are one-off add-ons?"
+                                >
+                                  <Info className="h-3.5 w-3.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+                                One-off add-ons are extras unique to this item only (e.g. extra cheese, gift wrap). Use Modifier Groups instead if you want to reuse the same add-ons across multiple items.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                         <Button
                           type="button"
                           variant="outline"
