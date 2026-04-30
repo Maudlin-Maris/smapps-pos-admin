@@ -388,6 +388,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           setPricingStrategy("base");
         }
         setSellingUnit(item.sellingUnit ?? ((item.itemType ?? "simple") === "service" ? "hr" : "pcs"));
+        setCostPrice(item.costPrice != null ? String(item.costPrice) : "");
+        setMenuPricingMethod(item.pricingMethod ?? "markup");
+        setMenuPricingValue(item.pricingValue != null ? String(item.pricingValue) : "30");
       } else {
         setItemType("simple");
         setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
@@ -399,6 +402,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setPricingStrategy("base");
         setAddToInventory(false);
         setSellingUnit("pcs");
+        setCostPrice("");
+        setMenuPricingMethod("markup");
+        setMenuPricingValue("30");
       }
     }
   }, [open, item, categories, currentOutletId]);
