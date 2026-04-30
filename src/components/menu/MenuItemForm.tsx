@@ -935,12 +935,176 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   })}
                 </div>
 
-                {pricingStrategy === "base" && (
-                  <div>
-                    <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
-                    <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                  </div>
-                )}
+                {pricingStrategy === "base" && (() => {
+                  const isSimple = itemType === "simple";
+                  const linkedInv = isSimple && linkedInventoryItemId
+                    ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
+                    : null;
+
+                  // LINKED → read-only summary sourced from inventory record
+                  if (linkedInv) {
+                    const cost = linkedInv.costPrice ?? 0;
+                    const sell = linkedInv.sellPrice ?? parseFloat(price) || 0;
+                    const profit = sell - cost;
+                    const markupPct = cost > 0 ? (profit / cost) * 100 : 0;
+                    const methodLabel =
+                      linkedInv.pricingMethod === "margin" ? "Margin"
+                      : linkedInv.pricingMethod === "fixed" ? "Fixed"
+                      : "Markup";
+                    return (
+                      <div className="space-y-2">
+                        <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            <Lock className="h-3 w-3" /> Synced from inventory
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-sm">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cost / unit</p>
+                              <p className="font-medium tabular-nums">₦{cost.toFixed(2)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{methodLabel}{linkedInv.pricingMethod !== "fixed" ? " %" : ""}</p>
+                              <p className="font-medium tabular-nums">
+                                {linkedInv.pricingValue != null
+                                  ? (linkedInv.pricingMethod === "fixed"
+                                      ? `₦${Number(linkedInv.pricingValue).toFixed(2)}`
+                                      : `${Number(linkedInv.pricingValue).toFixed(1)}%`)
+                                  : `${markupPct.toFixed(1)}%`}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell Price</p>
+                              <p className="font-medium tabular-nums text-primary">₦{sell.toFixed(2)}</p>
+                            </div>
+                          </div>
+                          {cost > 0 && sell > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-border/60">
+                              <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
+                              <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                                ₦{profit.toFixed(2)}/unit profit
+                              </span>
+                              <span className="text-muted-foreground">({markupPct.toFixed(1)}% markup)</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // SIMPLE (not linked) → editable cost + sell price & markup
+                  if (isSimple) {
+                    const cost = parseFloat(costPrice) || 0;
+                    const sell = parseFloat(price) || 0;
+                    const profit = sell - cost;
+                    return (
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="item-cost-nv" className="text-xs">Cost Price / unit</Label>
+                          <Input
+                            id="item-cost-nv"
+                            className="mt-1 h-9"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={costPrice}
+                            onChange={(e) => {
+                              const cp = e.target.value;
+                              setCostPrice(cp);
+                              const cpNum = parseFloat(cp) || 0;
+                              const valNum = parseFloat(menuPricingValue) || 0;
+                              if (cpNum > 0) {
+                                const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
+                                setPrice(String(newSell));
+                              }
+                            }}
+                            placeholder="0.00"
+                          />
+                          <p className="text-[10px] text-muted-foreground mt-1">Optional — enables markup-based sell pricing.</p>
+                        </div>
+
+                        <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                            <Select
+                              value={menuPricingMethod}
+                              onValueChange={(v) => {
+                                const method = v as PricingMethod;
+                                setMenuPricingMethod(method);
+                                const cpNum = parseFloat(costPrice) || 0;
+                                const valNum = parseFloat(menuPricingValue) || 0;
+                                if (cpNum > 0) {
+                                  const newSell = Math.round(calcMenuSellPrice(cpNum, method, valNum) * 100) / 100;
+                                  setPrice(String(newSell));
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="markup">Markup %</SelectItem>
+                                <SelectItem value="margin">Margin %</SelectItem>
+                                <SelectItem value="fixed">Fixed Price</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                              {menuPricingMethod === "fixed" ? "Price" : "%"}
+                            </label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="h-9"
+                              value={menuPricingValue}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setMenuPricingValue(val);
+                                const cpNum = parseFloat(costPrice) || 0;
+                                const valNum = parseFloat(val) || 0;
+                                if (cpNum > 0) {
+                                  const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
+                                  setPrice(String(newSell));
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="h-9"
+                              value={price}
+                              onChange={(e) => setPrice(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+
+                        {cost > 0 && sell > 0 && (
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
+                            <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                              ₦{profit.toFixed(2)}/unit profit
+                            </span>
+                            <span className="text-muted-foreground">
+                              ({((profit / cost) * 100).toFixed(1)}% markup)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // COMPOSITE / SERVICE → original simple Price field
+                  return (
+                    <div>
+                      <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
+                      <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                    </div>
+                  );
+                })()}
 
                 {pricingStrategy === "variant" && itemType !== "service" && (
                   <div className="space-y-2">
