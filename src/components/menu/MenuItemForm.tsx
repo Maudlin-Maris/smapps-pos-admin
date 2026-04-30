@@ -1107,6 +1107,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                             </span>
                           )}
                         </div>
+                        {g.inventoryItemId && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-muted-foreground">Role</span>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant={(g.role ?? "primary") === "primary" ? "default" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "primary" } : p))}
+                              >
+                                Primary
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={g.role === "secondary" ? "secondary" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "secondary" } : p))}
+                              >
+                                Secondary
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
