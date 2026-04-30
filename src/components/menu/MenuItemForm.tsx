@@ -21,7 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp } from "lucide-react";
+import type { PricingMethod } from "@/components/inventory/StockAdjustmentHistory";
+
+function calcMenuSellPrice(costPrice: number, method: PricingMethod, value: number): number {
+  if (method === "fixed") return value;
+  if (method === "markup") return costPrice * (1 + value / 100);
+  if (method === "margin") {
+    if (value >= 100) return costPrice * 10;
+    return costPrice / (1 - value / 100);
+  }
+  return costPrice;
+}
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
