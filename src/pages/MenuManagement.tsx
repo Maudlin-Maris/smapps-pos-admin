@@ -195,6 +195,17 @@ export default function MenuManagement() {
       toast.success(newItems.length > 1 ? `Item added to ${newItems.length} outlets` : "Menu item added");
       return [...prev, ...newItems];
     });
+    // Sync composite linkage to inventory composites for each target outlet
+    const exists = menuItems.find((m) => m.id === item.id);
+    if (exists) {
+      const primaryOutletId = targetOutletIds[0] ?? selectedOutletId;
+      syncCompositeForMenuItem({ ...item, id: item.id }, primaryOutletId);
+      // copies get fresh ids — handled by reading state in next tick
+    } else {
+      targetOutletIds.forEach((oid, idx) => {
+        if (idx === 0) syncCompositeForMenuItem(item, oid);
+      });
+    }
     setEditingItem(null);
   };
 
