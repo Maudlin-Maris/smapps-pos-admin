@@ -1109,7 +1109,23 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                         </div>
                         {g.inventoryItemId && (
                           <div className="flex items-center gap-2">
-                            <span className="text-[11px] text-muted-foreground">Role</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[11px] text-muted-foreground">Role</span>
+                              <TooltipProvider delayDuration={150}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button type="button" className="text-muted-foreground/70 hover:text-foreground" aria-label="What does role mean?">
+                                      <Info className="h-3 w-3" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+                                    <p className="font-medium mb-1">Primary vs Secondary</p>
+                                    <p><span className="font-medium">Primary</span>: a core ingredient that defines the dish (e.g. the protein or main carb). Used to determine producible quantity.</p>
+                                    <p className="mt-1"><span className="font-medium">Secondary</span>: a supporting ingredient (e.g. seasoning, garnish) that contributes to cost but isn't the main driver of yield.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
                             <div className="flex gap-1">
                               <Button
                                 type="button"
