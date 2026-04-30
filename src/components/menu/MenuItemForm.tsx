@@ -416,6 +416,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setCostPrice("");
         setMenuPricingMethod("markup");
         setMenuPricingValue("30");
+        setCompositePriceMode("manual");
+        setCompositeMarkupPct("100");
       }
     }
   }, [open, item, categories, currentOutletId]);
