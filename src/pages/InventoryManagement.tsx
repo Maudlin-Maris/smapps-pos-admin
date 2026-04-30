@@ -113,7 +113,7 @@ export default function InventoryManagement() {
   const [categories, setCategories] = useState<InventoryCategory[]>(defaultCategories);
   const [units, setUnits] = useState<MeasuringUnit[]>(defaultUnits);
   const [items, setItems] = useState<InventoryItem[]>(defaultItems);
-  const [composites, setComposites] = useState<CompositeItem[]>(defaultComposites);
+  const [composites, setComposites] = useCompositesStore(defaultComposites);
   const { adjustments: storedAdjustments, addAdjustment } = useStockAdjustments();
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
