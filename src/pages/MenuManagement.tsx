@@ -134,6 +134,37 @@ export default function MenuManagement() {
     [menuItems, selectedOutletId, isAllOutlets]
   );
 
+  const syncCompositeForMenuItem = (item: MenuItem, outletId: string) => {
+    if (item.itemType !== "composite") {
+      // If switched away from composite, remove any linked composite for this outlet
+      removeCompositesForMenu(item.id, outletId);
+      return;
+    }
+    const components: CompositeComponent[] = (item.ingredients ?? [])
+      .filter((g) => g.inventoryItemId && g.quantity > 0)
+      .map((g, idx) => ({
+        inventoryItemId: g.inventoryItemId,
+        quantity: g.quantity,
+        unitId: g.unitId,
+        role: idx === 0 ? "primary" : "secondary",
+      }));
+    if (components.length === 0) return;
+    const composite: CompositeItem = {
+      id: crypto.randomUUID(),
+      name: item.name,
+      menuItemId: item.id,
+      description: item.description,
+      components,
+      outletId,
+      sellPrice: item.price || undefined,
+      pricingMethod: item.pricingMethod === "markup" || item.pricingMethod === "margin" || item.pricingMethod === "fixed"
+        ? item.pricingMethod
+        : undefined,
+      pricingValue: item.pricingValue,
+    };
+    upsertCompositeFromMenu(composite);
+  };
+
   const handleSave = (item: MenuItem, targetOutletIds: string[]) => {
     setMenuItems((prev) => {
       const exists = prev.find((m) => m.id === item.id);
