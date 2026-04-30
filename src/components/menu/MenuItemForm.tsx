@@ -101,6 +101,9 @@ export interface MenuIngredient {
   /** Unit the quantity is expressed in. Undefined = the item's base unit.
    *  Otherwise must match one of the item's conversion `toUnitId`s. */
   unitId?: string;
+  /** Whether this ingredient is a primary or secondary component of the
+   *  composition. Defaults to "primary" when omitted. */
+  role?: "primary" | "secondary";
 }
 
 export interface MenuItem {
@@ -1000,7 +1003,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
+                    onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1, role: "primary" }])}
                   >
                     <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
                   </Button>
@@ -1104,6 +1107,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                             </span>
                           )}
                         </div>
+                        {g.inventoryItemId && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-muted-foreground">Role</span>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                variant={(g.role ?? "primary") === "primary" ? "default" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "primary" } : p))}
+                              >
+                                Primary
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={g.role === "secondary" ? "secondary" : "outline"}
+                                size="sm"
+                                className="h-7 text-xs px-2.5"
+                                onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "secondary" } : p))}
+                              >
+                                Secondary
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
