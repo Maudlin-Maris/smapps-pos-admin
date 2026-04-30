@@ -944,7 +944,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                   // LINKED → read-only summary sourced from inventory record
                   if (linkedInv) {
                     const cost = linkedInv.costPrice ?? 0;
-                    const sell = linkedInv.sellPrice ?? parseFloat(price) || 0;
+                    const sell = linkedInv.sellPrice ?? (parseFloat(price) || 0);
                     const profit = sell - cost;
                     const markupPct = cost > 0 ? (profit / cost) * 100 : 0;
                     const methodLabel =
