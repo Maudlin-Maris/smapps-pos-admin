@@ -101,6 +101,9 @@ export interface MenuIngredient {
   /** Unit the quantity is expressed in. Undefined = the item's base unit.
    *  Otherwise must match one of the item's conversion `toUnitId`s. */
   unitId?: string;
+  /** Whether this ingredient is a primary or secondary component of the
+   *  composition. Defaults to "primary" when omitted. */
+  role?: "primary" | "secondary";
 }
 
 export interface MenuItem {
