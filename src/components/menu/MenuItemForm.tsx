@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp, Pencil, Check as CheckIcon } from "lucide-react";
 import type { PricingMethod } from "@/components/inventory/StockAdjustmentHistory";
 
 function calcMenuSellPrice(costPrice: number, method: PricingMethod, value: number): number {
