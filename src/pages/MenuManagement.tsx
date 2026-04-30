@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { outlets } from "@/data/outlets";
 import { defaultInventoryItems } from "@/data/inventoryItems";
+import { upsertCompositeFromMenu, removeCompositesForMenu } from "@/hooks/use-composites-store";
+import type { CompositeItem, CompositeComponent } from "@/components/inventory/CompositeItemForm";
 
 const initialCategories: Category[] = [
   {
