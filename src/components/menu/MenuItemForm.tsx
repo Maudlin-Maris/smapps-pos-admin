@@ -331,11 +331,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [costPrice, setCostPrice] = useState<string>("");
   const [menuPricingMethod, setMenuPricingMethod] = useState<PricingMethod>("markup");
   const [menuPricingValue, setMenuPricingValue] = useState<string>("30");
-  /** Composite-item pricing strategy: "manual" lets user enter sell price
-   *  directly, "markup" auto-derives sell price from material cost + %. */
-  type CompositePriceMode = "manual" | "markup";
-  const [compositePriceMode, setCompositePriceMode] = useState<CompositePriceMode>("manual");
-  const [compositeMarkupPct, setCompositeMarkupPct] = useState<string>("100");
   /** Reusable modifier groups attached to this item. */
   const [modifierGroupIds, setModifierGroupIds] = useState<string[]>([]);
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
@@ -416,8 +411,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setCostPrice("");
         setMenuPricingMethod("markup");
         setMenuPricingValue("30");
-        setCompositePriceMode("manual");
-        setCompositeMarkupPct("100");
       }
     }
   }, [open, item, categories, currentOutletId]);
@@ -650,39 +643,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     ? "Update the details of this catalog item."
     : "Fill in the details to create a new catalog item.";
   const submitLabel = mode === "clone" ? "Create Clone" : mode === "edit" ? "Update Item" : "Add Item";
-
-  /** Material cost for composite items — mirrors the Composition section so
-   *  the markup-pricing flow always agrees with the Material Cost card. */
-  const compositeMaterialCost = (() => {
-    if (itemType !== "composite") return 0;
-    let total = 0;
-    for (const g of ingredients) {
-      if (!g.inventoryItemId || !g.quantity) continue;
-      const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
-      if (!item) continue;
-      const baseCost = item.costPrice ?? 0;
-      let unitCost = baseCost;
-      if (g.unitId && g.unitId !== item.unitId) {
-        const conv = (item.conversions || []).find((c) => c.toUnitId === g.unitId);
-        if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
-          unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
-        }
-      }
-      total += unitCost * g.quantity;
-    }
-    return total;
-  })();
-
-  // Auto-recompute composite sell price when material cost or markup % change.
-  useEffect(() => {
-    if (itemType !== "composite") return;
-    if (compositePriceMode !== "markup") return;
-    const pct = parseFloat(compositeMarkupPct) || 0;
-    if (compositeMaterialCost <= 0) return;
-    const newSell = Math.round(compositeMaterialCost * (1 + pct / 100) * 100) / 100;
-    setPrice(String(newSell));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemType, compositePriceMode, compositeMarkupPct, compositeMaterialCost]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1412,96 +1372,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     );
                   }
 
-                  // COMPOSITE → manual sell price OR markup-based auto pricing
-                  if (itemType === "composite") {
-                    const sell = parseFloat(price) || 0;
-                    const profit = sell - compositeMaterialCost;
-                    const effectiveMarkup = compositeMaterialCost > 0
-                      ? (profit / compositeMaterialCost) * 100
-                      : 0;
-                    const hasCost = compositeMaterialCost > 0;
-                    return (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing Method</label>
-                          <div className="mt-1 grid grid-cols-2 gap-2">
-                            {([
-                              { id: "manual" as const, label: "Manual Price", desc: "Enter sell price directly" },
-                              { id: "markup" as const, label: "Markup %", desc: "Auto from material cost" },
-                            ]).map((opt) => {
-                              const active = compositePriceMode === opt.id;
-                              return (
-                                <button
-                                  key={opt.id}
-                                  type="button"
-                                  onClick={() => setCompositePriceMode(opt.id)}
-                                  className={cn(
-                                    "flex flex-col items-start gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors",
-                                    active
-                                      ? "border-primary bg-primary/5 text-primary"
-                                      : "border-border text-muted-foreground hover:bg-muted/50",
-                                  )}
-                                >
-                                  <span className="text-xs font-medium">{opt.label}</span>
-                                  <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{opt.desc}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {compositePriceMode === "manual" ? (
-                          <div>
-                            <Label htmlFor="item-price-nv" className="text-xs">Sell Price (₦) *</Label>
-                            <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Material Cost</label>
-                              <Input className="h-9" value={hasCost ? formatNaira(compositeMaterialCost) : "—"} readOnly disabled />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Markup %</label>
-                              <Input
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                className="h-9"
-                                value={compositeMarkupPct}
-                                onChange={(e) => setCompositeMarkupPct(e.target.value)}
-                                placeholder="100"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
-                              <Input className="h-9" value={price} readOnly disabled />
-                            </div>
-                          </div>
-                        )}
-
-                        {hasCost && sell > 0 && (
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
-                            <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
-                              {formatNaira(profit)}/unit profit
-                            </span>
-                            <span className="text-muted-foreground">
-                              ({effectiveMarkup.toFixed(1)}% markup)
-                            </span>
-                          </div>
-                        )}
-
-                        {compositePriceMode === "markup" && !hasCost && (
-                          <p className="text-[11px] text-muted-foreground">
-                            Add ingredients above to enable markup pricing.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  // SERVICE → original simple Price field
+                  // COMPOSITE / SERVICE → original simple Price field
                   return (
                     <div>
                       <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
