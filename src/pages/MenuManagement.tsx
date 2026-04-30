@@ -230,7 +230,9 @@ export default function MenuManagement() {
 
   const handleDeleteConfirm = () => {
     if (!deletingId) return;
+    const target = menuItems.find((m) => m.id === deletingId);
     setMenuItems((prev) => prev.filter((m) => m.id !== deletingId));
+    if (target) removeCompositesForMenu(target.id, target.outletId);
     setDeleteConfirmOpen(false);
     setDeletingId(null);
     toast.success("Menu item deleted");
