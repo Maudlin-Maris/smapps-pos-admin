@@ -948,7 +948,27 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             const limitingName = limitingId ? inventoryItems.find((i) => i.id === limitingId)?.name : "";
 
             return (
-              <FormGroup title="Composition" hint="Inventory consumed per sale">
+              <FormGroup>
+                <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Composition
+                    </h3>
+                    <TooltipProvider delayDuration={150}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                            <Info className="h-3.5 w-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
+                          Composition lists the inventory items (ingredients/raw materials) used to make this item. Each sale automatically deducts the configured quantity from stock, calculates the material cost, and shows how many units you can still produce from current stock.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">Inventory consumed per sale</span>
+                </div>
                 <div className="flex justify-end">
                   <Button
                     type="button"
