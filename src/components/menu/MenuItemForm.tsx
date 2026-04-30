@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp, Pencil, Check as CheckIcon } from "lucide-react";
 import type { PricingMethod } from "@/components/inventory/StockAdjustmentHistory";
 
 function calcMenuSellPrice(costPrice: number, method: PricingMethod, value: number): number {
@@ -292,6 +292,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [selectedCatId, setSelectedCatId] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [price, setPrice] = useState("");
+  const [isLinkedSellPriceEditable, setIsLinkedSellPriceEditable] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [salePeriodStart, setSalePeriodStart] = useState<Date | null>(null);
@@ -974,17 +975,45 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                             </div>
                             <div>
                               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell Price</p>
-                              <div className="flex items-center">
-                                <span className="font-medium tabular-nums text-primary">₦</span>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={price}
-                                  onChange={(e) => setPrice(e.target.value)}
-                                  className="h-auto border-0 bg-transparent p-0 font-medium tabular-nums text-primary text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                                  aria-label="Sell price"
-                                />
+                              <div className="flex items-center gap-1">
+                                {isLinkedSellPriceEditable ? (
+                                  <>
+                                    <span className="font-medium tabular-nums text-primary">₦</span>
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      autoFocus
+                                      value={price}
+                                      onChange={(e) => setPrice(e.target.value)}
+                                      onBlur={() => setIsLinkedSellPriceEditable(false)}
+                                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setIsLinkedSellPriceEditable(false); }}
+                                      className="h-auto border-0 bg-transparent p-0 font-medium tabular-nums text-primary text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                                      aria-label="Sell price"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setIsLinkedSellPriceEditable(false)}
+                                      className="text-primary hover:text-primary/80 transition-colors"
+                                      aria-label="Done editing sell price"
+                                    >
+                                      <CheckIcon className="h-3.5 w-3.5" />
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="font-medium tabular-nums text-primary">₦{sell.toFixed(2)}</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => setIsLinkedSellPriceEditable(true)}
+                                      className="text-muted-foreground hover:text-primary transition-colors"
+                                      aria-label="Edit sell price"
+                                      title="Edit sell price"
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
