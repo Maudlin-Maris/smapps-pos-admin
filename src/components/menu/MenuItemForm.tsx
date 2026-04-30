@@ -133,6 +133,14 @@ export interface MenuItem {
   /** Unit used when selling this item (e.g. "pcs", "kg", "hour"). Drives
    *  POS display and reporting. Service items typically use time-based units. */
   sellingUnit?: string;
+  /** Simple items (Base Price strategy): cost price per selling unit. When
+   *  linked to an inventory item this is sourced from the inventory record;
+   *  otherwise admin enters it manually alongside Sell Price & Markup. */
+  costPrice?: number;
+  /** Simple items: how the sell price was derived from cost (markup/margin/fixed). */
+  pricingMethod?: PricingMethod;
+  /** Simple items: the value paired with `pricingMethod` (% or fixed price). */
+  pricingValue?: number;
 }
 
 interface MenuItemFormProps {
