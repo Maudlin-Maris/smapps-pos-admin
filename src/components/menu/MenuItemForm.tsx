@@ -1003,7 +1003,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
+                    onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1, role: "primary" }])}
                   >
                     <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
                   </Button>
