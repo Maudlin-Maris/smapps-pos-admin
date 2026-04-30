@@ -415,6 +415,32 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     }
   }, [open, item, categories, currentOutletId]);
 
+  // Auto-recalculate sell price for composite items as ingredients (and thus
+  // material cost) change, based on the active pricing strategy.
+  useEffect(() => {
+    if (!open) return;
+    if (itemType !== "composite") return;
+    if (pricingStrategy !== "base") return;
+    const cost = ingredients.reduce((sum, g) => {
+      if (!g.inventoryItemId || !g.quantity) return sum;
+      const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+      if (!inv) return sum;
+      const baseCost = inv.costPrice ?? 0;
+      let unitCost = baseCost;
+      if (g.unitId && g.unitId !== inv.unitId) {
+        const conv = (inv.conversions || []).find((c) => c.toUnitId === g.unitId);
+        if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
+          unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
+        }
+      }
+      return sum + unitCost * (Number(g.quantity) || 0);
+    }, 0);
+    const valNum = parseFloat(menuPricingValue) || 0;
+    if (cost <= 0 && menuPricingMethod !== "fixed") return;
+    const newSell = Math.round(calcMenuSellPrice(cost, menuPricingMethod, valNum) * 100) / 100;
+    setPrice((prev) => (prev === String(newSell) ? prev : String(newSell)));
+  }, [open, itemType, pricingStrategy, ingredients, menuPricingMethod, menuPricingValue, inventoryItems]);
+
   // When switching item type, clear fields that no longer apply so saved data
   // stays consistent with the chosen type.
   const handleTypeChange = (next: MenuItemType) => {
