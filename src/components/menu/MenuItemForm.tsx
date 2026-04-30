@@ -331,6 +331,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [costPrice, setCostPrice] = useState<string>("");
   const [menuPricingMethod, setMenuPricingMethod] = useState<PricingMethod>("markup");
   const [menuPricingValue, setMenuPricingValue] = useState<string>("30");
+  /** Composite-item pricing strategy: "manual" lets user enter sell price
+   *  directly, "markup" auto-derives sell price from material cost + %. */
+  type CompositePriceMode = "manual" | "markup";
+  const [compositePriceMode, setCompositePriceMode] = useState<CompositePriceMode>("manual");
+  const [compositeMarkupPct, setCompositeMarkupPct] = useState<string>("100");
   /** Reusable modifier groups attached to this item. */
   const [modifierGroupIds, setModifierGroupIds] = useState<string[]>([]);
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
