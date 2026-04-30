@@ -1412,7 +1412,96 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     );
                   }
 
-                  // COMPOSITE / SERVICE → original simple Price field
+                  // COMPOSITE → manual sell price OR markup-based auto pricing
+                  if (itemType === "composite") {
+                    const sell = parseFloat(price) || 0;
+                    const profit = sell - compositeMaterialCost;
+                    const effectiveMarkup = compositeMaterialCost > 0
+                      ? (profit / compositeMaterialCost) * 100
+                      : 0;
+                    const hasCost = compositeMaterialCost > 0;
+                    return (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing Method</label>
+                          <div className="mt-1 grid grid-cols-2 gap-2">
+                            {([
+                              { id: "manual" as const, label: "Manual Price", desc: "Enter sell price directly" },
+                              { id: "markup" as const, label: "Markup %", desc: "Auto from material cost" },
+                            ]).map((opt) => {
+                              const active = compositePriceMode === opt.id;
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => setCompositePriceMode(opt.id)}
+                                  className={cn(
+                                    "flex flex-col items-start gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors",
+                                    active
+                                      ? "border-primary bg-primary/5 text-primary"
+                                      : "border-border text-muted-foreground hover:bg-muted/50",
+                                  )}
+                                >
+                                  <span className="text-xs font-medium">{opt.label}</span>
+                                  <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{opt.desc}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {compositePriceMode === "manual" ? (
+                          <div>
+                            <Label htmlFor="item-price-nv" className="text-xs">Sell Price (₦) *</Label>
+                            <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Material Cost</label>
+                              <Input className="h-9" value={hasCost ? formatNaira(compositeMaterialCost) : "—"} readOnly disabled />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Markup %</label>
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                className="h-9"
+                                value={compositeMarkupPct}
+                                onChange={(e) => setCompositeMarkupPct(e.target.value)}
+                                placeholder="100"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
+                              <Input className="h-9" value={price} readOnly disabled />
+                            </div>
+                          </div>
+                        )}
+
+                        {hasCost && sell > 0 && (
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
+                            <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                              {formatNaira(profit)}/unit profit
+                            </span>
+                            <span className="text-muted-foreground">
+                              ({effectiveMarkup.toFixed(1)}% markup)
+                            </span>
+                          </div>
+                        )}
+
+                        {compositePriceMode === "markup" && !hasCost && (
+                          <p className="text-[11px] text-muted-foreground">
+                            Add ingredients above to enable markup pricing.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // SERVICE → original simple Price field
                   return (
                     <div>
                       <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
