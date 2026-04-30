@@ -292,6 +292,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [selectedCatId, setSelectedCatId] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [price, setPrice] = useState("");
+  const [isLinkedSellPriceEditable, setIsLinkedSellPriceEditable] = useState(false);
   const [quantity, setQuantity] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [salePeriodStart, setSalePeriodStart] = useState<Date | null>(null);
