@@ -651,6 +651,39 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     : "Fill in the details to create a new catalog item.";
   const submitLabel = mode === "clone" ? "Create Clone" : mode === "edit" ? "Update Item" : "Add Item";
 
+  /** Material cost for composite items — mirrors the Composition section so
+   *  the markup-pricing flow always agrees with the Material Cost card. */
+  const compositeMaterialCost = (() => {
+    if (itemType !== "composite") return 0;
+    let total = 0;
+    for (const g of ingredients) {
+      if (!g.inventoryItemId || !g.quantity) continue;
+      const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
+      if (!item) continue;
+      const baseCost = item.costPrice ?? 0;
+      let unitCost = baseCost;
+      if (g.unitId && g.unitId !== item.unitId) {
+        const conv = (item.conversions || []).find((c) => c.toUnitId === g.unitId);
+        if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
+          unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
+        }
+      }
+      total += unitCost * g.quantity;
+    }
+    return total;
+  })();
+
+  // Auto-recompute composite sell price when material cost or markup % change.
+  useEffect(() => {
+    if (itemType !== "composite") return;
+    if (compositePriceMode !== "markup") return;
+    const pct = parseFloat(compositeMarkupPct) || 0;
+    if (compositeMaterialCost <= 0) return;
+    const newSell = Math.round(compositeMaterialCost * (1 + pct / 100) * 100) / 100;
+    setPrice(String(newSell));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [itemType, compositePriceMode, compositeMarkupPct, compositeMaterialCost]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
