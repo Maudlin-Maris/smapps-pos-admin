@@ -974,7 +974,18 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                             </div>
                             <div>
                               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell Price</p>
-                              <p className="font-medium tabular-nums text-primary">₦{sell.toFixed(2)}</p>
+                              <div className="flex items-center">
+                                <span className="font-medium tabular-nums text-primary">₦</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={price}
+                                  onChange={(e) => setPrice(e.target.value)}
+                                  className="h-auto border-0 bg-transparent p-0 font-medium tabular-nums text-primary text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                                  aria-label="Sell price"
+                                />
+                              </div>
                             </div>
                           </div>
                           {cost > 0 && sell > 0 && (
