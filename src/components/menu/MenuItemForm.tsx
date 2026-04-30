@@ -617,6 +617,15 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
         : undefined,
       sellingUnit: sellingUnit || undefined,
+      costPrice: itemType === "simple" && pricingStrategy === "base" && costPrice
+        ? parseFloat(costPrice) || undefined
+        : undefined,
+      pricingMethod: itemType === "simple" && pricingStrategy === "base" && costPrice
+        ? menuPricingMethod
+        : undefined,
+      pricingValue: itemType === "simple" && pricingStrategy === "base" && costPrice
+        ? parseFloat(menuPricingValue) || 0
+        : undefined,
     }, selectedOutletIds);
     onOpenChange(false);
   };
