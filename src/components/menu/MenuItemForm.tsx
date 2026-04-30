@@ -626,10 +626,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       costPrice: itemType === "simple" && pricingStrategy === "base" && costPrice
         ? parseFloat(costPrice) || undefined
         : undefined,
-      pricingMethod: itemType === "simple" && pricingStrategy === "base" && costPrice
+      pricingMethod: pricingStrategy === "base" && (itemType === "composite" || (itemType === "simple" && !!costPrice))
         ? menuPricingMethod
         : undefined,
-      pricingValue: itemType === "simple" && pricingStrategy === "base" && costPrice
+      pricingValue: pricingStrategy === "base" && (itemType === "composite" || (itemType === "simple" && !!costPrice))
         ? parseFloat(menuPricingValue) || 0
         : undefined,
     }, selectedOutletIds);
