@@ -47,6 +47,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
 import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
+import { formatNaira } from "@/lib/currency";
 import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
@@ -97,6 +98,9 @@ export type MenuItemType = "simple" | "composite" | "service";
 export interface MenuIngredient {
   inventoryItemId: string;
   quantity: number;
+  /** Unit the quantity is expressed in. Undefined = the item's base unit.
+   *  Otherwise must match one of the item's conversion `toUnitId`s. */
+  unitId?: string;
 }
 
 export interface MenuItem {
@@ -882,94 +886,214 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           })()}
 
           {/* COMPOSITION — Composite items only (shown before Pricing) */}
-          {itemType === "composite" && (
-            <FormGroup title="Composition" hint="Inventory consumed per sale">
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
-                </Button>
-              </div>
+          {itemType === "composite" && (() => {
+            // Per-component unit options: base unit + every conversion target.
+            const getCompUnitOptions = (itemId: string) => {
+              const item = inventoryItems.find((i) => i.id === itemId);
+              if (!item) return [] as { id: string; label: string; baseUnitsPer: number }[];
+              const baseUnit = defaultMeasuringUnits.find((u) => u.id === item.unitId);
+              const opts: { id: string; label: string; baseUnitsPer: number }[] = [
+                {
+                  id: item.unitId,
+                  label: baseUnit ? `${baseUnit.name} (${baseUnit.abbreviation})` : "Base unit",
+                  baseUnitsPer: 1,
+                },
+              ];
+              (item.conversions || []).forEach((c) => {
+                if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0) return;
+                const u = defaultMeasuringUnits.find((x) => x.id === c.toUnitId);
+                opts.push({
+                  id: c.toUnitId,
+                  label: u ? `${u.name} (${u.abbreviation})` : c.toUnitId,
+                  baseUnitsPer: c.fromQuantity / c.toQuantity,
+                });
+              });
+              return opts;
+            };
+            const getCompUnitCost = (g: MenuIngredient) => {
+              const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
+              if (!item) return 0;
+              const baseCost = item.costPrice ?? 0;
+              if (!g.unitId || g.unitId === item.unitId) return baseCost;
+              const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
+              return baseCost * (opt?.baseUnitsPer ?? 1);
+            };
+            const getCompBaseConsumed = (g: MenuIngredient) => {
+              const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
+              if (!item) return 0;
+              let baseUnitsPer = 1;
+              if (g.unitId && g.unitId !== item.unitId) {
+                const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
+                baseUnitsPer = opt?.baseUnitsPer ?? 1;
+              }
+              return (g.quantity || 0) * baseUnitsPer;
+            };
+            const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
+            const totalMaterialCost = validIngredients.reduce(
+              (s, g) => s + getCompUnitCost(g) * (g.quantity || 0),
+              0
+            );
+            let sellableQty = Infinity;
+            let limitingId: string | undefined;
+            for (const g of validIngredients) {
+              const consumed = getCompBaseConsumed(g);
+              if (consumed <= 0) continue;
+              const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
+              const stock = item?.stock ?? 0;
+              const possible = Math.floor(stock / consumed);
+              if (possible < sellableQty) { sellableQty = possible; limitingId = g.inventoryItemId; }
+            }
+            const hasComponents = sellableQty !== Infinity;
+            const producible = hasComponents ? sellableQty : 0;
+            const limitingName = limitingId ? inventoryItems.find((i) => i.id === limitingId)?.name : "";
 
-              {ingredients.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
-                  No ingredients yet. Add inventory items that make up this dish.
-                </p>
-              )}
+            return (
+              <FormGroup title="Composition" hint="Inventory consumed per sale">
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1 }])}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
+                  </Button>
+                </div>
 
-              <div className="space-y-2">
-                {ingredients.map((g, idx) => {
-                  const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                  return (
-                    <div key={idx} className="grid grid-cols-[1fr,90px,32px] gap-2 items-center">
-                      <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
-                        <PopoverTrigger asChild>
-                          <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm w-full">
-                            {inv ? (
-                              <span className="truncate">{inv.name}</span>
-                            ) : (
-                              <span className="text-muted-foreground">Select inventory item...</span>
-                            )}
-                            <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                          <Command>
-                            <CommandInput placeholder="Search inventory..." className="h-9" />
-                            <CommandList>
-                              <CommandEmpty>No items found.</CommandEmpty>
-                              <CommandGroup>
-                                {availableInventory.map((it) => (
-                                  <CommandItem
-                                    key={it.id}
-                                    value={`${it.name} ${it.sku}`}
-                                    onSelect={() => {
-                                      setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id } : p));
-                                      setIngredientPickerOpenIdx(null);
-                                    }}
-                                  >
-                                    <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-sm truncate">{it.name}</div>
-                                      <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
-                                    </div>
-                                  </CommandItem>
+                {ingredients.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                    No ingredients yet. Add inventory items that make up this dish.
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  {ingredients.map((g, idx) => {
+                    const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                    const unitOptions = g.inventoryItemId ? getCompUnitOptions(g.inventoryItemId) : [];
+                    const activeUnitId = g.unitId || inv?.unitId || "";
+                    const unitCost = getCompUnitCost(g);
+                    const lineCost = unitCost * (g.quantity || 0);
+                    return (
+                      <div key={idx} className="space-y-2 p-2.5 border rounded-md">
+                        <div className="flex items-center gap-2">
+                          <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
+                            <PopoverTrigger asChild>
+                              <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm flex-1">
+                                {inv ? (
+                                  <span className="truncate">{inv.name}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">Select inventory item...</span>
+                                )}
+                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Search inventory..." className="h-9" />
+                                <CommandList>
+                                  <CommandEmpty>No items found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {availableInventory.map((it) => (
+                                      <CommandItem
+                                        key={it.id}
+                                        value={`${it.name} ${it.sku}`}
+                                        onSelect={() => {
+                                          // Reset unit when item changes so we don't carry stale unitId
+                                          setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id, unitId: undefined } : p));
+                                          setIngredientPickerOpenIdx(null);
+                                        }}
+                                      >
+                                        <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-sm truncate">{it.name}</div>
+                                          <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
+                                        </div>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <button
+                            type="button"
+                            onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
+                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
+                            aria-label="Remove ingredient"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={g.quantity || ""}
+                            onChange={(e) => {
+                              const v = parseFloat(e.target.value) || 0;
+                              setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
+                            }}
+                            placeholder="Qty"
+                            className="h-9 text-sm w-20"
+                          />
+                          {g.inventoryItemId && unitOptions.length > 0 && (
+                            <Select
+                              value={activeUnitId}
+                              onValueChange={(v) => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, unitId: v } : p))}
+                            >
+                              <SelectTrigger className="h-9 w-36">
+                                <SelectValue placeholder="Unit" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {unitOptions.map((opt) => (
+                                  <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
                                 ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={g.quantity || ""}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value) || 0;
-                          setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
-                        }}
-                        placeholder="Qty"
-                        className="h-9 text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
-                        className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                        aria-label="Remove ingredient"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {g.inventoryItemId && (
+                            <span className="text-[11px] text-muted-foreground tabular-nums ml-auto">
+                              @ {formatNaira(unitCost)} = <span className="font-medium text-foreground">{formatNaira(lineCost)}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {validIngredients.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="rounded-md border bg-muted/30 p-2.5">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Material Cost</div>
+                      <div className="text-sm font-semibold tabular-nums mt-0.5">{formatNaira(totalMaterialCost)}</div>
                     </div>
-                  );
-                })}
-              </div>
-            </FormGroup>
-          )}
+                    <div className={cn(
+                      "rounded-md border p-2.5",
+                      !hasComponents ? "bg-muted/30" :
+                        producible === 0 ? "border-destructive/40 bg-destructive/5" :
+                        producible < 5 ? "border-warning/40 bg-warning/5" :
+                        "border-success/40 bg-success/5"
+                    )}>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Sellable Qty</div>
+                      <div className={cn(
+                        "text-sm font-semibold tabular-nums mt-0.5",
+                        hasComponents && producible === 0 && "text-destructive"
+                      )}>
+                        {hasComponents ? `${producible} units` : "—"}
+                      </div>
+                      {limitingName && hasComponents && (
+                        <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                          Limited by <span className="font-medium text-foreground">{limitingName}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </FormGroup>
+            );
+          })()}
 
           {/* PRICING */}
           <FormGroup title="Pricing">
