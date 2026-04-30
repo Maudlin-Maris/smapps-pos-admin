@@ -97,6 +97,9 @@ export type MenuItemType = "simple" | "composite" | "service";
 export interface MenuIngredient {
   inventoryItemId: string;
   quantity: number;
+  /** Unit the quantity is expressed in. Undefined = the item's base unit.
+   *  Otherwise must match one of the item's conversion `toUnitId`s. */
+  unitId?: string;
 }
 
 export interface MenuItem {
