@@ -626,10 +626,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       costPrice: itemType === "simple" && pricingStrategy === "base" && costPrice
         ? parseFloat(costPrice) || undefined
         : undefined,
-      pricingMethod: itemType === "simple" && pricingStrategy === "base" && costPrice
+      pricingMethod: pricingStrategy === "base" && (itemType === "composite" || (itemType === "simple" && !!costPrice))
         ? menuPricingMethod
         : undefined,
-      pricingValue: itemType === "simple" && pricingStrategy === "base" && costPrice
+      pricingValue: pricingStrategy === "base" && (itemType === "composite" || (itemType === "simple" && !!costPrice))
         ? parseFloat(menuPricingValue) || 0
         : undefined,
     }, selectedOutletIds);
@@ -1372,7 +1372,107 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     );
                   }
 
-                  // COMPOSITE / SERVICE → original simple Price field
+                  // COMPOSITE → cost auto-derived from ingredients (material cost)
+                  if (itemType === "composite") {
+                    const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
+                    const cost = validIngredients.reduce((sum, g) => {
+                      const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                      if (!inv) return sum;
+                      const baseCost = inv.costPrice ?? 0;
+                      let unitCost = baseCost;
+                      if (g.unitId && g.unitId !== inv.unitId) {
+                        const conv = (inv.conversions || []).find((c) => c.toUnitId === g.unitId);
+                        if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
+                          unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
+                        }
+                      }
+                      return sum + unitCost * (Number(g.quantity) || 0);
+                    }, 0);
+                    const sell = parseFloat(price) || 0;
+                    const profit = sell - cost;
+                    return (
+                      <div className="space-y-3">
+                        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                            <Lock className="h-3 w-3" /> Material Cost / unit
+                          </div>
+                          <div className="text-sm font-semibold tabular-nums">{formatNaira(cost)}</div>
+                        </div>
+
+                        <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                            <Select
+                              value={menuPricingMethod}
+                              onValueChange={(v) => {
+                                const method = v as PricingMethod;
+                                setMenuPricingMethod(method);
+                                const valNum = parseFloat(menuPricingValue) || 0;
+                                if (cost > 0 || method === "fixed") {
+                                  const newSell = Math.round(calcMenuSellPrice(cost, method, valNum) * 100) / 100;
+                                  setPrice(String(newSell));
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="markup">Markup %</SelectItem>
+                                <SelectItem value="margin">Margin %</SelectItem>
+                                <SelectItem value="fixed">Fixed Price</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                              {menuPricingMethod === "fixed" ? "Price" : "%"}
+                            </label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="h-9"
+                              value={menuPricingValue}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setMenuPricingValue(val);
+                                const valNum = parseFloat(val) || 0;
+                                if (cost > 0 || menuPricingMethod === "fixed") {
+                                  const newSell = Math.round(calcMenuSellPrice(cost, menuPricingMethod, valNum) * 100) / 100;
+                                  setPrice(String(newSell));
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="h-9"
+                              value={price}
+                              onChange={(e) => setPrice(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+
+                        {cost > 0 && sell > 0 && (
+                          <div className="flex items-center gap-1.5 text-xs">
+                            <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
+                            <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                              ₦{profit.toFixed(2)}/unit profit
+                            </span>
+                            <span className="text-muted-foreground">
+                              ({((profit / cost) * 100).toFixed(1)}% markup)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // SERVICE → original simple Price field
                   return (
                     <div>
                       <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
