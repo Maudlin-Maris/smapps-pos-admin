@@ -333,6 +333,12 @@ export default function CustomerManagement() {
       )}
 
       <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editCustomer} onSave={handleSave} />
+      <CustomerDetailPanel
+        customer={detailCustomer}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={(c) => { setDetailOpen(false); setEditCustomer(c); setFormOpen(true); }}
+      />
     </div>
   );
 }
