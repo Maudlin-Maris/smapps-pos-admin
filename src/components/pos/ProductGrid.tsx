@@ -626,6 +626,13 @@ export default function ProductGrid() {
         onConfirm={handleConfirmVariantExtras}
       />
 
+      <OpenPriceDialog
+        open={!!openPriceProduct}
+        productName={openPriceProduct?.name || ""}
+        onConfirm={handleOpenPriceConfirm}
+        onClose={() => setOpenPriceProduct(null)}
+      />
+
       <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
