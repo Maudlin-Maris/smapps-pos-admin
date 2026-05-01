@@ -433,7 +433,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
       <Sheet open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); setShowPayInline(false); } }}>
         <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
           {selectedOrder && showPayInline ? (
-            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+            <div className="px-4 py-4 space-y-3">
               <PaymentContent
                 existingOrderId={selectedOrder.id}
                 onClose={() => setShowPayInline(false)}
@@ -441,7 +441,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
               />
             </div>
           ) : selectedOrder && showAddItemsInline ? (
-            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3 w-full max-w-full overflow-hidden box-border">
+            <div className="px-4 py-4 space-y-3 w-full max-w-full overflow-hidden box-border">
               <AddItemsToOrderContent
                 orderId={selectedOrder.id}
                 onDone={() => setShowAddItemsInline(false)}
@@ -449,7 +449,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
               />
             </div>
           ) : selectedOrder && showMergeInline ? (
-            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+            <div className="px-4 py-4 space-y-3">
               <MergeOrderContent
                 targetOrderId={selectedOrder.id}
                 onDone={() => setShowMergeInline(false)}
@@ -735,7 +735,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
                   )}
 
                   {/* Actions */}
-                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:static border-t border-border sm:border-0">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 border-t border-border">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
                         {selectedOrder.paidAmount < selectedOrder.totalAmount && (
