@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -358,15 +358,15 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[100dvh] sm:max-h-[90vh] h-full sm:h-auto flex flex-col overflow-hidden p-4 sm:p-6 gap-2 sm:gap-4">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</DialogTitle>
-          <DialogDescription>Group products together and sell at a package price</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:z-10">
+        <SheetHeader className="flex-shrink-0 p-4 sm:p-6 pb-0">
+          <SheetTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</SheetTitle>
+          <SheetDescription>Group products together and sell at a package price</SheetDescription>
+        </SheetHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-2">
-          <div className="space-y-5 py-2">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="space-y-5 px-4 sm:px-6 py-4">
             {/* Basic Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -648,11 +648,11 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
           </div>
         </ScrollArea>
 
-        <DialogFooter className="flex-shrink-0 pt-3 border-t border-border flex-col-reverse sm:flex-row gap-2">
+        <div className="flex-shrink-0 p-4 sm:p-6 pt-3 border-t border-border flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
           <Button onClick={handleSave} className="w-full sm:w-auto">{isEdit ? "Update Bundle" : "Create Bundle"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
