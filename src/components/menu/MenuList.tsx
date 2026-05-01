@@ -128,7 +128,6 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
         (item.name.toLowerCase().includes(q) ||
           item.sku.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
-          item.subcategory.toLowerCase().includes(q) ||
           item.variants.some((v) => v.sku.toLowerCase().includes(q)))
     );
   }, [items, selectedSubcategory, search]);
