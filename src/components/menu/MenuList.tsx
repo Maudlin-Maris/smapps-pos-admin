@@ -128,7 +128,6 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
         (item.name.toLowerCase().includes(q) ||
           item.sku.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
-          item.subcategory.toLowerCase().includes(q) ||
           item.variants.some((v) => v.sku.toLowerCase().includes(q)))
     );
   }, [items, selectedSubcategory, search]);
@@ -305,7 +304,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                             )}
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate">{item.name}</p>
-                              <p className="text-xs text-muted-foreground">{item.category} › {item.subcategory}</p>
+                              <p className="text-xs text-muted-foreground">{item.category}</p>
                               {item.sellingUnit && <p className="text-[10px] text-muted-foreground">Unit: {item.sellingUnit}</p>}
                             </div>
                           </div>
@@ -384,7 +383,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                         )}
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.category} › {item.subcategory}</p>
+                          <p className="text-xs text-muted-foreground">{item.category}</p>
                           {item.sellingUnit && <p className="text-[10px] text-muted-foreground">Unit: {item.sellingUnit}</p>}
                         </div>
                       </div>
