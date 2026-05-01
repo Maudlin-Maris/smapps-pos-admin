@@ -140,7 +140,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
 
   useMemo(() => setCurrentPage(1), [search, selectedSubcategory, rowsPerPage]);
 
-  const colCount = 8 + (showOutlet ? 1 : 0) + (readOnly ? 0 : 1);
+  const colCount = 10 + (showOutlet ? 1 : 0) + (readOnly ? 0 : 1);
 
   // Print helpers
   const togglePrintSelect = (id: string) => {
