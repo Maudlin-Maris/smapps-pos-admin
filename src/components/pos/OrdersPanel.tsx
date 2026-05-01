@@ -460,14 +460,14 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
             const sc = statusConfig[selectedOrder.status];
             return (
               <>
-                <DialogHeader className="px-4 pt-4 pb-2 sm:px-0 sm:pt-0 sm:pb-0 border-b border-border sm:border-0 sticky top-0 bg-background z-10">
-                  <DialogTitle className="flex items-center gap-2 text-base">
+                <SheetHeader className="px-4 pt-4 pb-2 border-b border-border sticky top-0 bg-background z-10">
+                  <SheetTitle className="flex items-center gap-2 text-base">
                     {selectedOrder.orderNumber}
                     <Badge variant="outline" className={`text-xs gap-1 ${sc.color}`}>{sc.icon} {sc.label}</Badge>
-                  </DialogTitle>
-                </DialogHeader>
+                  </SheetTitle>
+                </SheetHeader>
 
-                <div className="space-y-3 px-4 pb-4 sm:px-0 sm:pb-0 overflow-y-auto flex-1">
+                <div className="space-y-3 px-4 pb-4 overflow-y-auto flex-1">
                   {/* Info - compact chips on mobile */}
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground py-1">
                     <span className="capitalize">{selectedOrder.type.replace("_", " ")}</span>
@@ -762,8 +762,8 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
               </>
             );
           })()}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Payment dialog removed — payment is now inline in the order details dialog */}
 
