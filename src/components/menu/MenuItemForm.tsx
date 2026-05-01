@@ -1841,7 +1841,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           </FormGroup>
         </div>
 
-
+        </div>
         <SheetFooter className="px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
