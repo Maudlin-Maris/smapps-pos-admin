@@ -3,7 +3,9 @@ import { type POSCartItem, posProducts } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Trash2, Minus, Plus, Package, Pill } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Check, Trash2, Minus, Plus, Package, Pill, DollarSign } from "lucide-react";
 
 interface Props {
   item: POSCartItem | null;
@@ -17,6 +19,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>();
   const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>();
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
+  const [openPriceValue, setOpenPriceValue] = useState("");
 
   const product = item ? posProducts.find(p => p.id === item.productId) : null;
 
@@ -38,20 +41,27 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       const qtyMap: Record<string, number> = {};
       item.extras.forEach(e => { qtyMap[e.id] = e.quantity || 1; });
       setExtraQuantities(qtyMap);
+      // Initialize open price value from current unit price
+      if (product.openPricing) {
+        setOpenPriceValue(item.unitPrice > 0 ? String(item.unitPrice) : "");
+      }
     }
   }, [item, open, product]);
 
   if (!item || !product) return null;
 
+  const isOpenPricing = !!product.openPricing;
   const hasVariants = product.variants && product.variants.length > 0;
   const hasExtras = product.extras && product.extras.length > 0;
   const hasUnits = !!(product.sellableUnits && product.sellableUnits.length > 0);
   const variant = product.variants?.find(v => v.id === selectedVariant);
   const selectedUnit = product.sellableUnits?.find(u => u.id === selectedUnitId);
-  const basePrice = selectedUnit?.price ?? variant?.price ?? product.price;
+  const openPriceNumeric = parseFloat(openPriceValue) || 0;
+  const basePrice = isOpenPricing ? openPriceNumeric : (selectedUnit?.price ?? variant?.price ?? product.price);
   const selectedExtras = product.extras?.filter(e => (extraQuantities[e.id] || 0) > 0) ?? [];
   const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * (extraQuantities[e.id] || 1), 0);
   const totalPrice = (basePrice + extrasTotal) * item.quantity;
+  const quickAmounts = [500, 1000, 2500, 5000, 10000, 25000];
 
   const toggleExtra = (id: string) => {
     setExtraQuantities(prev => {
@@ -114,6 +124,50 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
         <DialogHeader>
           <DialogTitle className="text-lg">Edit: {product.name}</DialogTitle>
         </DialogHeader>
+
+        {isOpenPricing && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Selling Price</p>
+            </div>
+            <div>
+              <Label htmlFor="edit-open-price" className="text-xs text-muted-foreground">
+                Price (₦)
+              </Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₦</span>
+                <Input
+                  id="edit-open-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={openPriceValue}
+                  onChange={e => setOpenPriceValue(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-8 text-lg font-semibold h-12"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {quickAmounts.map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setOpenPriceValue(String(amt))}
+                  className={`py-2 rounded-lg text-xs font-medium transition-colors ${
+                    openPriceValue === String(amt)
+                      ? "bg-primary/10 text-primary border border-primary/30"
+                      : "bg-muted hover:bg-muted/80 text-foreground"
+                  }`}
+                >
+                  {formatNaira(amt)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {hasUnits && (
           <div className="space-y-2">
@@ -239,7 +293,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
             </Button>
             <Button
               onClick={handleSave}
-              disabled={hasVariants && !selectedVariant}
+              disabled={(hasVariants && !selectedVariant) || (isOpenPricing && openPriceNumeric <= 0)}
               className="h-11 px-6 bg-primary text-primary-foreground"
             >
               Save Changes
