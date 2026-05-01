@@ -523,10 +523,10 @@ export default function ProductGrid() {
                     {savingsPercent}% off
                   </span>
                   <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">{bundle.description}</p>
-                  <div className="flex items-center gap-2 mt-auto">
-                    <span className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</span>
-                    <span className="text-sm font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</span>
-                  </div>
+                   <div className="flex items-center gap-1.5 mt-auto flex-wrap">
+                     <span className="text-[11px] text-muted-foreground line-through whitespace-nowrap">{formatNaira(bundle.originalPrice)}</span>
+                     <span className="text-xs font-bold text-foreground whitespace-nowrap">{formatNaira(bundle.bundlePrice)}</span>
+                   </div>
                 </button>
               );
             })}
@@ -552,10 +552,10 @@ export default function ProductGrid() {
                       <Tag className="w-2.5 h-2.5" />
                       {savingsPercent}% off
                     </span>
-                    <div className="flex items-center gap-2 mt-auto">
-                      <span className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</span>
-                      <span className="text-sm font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</span>
-                    </div>
+                     <div className="flex items-center gap-1.5 mt-auto flex-wrap">
+                       <span className="text-[11px] text-muted-foreground line-through whitespace-nowrap">{formatNaira(bundle.originalPrice)}</span>
+                       <span className="text-xs font-bold text-foreground whitespace-nowrap">{formatNaira(bundle.bundlePrice)}</span>
+                     </div>
                   </button>
                 );
               })}
