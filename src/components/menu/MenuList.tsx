@@ -24,8 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer } from "lucide-react";
+import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer, Package, ChefHat, Sparkles, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { formatNaira } from "@/lib/currency";
 import type { MenuItem } from "./MenuItemForm";
 import type { Outlet } from "@/data/outlets";
 
@@ -139,7 +140,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
 
   useMemo(() => setCurrentPage(1), [search, selectedSubcategory, rowsPerPage]);
 
-  const colCount = 8 + (showOutlet ? 1 : 0) + (readOnly ? 0 : 1);
+  const colCount = 10 + (showOutlet ? 1 : 0) + (readOnly ? 0 : 1);
 
   // Print helpers
   const togglePrintSelect = (id: string) => {
@@ -165,10 +166,10 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
     printableItems.forEach((item) => {
       if (item.variants.length > 0) {
         item.variants.forEach((v) => {
-          if (v.sku) labels.push({ name: item.name, variant: v.name, sku: v.sku, price: `$${v.price.toFixed(2)}` });
+          if (v.sku) labels.push({ name: item.name, variant: v.name, sku: v.sku, price: formatNaira(v.price) });
         });
       } else if (item.sku) {
-        labels.push({ name: item.name, variant: "", sku: item.sku, price: `$${item.price.toFixed(2)}` });
+        labels.push({ name: item.name, variant: "", sku: item.sku, price: formatNaira(item.price) });
       }
     });
 
@@ -267,12 +268,14 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
               <TableRow>
                 <TableHead>Name</TableHead>
                 {showOutlet && <TableHead>Outlet</TableHead>}
+                <TableHead>Type</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Variant</TableHead>
+                <TableHead>Pricing</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead className="text-right">Sale Price</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
-                <TableHead>Inventory</TableHead>
                 <TableHead>Status</TableHead>
                 {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
@@ -282,6 +285,12 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                 const hasVariants = item.variants?.length > 0;
 
                 if (hasVariants) {
+                  const itemType = item.itemType || "simple";
+                  const pricingStrategy = item.pricingStrategy || "base";
+                  const typeIcon = itemType === "composite" ? <ChefHat className="h-3 w-3" /> : itemType === "service" ? <Sparkles className="h-3 w-3" /> : <Package className="h-3 w-3" />;
+                  const typeLabel = itemType === "composite" ? "Composite" : itemType === "service" ? "Service" : "Simple";
+                  const pricingLabel = pricingStrategy === "open" ? "Open" : pricingStrategy === "variant" ? "Variant" : "Base";
+
                   return item.variants.map((v, vIdx) => (
                     <TableRow key={`${item.id}-${v.id}`} className={vIdx > 0 ? "border-t-0" : ""}>
                       {vIdx === 0 ? (
@@ -297,6 +306,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate">{item.name}</p>
                               <p className="text-xs text-muted-foreground">{item.category} › {item.subcategory}</p>
+                              {item.sellingUnit && <p className="text-[10px] text-muted-foreground">Unit: {item.sellingUnit}</p>}
                             </div>
                           </div>
                         </TableCell>
@@ -306,30 +316,39 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                           <Badge variant="outline" className="text-xs whitespace-nowrap">{getOutletName(item.outletId)}</Badge>
                         </TableCell>
                       ) : showOutlet && vIdx > 0 ? null : null}
+                      {vIdx === 0 ? (
+                        <TableCell rowSpan={item.variants.length} className="align-top">
+                          <Badge variant="outline" className="text-[10px] gap-1 whitespace-nowrap">
+                            {typeIcon} {typeLabel}
+                          </Badge>
+                        </TableCell>
+                      ) : null}
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{v.sku || "—"}</TableCell>
                       <TableCell className="text-sm font-medium">{v.name}</TableCell>
-                      <TableCell className="text-right font-heading font-semibold text-sm">
-                        ${(v.price ?? 0).toFixed(2)}
+                      {vIdx === 0 ? (
+                        <TableCell rowSpan={item.variants.length} className="align-top">
+                          <Badge variant={pricingStrategy === "open" ? "secondary" : "outline"} className="text-[10px] gap-1 whitespace-nowrap">
+                            {pricingStrategy === "open" && <DollarSign className="h-3 w-3" />}
+                            {pricingLabel}
+                          </Badge>
+                        </TableCell>
+                      ) : null}
+                      <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                        {item.costPrice != null ? formatNaira(item.costPrice) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-heading font-semibold text-sm whitespace-nowrap">
+                        {formatNaira(v.price ?? 0)}
                       </TableCell>
                       <TableCell className="text-right text-sm">
                         {v.salePrice != null ? (
                           <Badge variant="secondary" className="text-xs gap-1">
-                            <Tag className="h-3 w-3" />${v.salePrice.toFixed(2)}
+                            <Tag className="h-3 w-3" />{formatNaira(v.salePrice)}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right text-sm">{v.quantity ?? 0}</TableCell>
-                      <TableCell>
-                        {v.trackInventory ? (
-                          <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
-                            <PackageCheck className="h-3 w-3" /> Tracked
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Manual</span>
-                        )}
-                      </TableCell>
                       <TableCell>
                         <Badge variant={v.status === "active" ? "default" : "secondary"} className="text-xs">{v.status}</Badge>
                       </TableCell>
@@ -346,6 +365,12 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                   ));
                 }
 
+                const itemType = item.itemType || "simple";
+                const pricingStrategy = item.pricingStrategy || "base";
+                const typeIcon = itemType === "composite" ? <ChefHat className="h-3 w-3" /> : itemType === "service" ? <Sparkles className="h-3 w-3" /> : <Package className="h-3 w-3" />;
+                const typeLabel = itemType === "composite" ? "Composite" : itemType === "service" ? "Service" : "Simple";
+                const pricingLabel = pricingStrategy === "open" ? "Open" : pricingStrategy === "variant" ? "Variant" : "Base";
+
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
@@ -360,6 +385,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{item.name}</p>
                           <p className="text-xs text-muted-foreground">{item.category} › {item.subcategory}</p>
+                          {item.sellingUnit && <p className="text-[10px] text-muted-foreground">Unit: {item.sellingUnit}</p>}
                         </div>
                       </div>
                     </TableCell>
@@ -368,30 +394,35 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                         <Badge variant="outline" className="text-xs whitespace-nowrap">{getOutletName(item.outletId)}</Badge>
                       </TableCell>
                     )}
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px] gap-1 whitespace-nowrap">
+                        {typeIcon} {typeLabel}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{item.sku || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">—</TableCell>
-                    <TableCell className="text-right font-heading font-semibold text-sm">
-                      ${(item.price ?? 0).toFixed(2)}
+                    <TableCell>
+                      <Badge variant={pricingStrategy === "open" ? "secondary" : "outline"} className="text-[10px] gap-1 whitespace-nowrap">
+                        {pricingStrategy === "open" && <DollarSign className="h-3 w-3" />}
+                        {pricingLabel}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                      {item.costPrice != null ? formatNaira(item.costPrice) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-heading font-semibold text-sm whitespace-nowrap">
+                      {pricingStrategy === "open" ? <span className="text-muted-foreground italic text-xs">Open</span> : formatNaira(item.price ?? 0)}
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {item.salePrice != null ? (
                         <Badge variant="secondary" className="text-xs gap-1">
-                          <Tag className="h-3 w-3" />${item.salePrice.toFixed(2)}
+                          <Tag className="h-3 w-3" />{formatNaira(item.salePrice)}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right text-sm">{item.quantity ?? 0}</TableCell>
-                    <TableCell>
-                      {item.trackInventory ? (
-                        <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
-                          <PackageCheck className="h-3 w-3" /> Tracked
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Manual</span>
-                      )}
-                    </TableCell>
                     <TableCell>
                       <Badge variant={item.status === "active" ? "default" : "secondary"} className="text-xs">{item.status}</Badge>
                     </TableCell>
