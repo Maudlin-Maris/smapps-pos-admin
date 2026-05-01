@@ -359,7 +359,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[100dvh] sm:max-h-[90vh] h-full sm:h-auto flex flex-col overflow-hidden p-4 sm:p-6 gap-2 sm:gap-4">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</DialogTitle>
           <DialogDescription>Group products together and sell at a package price</DialogDescription>
