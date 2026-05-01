@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import {
   User, Phone, Mail, Calendar, Star, Award, TrendingUp,
   ShoppingBag, Tag, StickyNote, Pencil, Receipt, CheckCircle2,
-  Clock, XCircle, CreditCard,
+  Clock, XCircle, CreditCard, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
@@ -113,11 +113,20 @@ interface CustomerDetailPanelProps {
   onEdit: (customer: Customer) => void;
 }
 
+const TXN_PER_PAGE = 5;
+
 export default function CustomerDetailPanel({ customer, open, onOpenChange, onEdit }: CustomerDetailPanelProps) {
+  const [txnPage, setTxnPage] = useState(1);
+
   const transactions = useMemo(() => {
     if (!customer) return [];
+    setTxnPage(1);
     return generateMockTransactions(customer);
   }, [customer]);
+
+  const txnTotalPages = Math.max(1, Math.ceil(transactions.length / TXN_PER_PAGE));
+  const safeTxnPage = Math.min(txnPage, txnTotalPages);
+  const paginatedTxns = transactions.slice((safeTxnPage - 1) * TXN_PER_PAGE, safeTxnPage * TXN_PER_PAGE);
 
   if (!customer) return null;
 
@@ -215,62 +224,80 @@ export default function CustomerDetailPanel({ customer, open, onOpenChange, onEd
             {transactions.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">No transactions yet</p>
             ) : (
-              <div className="space-y-2">
-                {transactions.map((txn) => {
-                  const ps = paymentStatusStyles[txn.paymentStatus];
-                  const PIcon = ps?.icon ?? CheckCircle2;
-                  return (
-                    <details key={txn.id} className="group rounded-lg border border-border overflow-hidden">
-                      <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/30 transition-colors text-sm">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs text-muted-foreground">{txn.id}</span>
-                              <Badge variant="secondary" className={cn("text-[10px] gap-1 px-1.5 py-0", ps?.class)}>
-                                <PIcon className="h-2.5 w-2.5" />
-                                {txn.paymentStatus}
-                              </Badge>
+              <>
+                {txnTotalPages > 1 && (
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-muted-foreground">
+                      {(safeTxnPage - 1) * TXN_PER_PAGE + 1}–{Math.min(safeTxnPage * TXN_PER_PAGE, transactions.length)} of {transactions.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="icon" className="h-7 w-7" disabled={safeTxnPage <= 1} onClick={() => setTxnPage(safeTxnPage - 1)}>
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </Button>
+                      <span className="text-xs text-muted-foreground px-1">{safeTxnPage}/{txnTotalPages}</span>
+                      <Button variant="outline" size="icon" className="h-7 w-7" disabled={safeTxnPage >= txnTotalPages} onClick={() => setTxnPage(safeTxnPage + 1)}>
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  {paginatedTxns.map((txn) => {
+                    const ps = paymentStatusStyles[txn.paymentStatus];
+                    const PIcon = ps?.icon ?? CheckCircle2;
+                    return (
+                      <details key={txn.id} className="group rounded-lg border border-border overflow-hidden">
+                        <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/30 transition-colors text-sm">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs text-muted-foreground">{txn.id}</span>
+                                <Badge variant="secondary" className={cn("text-[10px] gap-1 px-1.5 py-0", ps?.class)}>
+                                  <PIcon className="h-2.5 w-2.5" />
+                                  {txn.paymentStatus}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">{txn.date} · {txn.location}</p>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{txn.date} · {txn.location}</p>
                           </div>
-                        </div>
-                        <div className="text-right shrink-0 ml-3">
-                          <p className="font-semibold">{fmt(txn.amount)}</p>
-                          <p className="text-[10px] text-muted-foreground">{txn.paymentMethod}</p>
-                        </div>
-                      </summary>
-                      <div className="border-t border-border bg-muted/20 px-3 py-2">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-muted-foreground">
-                              <th className="text-left py-1 font-medium">Item</th>
-                              <th className="text-center py-1 font-medium">Qty</th>
-                              <th className="text-right py-1 font-medium">Price</th>
-                              <th className="text-right py-1 font-medium">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {txn.items.map((item, i) => (
-                              <tr key={i} className="border-t border-border/30">
-                                <td className="py-1 font-medium">{item.name}</td>
-                                <td className="py-1 text-center text-muted-foreground">{item.qty}</td>
-                                <td className="py-1 text-right text-muted-foreground">{fmt(item.unitPrice)}</td>
-                                <td className="py-1 text-right font-medium">{fmt(item.qty * item.unitPrice)}</td>
+                          <div className="text-right shrink-0 ml-3">
+                            <p className="font-semibold">{fmt(txn.amount)}</p>
+                            <p className="text-[10px] text-muted-foreground">{txn.paymentMethod}</p>
+                          </div>
+                        </summary>
+                        <div className="border-t border-border bg-muted/20 px-3 py-2">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-muted-foreground">
+                                <th className="text-left py-1 font-medium">Item</th>
+                                <th className="text-center py-1 font-medium">Qty</th>
+                                <th className="text-right py-1 font-medium">Price</th>
+                                <th className="text-right py-1 font-medium">Total</th>
                               </tr>
-                            ))}
-                          </tbody>
-                          <tfoot>
-                            <tr className="border-t border-border">
-                              <td colSpan={3} className="py-1 text-right font-semibold">Total</td>
-                              <td className="py-1 text-right font-semibold">{fmt(txn.amount)}</td>
-                            </tr>
-                          </tfoot>
-                        </table>
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
+                            </thead>
+                            <tbody>
+                              {txn.items.map((item, i) => (
+                                <tr key={i} className="border-t border-border/30">
+                                  <td className="py-1 font-medium">{item.name}</td>
+                                  <td className="py-1 text-center text-muted-foreground">{item.qty}</td>
+                                  <td className="py-1 text-right text-muted-foreground">{fmt(item.unitPrice)}</td>
+                                  <td className="py-1 text-right font-medium">{fmt(item.qty * item.unitPrice)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t border-border">
+                                <td colSpan={3} className="py-1 text-right font-semibold">Total</td>
+                                <td className="py-1 text-right font-semibold">{fmt(txn.amount)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
