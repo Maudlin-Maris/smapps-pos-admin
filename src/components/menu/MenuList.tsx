@@ -268,12 +268,14 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
               <TableRow>
                 <TableHead>Name</TableHead>
                 {showOutlet && <TableHead>Outlet</TableHead>}
+                <TableHead>Type</TableHead>
                 <TableHead>SKU</TableHead>
                 <TableHead>Variant</TableHead>
+                <TableHead>Pricing</TableHead>
+                <TableHead className="text-right">Cost</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead className="text-right">Sale Price</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
-                <TableHead>Inventory</TableHead>
                 <TableHead>Status</TableHead>
                 {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
