@@ -19,6 +19,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>();
   const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>();
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
+  const [openPriceValue, setOpenPriceValue] = useState("");
 
   const product = item ? posProducts.find(p => p.id === item.productId) : null;
 
