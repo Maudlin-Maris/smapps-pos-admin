@@ -544,15 +544,15 @@ export default function ProductGrid() {
                     onClick={() => handleBundleClick(bundle)}
                     className="relative flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.97] bg-primary/5 border-primary/20 hover:border-primary/40 hover:shadow-md col-span-1"
                   >
-                    <Badge className="absolute top-2 right-2 text-[10px] bg-primary/10 text-primary border-primary/20" variant="outline">
-                      <Tag className="w-2.5 h-2.5 mr-0.5" />
-                      {savingsPercent}% off
-                    </Badge>
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <Gift className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-sm font-semibold text-foreground line-clamp-1">{bundle.name}</span>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Gift className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{bundle.name}</span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary mb-1">
+                      <Tag className="w-2.5 h-2.5" />
+                      {savingsPercent}% off
+                    </span>
+                    <div className="flex items-center gap-2 mt-auto">
                       <span className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</span>
                       <span className="text-sm font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</span>
                     </div>
