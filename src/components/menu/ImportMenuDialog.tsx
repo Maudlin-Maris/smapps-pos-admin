@@ -22,7 +22,8 @@ import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronL
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
-import type { MenuItem, MenuVariant } from "./MenuItemForm";
+import type { MenuItem, MenuVariant, MenuItemType } from "./MenuItemForm";
+import { formatNaira } from "@/lib/currency";
 import {
   Select,
   SelectContent,
@@ -41,8 +42,11 @@ interface ParsedRow {
   name: string;
   description: string;
   category: string;
-  subcategory: string;
+  itemType: string;
+  pricingStrategy: string;
   price: number;
+  costPrice: number;
+  sellingUnit: string;
   quantity: number;
   sku: string;
   status: string;
@@ -54,15 +58,17 @@ interface ParsedRow {
 }
 
 const EXPECTED_HEADERS = [
-  "Name", "Description", "Category", "Subcategory", "Price", "Quantity",
+  "Name", "Description", "Category", "Item Type", "Pricing Strategy",
+  "Price", "Cost Price", "Selling Unit", "Quantity",
   "SKU", "Status", "Variant Name", "Variant Price", "Variant SKU", "Variant Status",
 ];
 
 const SAMPLE_DATA = [
-  ["Cappuccino", "Rich espresso with steamed milk", "Food & Beverages", "Hot Drinks", 3.5, 150, "HD-001", "active", "", "", "", ""],
-  ["Iced Latte", "Chilled espresso with cold milk", "Food & Beverages", "Cold Drinks", 5.0, 80, "CD-001", "active", "Regular", 5.0, "CD-001-R", "active"],
-  ["Iced Latte", "", "", "", "", "", "", "", "Large", 6.5, "CD-001-L", "active"],
-  ["Croissant", "Buttery French pastry", "Food & Beverages", "Pastries", 3.25, 40, "PS-001", "active", "", "", "", ""],
+  ["Cappuccino", "Rich espresso with steamed milk", "Food & Beverages", "simple", "base", 4500, 2000, "pcs", 150, "HD-001", "active", "", "", "", ""],
+  ["Iced Latte", "Chilled espresso with cold milk", "Food & Beverages", "simple", "variant", "", "", "pcs", 80, "CD-001", "active", "Regular", 5000, "CD-001-R", "active"],
+  ["Iced Latte", "", "", "", "", "", "", "", "", "", "", "Large", 6500, "CD-001-L", "active"],
+  ["Haircut", "Professional styling", "Services", "service", "base", 15000, "", "session", "", "SV-001", "active", "", "", "", ""],
+  ["Croissant", "Buttery French pastry", "Food & Beverages", "simple", "base", 3250, 1500, "pcs", 40, "PS-001", "active", "", "", "", ""],
 ];
 
 const ITEMS_PER_PAGE = 10;
@@ -71,11 +77,10 @@ function downloadTemplate() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([EXPECTED_HEADERS, ...SAMPLE_DATA]);
 
-  // Column widths
   ws["!cols"] = [
-    { wch: 18 }, { wch: 35 }, { wch: 18 }, { wch: 15 }, { wch: 8 },
-    { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 },
-    { wch: 14 }, { wch: 14 },
+    { wch: 18 }, { wch: 35 }, { wch: 18 }, { wch: 12 }, { wch: 16 },
+    { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
+    { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 14 }, { wch: 14 },
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Catalog Items");
@@ -106,17 +111,10 @@ function parseFile(data: ArrayBuffer): { rows: ParsedRow[]; errors: string[] } {
     const name = String(r[colIdx["Name"]] ?? "").trim();
     const variantName = String(r[colIdx["Variant Name"]] ?? "").trim();
 
-    // Variant-only row (continuation of previous item)
     if (!name && variantName) {
       rows.push({
-        name: "",
-        description: "",
-        category: "",
-        subcategory: "",
-        price: 0,
-        quantity: 0,
-        sku: "",
-        status: "",
+        name: "", description: "", category: "", itemType: "", pricingStrategy: "",
+        price: 0, costPrice: 0, sellingUnit: "", quantity: 0, sku: "", status: "",
         variantName,
         variantPrice: Number(r[colIdx["Variant Price"]]) || 0,
         variantSku: String(r[colIdx["Variant SKU"]] ?? "").trim(),
@@ -131,16 +129,29 @@ function parseFile(data: ArrayBuffer): { rows: ParsedRow[]; errors: string[] } {
     }
 
     const price = Number(r[colIdx["Price"]]);
-    if (isNaN(price) || price < 0) {
+    if (isNaN(price) && String(r[colIdx["Price"]] ?? "").trim() !== "") {
       errors.push(`Row ${i + 1}: Invalid price for "${name}".`);
+    }
+
+    const itemType = String(r[colIdx["Item Type"]] ?? "simple").trim().toLowerCase();
+    if (itemType && !["simple", "composite", "service"].includes(itemType)) {
+      errors.push(`Row ${i + 1}: Invalid item type "${itemType}" for "${name}". Use simple, composite, or service.`);
+    }
+
+    const pricingStrategy = String(r[colIdx["Pricing Strategy"]] ?? "base").trim().toLowerCase();
+    if (pricingStrategy && !["base", "variant", "open"].includes(pricingStrategy)) {
+      errors.push(`Row ${i + 1}: Invalid pricing strategy "${pricingStrategy}" for "${name}". Use base, variant, or open.`);
     }
 
     rows.push({
       name,
       description: String(r[colIdx["Description"]] ?? "").trim(),
       category: String(r[colIdx["Category"]] ?? "").trim(),
-      subcategory: String(r[colIdx["Subcategory"]] ?? "").trim(),
+      itemType: itemType || "simple",
+      pricingStrategy: pricingStrategy || "base",
       price: isNaN(price) ? 0 : price,
+      costPrice: Number(r[colIdx["Cost Price"]]) || 0,
+      sellingUnit: String(r[colIdx["Selling Unit"]] ?? "").trim(),
       quantity: Number(r[colIdx["Quantity"]]) || 0,
       sku: String(r[colIdx["SKU"]] ?? "").trim(),
       status: String(r[colIdx["Status"]] ?? "active").trim(),
@@ -160,13 +171,12 @@ function rowsToMenuItems(rows: ParsedRow[]): MenuItem[] {
 
   for (const row of rows) {
     if (row.name) {
-      // New item
       current = {
         id: crypto.randomUUID(),
         name: row.name,
         description: row.description,
         category: row.category,
-        subcategory: row.subcategory,
+        subcategory: "",
         price: row.price,
         quantity: row.quantity,
         sku: row.sku,
@@ -178,6 +188,10 @@ function rowsToMenuItems(rows: ParsedRow[]): MenuItem[] {
         trackInventory: false,
         variants: [],
         extras: [],
+        itemType: (["simple", "composite", "service"].includes(row.itemType) ? row.itemType : "simple") as MenuItemType,
+        pricingStrategy: (["base", "variant", "open"].includes(row.pricingStrategy) ? row.pricingStrategy : "base") as "base" | "variant" | "open",
+        costPrice: row.costPrice || undefined,
+        sellingUnit: row.sellingUnit || undefined,
       };
 
       if (row.variantName) {
@@ -197,7 +211,6 @@ function rowsToMenuItems(rows: ParsedRow[]): MenuItem[] {
 
       items.push(current);
     } else if (row.variantName && current) {
-      // Variant continuation row
       current.variants.push({
         id: crypto.randomUUID(),
         name: row.variantName,
@@ -307,7 +320,6 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
       }
     };
     reader.readAsArrayBuffer(file);
-    // Reset input so same file can be re-selected
     e.target.value = "";
   };
 
@@ -335,9 +347,21 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
     onOpenChange(open);
   };
 
+  const itemTypeLabel = (t?: string) => {
+    if (t === "composite") return "Composite";
+    if (t === "service") return "Service";
+    return "Simple";
+  };
+
+  const pricingLabel = (p?: string) => {
+    if (p === "variant") return "Variant";
+    if (p === "open") return "Open";
+    return "Base";
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -349,7 +373,6 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
         </DialogHeader>
 
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col min-h-0">
-          {/* Upload area & template */}
           <div className="flex items-center gap-3 flex-wrap">
             <input
               ref={fileRef}
@@ -372,7 +395,6 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
             </Button>
           </div>
 
-          {/* Errors */}
           {parseErrors.length > 0 && (
             <div className="bg-destructive/10 text-destructive rounded-lg p-3 text-sm space-y-1">
               <div className="flex items-center gap-1.5 font-medium">
@@ -385,7 +407,6 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
             </div>
           )}
 
-          {/* Preview table */}
           {parsedItems.length > 0 && (
             <>
               <div className="flex items-center justify-between">
@@ -415,9 +436,10 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[140px]">Name</TableHead>
-                      <TableHead className="min-w-[120px]">Category</TableHead>
-                      <TableHead className="min-w-[100px]">Subcategory</TableHead>
-                      <TableHead className="text-right min-w-[70px]">Price</TableHead>
+                      <TableHead className="min-w-[100px]">Category</TableHead>
+                      <TableHead className="min-w-[80px]">Type</TableHead>
+                      <TableHead className="min-w-[80px]">Pricing</TableHead>
+                      <TableHead className="text-right min-w-[80px]">Price</TableHead>
                       <TableHead className="min-w-[80px]">SKU</TableHead>
                       <TableHead className="min-w-[70px]">Status</TableHead>
                       <TableHead className="min-w-[100px]">Variants</TableHead>
@@ -433,8 +455,35 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
                         <TableCell className="text-xs text-muted-foreground">
                           <EditableCell value={item.category} itemId={item.id} field="category" />
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          <EditableCell value={item.subcategory} itemId={item.id} field="subcategory" />
+                        <TableCell>
+                          <Select
+                            value={item.itemType || "simple"}
+                            onValueChange={(v) => updateItem(item.id, "itemType", v)}
+                          >
+                            <SelectTrigger className="h-7 text-[10px] w-[85px] px-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="simple">Simple</SelectItem>
+                              <SelectItem value="composite">Composite</SelectItem>
+                              <SelectItem value="service">Service</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={item.pricingStrategy || "base"}
+                            onValueChange={(v) => updateItem(item.id, "pricingStrategy", v)}
+                          >
+                            <SelectTrigger className="h-7 text-[10px] w-[80px] px-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="base">Base</SelectItem>
+                              <SelectItem value="variant">Variant</SelectItem>
+                              <SelectItem value="open">Open</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell className="text-right text-sm">
                           <EditableCell value={item.price} itemId={item.id} field="price" type="number" />
@@ -486,7 +535,7 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
                                         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); if (e.key === "Escape") setEditingCell(null); }}
                                       />
                                     ) : (
-                                      <span className="cursor-pointer hover:bg-muted/50 rounded px-0.5" onClick={() => setEditingCell({ id: v.id, field: "price" })}>${v.price.toFixed(2)}</span>
+                                      <span className="cursor-pointer hover:bg-muted/50 rounded px-0.5" onClick={() => setEditingCell({ id: v.id, field: "price" })}>₦{v.price.toLocaleString()}</span>
                                     )}
                                   </div>
                                 );
@@ -509,7 +558,6 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
             </>
           )}
 
-          {/* Empty state */}
           {parsedItems.length === 0 && parseErrors.length === 0 && (
             <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
               <FileSpreadsheet className="h-10 w-10 opacity-40" />
