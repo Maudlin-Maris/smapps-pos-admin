@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Search, Package, Trash2, Pencil, Gift, Tag, ArrowRightLeft, ChevronDown, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
