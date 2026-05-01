@@ -24,8 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer } from "lucide-react";
+import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer, Package, ChefHat, Sparkles, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import { formatNaira } from "@/lib/currency";
 import type { MenuItem } from "./MenuItemForm";
 import type { Outlet } from "@/data/outlets";
 
