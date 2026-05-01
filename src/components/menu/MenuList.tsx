@@ -19,11 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer, Package, ChefHat, Sparkles, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/currency";
@@ -474,32 +474,32 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
       </Card>
 
       {/* Camera Scanner Dialog */}
-      <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <Sheet open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4">
+            <SheetTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-accent" />
               Scan Barcode
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
             <div id="menu-barcode-reader" ref={scannerRef} className="w-full min-h-[250px] rounded-lg overflow-hidden bg-muted" />
             <p className="text-sm text-muted-foreground text-center">Point your camera at the barcode</p>
             <Button variant="outline" className="w-full" onClick={stopCamera}>Cancel</Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Bulk Print Dialog */}
-      <Dialog open={printOpen} onOpenChange={setPrintOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <Sheet open={printOpen} onOpenChange={setPrintOpen}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-lg p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4">
+            <SheetTitle className="flex items-center gap-2">
               <Printer className="h-5 w-5 text-primary" />
               Print Barcode Labels
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
             <div className="flex items-center justify-between">
               <Button variant="outline" size="sm" onClick={toggleSelectAll}>
                 {selectedForPrint.size === items.length ? "Deselect All" : "Select All"}
@@ -534,8 +534,8 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
               Print {selectedForPrint.size > 0 ? `${selectedForPrint.size} Item(s)` : "Labels"}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

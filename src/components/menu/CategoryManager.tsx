@@ -4,6 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -139,31 +146,30 @@ export default function CategoryManager({
         </div>
       </Card>
 
-      {/* Category Dialog */}
-      <Dialog open={catDialogOpen} onOpenChange={setCatDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingCategory ? "Edit Category" : "Add Category"}</DialogTitle>
-            <DialogDescription>
-              {editingCategory ? "Update the category name." : "Create a new category."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Label htmlFor="cat-name">Category Name</Label>
-            <Input
-              id="cat-name"
-              value={catName}
-              onChange={(e) => setCatName(e.target.value)}
-              placeholder="e.g. Food & Beverages"
-              onKeyDown={(e) => e.key === "Enter" && saveCategory()}
-            />
+      {/* Category Sheet */}
+      <Sheet open={catDialogOpen} onOpenChange={setCatDialogOpen}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4">
+            <SheetTitle>{editingCategory ? "Edit Category" : "Add Category"}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="space-y-3">
+              <Label htmlFor="cat-name">Category Name</Label>
+              <Input
+                id="cat-name"
+                value={catName}
+                onChange={(e) => setCatName(e.target.value)}
+                placeholder="e.g. Food & Beverages"
+                onKeyDown={(e) => e.key === "Enter" && saveCategory()}
+              />
+            </div>
           </div>
-          <DialogFooter>
+          <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setCatDialogOpen(false)}>Cancel</Button>
             <Button onClick={saveCategory} disabled={!catName.trim()}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       {/* Delete Confirmation */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

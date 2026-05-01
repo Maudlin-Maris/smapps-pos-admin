@@ -7,12 +7,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -196,15 +196,15 @@ export default function BulkReceiveStockDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[92vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-3xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <Truck className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-lg">Receive Shipment</DialogTitle>
+              <SheetTitle className="text-lg">Receive Shipment</SheetTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Select items, enter quantities, and receive all at once{!isAllMode && outlet ? ` — ${outlet.name}` : ""}
               </p>
@@ -222,7 +222,7 @@ export default function BulkReceiveStockDialog({
               </Select>
             )}
           </div>
-        </DialogHeader>
+        </SheetHeader>
 
         {/* Search + select all */}
         <div className="px-6 py-3 flex items-center gap-3 border-b bg-muted/30">
@@ -445,7 +445,7 @@ export default function BulkReceiveStockDialog({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

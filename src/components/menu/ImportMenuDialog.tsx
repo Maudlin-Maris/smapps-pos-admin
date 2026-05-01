@@ -2,13 +2,13 @@ import { useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -360,19 +360,19 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-3xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-4">
+          <SheetTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
             Import Catalog from Excel
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Upload an Excel file to bulk-import catalog items. Items with variants use continuation rows.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <div className="space-y-4 flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col min-h-0 px-6">
           <div className="flex items-center gap-3 flex-wrap">
             <input
               ref={fileRef}
@@ -566,15 +566,14 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
             </div>
           )}
         </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
+        <SheetFooter className="px-6 py-4 border-t gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
           <Button onClick={handleImport} disabled={parsedItems.length === 0} className="gap-2">
             <Check className="h-4 w-4" />
             Import {parsedItems.length > 0 ? `${parsedItems.length} item${parsedItems.length > 1 ? "s" : ""}` : ""}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
