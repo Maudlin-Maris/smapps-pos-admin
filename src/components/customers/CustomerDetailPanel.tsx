@@ -113,11 +113,20 @@ interface CustomerDetailPanelProps {
   onEdit: (customer: Customer) => void;
 }
 
+const TXN_PER_PAGE = 5;
+
 export default function CustomerDetailPanel({ customer, open, onOpenChange, onEdit }: CustomerDetailPanelProps) {
+  const [txnPage, setTxnPage] = useState(1);
+
   const transactions = useMemo(() => {
     if (!customer) return [];
+    setTxnPage(1);
     return generateMockTransactions(customer);
   }, [customer]);
+
+  const txnTotalPages = Math.max(1, Math.ceil(transactions.length / TXN_PER_PAGE));
+  const safeTxnPage = Math.min(txnPage, txnTotalPages);
+  const paginatedTxns = transactions.slice((safeTxnPage - 1) * TXN_PER_PAGE, safeTxnPage * TXN_PER_PAGE);
 
   if (!customer) return null;
 
