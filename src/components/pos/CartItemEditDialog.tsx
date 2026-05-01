@@ -293,7 +293,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
             </Button>
             <Button
               onClick={handleSave}
-              disabled={hasVariants && !selectedVariant}
+              disabled={(hasVariants && !selectedVariant) || (isOpenPricing && openPriceNumeric <= 0)}
               className="h-11 px-6 bg-primary text-primary-foreground"
             >
               Save Changes
