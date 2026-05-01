@@ -695,7 +695,19 @@ export default function LoyaltyManagement() {
               <Separator />
 
               <div>
-                <Label className="mb-3 block">Tier Multipliers</Label>
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Label className="block">Tier Multipliers</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs text-sm">
+                        Tier multipliers boost the points customers earn per purchase. For example, a 2× multiplier means Gold members earn double the base points on every order.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {(Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => (
                     <div key={tier} className="rounded-lg border p-3 text-center space-y-1">
