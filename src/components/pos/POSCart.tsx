@@ -263,11 +263,12 @@ export default function POSCart({ onCheckout }: Props) {
             </SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 py-4">
-            {swapState?.swapOptions && swapState.swapOptions.length > 0
-              ? "Select a replacement from the available options:"
-              : "Select a replacement from the same category:"}
-          </p>
-          <div className="space-y-1 mt-2">
+            <p className="text-sm text-muted-foreground mb-3">
+              {swapState?.swapOptions && swapState.swapOptions.length > 0
+                ? "Select a replacement from the available options:"
+                : "Select a replacement from the same category:"}
+            </p>
+            <div className="space-y-1">
             {swapCandidates.map(prod => {
               const currentItem = swapState ? cart.find(i => i.id === swapState.itemId) : null;
               const defaultMarketPrice = currentItem?.bundleDefaultMarketPrice ?? (currentItem?.unitPrice ?? 0) * (currentItem?.quantity ?? 1);
@@ -330,9 +331,10 @@ export default function POSCart({ onCheckout }: Props) {
             {swapCandidates.length === 0 && (
               <p className="text-sm text-muted-foreground py-4 text-center">No other items available in this category</p>
             )}
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
