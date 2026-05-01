@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "@/components/inventory/PaginationControls";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -145,6 +147,8 @@ export default function CustomerManagement() {
     return list;
   }, [customers, tierFilter, search]);
 
+  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems: paginatedCustomers, totalItems, pageSizeOptions } = usePagination(filtered, 10);
+
   const stats = useMemo(() => ({
     total: customers.length,
     totalPoints: customers.reduce((s, c) => s + c.points, 0),
@@ -235,6 +239,16 @@ export default function CustomerManagement() {
             </Select>
           </div>
 
+          <PaginationControls
+            page={page}
+            totalPages={totalPages}
+            perPage={perPage}
+            totalItems={totalItems}
+            pageSizeOptions={pageSizeOptions}
+            onPageChange={setPage}
+            onPerPageChange={setPerPage}
+          />
+
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -250,7 +264,7 @@ export default function CustomerManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((c) => {
+                  {paginatedCustomers.map((c) => {
                     const tc = tierConfig[c.loyaltyTier];
                     return (
                       <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setDetailCustomer(c); setDetailOpen(true); }}>
