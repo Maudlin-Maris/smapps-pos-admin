@@ -50,15 +50,18 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
 
   if (!item || !product) return null;
 
+  const isOpenPricing = !!product.openPricing;
   const hasVariants = product.variants && product.variants.length > 0;
   const hasExtras = product.extras && product.extras.length > 0;
   const hasUnits = !!(product.sellableUnits && product.sellableUnits.length > 0);
   const variant = product.variants?.find(v => v.id === selectedVariant);
   const selectedUnit = product.sellableUnits?.find(u => u.id === selectedUnitId);
-  const basePrice = selectedUnit?.price ?? variant?.price ?? product.price;
+  const openPriceNumeric = parseFloat(openPriceValue) || 0;
+  const basePrice = isOpenPricing ? openPriceNumeric : (selectedUnit?.price ?? variant?.price ?? product.price);
   const selectedExtras = product.extras?.filter(e => (extraQuantities[e.id] || 0) > 0) ?? [];
   const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * (extraQuantities[e.id] || 1), 0);
   const totalPrice = (basePrice + extrasTotal) * item.quantity;
+  const quickAmounts = [500, 1000, 2500, 5000, 10000, 25000];
 
   const toggleExtra = (id: string) => {
     setExtraQuantities(prev => {
