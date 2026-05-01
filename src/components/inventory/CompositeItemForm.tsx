@@ -416,11 +416,12 @@ export default function CompositeItemForm({ composites, setComposites, inventory
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Composite Item" : "Create Composite Item"}</DialogTitle>
-          </DialogHeader>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-lg p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4">
+            <SheetTitle>{editing ? "Edit Composite Item" : "Create Composite Item"}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Menu Item *</label>
@@ -683,12 +684,13 @@ export default function CompositeItemForm({ composites, setComposites, inventory
             </div>
 
           </div>
-          <DialogFooter>
+          </div>
+          <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={handleSave}>{editing ? "Update" : "Create"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

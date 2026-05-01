@@ -122,27 +122,29 @@ export default function MeasuringUnitManager({ units, setUnits }: Props) {
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Unit" : "Add Unit"}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Name</label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Kilogram" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Abbreviation</label>
-              <Input value={form.abbreviation} onChange={(e) => setForm({ ...form, abbreviation: e.target.value })} placeholder="e.g. kg" />
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4">
+            <SheetTitle>{editing ? "Edit Unit" : "Add Unit"}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Name</label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Kilogram" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Abbreviation</label>
+                <Input value={form.abbreviation} onChange={(e) => setForm({ ...form, abbreviation: e.target.value })} placeholder="e.g. kg" />
+              </div>
             </div>
           </div>
-          <DialogFooter>
+          <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={handleSave}>{editing ? "Update" : "Add"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

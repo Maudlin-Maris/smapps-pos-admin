@@ -653,11 +653,12 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       </div>
 
       {/* Registration / Edit Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</DialogTitle>
-          </DialogHeader>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-lg p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4">
+            <SheetTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
           <div className="grid gap-4">
             {(() => {
               const formOutlet = form.outletId ? outlets.find((o) => o.id === form.outletId) : null;
@@ -1189,12 +1190,13 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
               </div>
             )}
           </div>
-          <DialogFooter>
+          </div>
+          <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={handleSave}>{editing ? "Update" : "Register"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
