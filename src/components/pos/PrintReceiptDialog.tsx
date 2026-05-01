@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { usePOS } from "@/contexts/POSContext";
 import type { POSOrder } from "@/data/posData";
 import { initialDepartments } from "@/data/departments";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,15 +39,11 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
     if (!dept) return;
     const assignedPrinters = enabledPrinters.filter(p => p.assignedDepartments.includes(dept.id));
     if (assignedPrinters.length === 0) return;
-
     for (const printer of assignedPrinters) {
       console.log(`[Print] Routing ${departmentName} docket to "${printer.name}"`);
     }
     const names = assignedPrinters.map(p => p.name).join(", ");
-    toast.success(`Docket sent to ${names}`, {
-      description: `${departmentName} — Order ${order?.orderNumber}`,
-      duration: 3000,
-    });
+    toast.success(`Docket sent to ${names}`, { description: `${departmentName} — Order ${order?.orderNumber}`, duration: 3000 });
   };
 
   if (!order) return null;
@@ -56,44 +52,11 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
 
   const printElement = (element: HTMLElement, title: string) => {
     const printWindow = window.open("", "_blank", "width=320,height=600");
-    if (!printWindow) {
-      toast.error("Please allow popups to print");
-      return;
-    }
+    if (!printWindow) { toast.error("Please allow popups to print"); return; }
     const content = element.outerHTML;
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${title}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Courier New', monospace;
-            display: flex;
-            justify-content: center;
-            width: 80mm;
-            margin: 0 auto;
-          }
-          body > div {
-            width: 302px;
-            margin: 0 auto;
-          }
-          .text-center { text-align: center; }
-          @media print {
-            @page { margin: 0; size: 80mm auto; }
-            body { width: 80mm; }
-          }
-        </style>
-      </head>
-      <body>${content}</body>
-      </html>
-    `);
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>* { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: 'Courier New', monospace; display: flex; justify-content: center; width: 80mm; margin: 0 auto; } body > div { width: 302px; margin: 0 auto; } .text-center { text-align: center; } @media print { @page { margin: 0; size: 80mm auto; } body { width: 80mm; } }</style></head><body>${content}</body></html>`);
     printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
   };
 
   const handlePrint = (ref: React.RefObject<HTMLDivElement>, title: string) => {
@@ -103,50 +66,36 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
 
   const handlePrintDepartment = (departmentName: string) => {
     const el = docketRefs.current.get(departmentName);
-    if (el) {
-      printElement(el, `Docket-${departmentName}-${order.orderNumber}`);
-    }
-    // Also route to assigned printers
+    if (el) printElement(el, `Docket-${departmentName}-${order.orderNumber}`);
     routeToPrinter(departmentName);
   };
 
   const handlePrintAllDockets = () => {
     handlePrint(docketRef, `Docket-${order.orderNumber}`);
-    // Route each department to its assigned printers
     let sentCount = 0;
     for (const group of docketGroups) {
       const dept = departments.find(d => d.name === group.departmentName);
       if (!dept) continue;
       const assigned = enabledPrinters.filter(p => p.assignedDepartments.includes(dept.id));
       if (assigned.length > 0) {
-        for (const printer of assigned) {
-          console.log(`[Print] Routing ${group.departmentName} docket to "${printer.name}"`);
-        }
+        for (const printer of assigned) console.log(`[Print] Routing ${group.departmentName} docket to "${printer.name}"`);
         sentCount += assigned.length;
       }
     }
-    if (sentCount > 0) {
-      toast.success(`Dockets routed to ${sentCount} printer${sentCount > 1 ? "s" : ""}`, {
-        description: `Order ${order.orderNumber} — auto-routed by department`,
-        duration: 3000,
-      });
-    }
+    if (sentCount > 0) toast.success(`Dockets routed to ${sentCount} printer${sentCount > 1 ? "s" : ""}`, { description: `Order ${order.orderNumber} — auto-routed by department`, duration: 3000 });
   };
 
   const handleEmailReceipt = () => {
-    if (!customerEmail.trim()) {
-      toast.error("Please enter customer email");
-      return;
-    }
+    if (!customerEmail.trim()) { toast.error("Please enter customer email"); return; }
     toast.success(`Receipt sent to ${customerEmail}`);
     setCustomerEmail("");
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg p-0 gap-0">
-        <DialogHeader className="p-4 pb-0">
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-lg p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-4 pt-4 pb-0 border-b-0">
+          <SheetTitle className="flex items-center gap-2">
             {onBack && (
               <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => { onClose(); onBack(); }}>
                 <ArrowLeft className="w-4 h-4" />
@@ -154,91 +103,50 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
             )}
             <Receipt className="w-5 h-5" />
             Print & Share — {order.orderNumber}
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
-        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex flex-col">
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex flex-col flex-1 min-h-0">
           <TabsList className="mx-4 mt-3 grid grid-cols-2">
-            <TabsTrigger value="receipt" className="gap-1.5 text-xs">
-              <Receipt className="w-3.5 h-3.5" /> Receipt
-            </TabsTrigger>
-            <TabsTrigger value="docket" className="gap-1.5 text-xs">
-              <ChefHat className="w-3.5 h-3.5" /> Dockets
-            </TabsTrigger>
+            <TabsTrigger value="receipt" className="gap-1.5 text-xs"><Receipt className="w-3.5 h-3.5" /> Receipt</TabsTrigger>
+            <TabsTrigger value="docket" className="gap-1.5 text-xs"><ChefHat className="w-3.5 h-3.5" /> Dockets</TabsTrigger>
           </TabsList>
 
-          {/* ===== RECEIPT TAB ===== */}
-          <TabsContent value="receipt" className="mt-0">
-            <div className="px-4 py-3 max-h-[50vh] overflow-y-auto">
+          <TabsContent value="receipt" className="mt-0 flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-4 py-3">
               <div className="flex justify-center">
                 <div className="border border-border rounded-lg overflow-hidden shadow-sm">
                   <ThermalReceipt ref={receiptRef} order={order} outlet={currentOutlet} />
                 </div>
               </div>
             </div>
-
             <div className="border-t border-border p-4 space-y-3">
-              <Button
-                onClick={() => handlePrint(receiptRef, `Receipt-${order.orderNumber}`)}
-                className="w-full gap-2"
-              >
-                <Printer className="w-4 h-4" /> Print Receipt
-              </Button>
-
+              <Button onClick={() => handlePrint(receiptRef, `Receipt-${order.orderNumber}`)} className="w-full gap-2"><Printer className="w-4 h-4" /> Print Receipt</Button>
               <div className="flex gap-2">
-                <Input
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  placeholder="customer@email.com"
-                  className="h-9"
-                />
-                <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleEmailReceipt}>
-                  <Mail className="w-3.5 h-3.5" /> Send
-                </Button>
+                <Input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="customer@email.com" className="h-9" />
+                <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={handleEmailReceipt}><Mail className="w-3.5 h-3.5" /> Send</Button>
               </div>
             </div>
           </TabsContent>
 
-          {/* ===== DOCKET TAB ===== */}
-          <TabsContent value="docket" className="mt-0">
-            <div className="px-4 py-3 max-h-[50vh] overflow-y-auto">
+          <TabsContent value="docket" className="mt-0 flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-4 py-3">
               <div className="space-y-4">
                 {docketGroups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No department dockets for this order
-                  </p>
+                  <p className="text-sm text-muted-foreground text-center py-8">No department dockets for this order</p>
                 ) : (
                   docketGroups.map((group) => (
                     <div key={group.departmentName} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="gap-1 text-xs font-semibold">
-                          <ChefHat className="w-3 h-3" /> {group.departmentName}
-                        </Badge>
+                        <Badge variant="outline" className="gap-1 text-xs font-semibold"><ChefHat className="w-3 h-3" /> {group.departmentName}</Badge>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {group.items.length} item{group.items.length > 1 ? "s" : ""}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 px-2 gap-1 text-xs"
-                            onClick={() => handlePrintDepartment(group.departmentName)}
-                          >
-                            <Printer className="w-3 h-3" /> Print
-                          </Button>
+                          <span className="text-xs text-muted-foreground">{group.items.length} item{group.items.length > 1 ? "s" : ""}</span>
+                          <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs" onClick={() => handlePrintDepartment(group.departmentName)}><Printer className="w-3 h-3" /> Print</Button>
                         </div>
                       </div>
                       <div className="flex justify-center">
                         <div className="border border-border rounded-lg overflow-hidden shadow-sm">
-                          <KitchenDocket
-                            ref={(el: HTMLDivElement | null) => {
-                              if (el) docketRefs.current.set(group.departmentName, el);
-                            }}
-                            order={order}
-                            outlet={currentOutlet}
-                            departmentFilter={group.departmentName}
-                          />
+                          <KitchenDocket ref={(el: HTMLDivElement | null) => { if (el) docketRefs.current.set(group.departmentName, el); }} order={order} outlet={currentOutlet} departmentFilter={group.departmentName} />
                         </div>
                       </div>
                     </div>
@@ -246,26 +154,16 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
                 )}
               </div>
             </div>
-
             <div className="border-t border-border p-4 space-y-2">
-              <Button
-                onClick={handlePrintAllDockets}
-                className="w-full gap-2"
-              >
-                <Printer className="w-4 h-4" /> Print All Dockets
-              </Button>
-              <p className="text-[10px] text-muted-foreground text-center">
-                Each department docket prints on a separate page
-              </p>
+              <Button onClick={handlePrintAllDockets} className="w-full gap-2"><Printer className="w-4 h-4" /> Print All Dockets</Button>
+              <p className="text-[10px] text-muted-foreground text-center">Each department docket prints on a separate page</p>
             </div>
-
-            {/* Hidden combined docket for printing all */}
             <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
               <KitchenDocket ref={docketRef} order={order} outlet={currentOutlet} />
             </div>
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

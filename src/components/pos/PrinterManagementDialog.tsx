@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { initialDepartments } from "@/data/departments";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
-} from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Printer, Plus, Pencil, Trash2, Wifi, WifiOff, CheckCircle2 } from "lucide-react";
@@ -17,7 +15,7 @@ export interface POSPrinter {
   connectionType: "usb" | "network" | "bluetooth";
   ipAddress?: string;
   port?: number;
-  assignedDepartments: string[]; // department IDs
+  assignedDepartments: string[];
   outletId: string;
   enabled: boolean;
 }
@@ -40,15 +38,8 @@ export default function PrinterManagementDialog({ open, onClose, printers, onPri
   const outletNum = parseInt(outletId.replace("outlet-", ""));
   const departments = initialDepartments.filter((d) => d.outletId === outletNum);
 
-  const openAddWizard = () => {
-    setEditingPrinter(null);
-    setView("wizard");
-  };
-
-  const openEditWizard = (printer: POSPrinter) => {
-    setEditingPrinter(printer);
-    setView("wizard");
-  };
+  const openAddWizard = () => { setEditingPrinter(null); setView("wizard"); };
+  const openEditWizard = (printer: POSPrinter) => { setEditingPrinter(printer); setView("wizard"); };
 
   const handleInstall = (printer: POSPrinter) => {
     if (editingPrinter) {
@@ -62,139 +53,78 @@ export default function PrinterManagementDialog({ open, onClose, printers, onPri
     setView("list");
   };
 
-  const handleDelete = (printerId: string) => {
-    onPrintersChange(printers.filter((p) => p.id !== printerId));
-    toast.success("Printer removed");
-  };
-
-  const toggleEnabled = (printerId: string) => {
-    onPrintersChange(
-      printers.map((p) => (p.id === printerId ? { ...p, enabled: !p.enabled } : p))
-    );
-  };
-
-  const handleTestPrint = (printer: POSPrinter) => {
-    toast.success(`Test page sent to "${printer.name}"`, {
-      description: "Check the printer for output",
-    });
-  };
-
-  const getDeptName = (deptId: string) => {
-    return initialDepartments.find((d) => d.id === deptId)?.name || deptId;
-  };
+  const handleDelete = (printerId: string) => { onPrintersChange(printers.filter((p) => p.id !== printerId)); toast.success("Printer removed"); };
+  const toggleEnabled = (printerId: string) => { onPrintersChange(printers.map((p) => (p.id === printerId ? { ...p, enabled: !p.enabled } : p))); };
+  const handleTestPrint = (printer: POSPrinter) => { toast.success(`Test page sent to "${printer.name}"`, { description: "Check the printer for output" }); };
+  const getDeptName = (deptId: string) => initialDepartments.find((d) => d.id === deptId)?.name || deptId;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setView("list"); setEditingPrinter(null); onClose(); } }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={(o) => { if (!o) { setView("list"); setEditingPrinter(null); onClose(); } }}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+          <SheetTitle className="flex items-center gap-2">
             <Printer className="w-5 h-5" />
             {view === "list" ? "Printer Management" : editingPrinter ? "Edit Printer" : "Add Printer"}
-          </DialogTitle>
-          <DialogDescription>
-            {view === "list"
-              ? "Manage printers and assign them to departments for automatic docket routing."
-              : editingPrinter ? "Update printer configuration." : "Search for and install a printer."}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetTitle>
+          <SheetDescription>
+            {view === "list" ? "Manage printers and assign them to departments for automatic docket routing." : editingPrinter ? "Update printer configuration." : "Search for and install a printer."}
+          </SheetDescription>
+        </SheetHeader>
 
-        {view === "list" ? (
-          <div className="space-y-3">
-            {printers.length === 0 ? (
-              <div className="text-center py-8 space-y-2">
-                <Printer className="w-10 h-10 mx-auto text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No printers installed</p>
-                <p className="text-xs text-muted-foreground">Add a printer to enable automatic docket printing</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                {printers.map((printer) => (
-                  <div
-                    key={printer.id}
-                    className={`border rounded-lg p-3 space-y-2 transition-colors ${
-                      printer.enabled ? "border-border" : "border-border/50 opacity-60"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">{printer.name}</span>
-                          {printer.enabled ? (
-                            <Wifi className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                          ) : (
-                            <WifiOff className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          )}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {view === "list" ? (
+            <div className="space-y-3">
+              {printers.length === 0 ? (
+                <div className="text-center py-8 space-y-2">
+                  <Printer className="w-10 h-10 mx-auto text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">No printers installed</p>
+                  <p className="text-xs text-muted-foreground">Add a printer to enable automatic docket printing</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {printers.map((printer) => (
+                    <div key={printer.id} className={`border rounded-lg p-3 space-y-2 transition-colors ${printer.enabled ? "border-border" : "border-border/50 opacity-60"}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">{printer.name}</span>
+                            {printer.enabled ? <Wifi className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <WifiOff className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="secondary" className="text-[10px] h-5">{printer.type}</Badge>
+                            <Badge variant="outline" className="text-[10px] h-5">{printer.connectionType}</Badge>
+                            {printer.ipAddress && <span className="text-[10px] text-muted-foreground">{printer.ipAddress}</span>}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <Badge variant="secondary" className="text-[10px] h-5">
-                            {printer.type}
-                          </Badge>
-                          <Badge variant="outline" className="text-[10px] h-5">
-                            {printer.connectionType}
-                          </Badge>
-                          {printer.ipAddress && (
-                            <span className="text-[10px] text-muted-foreground">{printer.ipAddress}</span>
-                          )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleTestPrint(printer)} title="Test Print"><CheckCircle2 className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditWizard(printer)}><Pencil className="w-3.5 h-3.5" /></Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(printer.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleTestPrint(printer)} title="Test Print">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditWizard(printer)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(printer.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                      {printer.assignedDepartments.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {printer.assignedDepartments.map((deptId) => (
+                            <Badge key={deptId} variant="default" className="text-[10px] h-5 font-normal">{getDeptName(deptId)}</Badge>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-1 border-t border-border/50">
+                        <button onClick={() => toggleEnabled(printer.id)} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                          {printer.enabled ? (<><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Enabled</>) : (<><span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Disabled</>)}
+                        </button>
                       </div>
                     </div>
-
-                    {printer.assignedDepartments.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {printer.assignedDepartments.map((deptId) => (
-                          <Badge key={deptId} variant="default" className="text-[10px] h-5 font-normal">
-                            {getDeptName(deptId)}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-1 border-t border-border/50">
-                      <button
-                        onClick={() => toggleEnabled(printer.id)}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {printer.enabled ? (
-                          <>
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Enabled
-                          </>
-                        ) : (
-                          <>
-                            <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" /> Disabled
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <Button onClick={openAddWizard} className="w-full gap-2">
-              <Plus className="w-4 h-4" /> Add Printer
-            </Button>
-          </div>
-        ) : (
-          <PrinterDiscoveryWizard
-            outletId={outletId}
-            departments={departments}
-            onInstall={handleInstall}
-            onCancel={() => { setEditingPrinter(null); setView("list"); }}
-            editingPrinter={editingPrinter}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+                  ))}
+                </div>
+              )}
+              <Button onClick={openAddWizard} className="w-full gap-2"><Plus className="w-4 h-4" /> Add Printer</Button>
+            </div>
+          ) : (
+            <PrinterDiscoveryWizard outletId={outletId} departments={departments} onInstall={handleInstall} onCancel={() => { setEditingPrinter(null); setView("list"); }} editingPrinter={editingPrinter} />
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
