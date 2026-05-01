@@ -17,6 +17,7 @@ import {
   Plus, Search, Users, Star, Gift, TrendingUp, Award, Heart,
 } from "lucide-react";
 import { format } from "date-fns";
+import CustomerDetailPanel from "@/components/customers/CustomerDetailPanel";
 
 // ── Types ──
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
@@ -131,6 +132,8 @@ export default function CustomerManagement() {
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
+  const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const filtered = useMemo(() => {
     let list = customers;
@@ -250,7 +253,7 @@ export default function CustomerManagement() {
                   {filtered.map((c) => {
                     const tc = tierConfig[c.loyaltyTier];
                     return (
-                      <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setEditCustomer(c); setFormOpen(true); }}>
+                      <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setDetailCustomer(c); setDetailOpen(true); }}>
                         <td className="p-3">
                           <div className="font-medium">{c.name}</div>
                           <div className="text-xs text-muted-foreground">{c.email || c.phone}</div>
@@ -330,6 +333,12 @@ export default function CustomerManagement() {
       )}
 
       <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editCustomer} onSave={handleSave} />
+      <CustomerDetailPanel
+        customer={detailCustomer}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={(c) => { setDetailOpen(false); setEditCustomer(c); setFormOpen(true); }}
+      />
     </div>
   );
 }
