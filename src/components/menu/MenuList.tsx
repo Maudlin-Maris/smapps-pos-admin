@@ -19,11 +19,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer, Package, ChefHat, Sparkles, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/currency";
