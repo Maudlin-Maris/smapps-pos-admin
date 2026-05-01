@@ -648,9 +648,9 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
           </div>
         </ScrollArea>
 
-        <DialogFooter className="flex-shrink-0 pt-3 border-t border-border">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>{isEdit ? "Update Bundle" : "Create Bundle"}</Button>
+        <DialogFooter className="flex-shrink-0 pt-3 border-t border-border flex-col-reverse sm:flex-row gap-2">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+          <Button onClick={handleSave} className="w-full sm:w-auto">{isEdit ? "Update Bundle" : "Create Bundle"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
