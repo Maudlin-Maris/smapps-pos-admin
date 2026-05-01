@@ -359,13 +359,13 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</DialogTitle>
           <DialogDescription>Group products together and sell at a package price</DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-2">
+        <ScrollArea className="flex-1 min-h-0 pr-2">
           <div className="space-y-5 py-2">
             {/* Basic Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -648,7 +648,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
           </div>
         </ScrollArea>
 
-        <DialogFooter className="pt-3 border-t border-border">
+        <DialogFooter className="flex-shrink-0 pt-3 border-t border-border">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave}>{isEdit ? "Update Bundle" : "Create Bundle"}</Button>
         </DialogFooter>
