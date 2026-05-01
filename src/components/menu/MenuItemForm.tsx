@@ -8,13 +8,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -674,12 +674,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const submitLabel = mode === "clone" ? "Create Clone" : mode === "edit" ? "Update Item" : "Add Item";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-2">
-          <DialogTitle>{formTitle}</DialogTitle>
-          <DialogDescription className="text-xs">{formDescription}</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-3xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-2">
+          <SheetTitle>{formTitle}</SheetTitle>
+          <SheetDescription className="text-xs">{formDescription}</SheetDescription>
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
 
         <div className="space-y-6">
           {/* DETAILS — outlet, item type, name, category, unit, description.
@@ -1859,8 +1860,29 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           })()}>
             {submitLabel}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+        <SheetFooter className="px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            onClick={handleSave}
+            disabled={(() => {
+              if (!name.trim()) return true;
+              if (!selectedCatId) return true;
+              if (selectedOutletIds.length === 0) return true;
+              if (pricingStrategy === "variant") {
+                if (variants.length === 0) return true;
+                if (variants.some((v) => !v.name.trim() || v.price <= 0)) return true;
+                return false;
+              }
+              if (pricingStrategy === "open") return false;
+              if (!price) return true;
+              if (variants.length > 0 && variants.some((v) => !v.name.trim())) return true;
+              return false;
+            })()}>
+            {submitLabel}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
