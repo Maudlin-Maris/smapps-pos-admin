@@ -166,10 +166,10 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
     printableItems.forEach((item) => {
       if (item.variants.length > 0) {
         item.variants.forEach((v) => {
-          if (v.sku) labels.push({ name: item.name, variant: v.name, sku: v.sku, price: `$${v.price.toFixed(2)}` });
+          if (v.sku) labels.push({ name: item.name, variant: v.name, sku: v.sku, price: formatNaira(v.price) });
         });
       } else if (item.sku) {
-        labels.push({ name: item.name, variant: "", sku: item.sku, price: `$${item.price.toFixed(2)}` });
+        labels.push({ name: item.name, variant: "", sku: item.sku, price: formatNaira(item.price) });
       }
     });
 
