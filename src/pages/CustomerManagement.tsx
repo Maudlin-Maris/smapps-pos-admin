@@ -253,7 +253,7 @@ export default function CustomerManagement() {
                   {filtered.map((c) => {
                     const tc = tierConfig[c.loyaltyTier];
                     return (
-                      <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setEditCustomer(c); setFormOpen(true); }}>
+                      <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setDetailCustomer(c); setDetailOpen(true); }}>
                         <td className="p-3">
                           <div className="font-medium">{c.name}</div>
                           <div className="text-xs text-muted-foreground">{c.email || c.phone}</div>
