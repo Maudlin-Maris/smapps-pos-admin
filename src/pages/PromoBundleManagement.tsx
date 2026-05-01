@@ -358,12 +358,12 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[100dvh] sm:max-h-[90vh] h-full sm:h-auto flex flex-col overflow-hidden p-4 sm:p-6 gap-2 sm:gap-4">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</DialogTitle>
-          <DialogDescription>Group products together and sell at a package price</DialogDescription>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:z-10">
+        <SheetHeader className="flex-shrink-0 p-4 sm:p-6 pb-0">
+          <SheetTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</SheetTitle>
+          <SheetDescription>Group products together and sell at a package price</SheetDescription>
+        </SheetHeader>
 
         <ScrollArea className="flex-1 min-h-0 pr-2">
           <div className="space-y-5 py-2">
