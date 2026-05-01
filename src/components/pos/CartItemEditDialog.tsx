@@ -41,6 +41,10 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       const qtyMap: Record<string, number> = {};
       item.extras.forEach(e => { qtyMap[e.id] = e.quantity || 1; });
       setExtraQuantities(qtyMap);
+      // Initialize open price value from current unit price
+      if (product.openPricing) {
+        setOpenPriceValue(item.unitPrice > 0 ? String(item.unitPrice) : "");
+      }
     }
   }, [item, open, product]);
 
