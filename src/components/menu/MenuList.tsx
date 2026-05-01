@@ -305,7 +305,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                             )}
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate">{item.name}</p>
-                              <p className="text-xs text-muted-foreground">{item.category} › {item.subcategory}</p>
+                              <p className="text-xs text-muted-foreground">{item.category}</p>
                               {item.sellingUnit && <p className="text-[10px] text-muted-foreground">Unit: {item.sellingUnit}</p>}
                             </div>
                           </div>
@@ -384,7 +384,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                         )}
                         <div className="min-w-0">
                           <p className="font-medium text-sm truncate">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.category} › {item.subcategory}</p>
+                          <p className="text-xs text-muted-foreground">{item.category}</p>
                           {item.sellingUnit && <p className="text-[10px] text-muted-foreground">Unit: {item.sellingUnit}</p>}
                         </div>
                       </div>
