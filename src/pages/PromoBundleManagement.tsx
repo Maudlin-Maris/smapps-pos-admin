@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Search, Package, Trash2, Pencil, Gift, Tag, ArrowRightLeft, ChevronDown, ChevronRight, X } from "lucide-react";
 import { toast } from "sonner";
@@ -359,14 +359,14 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col [&>button]:z-10">
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
         <SheetHeader className="flex-shrink-0 p-4 sm:p-6 pb-0">
           <SheetTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</SheetTitle>
           <SheetDescription>Group products together and sell at a package price</SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="space-y-5 px-4 sm:px-6 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="space-y-5 px-4 sm:px-6 py-4 pb-6">
             {/* Basic Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -646,7 +646,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
               )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="flex-shrink-0 p-4 sm:p-6 pt-3 border-t border-border flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
