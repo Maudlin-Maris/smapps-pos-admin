@@ -160,19 +160,19 @@ export default function CopyMenuDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-4">
+          <SheetTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5 text-primary" />
             Copy Menu Items
-          </DialogTitle>
-          <DialogDescription>
+          </SheetTitle>
+          <SheetDescription>
             Select items from <span className="font-medium text-foreground">{currentOutletName}</span> to copy. You can adjust prices before copying.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
 
-        <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
+        <div className="space-y-3 flex-1 overflow-hidden flex flex-col px-6">
           {/* Target outlet */}
           <div>
             <label className="text-sm font-medium mb-1.5 block">Copy to</label>
@@ -332,7 +332,7 @@ export default function CopyMenuDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <SheetFooter className="px-6 py-4 border-t gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
@@ -344,8 +344,8 @@ export default function CopyMenuDialog({
             Copy {selectedIds.size > 0 ? `${selectedIds.size} item${selectedIds.size > 1 ? "s" : ""}` : ""}
             <ArrowRight className="h-4 w-4" />
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
