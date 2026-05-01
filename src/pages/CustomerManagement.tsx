@@ -147,6 +147,8 @@ export default function CustomerManagement() {
     return list;
   }, [customers, tierFilter, search]);
 
+  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems: paginatedCustomers, totalItems, pageSizeOptions } = usePagination(filtered, 10);
+
   const stats = useMemo(() => ({
     total: customers.length,
     totalPoints: customers.reduce((s, c) => s + c.points, 0),
