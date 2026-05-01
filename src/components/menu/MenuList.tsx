@@ -285,6 +285,12 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                 const hasVariants = item.variants?.length > 0;
 
                 if (hasVariants) {
+                  const itemType = item.itemType || "simple";
+                  const pricingStrategy = item.pricingStrategy || "base";
+                  const typeIcon = itemType === "composite" ? <ChefHat className="h-3 w-3" /> : itemType === "service" ? <Sparkles className="h-3 w-3" /> : <Package className="h-3 w-3" />;
+                  const typeLabel = itemType === "composite" ? "Composite" : itemType === "service" ? "Service" : "Simple";
+                  const pricingLabel = pricingStrategy === "open" ? "Open" : pricingStrategy === "variant" ? "Variant" : "Base";
+
                   return item.variants.map((v, vIdx) => (
                     <TableRow key={`${item.id}-${v.id}`} className={vIdx > 0 ? "border-t-0" : ""}>
                       {vIdx === 0 ? (
@@ -300,6 +306,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate">{item.name}</p>
                               <p className="text-xs text-muted-foreground">{item.category} › {item.subcategory}</p>
+                              {item.sellingUnit && <p className="text-[10px] text-muted-foreground">Unit: {item.sellingUnit}</p>}
                             </div>
                           </div>
                         </TableCell>
@@ -309,30 +316,39 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                           <Badge variant="outline" className="text-xs whitespace-nowrap">{getOutletName(item.outletId)}</Badge>
                         </TableCell>
                       ) : showOutlet && vIdx > 0 ? null : null}
+                      {vIdx === 0 ? (
+                        <TableCell rowSpan={item.variants.length} className="align-top">
+                          <Badge variant="outline" className="text-[10px] gap-1 whitespace-nowrap">
+                            {typeIcon} {typeLabel}
+                          </Badge>
+                        </TableCell>
+                      ) : null}
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{v.sku || "—"}</TableCell>
                       <TableCell className="text-sm font-medium">{v.name}</TableCell>
-                      <TableCell className="text-right font-heading font-semibold text-sm">
-                        ${(v.price ?? 0).toFixed(2)}
+                      {vIdx === 0 ? (
+                        <TableCell rowSpan={item.variants.length} className="align-top">
+                          <Badge variant={pricingStrategy === "open" ? "secondary" : "outline"} className="text-[10px] gap-1 whitespace-nowrap">
+                            {pricingStrategy === "open" && <DollarSign className="h-3 w-3" />}
+                            {pricingLabel}
+                          </Badge>
+                        </TableCell>
+                      ) : null}
+                      <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                        {item.costPrice != null ? formatNaira(item.costPrice) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-heading font-semibold text-sm whitespace-nowrap">
+                        {formatNaira(v.price ?? 0)}
                       </TableCell>
                       <TableCell className="text-right text-sm">
                         {v.salePrice != null ? (
                           <Badge variant="secondary" className="text-xs gap-1">
-                            <Tag className="h-3 w-3" />${v.salePrice.toFixed(2)}
+                            <Tag className="h-3 w-3" />{formatNaira(v.salePrice)}
                           </Badge>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right text-sm">{v.quantity ?? 0}</TableCell>
-                      <TableCell>
-                        {v.trackInventory ? (
-                          <Badge variant="outline" className="text-xs gap-1 text-primary border-primary/30">
-                            <PackageCheck className="h-3 w-3" /> Tracked
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Manual</span>
-                        )}
-                      </TableCell>
                       <TableCell>
                         <Badge variant={v.status === "active" ? "default" : "secondary"} className="text-xs">{v.status}</Badge>
                       </TableCell>
