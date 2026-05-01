@@ -566,8 +566,6 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
             </div>
           )}
         </div>
-
-        </div>
         <SheetFooter className="px-6 py-4 border-t gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
           <Button onClick={handleImport} disabled={parsedItems.length === 0} className="gap-2">
