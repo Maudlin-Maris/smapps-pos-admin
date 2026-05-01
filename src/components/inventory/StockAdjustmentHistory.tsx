@@ -251,18 +251,19 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
   const totalProfit = profitPerUnit * quantity;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-lg p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-4">
+          <SheetTitle>
             {isAddType && showRetailPricing ? "Receive Stock" : "Adjust Stock"} — {item?.name}
-          </DialogTitle>
+          </SheetTitle>
           {outletName && (
             <p className="text-xs text-muted-foreground mt-1">
               Outlet: <span className="font-medium text-foreground">{outletName}</span>
             </p>
           )}
-        </DialogHeader>
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
             <span className="text-sm text-muted-foreground">Current Stock</span>
@@ -490,14 +491,15 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
             <span className="font-heading font-bold text-accent">{previewStock}</span>
           </div>
         </div>
-        <DialogFooter>
+        </div>
+        <SheetFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave}>
             {isAddType && showRetailPricing ? "Receive Stock" : "Confirm Adjustment"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
