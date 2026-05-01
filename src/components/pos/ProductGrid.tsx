@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Search, ScanLine, Camera, X, Gift, Tag, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
@@ -633,15 +633,15 @@ export default function ProductGrid() {
         onClose={() => setOpenPriceProduct(null)}
       />
 
-      <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      <Sheet open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <SheetTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-accent" />
               Scan Barcode
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
             <div className="relative">
               <div
                 id="pos-barcode-reader"
@@ -659,8 +659,8 @@ export default function ProductGrid() {
               Cancel
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
