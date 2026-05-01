@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import {
   User, Phone, Mail, Calendar, Star, Award, TrendingUp,
   ShoppingBag, Tag, StickyNote, Pencil, Receipt, CheckCircle2,
-  Clock, XCircle, CreditCard,
+  Clock, XCircle, CreditCard, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
