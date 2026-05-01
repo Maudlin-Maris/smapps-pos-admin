@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ShieldAlert } from "lucide-react";
@@ -34,18 +34,18 @@ export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, item
   };
 
   return (
-    <Dialog open={open} onOpenChange={o => !o && handleClose()}>
-      <DialogContent className="max-w-xs">
-        <DialogHeader className="items-center text-center">
+    <Sheet open={open} onOpenChange={o => !o && handleClose()}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-xs p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="items-center text-center px-6 pt-6 pb-4 border-b border-border">
           <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-2">
             <ShieldAlert className="w-6 h-6 text-destructive" />
           </div>
-          <DialogTitle className="text-base">Authorization Required</DialogTitle>
-          <DialogDescription className="text-xs">
+          <SheetTitle className="text-base">Authorization Required</SheetTitle>
+          <SheetDescription className="text-xs">
             Enter 4-digit code to remove <span className="font-semibold text-foreground">{itemName}</span> from order.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col items-center gap-4 pt-2">
+          </SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col items-center gap-4 px-6 py-6">
           <InputOTP
             maxLength={4}
             value={code}
@@ -65,7 +65,7 @@ export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, item
             <Button size="sm" className="flex-1" onClick={handleSubmit} disabled={code.length < 4}>Confirm</Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

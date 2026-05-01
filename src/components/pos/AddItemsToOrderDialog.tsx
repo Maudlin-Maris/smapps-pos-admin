@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Search, X, Plus, Minus, Trash2, ShoppingBag, ArrowLeft, Check, Pencil } from "lucide-react";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 import RemoveItemAuthDialog from "./RemoveItemAuthDialog";
@@ -176,10 +176,10 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
 
   return (
     <>
-      <Dialog open={open} onOpenChange={o => !o && handleClose()}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[95vh] sm:max-h-[90vh] flex flex-col p-0 gap-0">
-          <DialogHeader className="p-4 pb-3 border-b border-border">
-            <DialogTitle className="flex items-center gap-2 pr-8">
+      <Sheet open={open} onOpenChange={o => !o && handleClose()}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="p-4 pb-3 border-b border-border">
+            <SheetTitle className="flex items-center gap-2 pr-8">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 {view === "browse" && (
                   <button onClick={() => setView("order")} className="p-1 rounded-md hover:bg-muted transition-colors">
@@ -198,8 +198,8 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
                   </p>
                 )}
               </div>
-            </DialogTitle>
-          </DialogHeader>
+            </SheetTitle>
+          </SheetHeader>
 
           {view === "order" ? (
             /* ── ORDER VIEW ── */
@@ -439,8 +439,8 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       <VariantExtrasDialog
         product={dialogProduct}

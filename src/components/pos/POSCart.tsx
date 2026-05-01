@@ -5,7 +5,7 @@ import { posProducts, posCategories, type POSProduct } from "@/data/posData";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Minus, Plus, Trash2, ShoppingCart, Pencil, Gift, MoreVertical, Unlink, ArrowRightLeft, Package } from "lucide-react";
 import { type POSCartItem } from "@/data/posData";
@@ -254,20 +254,21 @@ export default function POSCart({ onCheckout }: Props) {
       />
 
       {/* Swap Item Dialog */}
-      <Dialog open={!!swapState} onOpenChange={o => { if (!o) setSwapState(null); }}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg flex items-center gap-2">
+      <Sheet open={!!swapState} onOpenChange={o => { if (!o) setSwapState(null); }}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <SheetTitle className="text-lg flex items-center gap-2">
               <ArrowRightLeft className="w-5 h-5 text-primary" />
               Swap Item
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            {swapState?.swapOptions && swapState.swapOptions.length > 0
-              ? "Select a replacement from the available options:"
-              : "Select a replacement from the same category:"}
-          </p>
-          <div className="space-y-1 mt-2">
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              {swapState?.swapOptions && swapState.swapOptions.length > 0
+                ? "Select a replacement from the available options:"
+                : "Select a replacement from the same category:"}
+            </p>
+            <div className="space-y-1">
             {swapCandidates.map(prod => {
               const currentItem = swapState ? cart.find(i => i.id === swapState.itemId) : null;
               const defaultMarketPrice = currentItem?.bundleDefaultMarketPrice ?? (currentItem?.unitPrice ?? 0) * (currentItem?.quantity ?? 1);
@@ -330,9 +331,10 @@ export default function POSCart({ onCheckout }: Props) {
             {swapCandidates.length === 0 && (
               <p className="text-sm text-muted-foreground py-4 text-center">No other items available in this category</p>
             )}
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

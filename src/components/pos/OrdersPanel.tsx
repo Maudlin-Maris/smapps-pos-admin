@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
@@ -430,10 +430,10 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
       </ScrollArea>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); setShowPayInline(false); } }}>
-        <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
+      <Sheet open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); setShowPayInline(false); } }}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
           {selectedOrder && showPayInline ? (
-            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+            <div className="px-4 py-4 space-y-3">
               <PaymentContent
                 existingOrderId={selectedOrder.id}
                 onClose={() => setShowPayInline(false)}
@@ -441,7 +441,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
               />
             </div>
           ) : selectedOrder && showAddItemsInline ? (
-            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3 w-full max-w-full overflow-hidden box-border">
+            <div className="px-4 py-4 space-y-3 w-full max-w-full overflow-hidden box-border">
               <AddItemsToOrderContent
                 orderId={selectedOrder.id}
                 onDone={() => setShowAddItemsInline(false)}
@@ -449,7 +449,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
               />
             </div>
           ) : selectedOrder && showMergeInline ? (
-            <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
+            <div className="px-4 py-4 space-y-3">
               <MergeOrderContent
                 targetOrderId={selectedOrder.id}
                 onDone={() => setShowMergeInline(false)}
@@ -460,14 +460,14 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
             const sc = statusConfig[selectedOrder.status];
             return (
               <>
-                <DialogHeader className="px-4 pt-4 pb-2 sm:px-0 sm:pt-0 sm:pb-0 border-b border-border sm:border-0 sticky top-0 bg-background z-10">
-                  <DialogTitle className="flex items-center gap-2 text-base">
+                <SheetHeader className="px-4 pt-4 pb-2 border-b border-border sticky top-0 bg-background z-10">
+                  <SheetTitle className="flex items-center gap-2 text-base">
                     {selectedOrder.orderNumber}
                     <Badge variant="outline" className={`text-xs gap-1 ${sc.color}`}>{sc.icon} {sc.label}</Badge>
-                  </DialogTitle>
-                </DialogHeader>
+                  </SheetTitle>
+                </SheetHeader>
 
-                <div className="space-y-3 px-4 pb-4 sm:px-0 sm:pb-0 overflow-y-auto flex-1">
+                <div className="space-y-3 px-4 pb-4 overflow-y-auto flex-1">
                   {/* Info - compact chips on mobile */}
                   <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground py-1">
                     <span className="capitalize">{selectedOrder.type.replace("_", " ")}</span>
@@ -735,7 +735,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
                   )}
 
                   {/* Actions */}
-                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:static border-t border-border sm:border-0">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 border-t border-border">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
                       <>
                         {selectedOrder.paidAmount < selectedOrder.totalAmount && (
@@ -762,8 +762,8 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
               </>
             );
           })()}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* Payment dialog removed — payment is now inline in the order details dialog */}
 
