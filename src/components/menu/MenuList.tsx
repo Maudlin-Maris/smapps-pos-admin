@@ -124,7 +124,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
     const q = search.toLowerCase();
     return items.filter(
       (item) =>
-        (!selectedSubcategory || item.subcategory === selectedSubcategory) &&
+        (!selectedSubcategory || item.category === selectedSubcategory) &&
         (item.name.toLowerCase().includes(q) ||
           item.sku.toLowerCase().includes(q) ||
           item.category.toLowerCase().includes(q) ||
