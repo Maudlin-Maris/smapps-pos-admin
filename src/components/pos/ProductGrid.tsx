@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, ScanLine, Camera, X, Gift, Tag } from "lucide-react";
+import { Search, ScanLine, Camera, X, Gift, Tag, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
+import OpenPriceDialog from "./OpenPriceDialog";
 
 const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
 
@@ -21,6 +22,7 @@ export default function ProductGrid() {
   const [search, setSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
   const [dialogUnitId, setDialogUnitId] = useState<string | undefined>(undefined);
+  const [openPriceProduct, setOpenPriceProduct] = useState<POSProduct | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
@@ -210,6 +212,11 @@ export default function ProductGrid() {
   };
 
   const handleProductClick = (product: POSProduct) => {
+    // Open pricing: prompt cashier for price before adding
+    if (product.openPricing) {
+      setOpenPriceProduct(product);
+      return;
+    }
     const hasUnits = product.sellableUnits && product.sellableUnits.length > 0;
     const hasVariantsOrExtras =
       (product.variants && product.variants.length > 0) ||
@@ -228,6 +235,21 @@ export default function ProductGrid() {
         totalPrice: product.price,
       });
     }
+  };
+
+  const handleOpenPriceConfirm = (price: number) => {
+    if (!openPriceProduct) return;
+    addToCart({
+      productId: openPriceProduct.id,
+      productName: openPriceProduct.name,
+      categoryId: openPriceProduct.categoryId,
+      extras: [],
+      quantity: 1,
+      unitPrice: price,
+      totalPrice: price,
+    });
+    toast.success(`Added ${openPriceProduct.name} at ${formatNaira(price)}`);
+    setOpenPriceProduct(null);
   };
 
   const handleConfirmVariantExtras = (
@@ -551,13 +573,21 @@ export default function ProductGrid() {
                   {!product.inStock && (
                     <Badge variant="destructive" className="absolute top-2 right-2 text-[10px]">Out</Badge>
                   )}
+                  {product.inStock && product.openPricing && (
+                    <Badge variant="outline" className="absolute top-2 right-2 text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/30">
+                      <DollarSign className="w-2.5 h-2.5 mr-0.5" />
+                      Open Price
+                    </Badge>
+                  )}
                   <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
                   <span className="text-xs text-muted-foreground mt-1">
-                    {product.sellableUnits?.length
-                      ? `From ${formatNaira(Math.min(...product.sellableUnits.map(u => u.price)))}`
-                      : product.variants?.length
-                        ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}`
-                        : formatNaira(product.price)}
+                    {product.openPricing
+                      ? "Enter price at sale"
+                      : product.sellableUnits?.length
+                        ? `From ${formatNaira(Math.min(...product.sellableUnits.map(u => u.price)))}`
+                        : product.variants?.length
+                          ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}`
+                          : formatNaira(product.price)}
                   </span>
                   {product.sellableUnits && product.sellableUnits.length > 1 && (
                     <div className="flex gap-1 mt-1.5 flex-wrap">
@@ -594,6 +624,13 @@ export default function ProductGrid() {
         initialSellableUnitId={dialogUnitId}
         onClose={() => { setDialogProduct(null); setDialogUnitId(undefined); }}
         onConfirm={handleConfirmVariantExtras}
+      />
+
+      <OpenPriceDialog
+        open={!!openPriceProduct}
+        productName={openPriceProduct?.name || ""}
+        onConfirm={handleOpenPriceConfirm}
+        onClose={() => setOpenPriceProduct(null)}
       />
 
       <Dialog open={cameraOpen} onOpenChange={(open) => { if (!open) stopCamera(); }}>
