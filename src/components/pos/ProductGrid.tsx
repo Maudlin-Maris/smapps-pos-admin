@@ -512,7 +512,7 @@ export default function ProductGrid() {
                 <button
                   key={bundle.id}
                   onClick={() => handleBundleClick(bundle)}
-                  className="relative flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.97] bg-card border-border hover:border-primary/30 hover:shadow-md"
+                  className="relative flex flex-col items-start p-2.5 sm:p-3 rounded-xl border text-left transition-all active:scale-[0.97] bg-card border-border hover:border-primary/30 hover:shadow-md overflow-hidden"
                 >
                   <div className="flex items-center gap-1.5 mb-1">
                     <Gift className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -542,7 +542,7 @@ export default function ProductGrid() {
                   <button
                     key={bundle.id}
                     onClick={() => handleBundleClick(bundle)}
-                    className="relative flex flex-col items-start p-3 rounded-xl border text-left transition-all active:scale-[0.97] bg-primary/5 border-primary/20 hover:border-primary/40 hover:shadow-md col-span-1"
+                    className="relative flex flex-col items-start p-2.5 sm:p-3 rounded-xl border text-left transition-all active:scale-[0.97] bg-primary/5 border-primary/20 hover:border-primary/40 hover:shadow-md col-span-1 overflow-hidden"
                   >
                     <div className="flex items-center gap-1.5 mb-1">
                       <Gift className="w-3.5 h-3.5 text-primary shrink-0" />
