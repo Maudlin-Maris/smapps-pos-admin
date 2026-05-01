@@ -573,13 +573,21 @@ export default function ProductGrid() {
                   {!product.inStock && (
                     <Badge variant="destructive" className="absolute top-2 right-2 text-[10px]">Out</Badge>
                   )}
+                  {product.inStock && product.openPricing && (
+                    <Badge variant="outline" className="absolute top-2 right-2 text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/30">
+                      <DollarSign className="w-2.5 h-2.5 mr-0.5" />
+                      Open Price
+                    </Badge>
+                  )}
                   <span className="text-sm font-semibold text-foreground line-clamp-2 leading-tight">{product.name}</span>
                   <span className="text-xs text-muted-foreground mt-1">
-                    {product.sellableUnits?.length
-                      ? `From ${formatNaira(Math.min(...product.sellableUnits.map(u => u.price)))}`
-                      : product.variants?.length
-                        ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}`
-                        : formatNaira(product.price)}
+                    {product.openPricing
+                      ? "Enter price at sale"
+                      : product.sellableUnits?.length
+                        ? `From ${formatNaira(Math.min(...product.sellableUnits.map(u => u.price)))}`
+                        : product.variants?.length
+                          ? `From ${formatNaira(Math.min(...product.variants.map(v => v.price)))}`
+                          : formatNaira(product.price)}
                   </span>
                   {product.sellableUnits && product.sellableUnits.length > 1 && (
                     <div className="flex gap-1 mt-1.5 flex-wrap">
