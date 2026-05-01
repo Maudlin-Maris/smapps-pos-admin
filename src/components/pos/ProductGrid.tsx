@@ -212,6 +212,11 @@ export default function ProductGrid() {
   };
 
   const handleProductClick = (product: POSProduct) => {
+    // Open pricing: prompt cashier for price before adding
+    if (product.openPricing) {
+      setOpenPriceProduct(product);
+      return;
+    }
     const hasUnits = product.sellableUnits && product.sellableUnits.length > 0;
     const hasVariantsOrExtras =
       (product.variants && product.variants.length > 0) ||
@@ -230,6 +235,21 @@ export default function ProductGrid() {
         totalPrice: product.price,
       });
     }
+  };
+
+  const handleOpenPriceConfirm = (price: number) => {
+    if (!openPriceProduct) return;
+    addToCart({
+      productId: openPriceProduct.id,
+      productName: openPriceProduct.name,
+      categoryId: openPriceProduct.categoryId,
+      extras: [],
+      quantity: 1,
+      unitPrice: price,
+      totalPrice: price,
+    });
+    toast.success(`Added ${openPriceProduct.name} at ${formatNaira(price)}`);
+    setOpenPriceProduct(null);
   };
 
   const handleConfirmVariantExtras = (
