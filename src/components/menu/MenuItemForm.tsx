@@ -1842,25 +1842,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         </div>
 
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={(() => {
-            if (!name.trim() || !selectedCatId || selectedOutletIds.length === 0) return true;
-            if (itemType === "composite" && ingredients.filter((g) => g.inventoryItemId && g.quantity > 0).length === 0) return true;
-            if (itemType === "service") return !price;
-            if (pricingStrategy === "open") return false;
-            if (pricingStrategy === "variant") {
-              if (variants.length === 0) return true;
-              return variants.some((v) => !v.name.trim() || !v.price);
-            }
-            // base
-            if (!price) return true;
-            if (variants.length > 0 && variants.some((v) => !v.name.trim())) return true;
-            return false;
-          })()}>
-            {submitLabel}
-          </Button>
-        </div>
         <SheetFooter className="px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
