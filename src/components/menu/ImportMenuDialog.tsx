@@ -78,8 +78,8 @@ function downloadTemplate() {
     { wch: 14 }, { wch: 14 },
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, "Menu Items");
-  XLSX.writeFile(wb, "menu-import-template.xlsx");
+  XLSX.utils.book_append_sheet(wb, ws, "Catalog Items");
+  XLSX.writeFile(wb, "catalog-import-template.xlsx");
 }
 
 function parseFile(data: ArrayBuffer): { rows: ParsedRow[]; errors: string[] } {
@@ -303,7 +303,7 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
       setParsedItems(items);
       setPage(1);
       if (items.length === 0 && errors.length === 0) {
-        setParseErrors(["No valid menu items found in the file."]);
+        setParseErrors(["No valid catalog items found in the file."]);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -318,7 +318,7 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
   const handleImport = () => {
     if (parsedItems.length === 0) return;
     onImport(parsedItems);
-    toast.success(`${parsedItems.length} menu item${parsedItems.length > 1 ? "s" : ""} imported`);
+    toast.success(`${parsedItems.length} catalog item${parsedItems.length > 1 ? "s" : ""} imported`);
     reset();
     onOpenChange(false);
   };
@@ -341,10 +341,10 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
-            Import Menu from Excel
+            Import Catalog from Excel
           </DialogTitle>
           <DialogDescription>
-            Upload an Excel file to bulk-import menu items. Items with variants use continuation rows.
+            Upload an Excel file to bulk-import catalog items. Items with variants use continuation rows.
           </DialogDescription>
         </DialogHeader>
 
