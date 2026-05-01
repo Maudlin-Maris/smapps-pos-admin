@@ -3,7 +3,9 @@ import { type POSCartItem, posProducts } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Trash2, Minus, Plus, Package, Pill } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Check, Trash2, Minus, Plus, Package, Pill, DollarSign } from "lucide-react";
 
 interface Props {
   item: POSCartItem | null;
