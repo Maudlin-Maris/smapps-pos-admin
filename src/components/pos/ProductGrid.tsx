@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, ScanLine, Camera, X, Gift, Tag } from "lucide-react";
+import { Search, ScanLine, Camera, X, Gift, Tag, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
+import OpenPriceDialog from "./OpenPriceDialog";
 
 const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
 
