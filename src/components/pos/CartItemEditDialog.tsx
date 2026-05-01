@@ -125,6 +125,50 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
           <DialogTitle className="text-lg">Edit: {product.name}</DialogTitle>
         </DialogHeader>
 
+        {isOpenPricing && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-primary" />
+              <p className="text-sm font-semibold text-foreground">Selling Price</p>
+            </div>
+            <div>
+              <Label htmlFor="edit-open-price" className="text-xs text-muted-foreground">
+                Price (₦)
+              </Label>
+              <div className="relative mt-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₦</span>
+                <Input
+                  id="edit-open-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={openPriceValue}
+                  onChange={e => setOpenPriceValue(e.target.value)}
+                  placeholder="0.00"
+                  className="pl-8 text-lg font-semibold h-12"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {quickAmounts.map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setOpenPriceValue(String(amt))}
+                  className={`py-2 rounded-lg text-xs font-medium transition-colors ${
+                    openPriceValue === String(amt)
+                      ? "bg-primary/10 text-primary border border-primary/30"
+                      : "bg-muted hover:bg-muted/80 text-foreground"
+                  }`}
+                >
+                  {formatNaira(amt)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {hasUnits && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
