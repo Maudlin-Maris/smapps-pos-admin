@@ -17,6 +17,7 @@ import {
   Plus, Search, Users, Star, Gift, TrendingUp, Award, Heart,
 } from "lucide-react";
 import { format } from "date-fns";
+import CustomerDetailPanel from "@/components/customers/CustomerDetailPanel";
 
 // ── Types ──
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
