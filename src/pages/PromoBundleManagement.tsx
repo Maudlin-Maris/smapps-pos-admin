@@ -365,8 +365,8 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
           <SheetDescription>Group products together and sell at a package price</SheetDescription>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-2">
-          <div className="space-y-5 py-2">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="space-y-5 px-4 sm:px-6 py-4">
             {/* Basic Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
