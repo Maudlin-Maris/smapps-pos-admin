@@ -29,8 +29,9 @@ import { format } from "date-fns";
 import {
   Gift, Star, Award, TrendingUp, Settings2, History, Plus, Pencil, Trash2,
   Percent, DollarSign, Coffee, Users, ArrowUpRight, Search,
-  ToggleLeft, Zap, Crown, Shield, MapPin, Building2, Globe,
+  ToggleLeft, Zap, Crown, Shield, MapPin, Building2, Globe, HelpCircle,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   type LoyaltyTier, type LoyaltyReward, type ActivityEntry,
   tierConfig, loyaltyCustomers, loyaltyRewards, POINTS_PER_NAIRA,
