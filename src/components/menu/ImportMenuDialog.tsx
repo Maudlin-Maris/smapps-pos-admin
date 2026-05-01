@@ -567,14 +567,15 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        </div>
+        <SheetFooter className="px-6 py-4 border-t gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
           <Button onClick={handleImport} disabled={parsedItems.length === 0} className="gap-2">
             <Check className="h-4 w-4" />
             Import {parsedItems.length > 0 ? `${parsedItems.length} item${parsedItems.length > 1 ? "s" : ""}` : ""}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
