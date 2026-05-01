@@ -359,7 +359,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="w-full lg:max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
         <SheetHeader className="flex-shrink-0 p-4 sm:p-6 pb-0">
           <SheetTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</SheetTitle>
           <SheetDescription>Group products together and sell at a package price</SheetDescription>
