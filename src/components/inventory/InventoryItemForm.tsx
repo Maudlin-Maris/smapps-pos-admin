@@ -7,12 +7,12 @@ import { Card } from "@/components/ui/card";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,

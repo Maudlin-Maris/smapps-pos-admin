@@ -6,12 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import {
   Popover,
   PopoverContent,
