@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
 import type { PaymentMethod } from "@/data/posData";
@@ -49,14 +49,14 @@ export default function CashierSalesDialog({ open, onClose }: { open: boolean; o
   const maxMethod = methodEntries.length > 0 ? Math.max(...methodEntries.map(([, v]) => v)) : 1;
 
   return (
-    <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-sm sm:max-w-md p-0 gap-0">
-        <DialogHeader className="px-5 pt-5 pb-3">
-          <DialogTitle className="text-base font-semibold">Today's Sales</DialogTitle>
+    <Sheet open={open} onOpenChange={v => !v && onClose()}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-5 pt-5 pb-3 border-b border-border">
+          <SheetTitle className="text-base font-semibold">Today's Sales</SheetTitle>
           <p className="text-xs text-muted-foreground">{currentCashier?.name} · {currentOutlet?.name}</p>
-        </DialogHeader>
+        </SheetHeader>
 
-        <div className="px-5 pb-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
           {/* Summary cards */}
           <div className="grid grid-cols-2 gap-2.5">
             <div className="rounded-xl bg-primary/10 p-3 space-y-0.5">
@@ -117,7 +117,7 @@ export default function CashierSalesDialog({ open, onClose }: { open: boolean; o
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

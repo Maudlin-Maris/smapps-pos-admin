@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,20 +33,19 @@ export default function OpenPriceDialog({ open, productName, onConfirm, onClose 
     }
   };
 
-  // Quick amount buttons for common Nigerian price points
   const quickAmounts = [500, 1000, 2500, 5000, 10000, 25000];
 
   return (
-    <Dialog open={open} onOpenChange={o => { if (!o) onClose(); }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-base">
+    <Sheet open={open} onOpenChange={o => { if (!o) onClose(); }}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-sm p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+          <SheetTitle className="flex items-center gap-2 text-base">
             <DollarSign className="w-4 h-4 text-primary" />
             Enter Price
-          </DialogTitle>
-        </DialogHeader>
+          </SheetTitle>
+        </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           <div>
             <p className="text-sm font-medium text-foreground mb-3">{productName}</p>
             <Label htmlFor="open-price" className="text-xs text-muted-foreground">
@@ -74,7 +73,6 @@ export default function OpenPriceDialog({ open, productName, onConfirm, onClose 
             )}
           </div>
 
-          {/* Quick amount buttons */}
           <div className="grid grid-cols-3 gap-1.5">
             {quickAmounts.map(amt => (
               <button
@@ -87,17 +85,17 @@ export default function OpenPriceDialog({ open, productName, onConfirm, onClose 
               </button>
             ))}
           </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={numericValue <= 0}>
-              Add to Cart
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+
+        <SheetFooter className="px-6 py-4 border-t border-border flex-row gap-2 sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="button" disabled={numericValue <= 0} onClick={() => { if (numericValue > 0) onConfirm(numericValue); }}>
+            Add to Cart
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }

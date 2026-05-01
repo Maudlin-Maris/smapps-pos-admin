@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { type POSCartItem, posProducts } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +28,6 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       const realVariant = product.variants?.find(v => v.id === item.variantId);
       const matchedUnit = product.sellableUnits?.find(u => u.id === item.variantId);
       setSelectedVariant(realVariant?.id);
-      // If item.variantId points to a unit (not a real variant), preselect it.
-      // Otherwise fall back to default unit when product has units.
       if (matchedUnit) {
         setSelectedUnitId(matchedUnit.id);
       } else if (product.sellableUnits && product.sellableUnits.length > 0) {
@@ -41,7 +39,6 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       const qtyMap: Record<string, number> = {};
       item.extras.forEach(e => { qtyMap[e.id] = e.quantity || 1; });
       setExtraQuantities(qtyMap);
-      // Initialize open price value from current unit price
       if (product.openPricing) {
         setOpenPriceValue(item.unitPrice > 0 ? String(item.unitPrice) : "");
       }
@@ -119,188 +116,116 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
   }, {}) ?? {};
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-lg">Edit: {product.name}</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
+      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+          <SheetTitle className="text-lg">Edit: {product.name}</SheetTitle>
+        </SheetHeader>
 
-        {isOpenPricing && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-primary" />
-              <p className="text-sm font-semibold text-foreground">Selling Price</p>
-            </div>
-            <div>
-              <Label htmlFor="edit-open-price" className="text-xs text-muted-foreground">
-                Price (₦)
-              </Label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₦</span>
-                <Input
-                  id="edit-open-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={openPriceValue}
-                  onChange={e => setOpenPriceValue(e.target.value)}
-                  placeholder="0.00"
-                  className="pl-8 text-lg font-semibold h-12"
-                  inputMode="decimal"
-                />
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          {isOpenPricing && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Selling Price</p>
+              </div>
+              <div>
+                <Label htmlFor="edit-open-price" className="text-xs text-muted-foreground">Price (₦)</Label>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₦</span>
+                  <Input id="edit-open-price" type="number" min="0" step="0.01" value={openPriceValue} onChange={e => setOpenPriceValue(e.target.value)} placeholder="0.00" className="pl-8 text-lg font-semibold h-12" inputMode="decimal" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {quickAmounts.map(amt => (
+                  <button key={amt} type="button" onClick={() => setOpenPriceValue(String(amt))} className={`py-2 rounded-lg text-xs font-medium transition-colors ${openPriceValue === String(amt) ? "bg-primary/10 text-primary border border-primary/30" : "bg-muted hover:bg-muted/80 text-foreground"}`}>
+                    {formatNaira(amt)}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
-              {quickAmounts.map(amt => (
-                <button
-                  key={amt}
-                  type="button"
-                  onClick={() => setOpenPriceValue(String(amt))}
-                  className={`py-2 rounded-lg text-xs font-medium transition-colors ${
-                    openPriceValue === String(amt)
-                      ? "bg-primary/10 text-primary border border-primary/30"
-                      : "bg-muted hover:bg-muted/80 text-foreground"
-                  }`}
-                >
-                  {formatNaira(amt)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          )}
 
-        {hasUnits && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <Package className="w-3.5 h-3.5 text-primary" />
-                Sell as
-              </p>
-              <span className="text-[11px] text-muted-foreground">Pick the unit the customer wants</span>
-            </div>
-            <div className="grid grid-cols-1 gap-2">
-              {product.sellableUnits!.map(u => {
-                const active = selectedUnitId === u.id;
-                return (
-                  <button
-                    key={u.id}
-                    onClick={() => setSelectedUnitId(u.id)}
-                    className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${
-                      active
-                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <Pill className={`w-4 h-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
-                      <div>
-                        <p className="text-sm font-medium leading-tight">{u.name}</p>
-                        {u.shortLabel && (
-                          <p className="text-[11px] text-muted-foreground leading-tight">Charged per {u.shortLabel.toLowerCase()}</p>
-                        )}
+          {hasUnits && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-primary" /> Sell as</p>
+                <span className="text-[11px] text-muted-foreground">Pick the unit the customer wants</span>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {product.sellableUnits!.map(u => {
+                  const active = selectedUnitId === u.id;
+                  return (
+                    <button key={u.id} onClick={() => setSelectedUnitId(u.id)} className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all ${active ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"}`}>
+                      <div className="flex items-center gap-2">
+                        <Pill className={`w-4 h-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
+                        <div>
+                          <p className="text-sm font-medium leading-tight">{u.name}</p>
+                          {u.shortLabel && <p className="text-[11px] text-muted-foreground leading-tight">Charged per {u.shortLabel.toLowerCase()}</p>}
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-sm font-semibold">{formatNaira(u.price)}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {hasVariants && (
-          <div className="space-y-2">
-            <p className="text-sm font-semibold text-foreground">Select Size</p>
-            <div className="grid grid-cols-2 gap-2">
-              {product.variants!.map(v => (
-                <button
-                  key={v.id}
-                  onClick={() => setSelectedVariant(v.id)}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                    selectedVariant === v.id
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                      : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  <span className="text-sm font-medium">{v.name}</span>
-                  <span className="text-sm text-muted-foreground">{formatNaira(v.price)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {hasExtras && Object.entries(extrasByCategory).map(([category, catExtras]) => (
-          <div key={category} className="space-y-2">
-            <p className="text-sm font-semibold text-foreground">{category}</p>
-            <div className="space-y-1">
-              {catExtras!.map(extra => {
-                const qty = extraQuantities[extra.id] || 0;
-                const isSelected = qty > 0;
-                return (
-                  <div
-                    key={extra.id}
-                    className={`flex items-center w-full gap-3 p-2.5 rounded-lg border transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <button
-                      onClick={() => toggleExtra(extra.id)}
-                      className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${
-                        isSelected ? "bg-primary border-primary" : "border-input"
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                      <span className="text-sm font-semibold">{formatNaira(u.price)}</span>
                     </button>
-                    <span className="flex-1 text-sm text-left">{extra.name}</span>
-                    {isSelected && (
-                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                        <button
-                          onClick={() => adjustExtraQty(extra.id, -1)}
-                          className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-xs font-semibold w-5 text-center">{qty}</span>
-                        <button
-                          onClick={() => adjustExtraQty(extra.id, 1)}
-                          className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    <span className="text-sm text-muted-foreground shrink-0">
-                      +{formatNaira(extra.price * Math.max(qty, 1))}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          )}
 
-        <div className="flex items-center justify-between pt-2 border-t border-border">
+          {hasVariants && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">Select Size</p>
+              <div className="grid grid-cols-2 gap-2">
+                {product.variants!.map(v => (
+                  <button key={v.id} onClick={() => setSelectedVariant(v.id)} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${selectedVariant === v.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"}`}>
+                    <span className="text-sm font-medium">{v.name}</span>
+                    <span className="text-sm text-muted-foreground">{formatNaira(v.price)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasExtras && Object.entries(extrasByCategory).map(([category, catExtras]) => (
+            <div key={category} className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">{category}</p>
+              <div className="space-y-1">
+                {catExtras!.map(extra => {
+                  const qty = extraQuantities[extra.id] || 0;
+                  const isSelected = qty > 0;
+                  return (
+                    <div key={extra.id} className={`flex items-center w-full gap-3 p-2.5 rounded-lg border transition-all ${isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                      <button onClick={() => toggleExtra(extra.id)} className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${isSelected ? "bg-primary border-primary" : "border-input"}`}>
+                        {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                      </button>
+                      <span className="flex-1 text-sm text-left">{extra.name}</span>
+                      {isSelected && (
+                        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => adjustExtraQty(extra.id, -1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-destructive/10 transition-colors"><Minus className="w-3 h-3" /></button>
+                          <span className="text-xs font-semibold w-5 text-center">{qty}</span>
+                          <button onClick={() => adjustExtraQty(extra.id, 1)} className="w-6 h-6 rounded-md bg-muted flex items-center justify-center hover:bg-primary/10 transition-colors"><Plus className="w-3 h-3" /></button>
+                        </div>
+                      )}
+                      <span className="text-sm text-muted-foreground shrink-0">+{formatNaira(extra.price * Math.max(qty, 1))}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-6 py-4 border-t border-border flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground">Total ({item.quantity}x)</p>
             <p className="text-xl font-bold text-foreground">{formatNaira(totalPrice)}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="destructive" size="icon" onClick={handleRemove} className="h-11 w-11">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={(hasVariants && !selectedVariant) || (isOpenPricing && openPriceNumeric <= 0)}
-              className="h-11 px-6 bg-primary text-primary-foreground"
-            >
-              Save Changes
-            </Button>
+            <Button variant="destructive" size="icon" onClick={handleRemove} className="h-11 w-11"><Trash2 className="w-4 h-4" /></Button>
+            <Button onClick={handleSave} disabled={(hasVariants && !selectedVariant) || (isOpenPricing && openPriceNumeric <= 0)} className="h-11 px-6 bg-primary text-primary-foreground">Save Changes</Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
