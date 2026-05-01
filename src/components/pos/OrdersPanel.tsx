@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Clock, CheckCircle2, CookingPot, UtensilsCrossed, XCircle, CreditCard, Plus, Merge,
@@ -430,8 +430,8 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
       </ScrollArea>
 
       {/* Order Detail Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); setShowPayInline(false); } }}>
-        <DialogContent className="max-w-md max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overflow-x-hidden p-0 sm:p-6 gap-0 sm:gap-4 w-[95vw] sm:w-full">
+      <Sheet open={!!selectedOrder} onOpenChange={o => { if (!o) { setSelectedOrder(null); setShowMergeInline(false); setShowAddItemsInline(false); setShowPayInline(false); } }}>
+        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
           {selectedOrder && showPayInline ? (
             <div className="px-4 py-4 sm:px-0 sm:py-0 space-y-3">
               <PaymentContent
