@@ -61,6 +61,8 @@ export interface POSProduct {
   sellableUnits?: POSSellableUnit[];
   inStock: boolean;
   outletId: string;
+  /** When true the cashier enters the price at sale time (Toast-style open pricing). */
+  openPricing?: boolean;
 }
 
 export type ItemStatus = "open" | "in_progress" | "ready" | "served";
