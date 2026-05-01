@@ -646,7 +646,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
               )}
             </div>
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="flex-shrink-0 p-4 sm:p-6 pt-3 border-t border-border flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
