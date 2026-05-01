@@ -132,6 +132,8 @@ export default function CustomerManagement() {
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
+  const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const filtered = useMemo(() => {
     let list = customers;
