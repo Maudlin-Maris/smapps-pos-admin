@@ -27,6 +27,7 @@ interface POSContextType {
   currentCashier: POSCashier | null;
   signedInCashiers: POSCashier[];
   loginWithCredentials: (username: string, password: string) => boolean;
+  selectCashierForPin: (cashier: POSCashier) => void;
   loginWithPin: (pin: string) => boolean;
   selectCashier: (cashier: POSCashier) => void;
   lockScreen: () => void;
