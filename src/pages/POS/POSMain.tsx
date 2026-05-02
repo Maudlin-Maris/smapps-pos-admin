@@ -69,9 +69,8 @@ export default function POSMain() {
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const showKitchen = features?.hasDineIn || features?.hasMenu;
 
-  // Handle auth states
-  if (authState === "login") return <POSLogin />;
-  if (authState === "pin") return <POSPinEntry mode="pin" />;
+  // Handle auth states — PIN-only login replaces the old credential + pin two-step
+  if (authState === "login" || authState === "pin") return <POSLogin />;
   if (authState === "locked") return <POSPinEntry mode="locked" />;
 
   const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
