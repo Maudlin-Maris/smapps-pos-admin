@@ -139,6 +139,11 @@ export function POSProvider({ children }: { children: ReactNode }) {
     return false;
   }, []);
 
+  const selectCashierForPin = useCallback((cashier: POSCashier) => {
+    setCurrentCashier(cashier);
+    setSignedInCashiers(prev => prev.some(c => c.id === cashier.id) ? prev : [...prev, cashier]);
+  }, []);
+
   const loginWithPin = useCallback((pin: string) => {
     if (currentCashier && currentCashier.pin === pin) {
       setAuthState("active");
