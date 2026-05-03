@@ -85,6 +85,32 @@ interface POSContextType {
 const POSContext = createContext<POSContextType | null>(null);
 
 export function POSProvider({ children }: { children: ReactNode }) {
+  // --- Device & Business linking (persisted in localStorage) ---
+  const [linkedBusiness, setLinkedBusiness] = useState<POSBusiness | null>(() => {
+    try {
+      const raw = localStorage.getItem("pos_linked_business");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+
+  const initialAuthState = (): AuthState => {
+    if (!linkedBusiness) return "device_link";
+    // Check if we need outlet selection
+    const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
+    const lastOutletId = localStorage.getItem("pos_last_outlet_id");
+    const lastOutlet = lastOutletId ? deviceOutlets.find(o => o.id === lastOutletId) : null;
+    if (deviceOutlets.length > 1 && !lastOutlet) return "outlet_select";
+    // Check for session
+    try {
+      const raw = sessionStorage.getItem("pos_session");
+      if (raw) {
+        const s = JSON.parse(raw);
+        return s.authState === "active" ? "locked" : s.authState;
+      }
+    } catch {}
+    return "login";
+  };
+
   // Restore session from sessionStorage
   const saved = (() => {
     try {
@@ -101,14 +127,31 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const restoredCashier = saved ? posCashiers.find(c => c.id === saved.cashierId) || null : null;
   const restoredSignedIn = saved ? posCashiers.filter(c => saved.signedInCashierIds.includes(c.id)) : [];
-  const restoredOutlet = saved?.outletId ? posOutlets.find(o => o.id === saved.outletId) || null : null;
+  
+  // Resolve initial outlet from last-used or session
+  const resolveInitialOutlet = (): POSOutlet | null => {
+    if (!linkedBusiness) return null;
+    const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
+    // Single outlet → auto-select
+    if (deviceOutlets.length === 1) return deviceOutlets[0];
+    // Session outlet
+    if (saved?.outletId) {
+      const o = deviceOutlets.find(o => o.id === saved.outletId);
+      if (o) return o;
+    }
+    // Last used
+    const lastId = localStorage.getItem("pos_last_outlet_id");
+    if (lastId) {
+      const o = deviceOutlets.find(o => o.id === lastId);
+      if (o) return o;
+    }
+    return null;
+  };
 
-  const [authState, setAuthState] = useState<AuthState>(
-    saved ? (saved.authState === "active" ? "locked" : saved.authState) : "login"
-  );
+  const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const [currentCashier, setCurrentCashier] = useState<POSCashier | null>(restoredCashier);
   const [signedInCashiers, setSignedInCashiers] = useState<POSCashier[]>(restoredSignedIn);
-  const [currentOutlet, setCurrentOutletState] = useState<POSOutlet | null>(restoredOutlet);
+  const [currentOutlet, setCurrentOutletState] = useState<POSOutlet | null>(resolveInitialOutlet);
   const setCurrentOutlet = useCallback((outlet: POSOutlet) => {
     setCurrentOutletState(outlet);
     setCart([]);
