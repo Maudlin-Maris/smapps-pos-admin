@@ -503,6 +503,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   return (
     <POSContext.Provider value={{
+      linkedBusiness, linkDevice, unlinkDevice, selectOutletAndProceed,
       authState, currentCashier, signedInCashiers, loginWithCredentials, selectCashierForPin, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets, outletOpen, toggleOutletOpen,
