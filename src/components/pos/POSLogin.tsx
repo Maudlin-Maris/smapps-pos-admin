@@ -1,15 +1,16 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
-import { Delete, ArrowLeft } from "lucide-react";
+import { Delete, ArrowLeft, Search, Store } from "lucide-react";
 import { posCashiers } from "@/data/posData";
 import logoLight from "@/assets/logo-light.png";
 
 export default function POSLogin() {
-  const { selectCashierForPin, loginWithPin } = usePOS();
+  const { selectCashierForPin, loginWithPin, linkedBusiness, currentOutlet } = usePOS();
   const [selectedCashier, setSelectedCashier] = useState<typeof posCashiers[0] | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
+  const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -22,6 +23,18 @@ export default function POSLogin() {
   useEffect(() => {
     containerRef.current?.focus();
   }, [selectedCashier]);
+
+  // Filter cashiers assigned to the current outlet
+  const outletCashiers = useMemo(() => {
+    if (!currentOutlet) return posCashiers;
+    return posCashiers.filter(c => c.assignedOutlets.includes(currentOutlet.id));
+  }, [currentOutlet]);
+
+  const filteredCashiers = useMemo(() => {
+    if (!search.trim()) return outletCashiers;
+    const q = search.toLowerCase();
+    return outletCashiers.filter(c => c.name.toLowerCase().includes(q));
+  }, [outletCashiers, search]);
 
   const handleSelectCashier = (cashier: typeof posCashiers[0]) => {
     setSelectedCashier(cashier);
@@ -57,6 +70,7 @@ export default function POSLogin() {
     setSelectedCashier(null);
     setPin("");
     setError(false);
+    setSearch("");
   };
 
   const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
@@ -64,36 +78,62 @@ export default function POSLogin() {
   // Staff selection screen
   if (!selectedCashier) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)] p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="text-5xl font-light text-white tracking-wide mb-1">
-              {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-            <div className="text-sm text-[hsl(210,3%,50%)] mb-6">
-              {currentTime.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
-            </div>
-            <img src={logoLight} alt="Smapps" className="h-7 mx-auto mb-6 opacity-70" />
-            <h1 className="text-xl font-bold text-white">Who's clocking in?</h1>
-            <p className="text-[hsl(210,3%,50%)] text-sm mt-1">Tap your name to enter passcode</p>
-          </div>
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)]">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-10 bg-[hsl(233,37%,12%)]/90 backdrop-blur-sm border-b border-[hsl(233,30%,20%)] px-4 pt-5 pb-4">
+          <div className="max-w-2xl mx-auto text-center">
+            <img src={logoLight} alt="Smapps" className="h-6 mx-auto mb-3 opacity-70" />
+            {linkedBusiness && (
+              <h2 className="text-base font-semibold text-white mb-0.5">{linkedBusiness.name}</h2>
+            )}
+            {currentOutlet && (
+              <div className="flex items-center justify-center gap-1.5 text-xs text-[hsl(210,3%,55%)] mb-4">
+                <Store className="w-3 h-3" />
+                {currentOutlet.name}
+              </div>
+            )}
+            <h1 className="text-lg font-bold text-white mb-1">Who's clocking in?</h1>
+            <p className="text-[hsl(210,3%,50%)] text-xs mb-3">Tap your name to enter passcode</p>
 
-          <div className="grid grid-cols-2 gap-3">
-            {posCashiers.map(cashier => (
-              <button
-                key={cashier.id}
-                onClick={() => handleSelectCashier(cashier)}
-                className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[hsl(233,37%,14%)]/70 border border-[hsl(233,30%,24%)] hover:bg-[hsl(233,37%,20%)] hover:border-[hsl(var(--accent))]/40 active:scale-[0.97] transition-all duration-150"
-              >
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--accent))]/15 text-lg font-bold text-[hsl(var(--accent))]">
-                  {cashier.name.charAt(0)}
-                </div>
-                <div className="text-center">
-                  <div className="text-sm font-medium text-white">{cashier.name}</div>
-                  <div className="text-[10px] text-[hsl(210,3%,50%)] capitalize">{cashier.role}</div>
-                </div>
-              </button>
-            ))}
+            {/* Search bar — always visible for discoverability */}
+            <div className="relative max-w-xs mx-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(210,3%,40%)]" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search staff..."
+                className="w-full h-9 pl-9 pr-3 rounded-lg bg-[hsl(233,37%,14%)]/80 border border-[hsl(233,30%,24%)] text-sm text-white placeholder:text-[hsl(210,3%,35%)] focus:outline-none focus:border-[hsl(var(--accent))]/50 transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable cashier grid */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="max-w-2xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {filteredCashiers.map(cashier => (
+                <button
+                  key={cashier.id}
+                  onClick={() => handleSelectCashier(cashier)}
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-[hsl(233,37%,14%)]/70 border border-[hsl(233,30%,24%)] hover:bg-[hsl(233,37%,20%)] hover:border-[hsl(var(--accent))]/40 active:scale-[0.97] transition-all duration-150"
+                >
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[hsl(var(--accent))]/15 text-lg font-bold text-[hsl(var(--accent))]">
+                    {cashier.name.charAt(0)}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-white">{cashier.name}</div>
+                    <div className="text-[10px] text-[hsl(210,3%,50%)] capitalize">{cashier.role}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {filteredCashiers.length === 0 && (
+              <div className="text-center py-12 text-[hsl(210,3%,45%)] text-sm">
+                No staff found matching "{search}"
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -126,7 +166,13 @@ export default function POSLogin() {
             {selectedCashier.name.charAt(0)}
           </div>
           <h2 className="text-xl font-bold text-white">{selectedCashier.name}</h2>
-          <p className="text-[hsl(210,3%,60%)] text-sm mt-1">Enter your 4-digit passcode</p>
+          {currentOutlet && (
+            <div className="flex items-center justify-center gap-1.5 text-xs text-[hsl(210,3%,50%)] mt-1">
+              <Store className="w-3 h-3" />
+              {currentOutlet.name}
+            </div>
+          )}
+          <p className="text-[hsl(210,3%,60%)] text-sm mt-2">Enter your 4-digit passcode</p>
         </div>
 
         {/* PIN dots */}

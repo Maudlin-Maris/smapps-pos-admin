@@ -184,6 +184,33 @@ export interface POSOutlet {
   fees?: OutletFee[];
 }
 
+// --- Multi-tenant business & device linking mock data ---
+export interface POSBusiness {
+  id: string;
+  name: string;
+  logo?: string;
+  assignedOutlets: string[]; // outlet IDs this device can access
+}
+
+/** Mock businesses keyed by linking ID */
+export const mockDeviceLinks: Record<string, POSBusiness> = {
+  "SMAPPS-001": {
+    id: "biz-1",
+    name: "Tasty Bites Group",
+    assignedOutlets: ["outlet-1", "outlet-2", "outlet-3", "outlet-7"],
+  },
+  "SMAPPS-002": {
+    id: "biz-2",
+    name: "Glow & Sharp Beauty",
+    assignedOutlets: ["outlet-5"],
+  },
+  "SMAPPS-003": {
+    id: "biz-3",
+    name: "MedPlus Pharmacy",
+    assignedOutlets: ["outlet-4"],
+  },
+};
+
 // --- Preconfigured Discounts ---
 export const posDiscounts: POSDiscount[] = [
   { id: "disc-1", name: "Manager's Discount", type: "percentage", value: 10 },

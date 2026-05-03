@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { usePOS } from "@/contexts/POSContext";
+import { posOutlets } from "@/data/posData";
 import { getFeatures } from "@/data/businessTypes";
 import POSLogin from "@/components/pos/POSLogin";
+import POSDeviceLink from "@/components/pos/POSDeviceLink";
+import POSOutletSelect from "@/components/pos/POSOutletSelect";
 import POSPinEntry from "@/components/pos/POSPinEntry";
 import ProductGrid from "@/components/pos/ProductGrid";
 import POSCart from "@/components/pos/POSCart";
@@ -38,7 +41,8 @@ type POSTab = "catalog" | "orders" | "kitchen";
 export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
-    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders
+    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders,
+    linkedBusiness, linkDevice, selectOutletAndProceed,
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -69,7 +73,14 @@ export default function POSMain() {
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const showKitchen = features?.hasDineIn || features?.hasMenu;
 
-  // Handle auth states — PIN-only login replaces the old credential + pin two-step
+  // Handle auth states
+  if (authState === "device_link") return <POSDeviceLink onLink={linkDevice} />;
+  if (authState === "outlet_select") {
+    const deviceOutlets = linkedBusiness
+      ? posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id))
+      : [];
+    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} />;
+  }
   if (authState === "login" || authState === "pin") return <POSLogin />;
   if (authState === "locked") return <POSPinEntry mode="locked" />;
 

@@ -4,11 +4,12 @@ import { posProducts } from "@/data/posData";
 import {
   type POSCashier, type POSOrder, type POSCartItem, type POSOutlet,
   type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee, type ItemStatus,
-  posCashiers, mockOrders, posOutlets,
+  type POSBusiness,
+  posCashiers, mockOrders, posOutlets, mockDeviceLinks,
 } from "@/data/posData";
 import type { LoyaltyRedemption } from "@/data/loyaltyData";
 
-type AuthState = "login" | "pin" | "locked" | "active";
+type AuthState = "device_link" | "outlet_select" | "login" | "pin" | "locked" | "active";
 
 export interface POSShift {
   id: string;
@@ -22,6 +23,12 @@ export interface POSShift {
 }
 
 interface POSContextType {
+  // Device & Business
+  linkedBusiness: POSBusiness | null;
+  linkDevice: (linkingId: string) => boolean;
+  unlinkDevice: () => void;
+  selectOutletAndProceed: (outlet: POSOutlet) => void;
+
   // Auth
   authState: AuthState;
   currentCashier: POSCashier | null;
@@ -78,6 +85,32 @@ interface POSContextType {
 const POSContext = createContext<POSContextType | null>(null);
 
 export function POSProvider({ children }: { children: ReactNode }) {
+  // --- Device & Business linking (persisted in localStorage) ---
+  const [linkedBusiness, setLinkedBusiness] = useState<POSBusiness | null>(() => {
+    try {
+      const raw = localStorage.getItem("pos_linked_business");
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+
+  const initialAuthState = (): AuthState => {
+    if (!linkedBusiness) return "device_link";
+    // Check if we need outlet selection
+    const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
+    const lastOutletId = localStorage.getItem("pos_last_outlet_id");
+    const lastOutlet = lastOutletId ? deviceOutlets.find(o => o.id === lastOutletId) : null;
+    if (deviceOutlets.length > 1 && !lastOutlet) return "outlet_select";
+    // Check for session
+    try {
+      const raw = sessionStorage.getItem("pos_session");
+      if (raw) {
+        const s = JSON.parse(raw);
+        return s.authState === "active" ? "locked" : s.authState;
+      }
+    } catch {}
+    return "login";
+  };
+
   // Restore session from sessionStorage
   const saved = (() => {
     try {
@@ -94,14 +127,31 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const restoredCashier = saved ? posCashiers.find(c => c.id === saved.cashierId) || null : null;
   const restoredSignedIn = saved ? posCashiers.filter(c => saved.signedInCashierIds.includes(c.id)) : [];
-  const restoredOutlet = saved?.outletId ? posOutlets.find(o => o.id === saved.outletId) || null : null;
+  
+  // Resolve initial outlet from last-used or session
+  const resolveInitialOutlet = (): POSOutlet | null => {
+    if (!linkedBusiness) return null;
+    const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
+    // Single outlet → auto-select
+    if (deviceOutlets.length === 1) return deviceOutlets[0];
+    // Session outlet
+    if (saved?.outletId) {
+      const o = deviceOutlets.find(o => o.id === saved.outletId);
+      if (o) return o;
+    }
+    // Last used
+    const lastId = localStorage.getItem("pos_last_outlet_id");
+    if (lastId) {
+      const o = deviceOutlets.find(o => o.id === lastId);
+      if (o) return o;
+    }
+    return null;
+  };
 
-  const [authState, setAuthState] = useState<AuthState>(
-    saved ? (saved.authState === "active" ? "locked" : saved.authState) : "login"
-  );
+  const [authState, setAuthState] = useState<AuthState>(initialAuthState);
   const [currentCashier, setCurrentCashier] = useState<POSCashier | null>(restoredCashier);
   const [signedInCashiers, setSignedInCashiers] = useState<POSCashier[]>(restoredSignedIn);
-  const [currentOutlet, setCurrentOutletState] = useState<POSOutlet | null>(restoredOutlet);
+  const [currentOutlet, setCurrentOutletState] = useState<POSOutlet | null>(resolveInitialOutlet);
   const setCurrentOutlet = useCallback((outlet: POSOutlet) => {
     setCurrentOutletState(outlet);
     setCart([]);
@@ -114,9 +164,45 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const [outletOpen, setOutletOpen] = useState(true);
   const toggleOutletOpen = useCallback(() => setOutletOpen(prev => !prev), []);
 
+  // --- Device linking ---
+  const linkDevice = useCallback((linkingId: string): boolean => {
+    const biz = mockDeviceLinks[linkingId];
+    if (!biz) return false;
+    localStorage.setItem("pos_linked_business", JSON.stringify(biz));
+    setLinkedBusiness(biz);
+    const deviceOutlets = posOutlets.filter(o => biz.assignedOutlets.includes(o.id));
+    if (deviceOutlets.length === 1) {
+      setCurrentOutletState(deviceOutlets[0]);
+      localStorage.setItem("pos_last_outlet_id", deviceOutlets[0].id);
+      setAuthState("login");
+    } else {
+      setAuthState("outlet_select");
+    }
+    return true;
+  }, []);
+
+  const unlinkDevice = useCallback(() => {
+    localStorage.removeItem("pos_linked_business");
+    localStorage.removeItem("pos_last_outlet_id");
+    sessionStorage.removeItem("pos_session");
+    setLinkedBusiness(null);
+    setCurrentOutletState(null);
+    setCurrentCashier(null);
+    setSignedInCashiers([]);
+    setCart([]);
+    setAuthState("device_link");
+  }, []);
+
+  const selectOutletAndProceed = useCallback((outlet: POSOutlet) => {
+    setCurrentOutletState(outlet);
+    localStorage.setItem("pos_last_outlet_id", outlet.id);
+    setCart([]);
+    setAuthState("login");
+  }, []);
+
   // Persist session to sessionStorage
   useEffect(() => {
-    if (authState === "login") {
+    if (authState === "login" || authState === "device_link" || authState === "outlet_select") {
       sessionStorage.removeItem("pos_session");
     } else {
       sessionStorage.setItem("pos_session", JSON.stringify({
@@ -417,6 +503,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   return (
     <POSContext.Provider value={{
+      linkedBusiness, linkDevice, unlinkDevice, selectOutletAndProceed,
       authState, currentCashier, signedInCashiers, loginWithCredentials, selectCashierForPin, loginWithPin, selectCashier, lockScreen, switchProfile, logout,
       currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets, outletOpen, toggleOutletOpen,
