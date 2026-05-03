@@ -23,6 +23,12 @@ export interface POSShift {
 }
 
 interface POSContextType {
+  // Device & Business
+  linkedBusiness: POSBusiness | null;
+  linkDevice: (linkingId: string) => boolean;
+  unlinkDevice: () => void;
+  selectOutletAndProceed: (outlet: POSOutlet) => void;
+
   // Auth
   authState: AuthState;
   currentCashier: POSCashier | null;
