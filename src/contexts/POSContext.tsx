@@ -4,11 +4,12 @@ import { posProducts } from "@/data/posData";
 import {
   type POSCashier, type POSOrder, type POSCartItem, type POSOutlet,
   type OrderType, type PaymentEntry, type OrderStatus, type AppliedFee, type ItemStatus,
-  posCashiers, mockOrders, posOutlets,
+  type POSBusiness,
+  posCashiers, mockOrders, posOutlets, mockDeviceLinks,
 } from "@/data/posData";
 import type { LoyaltyRedemption } from "@/data/loyaltyData";
 
-type AuthState = "login" | "pin" | "locked" | "active";
+type AuthState = "device_link" | "outlet_select" | "login" | "pin" | "locked" | "active";
 
 export interface POSShift {
   id: string;
