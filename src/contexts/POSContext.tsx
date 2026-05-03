@@ -164,9 +164,45 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const [outletOpen, setOutletOpen] = useState(true);
   const toggleOutletOpen = useCallback(() => setOutletOpen(prev => !prev), []);
 
+  // --- Device linking ---
+  const linkDevice = useCallback((linkingId: string): boolean => {
+    const biz = mockDeviceLinks[linkingId];
+    if (!biz) return false;
+    localStorage.setItem("pos_linked_business", JSON.stringify(biz));
+    setLinkedBusiness(biz);
+    const deviceOutlets = posOutlets.filter(o => biz.assignedOutlets.includes(o.id));
+    if (deviceOutlets.length === 1) {
+      setCurrentOutletState(deviceOutlets[0]);
+      localStorage.setItem("pos_last_outlet_id", deviceOutlets[0].id);
+      setAuthState("login");
+    } else {
+      setAuthState("outlet_select");
+    }
+    return true;
+  }, []);
+
+  const unlinkDevice = useCallback(() => {
+    localStorage.removeItem("pos_linked_business");
+    localStorage.removeItem("pos_last_outlet_id");
+    sessionStorage.removeItem("pos_session");
+    setLinkedBusiness(null);
+    setCurrentOutletState(null);
+    setCurrentCashier(null);
+    setSignedInCashiers([]);
+    setCart([]);
+    setAuthState("device_link");
+  }, []);
+
+  const selectOutletAndProceed = useCallback((outlet: POSOutlet) => {
+    setCurrentOutletState(outlet);
+    localStorage.setItem("pos_last_outlet_id", outlet.id);
+    setCart([]);
+    setAuthState("login");
+  }, []);
+
   // Persist session to sessionStorage
   useEffect(() => {
-    if (authState === "login") {
+    if (authState === "login" || authState === "device_link" || authState === "outlet_select") {
       sessionStorage.removeItem("pos_session");
     } else {
       sessionStorage.setItem("pos_session", JSON.stringify({
