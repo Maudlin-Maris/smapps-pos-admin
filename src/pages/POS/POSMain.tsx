@@ -41,7 +41,8 @@ type POSTab = "catalog" | "orders" | "kitchen";
 export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
-    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders
+    lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders,
+    linkedBusiness, linkDevice, selectOutletAndProceed,
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
