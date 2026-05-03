@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { usePOS } from "@/contexts/POSContext";
+import { posOutlets } from "@/data/posData";
 import { getFeatures } from "@/data/businessTypes";
 import POSLogin from "@/components/pos/POSLogin";
+import POSDeviceLink from "@/components/pos/POSDeviceLink";
+import POSOutletSelect from "@/components/pos/POSOutletSelect";
 import POSPinEntry from "@/components/pos/POSPinEntry";
 import ProductGrid from "@/components/pos/ProductGrid";
 import POSCart from "@/components/pos/POSCart";
