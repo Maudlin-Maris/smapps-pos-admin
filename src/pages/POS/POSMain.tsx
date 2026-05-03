@@ -73,7 +73,14 @@ export default function POSMain() {
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const showKitchen = features?.hasDineIn || features?.hasMenu;
 
-  // Handle auth states — PIN-only login replaces the old credential + pin two-step
+  // Handle auth states
+  if (authState === "device_link") return <POSDeviceLink onLink={linkDevice} />;
+  if (authState === "outlet_select") {
+    const deviceOutlets = linkedBusiness
+      ? posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id))
+      : [];
+    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} />;
+  }
   if (authState === "login" || authState === "pin") return <POSLogin />;
   if (authState === "locked") return <POSPinEntry mode="locked" />;
 
