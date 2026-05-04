@@ -30,6 +30,7 @@ import Profile from "@/pages/Profile";
 import UserManagement from "@/pages/UserManagement";
 import RolesPermissions from "@/pages/RolesPermissions";
 import ModifierGroups from "@/pages/ModifierGroups";
+import TerminalManagement from "@/pages/TerminalManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
                 <Route path="/subscription" element={<Protected><SubscriptionManagement /></Protected>} />
                 <Route path="/users" element={<Protected><UserManagement /></Protected>} />
                 <Route path="/roles" element={<Protected><RolesPermissions /></Protected>} />
+                <Route path="/terminals" element={<Protected><TerminalManagement /></Protected>} />
                 <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
 
                 <Route path="*" element={<NotFound />} />
