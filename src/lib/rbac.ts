@@ -39,7 +39,8 @@ export type PermissionId =
   | "subscription.manage"
   // Admin
   | "users.manage"
-  | "roles.manage";
+  | "roles.manage"
+  | "terminals.manage";
 
 export interface PermissionDef {
   id: PermissionId;
@@ -113,6 +114,7 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
     permissions: [
       { id: "users.manage", label: "Manage users", description: "Invite, edit and deactivate portal users" },
       { id: "roles.manage", label: "Manage roles & permissions", description: "Create roles and edit permission sets" },
+      { id: "terminals.manage", label: "Manage terminals", description: "Register, view and remove linked POS terminals" },
     ],
   },
 ];
