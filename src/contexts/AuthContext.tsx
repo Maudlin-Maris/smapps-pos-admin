@@ -5,6 +5,8 @@ import {
   PermissionId,
   SYSTEM_ROLES,
 } from "@/lib/rbac";
+import { services, isOk } from "@/services";
+import { setAuthToken, clearAuthToken } from "@/services/http";
 
 // ===== MOCK AUTH (no backend) =====
 // Replace with real auth wiring later.
@@ -160,54 +162,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 400));
-    const users = loadUsers();
-    const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (!found || found.password !== password) {
-      return { error: "Invalid email or password" };
+    const result = await services.auth.login(email, password);
+    if (!isOk(result)) {
+      return { error: result.error };
     }
-    if (found.status === "inactive") {
-      return { error: "This account has been deactivated. Contact your administrator." };
-    }
-    const { password: _pw, ...safe } = found;
-    setUser(safe);
-    localStorage.setItem(SESSION_KEY, found.id);
+    const { user: loggedIn, token } = result.data;
+    setUser(loggedIn);
+    setAuthToken(token);
+    localStorage.setItem(SESSION_KEY, loggedIn.id);
     return {};
   };
 
   const signOut = () => {
     setUser(null);
+    clearAuthToken();
     localStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(SESSION_KEY);
   };
 
   const resetPassword = async (email: string) => {
-    await new Promise((r) => setTimeout(r, 600));
-    const users = loadUsers();
-    const idx = users.findIndex((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (idx === -1) {
-      return { error: "No account found with that email" };
+    const result = await services.auth.resetPassword(email);
+    if (!isOk(result)) {
+      return { error: result.error };
     }
-    const newPassword = generatePassword(12);
-    users[idx] = { ...users[idx], password: newPassword };
-    saveUsers(users);
-    console.info(`[mock email → ${email}]\nYour new password: ${newPassword}`);
-    return { newPassword };
+    return { newPassword: result.data.newPassword };
   };
 
-  const updateProfile: AuthContextValue["updateProfile"] = (patch) => {
+  const updateProfile: AuthContextValue["updateProfile"] = async (patch) => {
     if (!user) return;
-    const users = loadUsers();
-    const idx = users.findIndex((u) => u.id === user.id);
-    if (idx === -1) return;
-    users[idx] = { ...users[idx], ...patch };
-    saveUsers(users);
-    const { password, ...safe } = users[idx];
-    setUser(safe);
+    const result = await services.auth.updateProfile(user.id, patch);
+    if (isOk(result)) {
+      setUser(result.data);
+    }
   };
 
   const changePassword: AuthContextValue["changePassword"] = (current, next) => {
     if (!user) return { error: "Not signed in" };
+    // Fire-and-forget async call, return sync result for compat
+    services.auth.changePassword(user.id, current, next).then((result) => {
+      if (!isOk(result)) {
+        console.warn("[auth] changePassword failed:", result.error);
+      }
+    });
+    // For backward compat with sync callers, do local check too
     const users = loadUsers();
     const idx = users.findIndex((u) => u.id === user.id);
     if (idx === -1) return { error: "User not found" };
