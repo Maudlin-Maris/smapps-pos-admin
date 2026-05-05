@@ -2,7 +2,7 @@
  * Mock Inventory Service
  */
 
-import { inventoryItems as defaultItems } from "@/data/inventoryItems";
+import { defaultInventoryItems as defaultItems } from "@/data/inventoryItems";
 import { ok, err, type ServiceResult } from "../types";
 import type { InventoryRecord, InventoryService } from "./inventory.types";
 
