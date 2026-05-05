@@ -5,6 +5,8 @@ import {
   PermissionId,
   SYSTEM_ROLES,
 } from "@/lib/rbac";
+import { services, isOk } from "@/services";
+import { setAuthToken, clearAuthToken } from "@/services/http";
 
 // ===== MOCK AUTH (no backend) =====
 // Replace with real auth wiring later.
