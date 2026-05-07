@@ -42,7 +42,7 @@ export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
     lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders,
-    linkedBusiness, linkDevice, selectOutletAndProceed,
+    linkedBusiness, linkDevice, unlinkDevice, selectOutletAndProceed,
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
