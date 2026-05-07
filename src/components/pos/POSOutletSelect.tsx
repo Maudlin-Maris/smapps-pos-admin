@@ -11,7 +11,8 @@ interface Props {
   onUnlink?: () => void;
 }
 
-export default function POSOutletSelect({ businessName, outlets, onSelect }: Props) {
+export default function POSOutletSelect({ businessName, outlets, onSelect, onUnlink }: Props) {
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
   return (
     <div className="min-h-screen flex bg-[#F8FAFC]">
       <POSBrandPanel businessName={businessName} subtitle="Choose the outlet you'd like to open on this terminal." />
