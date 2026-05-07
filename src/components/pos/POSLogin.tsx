@@ -6,7 +6,8 @@ import logoDark from "@/assets/logo-dark.png";
 import POSBrandPanel from "./POSBrandPanel";
 
 export default function POSLogin() {
-  const { selectCashierForPin, loginWithPin, linkedBusiness, currentOutlet } = usePOS();
+  const { selectCashierForPin, loginWithPin, linkedBusiness, currentOutlet, unlinkDevice } = usePOS();
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [selectedCashier, setSelectedCashier] = useState<typeof posCashiers[0] | null>(null);
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
