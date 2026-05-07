@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
-import { Delete, ArrowLeft, Search, Store } from "lucide-react";
+import { Delete, ArrowLeft, Search, Store, Unlink } from "lucide-react";
 import { posCashiers } from "@/data/posData";
 import logoDark from "@/assets/logo-dark.png";
 import POSBrandPanel from "./POSBrandPanel";
