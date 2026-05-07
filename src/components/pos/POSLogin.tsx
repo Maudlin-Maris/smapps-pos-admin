@@ -159,8 +159,43 @@ export default function POSLogin() {
                 </div>
               )}
             </div>
+            {/* Unlink device */}
+            <div className="flex justify-center pt-4 pb-6">
+              <button
+                onClick={() => setConfirmUnlink(true)}
+                className="flex items-center gap-2 text-xs text-[#9CA3AF] hover:text-[#DC2626] transition-colors"
+              >
+                <Unlink className="w-3.5 h-3.5" />
+                Unlink this device
+              </button>
+            </div>
           </div>
         </div>
+
+        {confirmUnlink && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+              <h3 className="text-lg font-bold text-[#1A2042]">Unlink Device?</h3>
+              <p className="text-sm text-[#6B7280]">
+                This will disconnect the terminal from <strong>{linkedBusiness?.name}</strong>. You'll need a new linking ID to reconnect.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmUnlink(false)}
+                  className="flex-1 h-11 rounded-xl border-2 border-[#E5E7EB] text-sm font-medium text-[#374151] hover:bg-[#F3F4F6] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={unlinkDevice}
+                  className="flex-1 h-11 rounded-xl bg-[#DC2626] text-white text-sm font-semibold hover:bg-[#B91C1C] transition-colors"
+                >
+                  Unlink
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
