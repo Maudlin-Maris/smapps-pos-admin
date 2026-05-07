@@ -79,7 +79,7 @@ export default function POSMain() {
     const deviceOutlets = linkedBusiness
       ? posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id))
       : [];
-    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} />;
+    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} onUnlink={unlinkDevice} />;
   }
   if (authState === "login" || authState === "pin") return <POSLogin />;
   if (authState === "locked") return <POSPinEntry mode="locked" />;
