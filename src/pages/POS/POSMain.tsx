@@ -42,7 +42,7 @@ export default function POSMain() {
   const {
     authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
     lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders,
-    linkedBusiness, linkDevice, selectOutletAndProceed,
+    linkedBusiness, linkDevice, unlinkDevice, selectOutletAndProceed,
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -79,7 +79,7 @@ export default function POSMain() {
     const deviceOutlets = linkedBusiness
       ? posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id))
       : [];
-    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} />;
+    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} onUnlink={unlinkDevice} />;
   }
   if (authState === "login" || authState === "pin") return <POSLogin />;
   if (authState === "locked") return <POSPinEntry mode="locked" />;
