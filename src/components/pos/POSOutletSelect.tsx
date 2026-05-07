@@ -1,4 +1,5 @@
-import { Store, MapPin } from "lucide-react";
+import { useState } from "react";
+import { Store, MapPin, Unlink } from "lucide-react";
 import { type POSOutlet } from "@/data/posData";
 import logoDark from "@/assets/logo-dark.png";
 import POSBrandPanel from "./POSBrandPanel";
@@ -7,6 +8,7 @@ interface Props {
   businessName: string;
   outlets: POSOutlet[];
   onSelect: (outlet: POSOutlet) => void;
+  onUnlink?: () => void;
 }
 
 export default function POSOutletSelect({ businessName, outlets, onSelect }: Props) {
