@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link2, ArrowRight, AlertCircle } from "lucide-react";
-import logoLight from "@/assets/logo-light.png";
+import logoDark from "@/assets/logo-dark.png";
+import POSBrandPanel from "./POSBrandPanel";
 
 interface Props {
   onLink: (linkingId: string) => boolean;
@@ -19,7 +20,6 @@ export default function POSDeviceLink({ onLink }: Props) {
     }
     setLoading(true);
     setError("");
-    // Simulate brief network delay
     setTimeout(() => {
       const success = onLink(id);
       if (!success) {
@@ -30,58 +30,67 @@ export default function POSDeviceLink({ onLink }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(233,37%,12%)] via-[hsl(233,37%,18%)] to-[hsl(293,52%,20%)] p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <img src={logoLight} alt="Smapps" className="h-8 mx-auto mb-8 opacity-80" />
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[hsl(var(--accent))]/15 mb-6">
-            <Link2 className="w-9 h-9 text-[hsl(var(--accent))]" />
+    <div className="min-h-screen flex bg-[#F8FAFC]">
+      <POSBrandPanel subtitle="Link this terminal to your business to get started with Smapps POS." />
+
+      {/* Right interaction panel */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-sm">
+          {/* Mobile-only logo */}
+          <div className="lg:hidden text-center mb-8">
+            <img src={logoDark} alt="Smapps" className="h-8 mx-auto mb-2" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Link This Device</h1>
-          <p className="text-[hsl(210,3%,55%)] text-sm leading-relaxed">
-            Enter the Device Linking ID from your admin portal to connect this terminal to your business.
+
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D8245C]/10 mb-5">
+              <Link2 className="w-7 h-7 text-[#D8245C]" />
+            </div>
+            <h1 className="text-2xl font-bold text-[#1A2042] mb-2">Link This Device</h1>
+            <p className="text-[#6B7280] text-sm leading-relaxed max-w-xs mx-auto">
+              Enter the Device Linking ID from your admin portal to connect this terminal.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <input
+                type="text"
+                value={linkingId}
+                onChange={e => { setLinkingId(e.target.value.toUpperCase()); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
+                placeholder="e.g. SMAPPS-001"
+                className="w-full h-14 rounded-xl bg-white border-2 border-[#E5E7EB] text-[#1A2042] text-center text-lg font-mono tracking-widest placeholder:text-[#9CA3AF] placeholder:font-sans placeholder:tracking-normal focus:outline-none focus:border-[#D8245C] focus:ring-2 focus:ring-[#D8245C]/20 transition-all shadow-sm"
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-[#DC2626] bg-[#FEF2F2] rounded-xl px-4 py-3 border border-[#FECACA]">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !linkingId.trim()}
+              className="w-full h-14 rounded-xl bg-[#D8245C] text-white font-semibold text-base flex items-center justify-center gap-2 hover:bg-[#C01F52] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-[#D8245C]/20"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  Link Device
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </div>
+
+          <p className="text-center text-[#9CA3AF] text-xs mt-8">
+            Contact your administrator if you don't have a linking ID.
           </p>
         </div>
-
-        <div className="space-y-4">
-          <div>
-            <input
-              type="text"
-              value={linkingId}
-              onChange={e => { setLinkingId(e.target.value.toUpperCase()); setError(""); }}
-              onKeyDown={e => e.key === "Enter" && handleSubmit()}
-              placeholder="e.g. SMAPPS-001"
-              className="w-full h-14 rounded-xl bg-[hsl(233,37%,14%)]/80 border border-[hsl(233,30%,24%)] text-white text-center text-lg font-mono tracking-widest placeholder:text-[hsl(210,3%,35%)] placeholder:font-sans placeholder:tracking-normal focus:outline-none focus:border-[hsl(var(--accent))]/60 focus:ring-1 focus:ring-[hsl(var(--accent))]/30 transition-all"
-              autoFocus
-            />
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 text-sm text-[hsl(var(--destructive))] bg-[hsl(var(--destructive))]/10 rounded-lg px-3 py-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading || !linkingId.trim()}
-            className="w-full h-14 rounded-xl bg-[hsl(var(--accent))] text-white font-semibold text-base flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                Link Device
-                <ArrowRight className="w-5 h-5" />
-              </>
-            )}
-          </button>
-        </div>
-
-        <p className="text-center text-[hsl(210,3%,40%)] text-xs mt-8">
-          Contact your administrator if you don't have a linking ID.
-        </p>
       </div>
     </div>
   );
