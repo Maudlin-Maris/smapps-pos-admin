@@ -5,13 +5,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Trash2, Minus, Plus, Package, Pill, DollarSign } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, Trash2, Minus, Plus, Package, Pill, DollarSign, StickyNote } from "lucide-react";
 
 interface Props {
   item: POSCartItem | null;
   open: boolean;
   onClose: () => void;
-  onSave: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
+  onSave: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number, notes?: string) => void;
   onRemove: (itemId: string) => void;
 }
 
@@ -20,6 +21,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
   const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>();
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
   const [openPriceValue, setOpenPriceValue] = useState("");
+  const [notes, setNotes] = useState("");
 
   const product = item ? posProducts.find(p => p.id === item.productId) : null;
 
