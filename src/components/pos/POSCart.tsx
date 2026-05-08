@@ -254,7 +254,7 @@ export default function POSCart({ onCheckout }: Props) {
         item={editingItem}
         open={!!editingItem}
         onClose={() => setEditingItem(null)}
-        onSave={(id, variantId, variantName, extras, unitPrice) => updateCartItem(id, variantId, variantName, extras, unitPrice)}
+        onSave={(id, variantId, variantName, extras, unitPrice, notes) => updateCartItem(id, variantId, variantName, extras, unitPrice, notes)}
         onRemove={(id) => removeFromCart(id)}
       />
 
