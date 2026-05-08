@@ -186,6 +186,28 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm,
               </div>
             </div>
           ))}
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("ved-notes");
+                if (el) el.focus();
+              }}
+              className="text-sm font-semibold text-foreground flex items-center gap-1.5"
+            >
+              <StickyNote className="w-3.5 h-3.5 text-primary" /> Item Note <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+            </button>
+            <Textarea
+              id="ved-notes"
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="e.g. No onions, extra spicy, allergies…"
+              className="min-h-[60px] text-sm resize-none"
+              rows={2}
+            />
+          </div>
         </div>
 
         <div className="px-6 py-4 border-t border-border flex items-center justify-between">
