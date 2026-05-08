@@ -104,6 +104,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         extras: selectedExtras,
         unitPrice: total,
         totalPrice: total * i.quantity,
+        notes,
       } : i));
       setEditingItem(null);
     } else {
@@ -117,6 +118,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         quantity: 1,
         unitPrice: total,
         totalPrice: total,
+        notes,
       });
     }
     setDialogProduct(null);
