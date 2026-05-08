@@ -42,6 +42,7 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm,
         setExtraQuantities(map);
       } else {
         setExtraQuantities({});
+        setNotes("");
       }
     }
   }, [open, product, initialVariantId, initialExtras, initialSellableUnitId]);
