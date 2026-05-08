@@ -3,13 +3,14 @@ import { type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Check, Minus, Plus, Package, Pill } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, Minus, Plus, Package, Pill, StickyNote } from "lucide-react";
 
 interface Props {
   product: POSProduct | null;
   open: boolean;
   onClose: () => void;
-  onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
+  onConfirm: (variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number, notes?: string) => void;
   initialVariantId?: string;
   initialExtras?: { id: string; quantity: number }[];
   initialSellableUnitId?: string;
@@ -20,6 +21,7 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm,
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [unitQty, setUnitQty] = useState<number>(1);
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
+  const [notes, setNotes] = useState("");
 
   useEffect(() => {
     if (open && product) {
@@ -80,13 +82,15 @@ export default function VariantExtrasDialog({ product, open, onClose, onConfirm,
     const finalVariantId = variant?.id ?? selectedUnit?.id;
     const extrasPayload = selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price, quantity: extraQuantities[e.id] || 1 }));
     const qty = hasUnits ? unitQty : 1;
+    const trimmedNotes = notes.trim() || undefined;
     for (let i = 0; i < qty; i += 1) {
-      onConfirm(finalVariantId, finalVariantName, extrasPayload, basePrice);
+      onConfirm(finalVariantId, finalVariantName, extrasPayload, basePrice, trimmedNotes);
     }
     setSelectedVariant(null);
     setSelectedUnitId(null);
     setUnitQty(1);
     setExtraQuantities({});
+    setNotes("");
   };
 
   const handleOpenChange = (o: boolean) => { if (!o) onClose(); };
