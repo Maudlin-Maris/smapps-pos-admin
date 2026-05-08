@@ -58,7 +58,7 @@ interface POSContextType {
   addToCart: (item: Omit<POSCartItem, "id">) => void;
   removeFromCart: (itemId: string) => void;
   updateCartItemQuantity: (itemId: string, quantity: number) => void;
-  updateCartItem: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
+  updateCartItem: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number, notes?: string) => void;
   clearCart: () => void;
   cartTotal: number;
   removeBundleFromCart: (bundleId: string) => void;
@@ -322,11 +322,11 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const clearCart = useCallback(() => setCart([]), []);
 
-  const updateCartItem = useCallback((itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => {
+  const updateCartItem = useCallback((itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number, notes?: string) => {
     setCart(prev => prev.map(i => {
       if (i.id !== itemId) return i;
       const extrasTotal = extras.reduce((s, e) => s + e.price * e.quantity, 0);
-      return { ...i, variantId, variantName, extras, unitPrice, totalPrice: (unitPrice + extrasTotal) * i.quantity };
+      return { ...i, variantId, variantName, extras, unitPrice, notes, totalPrice: (unitPrice + extrasTotal) * i.quantity };
     }));
   }, []);
 
