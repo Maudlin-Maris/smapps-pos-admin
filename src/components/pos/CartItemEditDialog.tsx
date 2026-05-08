@@ -97,7 +97,8 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       finalVariantId,
       finalVariantName,
       selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price, quantity: extraQuantities[e.id] || 1 })),
-      basePrice
+      basePrice,
+      notes.trim() || undefined
     );
     onClose();
   };
