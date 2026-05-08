@@ -127,6 +127,11 @@ export default function POSCart({ onCheckout }: Props) {
                         +{item.extras.map(e => e.quantity > 1 ? `${e.quantity}x ${e.name}` : e.name).join(", ")}
                       </p>
                     )}
+                    {item.notes && (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 truncate italic">
+                        📝 {item.notes}
+                      </p>
+                    )}
                     <div className="flex items-center gap-1 mt-0.5">
                       <p className="text-xs text-muted-foreground">{formatNaira(item.unitPrice)} each</p>
                       <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
