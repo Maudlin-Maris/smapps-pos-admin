@@ -44,6 +44,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       if (product.openPricing) {
         setOpenPriceValue(item.unitPrice > 0 ? String(item.unitPrice) : "");
       }
+      setNotes(item.notes || "");
     }
   }, [item, open, product]);
 
