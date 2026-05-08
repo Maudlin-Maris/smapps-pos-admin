@@ -87,7 +87,8 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
     variantId: string | undefined,
     variantName: string | undefined,
     selectedExtras: { id: string; name: string; price: number; quantity: number }[],
-    unitPrice: number
+    unitPrice: number,
+    notes?: string
   ) => {
     const product = editingItem ? editingItem.product : dialogProduct;
     if (!product) return;
