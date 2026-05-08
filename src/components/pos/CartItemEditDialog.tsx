@@ -5,13 +5,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Trash2, Minus, Plus, Package, Pill, DollarSign } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, Trash2, Minus, Plus, Package, Pill, DollarSign, StickyNote } from "lucide-react";
 
 interface Props {
   item: POSCartItem | null;
   open: boolean;
   onClose: () => void;
-  onSave: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number) => void;
+  onSave: (itemId: string, variantId: string | undefined, variantName: string | undefined, extras: { id: string; name: string; price: number; quantity: number }[], unitPrice: number, notes?: string) => void;
   onRemove: (itemId: string) => void;
 }
 
@@ -20,6 +21,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
   const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>();
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
   const [openPriceValue, setOpenPriceValue] = useState("");
+  const [notes, setNotes] = useState("");
 
   const product = item ? posProducts.find(p => p.id === item.productId) : null;
 
@@ -42,6 +44,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       if (product.openPricing) {
         setOpenPriceValue(item.unitPrice > 0 ? String(item.unitPrice) : "");
       }
+      setNotes(item.notes || "");
     }
   }, [item, open, product]);
 
@@ -94,7 +97,8 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
       finalVariantId,
       finalVariantName,
       selectedExtras.map(e => ({ id: e.id, name: e.name, price: e.price, quantity: extraQuantities[e.id] || 1 })),
-      basePrice
+      basePrice,
+      notes.trim() || undefined
     );
     onClose();
   };
@@ -213,6 +217,20 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
               </div>
             </div>
           ))}
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+              <StickyNote className="w-3.5 h-3.5 text-primary" /> Item Note <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+            </p>
+            <Textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="e.g. No onions, extra spicy, allergies…"
+              className="min-h-[60px] text-sm resize-none"
+              rows={2}
+            />
+          </div>
         </div>
 
         <div className="px-6 py-4 border-t border-border flex items-center justify-between">

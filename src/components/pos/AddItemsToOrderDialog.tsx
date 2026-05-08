@@ -87,7 +87,8 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
     variantId: string | undefined,
     variantName: string | undefined,
     selectedExtras: { id: string; name: string; price: number; quantity: number }[],
-    unitPrice: number
+    unitPrice: number,
+    notes?: string
   ) => {
     const product = editingItem ? editingItem.product : dialogProduct;
     if (!product) return;
@@ -103,6 +104,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         extras: selectedExtras,
         unitPrice: total,
         totalPrice: total * i.quantity,
+        notes,
       } : i));
       setEditingItem(null);
     } else {
@@ -116,6 +118,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         quantity: 1,
         unitPrice: total,
         totalPrice: total,
+        notes,
       });
     }
     setDialogProduct(null);

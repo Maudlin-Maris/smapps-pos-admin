@@ -256,7 +256,8 @@ export default function ProductGrid() {
     variantId: string | undefined,
     variantName: string | undefined,
     selectedExtras: { id: string; name: string; price: number; quantity: number }[],
-    unitPrice: number
+    unitPrice: number,
+    notes?: string
   ) => {
     if (!dialogProduct) return;
     const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * e.quantity, 0);
@@ -271,6 +272,7 @@ export default function ProductGrid() {
       quantity: 1,
       unitPrice: total,
       totalPrice: total,
+      notes,
     });
     // NOTE: dialog is closed by VariantExtrasDialog itself only after the user
     // confirms; we close here too so multi-qty unit adds (loop in dialog) all run

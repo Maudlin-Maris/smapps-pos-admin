@@ -83,7 +83,8 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
     variantId: string | undefined,
     variantName: string | undefined,
     selectedExtras: { id: string; name: string; price: number; quantity: number }[],
-    unitPrice: number
+    unitPrice: number,
+    notes?: string
   ) => {
     const product = editingItem ? editingItem.product : dialogProduct;
     if (!product) return;
@@ -98,6 +99,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
         extras: selectedExtras,
         unitPrice: total,
         totalPrice: total * i.quantity,
+        notes,
       } : i));
       setEditingItem(null);
     } else {
@@ -111,6 +113,7 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
         quantity: 1,
         unitPrice: total,
         totalPrice: total,
+        notes,
       });
     }
     setDialogProduct(null);
