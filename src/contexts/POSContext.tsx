@@ -295,7 +295,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       const existing = prev.find(c => {
         if (c.bundleId) return false; // don't merge into bundle items
         const cExtrasKey = [...c.extras].sort((a, b) => a.id.localeCompare(b.id)).map(e => `${e.id}:${e.quantity}`).join(",");
-        return c.productId === item.productId && c.variantId === item.variantId && cExtrasKey === extrasKey;
+        return c.productId === item.productId && c.variantId === item.variantId && cExtrasKey === extrasKey && (c.notes || "") === (item.notes || "");
       });
       if (existing) {
         return prev.map(c => c.id === existing.id
