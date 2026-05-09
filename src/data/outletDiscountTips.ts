@@ -62,7 +62,10 @@ export function setOutletDiscountTipConfig(
   config: OutletDiscountTipConfig,
 ) {
   const store = loadAll();
-  store[String(outletId)] = config;
+  const key = String(outletId);
+  store[key] = config;
+  // Also mirror under the conventional "outlet-N" id used by POS mock data
+  if (/^\d+$/.test(key)) store[`outlet-${key}`] = config;
   saveAll(store);
 }
 
