@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
+import { type OrderType, type PaymentMethod, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
+import { getOutletDiscountTipConfig } from "@/data/outletDiscountTips";
 import { type LoyaltyRedemption } from "@/data/loyaltyData";
 import { getFeatures, getBusinessType } from "@/data/businessTypes";
 import { formatNaira } from "@/lib/currency";
@@ -299,7 +300,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     { id: "transfer", label: "Transfer", icon: <ArrowRightLeft className="w-5 h-5" /> },
   ];
 
-  const tipPresets = [5, 10, 15, 20];
+  const outletConfig = useMemo(
+    () => getOutletDiscountTipConfig(currentOutlet?.id ?? "default"),
+    [currentOutlet?.id]
+  );
+  const outletDiscounts = outletConfig.discounts;
+  const tipPresets = outletConfig.tips.map((t) => t.value);
 
   // Header with back button for inline mode
   const renderHeader = (title: string, backStep?: Step | "close") => (
@@ -495,7 +501,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 <p className="text-sm font-medium">Apply Discount</p>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
-                {posDiscounts.map(d => (
+                {outletDiscounts.map(d => (
                   <button
                     key={d.id}
                     onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); }}

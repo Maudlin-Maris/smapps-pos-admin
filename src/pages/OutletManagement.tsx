@@ -2,10 +2,11 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent, Tag } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
 import DepartmentManagerDialog from "@/components/outlets/DepartmentManagerDialog";
 import FeeManagerDialog from "@/components/outlets/FeeManagerDialog";
+import DiscountTipManagerDialog from "@/components/outlets/DiscountTipManagerDialog";
 import { initialDepartments, type Department } from "@/data/departments";
 import { type FeeFormData } from "@/components/fees/FeeFormDialog";
 import { toast } from "sonner";
@@ -43,6 +44,7 @@ export default function OutletManagement() {
     { id: 2, outletId: "1", name: "Service Charge", serviceOption: "dine_in", isFixed: true, chargeToCustomers: true, value: "", orderPeg: "2000", minimumFee: "500", maximumFee: "1000" },
   ]);
   const [feeDialogOutlet, setFeeDialogOutlet] = useState<OutletData | null>(null);
+  const [discountTipOutlet, setDiscountTipOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -206,6 +208,15 @@ export default function OutletManagement() {
                     {getFeeCount(outlet.id)}
                   </Badge>
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setDiscountTipOutlet(outlet)}
+                >
+                  <Tag className="h-3.5 w-3.5" />
+                  Discounts & Tips
+                </Button>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
@@ -244,6 +255,15 @@ export default function OutletManagement() {
           businessType={feeDialogOutlet.businessType}
           fees={fees}
           onUpdateFees={setFees}
+        />
+      )}
+
+      {discountTipOutlet && (
+        <DiscountTipManagerDialog
+          open={!!discountTipOutlet}
+          onOpenChange={(open) => !open && setDiscountTipOutlet(null)}
+          outletId={discountTipOutlet.id}
+          outletName={discountTipOutlet.name}
         />
       )}
     </div>
