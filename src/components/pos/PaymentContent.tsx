@@ -501,7 +501,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 <p className="text-sm font-medium">Apply Discount</p>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
-                {posDiscounts.map(d => (
+                {outletDiscounts.map(d => (
                   <button
                     key={d.id}
                     onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); }}
