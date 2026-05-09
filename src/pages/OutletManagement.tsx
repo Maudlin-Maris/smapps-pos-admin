@@ -44,6 +44,7 @@ export default function OutletManagement() {
     { id: 2, outletId: "1", name: "Service Charge", serviceOption: "dine_in", isFixed: true, chargeToCustomers: true, value: "", orderPeg: "2000", minimumFee: "500", maximumFee: "1000" },
   ]);
   const [feeDialogOutlet, setFeeDialogOutlet] = useState<OutletData | null>(null);
+  const [discountTipOutlet, setDiscountTipOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
