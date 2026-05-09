@@ -300,7 +300,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     { id: "transfer", label: "Transfer", icon: <ArrowRightLeft className="w-5 h-5" /> },
   ];
 
-  const tipPresets = [5, 10, 15, 20];
+  const outletConfig = useMemo(
+    () => getOutletDiscountTipConfig(currentOutlet?.id ?? "default"),
+    [currentOutlet?.id]
+  );
+  const outletDiscounts = outletConfig.discounts;
+  const tipPresets = outletConfig.tips.map((t) => t.value);
 
   // Header with back button for inline mode
   const renderHeader = (title: string, backStep?: Step | "close") => (
