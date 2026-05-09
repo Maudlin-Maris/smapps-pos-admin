@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { type OrderType, type PaymentMethod, posDiscounts, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
+import { type OrderType, type PaymentMethod, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
+import { getOutletDiscountTipConfig } from "@/data/outletDiscountTips";
 import { type LoyaltyRedemption } from "@/data/loyaltyData";
 import { getFeatures, getBusinessType } from "@/data/businessTypes";
 import { formatNaira } from "@/lib/currency";
