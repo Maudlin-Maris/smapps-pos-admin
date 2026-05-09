@@ -76,6 +76,8 @@ interface POSContextType {
   addPayment: (orderId: string, payment: PaymentEntry) => void;
   voidOrder: (orderId: string) => void;
   transferOrder: (orderId: string, toCashierId: string) => void;
+  acceptTransfer: (orderId: string) => void;
+  rejectTransfer: (orderId: string) => void;
 
   // UI state
   orderType: OrderType;
