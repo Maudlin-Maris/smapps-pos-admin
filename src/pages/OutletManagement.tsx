@@ -257,6 +257,15 @@ export default function OutletManagement() {
           onUpdateFees={setFees}
         />
       )}
+
+      {discountTipOutlet && (
+        <DiscountTipManagerDialog
+          open={!!discountTipOutlet}
+          onOpenChange={(open) => !open && setDiscountTipOutlet(null)}
+          outletId={discountTipOutlet.id}
+          outletName={discountTipOutlet.name}
+        />
+      )}
     </div>
   );
 }
