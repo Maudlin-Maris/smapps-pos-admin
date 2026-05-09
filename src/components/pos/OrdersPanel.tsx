@@ -416,6 +416,30 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
                       </span>
                     </div>
                   )}
+                  {group === "transferred" && (
+                    <div className="mt-2 flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="text-[11px] text-muted-foreground">
+                        Transferred from <span className="font-medium text-foreground">{cashierName}</span>
+                      </p>
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={(e) => { e.stopPropagation(); rejectTransfer(order.id); }}
+                        >
+                          <XCircle className="w-3 h-3 mr-1" /> Reject
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={(e) => { e.stopPropagation(); acceptTransfer(order.id); }}
+                        >
+                          <CheckCircle2 className="w-3 h-3 mr-1" /> Accept
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </button>
               );
             })}
