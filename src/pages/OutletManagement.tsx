@@ -208,6 +208,15 @@ export default function OutletManagement() {
                     {getFeeCount(outlet.id)}
                   </Badge>
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setDiscountTipOutlet(outlet)}
+                >
+                  <Tag className="h-3.5 w-3.5" />
+                  Discounts & Tips
+                </Button>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
