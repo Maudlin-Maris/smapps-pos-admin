@@ -76,6 +76,8 @@ interface POSContextType {
   addPayment: (orderId: string, payment: PaymentEntry) => void;
   voidOrder: (orderId: string) => void;
   transferOrder: (orderId: string, toCashierId: string) => void;
+  acceptTransfer: (orderId: string) => void;
+  rejectTransfer: (orderId: string) => void;
 
   // UI state
   orderType: OrderType;
@@ -501,6 +503,17 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, transferredToCashierId: toCashierId, updatedAt: new Date() } : o));
   }, []);
 
+  const acceptTransfer = useCallback((orderId: string) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId || !o.transferredToCashierId) return o;
+      return { ...o, cashierId: o.transferredToCashierId, transferredToCashierId: undefined, updatedAt: new Date() };
+    }));
+  }, []);
+
+  const rejectTransfer = useCallback((orderId: string) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, transferredToCashierId: undefined, updatedAt: new Date() } : o));
+  }, []);
+
   return (
     <POSContext.Provider value={{
       linkedBusiness, linkDevice, unlinkDevice, selectOutletAndProceed,
@@ -508,7 +521,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets, outletOpen, toggleOutletOpen,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal, removeBundleFromCart, breakBundle, swapBundleItem,
-      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder,
+      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder, acceptTransfer, rejectTransfer,
       orderType, setOrderType,
     }}>
       {children}

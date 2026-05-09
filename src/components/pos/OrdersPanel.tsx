@@ -51,7 +51,7 @@ interface OrdersPanelProps {
 }
 
 export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
-  const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder } = usePOS();
+  const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder, acceptTransfer, rejectTransfer } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
@@ -416,6 +416,30 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
                       </span>
                     </div>
                   )}
+                  {group === "transferred" && (
+                    <div className="mt-2 flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="text-[11px] text-muted-foreground">
+                        Transferred from <span className="font-medium text-foreground">{cashierName}</span>
+                      </p>
+                      <div className="flex gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={(e) => { e.stopPropagation(); rejectTransfer(order.id); }}
+                        >
+                          <XCircle className="w-3 h-3 mr-1" /> Reject
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={(e) => { e.stopPropagation(); acceptTransfer(order.id); }}
+                        >
+                          <CheckCircle2 className="w-3 h-3 mr-1" /> Accept
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -679,8 +703,40 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
                     </div>
                   )}
 
+                  {/* Accept / Reject incoming transfer */}
+                  {selectedOrder.transferredToCashierId === cashierId && selectedOrder.cashierId !== cashierId && (
+                    <div className="space-y-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <p className="text-sm font-semibold flex items-center gap-1.5">
+                        <ArrowDownLeft className="w-3.5 h-3.5" /> Incoming Transfer
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Transferred from{" "}
+                        <span className="font-medium text-foreground">
+                          {posCashiers.find(c => c.id === selectedOrder.cashierId)?.name || "Unknown"}
+                        </span>
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => { rejectTransfer(selectedOrder.id); setSelectedOrder(null); }}
+                        >
+                          <XCircle className="w-4 h-4 mr-1" /> Reject
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => { acceptTransfer(selectedOrder.id); setSelectedOrder(null); }}
+                        >
+                          <CheckCircle2 className="w-4 h-4 mr-1" /> Accept
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Transfer to another cashier */}
-                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
+                  {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && selectedOrder.cashierId === cashierId && (
                     <div className="space-y-2">
                       <p className="text-sm font-semibold flex items-center gap-1.5">
                         <ArrowRightLeft className="w-3.5 h-3.5" /> Transfer Order
