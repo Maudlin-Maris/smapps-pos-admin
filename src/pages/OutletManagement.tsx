@@ -231,6 +231,15 @@ export default function OutletManagement() {
                   <Tag className="h-3.5 w-3.5" />
                   Discounts & Tips
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setPaymentMethodOutlet(outlet)}
+                >
+                  <Wallet className="h-3.5 w-3.5" />
+                  Payment Methods
+                </Button>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
