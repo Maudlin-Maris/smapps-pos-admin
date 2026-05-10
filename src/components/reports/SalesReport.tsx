@@ -360,25 +360,38 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
             {paymentMethodData.length > 0 ? (
               <>
-                <ResponsiveContainer width="100%" height={180}>
-                  <PieChart>
-                    <Pie data={paymentMethodData} cx="50%" cy="50%" innerRadius={35} outerRadius={65} dataKey="value" paddingAngle={2}>
-                      {paymentMethodData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={paymentMethodData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} className="text-xs" interval={0} />
+                    <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={45} />
+                    <Tooltip
+                      formatter={(value: number) => [formatCurrency(value), "Sales"]}
+                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                      cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                    />
+                    <Bar dataKey="value" name="Sales" radius={[4, 4, 0, 0]}>
+                      {paymentMethodData.map((entry) => (
+                        <Cell
+                          key={entry.name}
+                          fill={entry.name === topPaymentMethod?.name ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.35)"}
+                        />
                       ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ fontSize: "12px" }} />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
-                  </PieChart>
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
-                <div className="space-y-1.5 mt-2">
-                  {paymentMethodData.map((pm) => (
-                    <div key={pm.name} className="flex items-center justify-between text-xs sm:text-sm">
-                      <span className="text-muted-foreground">{pm.name}</span>
-                      <span className="font-medium">{formatCurrency(pm.value)}</span>
-                    </div>
-                  ))}
-                </div>
+                {topPaymentMethod && (
+                  <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary/5 p-2 sm:p-3">
+                    <CreditCard className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="text-xs sm:text-sm">
+                      <strong>{topPaymentMethod.name}</strong> leads with{" "}
+                      <strong>{formatCurrency(topPaymentMethod.value)}</strong>
+                      {totalPaymentValue > 0 && (
+                        <span className="text-muted-foreground"> ({((topPaymentMethod.value / totalPaymentValue) * 100).toFixed(1)}%)</span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">No data</div>
@@ -386,6 +399,56 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           </CardContent>
         </Card>
       </div>
+
+      {/* Net Sales by Time of Day */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Clock className="h-4 w-4" /> Net Sales by Time of Day
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+          {filteredSales.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={salesByHour} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} className="text-xs" interval={1} />
+                  <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={45} />
+                  <Tooltip
+                    formatter={(value: number, _name, item) => {
+                      const p = item?.payload as { orders?: number } | undefined;
+                      return [`${formatCurrency(value)} · ${p?.orders ?? 0} orders`, "Net Sales"];
+                    }}
+                    labelFormatter={(_, payload) => (payload?.[0]?.payload as { fullLabel?: string } | undefined)?.fullLabel || ""}
+                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                    cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                  />
+                  <Bar dataKey="sales" name="Net Sales" radius={[4, 4, 0, 0]}>
+                    {salesByHour.map((entry) => (
+                      <Cell
+                        key={entry.hour}
+                        fill={entry.hour === peakHour?.hour ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.35)"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              {peakHour && peakHour.sales > 0 && (
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary/5 p-2 sm:p-3">
+                  <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-xs sm:text-sm">
+                    Peak hour <strong>{peakHour.fullLabel}</strong> with{" "}
+                    <strong>{formatCurrency(peakHour.sales)}</strong> across {peakHour.orders} orders
+                  </span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">No sales data for this period</div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Sales Trend */}
       <Card>
