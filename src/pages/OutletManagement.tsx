@@ -161,7 +161,7 @@ export default function OutletManagement() {
                   size="icon"
                   className="h-8 w-8"
                   title={outlet.status === "open" ? "Close outlet" : "Open outlet"}
-                  onClick={() => handleToggleStatus(outlet.id)}
+                  onClick={() => handleToggleStatus(outlet)}
                 >
                   <Power className={`h-4 w-4 ${outlet.status === "open" ? "text-success" : "text-muted-foreground"}`} />
                 </Button>
