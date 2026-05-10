@@ -50,6 +50,8 @@ export default function OutletManagement() {
   ]);
   const [feeDialogOutlet, setFeeDialogOutlet] = useState<OutletData | null>(null);
   const [discountTipOutlet, setDiscountTipOutlet] = useState<OutletData | null>(null);
+  const [paymentMethodOutlet, setPaymentMethodOutlet] = useState<OutletData | null>(null);
+  const [statusToggleOutlet, setStatusToggleOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
