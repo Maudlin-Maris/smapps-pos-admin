@@ -65,7 +65,13 @@ export default function OutletManagement() {
     setDialogOpen(true);
   };
 
-  const handleToggleStatus = (id: number) => {
+  const handleToggleStatus = (outlet: OutletData) => {
+    setStatusToggleOutlet(outlet);
+  };
+
+  const confirmToggleStatus = () => {
+    if (!statusToggleOutlet) return;
+    const id = statusToggleOutlet.id;
     setOutlets((prev) =>
       prev.map((o) => {
         if (o.id !== id) return o;
@@ -74,6 +80,7 @@ export default function OutletManagement() {
         return { ...o, status: newStatus };
       })
     );
+    setStatusToggleOutlet(null);
   };
 
   const handleSubmit = (data: OutletFormData) => {
