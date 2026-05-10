@@ -3,6 +3,7 @@ import { usePOS } from "@/contexts/POSContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type OrderType, type PaymentMethod, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
 import { getOutletDiscountTipConfig } from "@/data/outletDiscountTips";
+import { getOutletPaymentMethods } from "@/data/outletPaymentMethods";
 import { type LoyaltyRedemption } from "@/data/loyaltyData";
 import { getFeatures, getBusinessType } from "@/data/businessTypes";
 import { formatNaira } from "@/lib/currency";
@@ -293,12 +294,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setStep("complete");
   };
 
-  const paymentMethods: { id: PaymentMethod; label: string; icon: React.ReactNode }[] = [
-    { id: "cash", label: "Cash", icon: <Banknote className="w-5 h-5" /> },
-    { id: "card", label: "Card", icon: <CreditCard className="w-5 h-5" /> },
-    { id: "mobile", label: "Mobile", icon: <Smartphone className="w-5 h-5" /> },
-    { id: "transfer", label: "Transfer", icon: <ArrowRightLeft className="w-5 h-5" /> },
-  ];
+  const PM_ICONS: Record<PaymentMethod, React.ReactNode> = {
+    cash: <Banknote className="w-5 h-5" />,
+    card: <CreditCard className="w-5 h-5" />,
+    mobile: <Smartphone className="w-5 h-5" />,
+    transfer: <ArrowRightLeft className="w-5 h-5" />,
+  };
+
+  const paymentMethods = useMemo(() => {
+    const cfg = getOutletPaymentMethods(currentOutlet?.id ?? "default");
+    return cfg
+      .filter((m) => m.enabled)
+      .map((m) => ({ id: m.id, label: m.label || m.id, icon: PM_ICONS[m.id] }));
+  }, [currentOutlet?.id]);
+
+  // Ensure selected payment method is always in the enabled set
+  useEffect(() => {
+    if (paymentMethods.length && !paymentMethods.find((pm) => pm.id === paymentMethod)) {
+      setPaymentMethod(paymentMethods[0].id);
+    }
+  }, [paymentMethods, paymentMethod]);
 
   const outletConfig = useMemo(
     () => getOutletDiscountTipConfig(currentOutlet?.id ?? "default"),

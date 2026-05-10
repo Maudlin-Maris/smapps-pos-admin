@@ -2,11 +2,16 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent, Tag } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent, Tag, Wallet } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
 import DepartmentManagerDialog from "@/components/outlets/DepartmentManagerDialog";
 import FeeManagerDialog from "@/components/outlets/FeeManagerDialog";
 import DiscountTipManagerDialog from "@/components/outlets/DiscountTipManagerDialog";
+import PaymentMethodManagerDialog from "@/components/outlets/PaymentMethodManagerDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { initialDepartments, type Department } from "@/data/departments";
 import { type FeeFormData } from "@/components/fees/FeeFormDialog";
 import { toast } from "sonner";
@@ -45,6 +50,8 @@ export default function OutletManagement() {
   ]);
   const [feeDialogOutlet, setFeeDialogOutlet] = useState<OutletData | null>(null);
   const [discountTipOutlet, setDiscountTipOutlet] = useState<OutletData | null>(null);
+  const [paymentMethodOutlet, setPaymentMethodOutlet] = useState<OutletData | null>(null);
+  const [statusToggleOutlet, setStatusToggleOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -58,7 +65,13 @@ export default function OutletManagement() {
     setDialogOpen(true);
   };
 
-  const handleToggleStatus = (id: number) => {
+  const handleToggleStatus = (outlet: OutletData) => {
+    setStatusToggleOutlet(outlet);
+  };
+
+  const confirmToggleStatus = () => {
+    if (!statusToggleOutlet) return;
+    const id = statusToggleOutlet.id;
     setOutlets((prev) =>
       prev.map((o) => {
         if (o.id !== id) return o;
@@ -67,6 +80,7 @@ export default function OutletManagement() {
         return { ...o, status: newStatus };
       })
     );
+    setStatusToggleOutlet(null);
   };
 
   const handleSubmit = (data: OutletFormData) => {
@@ -147,7 +161,7 @@ export default function OutletManagement() {
                   size="icon"
                   className="h-8 w-8"
                   title={outlet.status === "open" ? "Close outlet" : "Open outlet"}
-                  onClick={() => handleToggleStatus(outlet.id)}
+                  onClick={() => handleToggleStatus(outlet)}
                 >
                   <Power className={`h-4 w-4 ${outlet.status === "open" ? "text-success" : "text-muted-foreground"}`} />
                 </Button>
@@ -217,6 +231,15 @@ export default function OutletManagement() {
                   <Tag className="h-3.5 w-3.5" />
                   Discounts & Tips
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => setPaymentMethodOutlet(outlet)}
+                >
+                  <Wallet className="h-3.5 w-3.5" />
+                  Payment Methods
+                </Button>
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
@@ -266,6 +289,36 @@ export default function OutletManagement() {
           outletName={discountTipOutlet.name}
         />
       )}
+
+      {paymentMethodOutlet && (
+        <PaymentMethodManagerDialog
+          open={!!paymentMethodOutlet}
+          onOpenChange={(open) => !open && setPaymentMethodOutlet(null)}
+          outletId={paymentMethodOutlet.id}
+          outletName={paymentMethodOutlet.name}
+        />
+      )}
+
+      <AlertDialog open={!!statusToggleOutlet} onOpenChange={(o) => !o && setStatusToggleOutlet(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusToggleOutlet?.status === "open" ? "Close" : "Open"} {statusToggleOutlet?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusToggleOutlet?.status === "open"
+                ? "Cashiers at this outlet will no longer be able to process new orders until it is reopened."
+                : "Cashiers at this outlet will be able to log in and start processing orders."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleStatus}>
+              {statusToggleOutlet?.status === "open" ? "Close Outlet" : "Open Outlet"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
