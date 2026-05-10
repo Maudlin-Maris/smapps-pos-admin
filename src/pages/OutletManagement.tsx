@@ -289,6 +289,36 @@ export default function OutletManagement() {
           outletName={discountTipOutlet.name}
         />
       )}
+
+      {paymentMethodOutlet && (
+        <PaymentMethodManagerDialog
+          open={!!paymentMethodOutlet}
+          onOpenChange={(open) => !open && setPaymentMethodOutlet(null)}
+          outletId={paymentMethodOutlet.id}
+          outletName={paymentMethodOutlet.name}
+        />
+      )}
+
+      <AlertDialog open={!!statusToggleOutlet} onOpenChange={(o) => !o && setStatusToggleOutlet(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {statusToggleOutlet?.status === "open" ? "Close" : "Open"} {statusToggleOutlet?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {statusToggleOutlet?.status === "open"
+                ? "Cashiers at this outlet will no longer be able to process new orders until it is reopened."
+                : "Cashiers at this outlet will be able to log in and start processing orders."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleStatus}>
+              {statusToggleOutlet?.status === "open" ? "Close Outlet" : "Open Outlet"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
