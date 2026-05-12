@@ -32,7 +32,8 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
   );
 
   // Registration form state
-  const [regName, setRegName] = useState("");
+  const [regFirstName, setRegFirstName] = useState("");
+  const [regLastName, setRegLastName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
 
