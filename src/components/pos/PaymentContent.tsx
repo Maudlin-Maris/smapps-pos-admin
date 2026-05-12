@@ -421,8 +421,15 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             })()}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Customer Name (optional)</label>
-              <Input value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Customer name" />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">First Name (optional)</label>
+                <Input value={customerFirstName} onChange={e => setCustomerFirstName(e.target.value)} placeholder="First name" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Last Name (optional)</label>
+                <Input value={customerLastName} onChange={e => setCustomerLastName(e.target.value)} placeholder="Last name" />
+              </div>
             </div>
 
             <div className="space-y-2">
