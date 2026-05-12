@@ -146,7 +146,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const reset = () => {
     setStep(existingOrderId ? "discount" : "type");
     setSelectedLocation("");
-    setCustomerName("");
+    setCustomerFirstName(""); setCustomerLastName("");
     setCustomerPhone("");
     setPaymentMethod("cash");
     setSplitMode(null);
