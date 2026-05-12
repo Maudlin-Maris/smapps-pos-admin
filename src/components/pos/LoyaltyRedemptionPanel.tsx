@@ -180,13 +180,21 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
           </Button>
         </div>
         <div className="space-y-2">
-          <Input
-            value={regName}
-            onChange={e => setRegName(e.target.value)}
-            placeholder="Full Name *"
-            className="h-9 text-sm"
-            autoFocus
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              value={regFirstName}
+              onChange={e => setRegFirstName(e.target.value)}
+              placeholder="First Name *"
+              className="h-9 text-sm"
+              autoFocus
+            />
+            <Input
+              value={regLastName}
+              onChange={e => setRegLastName(e.target.value)}
+              placeholder="Last Name *"
+              className="h-9 text-sm"
+            />
+          </div>
           <Input
             value={regPhone}
             onChange={e => setRegPhone(e.target.value)}
