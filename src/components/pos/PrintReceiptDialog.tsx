@@ -129,36 +129,34 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
             </div>
           </TabsContent>
 
-          <TabsContent value="docket" className="mt-0 flex flex-col flex-1 min-h-0">
-            <div className="flex-1 overflow-y-auto px-4 py-3">
-              <div className="space-y-4">
-                {docketGroups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No department dockets for this order</p>
-                ) : (
-                  docketGroups.map((group) => (
-                    <div key={group.departmentName} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="gap-1 text-xs font-semibold"><ChefHat className="w-3 h-3" /> {group.departmentName}</Badge>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">{group.items.length} item{group.items.length > 1 ? "s" : ""}</span>
-                          <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs" onClick={() => handlePrintDepartment(group.departmentName)}><Printer className="w-3 h-3" /> Print</Button>
-                        </div>
-                      </div>
-                      <div className="flex justify-center">
-                        <div className="border border-border rounded-lg overflow-hidden shadow-sm">
-                          <KitchenDocket ref={(el: HTMLDivElement | null) => { if (el) docketRefs.current.set(group.departmentName, el); }} order={order} outlet={currentOutlet} departmentFilter={group.departmentName} />
-                        </div>
+          <TabsContent value="docket" forceMount className="mt-0 data-[state=inactive]:hidden flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4">
+              {docketGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">No department dockets for this order</p>
+              ) : (
+                docketGroups.map((group) => (
+                  <div key={group.departmentName} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline" className="gap-1 text-xs font-semibold"><ChefHat className="w-3 h-3" /> {group.departmentName}</Badge>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{group.items.length} item{group.items.length > 1 ? "s" : ""}</span>
+                        <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs" onClick={() => handlePrintDepartment(group.departmentName)}><Printer className="w-3 h-3" /> Print</Button>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                    <div className="flex justify-center">
+                      <div className="border border-border rounded-lg overflow-hidden shadow-sm bg-white">
+                        <KitchenDocket ref={(el: HTMLDivElement | null) => { if (el) docketRefs.current.set(group.departmentName, el); }} order={order} outlet={currentOutlet} departmentFilter={group.departmentName} />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-            <div className="border-t border-border p-4 space-y-2">
+            <div className="shrink-0 border-t border-border p-4 space-y-2">
               <Button onClick={handlePrintAllDockets} className="w-full gap-2"><Printer className="w-4 h-4" /> Print All Dockets</Button>
               <p className="text-[10px] text-muted-foreground text-center">Each department docket prints on a separate page</p>
             </div>
-            <div style={{ position: "absolute", left: "-9999px", top: 0 }}>
+            <div aria-hidden className="sr-only" style={{ position: "fixed", left: "-99999px", top: 0, width: "302px", pointerEvents: "none", visibility: "hidden" }}>
               <KitchenDocket ref={docketRef} order={order} outlet={currentOutlet} />
             </div>
           </TabsContent>
