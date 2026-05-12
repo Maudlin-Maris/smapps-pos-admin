@@ -420,29 +420,6 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
               );
             })()}
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">First Name (optional)</label>
-                <Input value={customerFirstName} onChange={e => setCustomerFirstName(e.target.value)} placeholder="First name" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Last Name (optional)</label>
-                <Input value={customerLastName} onChange={e => setCustomerLastName(e.target.value)} placeholder="Last name" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Customer Phone (optional)</label>
-              <Input
-                type="tel"
-                inputMode="tel"
-                value={customerPhone}
-                onChange={e => setCustomerPhone(e.target.value.replace(/[^\d+\-\s()]/g, "").slice(0, 20))}
-                placeholder="e.g. 0801 234 5678"
-                autoComplete="tel"
-              />
-            </div>
-
             <div className="space-y-2">
               <label className="text-sm font-medium">Notes & Special Instructions (optional)</label>
               <Textarea
