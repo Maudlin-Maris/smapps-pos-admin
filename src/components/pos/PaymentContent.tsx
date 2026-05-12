@@ -35,7 +35,9 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
-  const [customerName, setCustomerName] = useState("");
+  const [customerFirstName, setCustomerFirstName] = useState("");
+  const [customerLastName, setCustomerLastName] = useState("");
+  const customerName = [customerFirstName.trim(), customerLastName.trim()].filter(Boolean).join(" ");
   const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
