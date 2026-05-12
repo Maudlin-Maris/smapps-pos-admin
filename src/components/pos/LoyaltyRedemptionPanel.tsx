@@ -97,13 +97,14 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
   };
 
   const handleRegister = () => {
-    if (!regName.trim() || !regPhone.trim()) {
-      toast.error("Name and phone are required");
+    if (!regFirstName.trim() || !regLastName.trim() || !regPhone.trim()) {
+      toast.error("First name, last name and phone are required");
       return;
     }
+    const fullName = `${regFirstName.trim()} ${regLastName.trim()}`;
     const newCustomer: LoyaltyCustomer = {
       id: `c${Date.now()}`,
-      name: regName.trim(),
+      name: fullName,
       email: regEmail.trim(),
       phone: regPhone.trim(),
       loyaltyTier: "bronze",
@@ -118,7 +119,8 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
     loyaltyCustomers.push(newCustomer);
     toast.success(`${newCustomer.name} enrolled as a Bronze member!`);
     setSelectedCustomer(newCustomer);
-    setRegName("");
+    setRegFirstName("");
+    setRegLastName("");
     setRegPhone("");
     setRegEmail("");
     setView("profile");
