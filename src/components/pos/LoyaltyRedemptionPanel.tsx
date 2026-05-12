@@ -252,7 +252,9 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
                   size="sm"
                   className="h-8 text-xs gap-1.5"
                   onClick={() => {
-                    setRegName(searchQuery.trim());
+                    const parts = searchQuery.trim().split(/\s+/);
+                    setRegFirstName(parts[0] || "");
+                    setRegLastName(parts.slice(1).join(" "));
                     setView("register");
                   }}
                 >
