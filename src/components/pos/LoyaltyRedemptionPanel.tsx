@@ -32,7 +32,8 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
   );
 
   // Registration form state
-  const [regName, setRegName] = useState("");
+  const [regFirstName, setRegFirstName] = useState("");
+  const [regLastName, setRegLastName] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
 
@@ -96,13 +97,14 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
   };
 
   const handleRegister = () => {
-    if (!regName.trim() || !regPhone.trim()) {
-      toast.error("Name and phone are required");
+    if (!regFirstName.trim() || !regLastName.trim() || !regPhone.trim()) {
+      toast.error("First name, last name and phone are required");
       return;
     }
+    const fullName = `${regFirstName.trim()} ${regLastName.trim()}`;
     const newCustomer: LoyaltyCustomer = {
       id: `c${Date.now()}`,
-      name: regName.trim(),
+      name: fullName,
       email: regEmail.trim(),
       phone: regPhone.trim(),
       loyaltyTier: "bronze",
@@ -117,7 +119,8 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
     loyaltyCustomers.push(newCustomer);
     toast.success(`${newCustomer.name} enrolled as a Bronze member!`);
     setSelectedCustomer(newCustomer);
-    setRegName("");
+    setRegFirstName("");
+    setRegLastName("");
     setRegPhone("");
     setRegEmail("");
     setView("profile");
@@ -177,13 +180,21 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
           </Button>
         </div>
         <div className="space-y-2">
-          <Input
-            value={regName}
-            onChange={e => setRegName(e.target.value)}
-            placeholder="Full Name *"
-            className="h-9 text-sm"
-            autoFocus
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              value={regFirstName}
+              onChange={e => setRegFirstName(e.target.value)}
+              placeholder="First Name *"
+              className="h-9 text-sm"
+              autoFocus
+            />
+            <Input
+              value={regLastName}
+              onChange={e => setRegLastName(e.target.value)}
+              placeholder="Last Name *"
+              className="h-9 text-sm"
+            />
+          </div>
           <Input
             value={regPhone}
             onChange={e => setRegPhone(e.target.value)}
@@ -241,7 +252,9 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
                   size="sm"
                   className="h-8 text-xs gap-1.5"
                   onClick={() => {
-                    setRegName(searchQuery.trim());
+                    const parts = searchQuery.trim().split(/\s+/);
+                    setRegFirstName(parts[0] || "");
+                    setRegLastName(parts.slice(1).join(" "));
                     setView("register");
                   }}
                 >
