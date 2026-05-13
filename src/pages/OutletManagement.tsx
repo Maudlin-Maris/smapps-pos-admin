@@ -242,6 +242,17 @@ export default function OutletManagement() {
                   <Wallet className="h-3.5 w-3.5" />
                   Payment Methods
                 </Button>
+                {outlet.businessType === "restaurant" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setLocationOutlet(outlet)}
+                  >
+                    <QrCode className="h-3.5 w-3.5" />
+                    Locations & QR
+                  </Button>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
