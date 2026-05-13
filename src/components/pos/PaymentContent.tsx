@@ -307,15 +307,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     const cfg = getOutletPaymentMethods(currentOutlet?.id ?? "default");
     return cfg
       .filter((m) => m.enabled)
-      .map((m) => ({ id: m.id, label: m.label || m.id, icon: PM_ICONS[m.id] }));
+      .map((m) => ({ id: m.id, label: m.label || m.kind, kind: m.kind, icon: PM_ICONS[m.kind] }));
   }, [currentOutlet?.id]);
+
+  const resolveKind = useCallback(
+    (id: string): PaymentMethod => paymentMethods.find((p) => p.id === id)?.kind ?? "cash",
+    [paymentMethods],
+  );
 
   // Ensure selected payment method is always in the enabled set
   useEffect(() => {
     if (paymentMethods.length && !paymentMethods.find((pm) => pm.id === paymentMethod)) {
       setPaymentMethod(paymentMethods[0].id);
     }
-  }, [paymentMethods, paymentMethod]);
+    if (paymentMethods.length && !paymentMethods.find((pm) => pm.id === splitItemPaymentMethod)) {
+      setSplitItemPaymentMethod(paymentMethods[0].id);
+    }
+    if (paymentMethods.length && !paymentMethods.find((pm) => pm.id === partialPaymentMethod)) {
+      setPartialPaymentMethod(paymentMethods[0].id);
+    }
+  }, [paymentMethods, paymentMethod, splitItemPaymentMethod, partialPaymentMethod]);
 
   const outletConfig = useMemo(
     () => getOutletDiscountTipConfig(currentOutlet?.id ?? "default"),
