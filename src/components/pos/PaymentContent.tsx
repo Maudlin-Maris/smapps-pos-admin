@@ -148,7 +148,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setSelectedLocation("");
     setCustomerFirstName(""); setCustomerLastName("");
     setCustomerPhone("");
-    setPaymentMethod("cash");
+    setPaymentMethod("");
     setSplitMode(null);
     setSplitCount(2);
     setCustomAmounts([]);
@@ -160,9 +160,9 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setTipPreset(null);
     setCustomerNotes("");
     setSelectedItems([]);
-    setSplitItemPaymentMethod("cash");
+    setSplitItemPaymentMethod("");
     setPartialAmount("");
-    setPartialPaymentMethod("cash");
+    setPartialPaymentMethod("");
     setLoyaltyRedemption(null);
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
