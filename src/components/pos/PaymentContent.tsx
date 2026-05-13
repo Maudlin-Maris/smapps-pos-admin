@@ -729,7 +729,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                     const per = Math.floor(total / n);
                     const remainder = total - per * n;
                     setCustomAmounts(Array.from({ length: n }, (_, i) => ({
-                      method: "cash" as PaymentMethod,
+                      method: paymentMethods[0]?.id ?? "",
                       amount: (i === n - 1 ? per + remainder : per).toString()
                     })));
                   }}
@@ -748,7 +748,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                     const per = Math.floor(total / n);
                     const remainder = total - per * n;
                     setCustomAmounts(Array.from({ length: n }, (_, i) => ({
-                      method: "cash" as PaymentMethod,
+                      method: paymentMethods[0]?.id ?? "",
                       amount: (i === n - 1 ? per + remainder : per).toString()
                     })));
                   }}
@@ -767,7 +767,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                     value={ca.method}
                     onChange={e => {
                       const next = [...customAmounts];
-                      next[i] = { ...next[i], method: e.target.value as PaymentMethod };
+                      next[i] = { ...next[i], method: e.target.value };
                       setCustomAmounts(next);
                     }}
                     className="h-9 rounded-md border border-input bg-background px-2 text-sm"
