@@ -678,20 +678,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             </div>
 
             <p className="text-sm font-medium">Payment Method</p>
-            <div className="grid grid-cols-2 gap-2">
-              {paymentMethods.map(pm => (
-                <button
-                  key={pm.id}
-                  onClick={() => setPaymentMethod(pm.id)}
-                  className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${
-                    paymentMethod === pm.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  {pm.icon}
-                  <span className="text-sm font-medium">{pm.label}</span>
-                </button>
-              ))}
-            </div>
+            {paymentMethods.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                No payment methods configured for this outlet. Ask an admin to add payment methods from the Outlets page.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {paymentMethods.map(pm => (
+                  <button
+                    key={pm.id}
+                    onClick={() => setPaymentMethod(pm.id)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${
+                      paymentMethod === pm.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    {pm.icon}
+                    <span className="text-sm font-medium">{pm.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <Button onClick={handleFullPayment} className="h-11">
