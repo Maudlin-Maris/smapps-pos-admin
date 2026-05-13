@@ -39,10 +39,10 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [customerLastName, setCustomerLastName] = useState("");
   const customerName = [customerFirstName.trim(), customerLastName.trim()].filter(Boolean).join(" ");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
   const [splitCount, setSplitCount] = useState(2);
-  const [customAmounts, setCustomAmounts] = useState<{ method: PaymentMethod; amount: string }[]>([]);
+  const [customAmounts, setCustomAmounts] = useState<{ method: string; amount: string }[]>([]);
   const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number; id: string } | null>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [payNow, setPayNow] = useState(true);
@@ -59,11 +59,11 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
 
   // Split by items state
   const [selectedItems, setSelectedItems] = useState<{ itemId: string; qty: number }[]>([]);
-  const [splitItemPaymentMethod, setSplitItemPaymentMethod] = useState<PaymentMethod>("cash");
+  const [splitItemPaymentMethod, setSplitItemPaymentMethod] = useState<string>("");
 
   // Partial payment state
   const [partialAmount, setPartialAmount] = useState("");
-  const [partialPaymentMethod, setPartialPaymentMethod] = useState<PaymentMethod>("cash");
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState<string>("");
 
   // Loyalty state
   const [loyaltyRedemption, setLoyaltyRedemption] = useState<LoyaltyRedemption | null>(null);
@@ -148,7 +148,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setSelectedLocation("");
     setCustomerFirstName(""); setCustomerLastName("");
     setCustomerPhone("");
-    setPaymentMethod("cash");
+    setPaymentMethod("");
     setSplitMode(null);
     setSplitCount(2);
     setCustomAmounts([]);
@@ -160,9 +160,9 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setTipPreset(null);
     setCustomerNotes("");
     setSelectedItems([]);
-    setSplitItemPaymentMethod("cash");
+    setSplitItemPaymentMethod("");
     setPartialAmount("");
-    setPartialPaymentMethod("cash");
+    setPartialPaymentMethod("");
     setLoyaltyRedemption(null);
     if (allowedOrderTypes.length > 0) {
       setSelectedOrderType(allowedOrderTypes[0].id);
@@ -190,12 +190,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
 
   const handleFullPayment = () => {
     if (existingOrderId) {
-      addPayment(existingOrderId, { method: paymentMethod, amount: total });
+      addPayment(existingOrderId, { method: resolveKind(paymentMethod), amount: total });
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
-      addPayment(order.id, { method: paymentMethod, amount: total });
+      addPayment(order.id, { method: resolveKind(paymentMethod), amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
     setStep("complete");
@@ -206,7 +206,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     if (existingOrderId) {
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
-        if (amt > 0) addPayment(existingOrderId, { method: ca.method, amount: amt });
+        if (amt > 0) addPayment(existingOrderId, { method: resolveKind(ca.method), amount: amt });
       });
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
@@ -214,7 +214,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
-        if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
+        if (amt > 0) addPayment(order.id, { method: resolveKind(ca.method), amount: amt });
       });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
@@ -222,34 +222,38 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   };
 
   const initSplit = () => {
+    const def = paymentMethods[0]?.id ?? "";
+    const second = paymentMethods[1]?.id ?? def;
     if (existingOrderId) {
       setStep("split-choice");
     } else {
       setCustomAmounts([
-        { method: "cash", amount: "" },
-        { method: "card", amount: "" },
+        { method: def, amount: "" },
+        { method: second, amount: "" },
       ]);
       setStep("split");
     }
   };
 
   const initSplitByAmount = () => {
+    const def = paymentMethods[0]?.id ?? "";
+    const second = paymentMethods[1]?.id ?? def;
     setCustomAmounts([
-      { method: "cash", amount: "" },
-      { method: "card", amount: "" },
+      { method: def, amount: "" },
+      { method: second, amount: "" },
     ]);
     setStep("split");
   };
 
   const initSplitByItems = () => {
     setSelectedItems([]);
-    setSplitItemPaymentMethod("cash");
+    setSplitItemPaymentMethod(paymentMethods[0]?.id ?? "");
     setStep("split-items");
   };
 
   const initPartialPayment = () => {
     setPartialAmount("");
-    setPartialPaymentMethod("cash");
+    setPartialPaymentMethod(paymentMethods[0]?.id ?? "");
     setStep("partial");
   };
 
@@ -280,7 +284,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handleSplitItemsPayment = () => {
     if (!existingOrderId || selectedItemsTotal <= 0) return;
     addPayment(existingOrderId, {
-      method: splitItemPaymentMethod,
+      method: resolveKind(splitItemPaymentMethod),
       amount: selectedItemsTotal,
       paidItems: selectedItems.map(si => ({ itemId: si.itemId, qty: si.qty })),
     });
@@ -291,7 +295,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handlePartialPayment = () => {
     const amt = parseFloat(partialAmount) || 0;
     if (!existingOrderId || amt <= 0) return;
-    addPayment(existingOrderId, { method: partialPaymentMethod, amount: amt });
+    addPayment(existingOrderId, { method: resolveKind(partialPaymentMethod), amount: amt });
     setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amt, id: existingOrderId });
     setStep("complete");
   };
@@ -307,15 +311,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     const cfg = getOutletPaymentMethods(currentOutlet?.id ?? "default");
     return cfg
       .filter((m) => m.enabled)
-      .map((m) => ({ id: m.id, label: m.label || m.id, icon: PM_ICONS[m.id] }));
+      .map((m) => ({ id: m.id, label: m.label || m.kind, kind: m.kind, icon: PM_ICONS[m.kind] }));
   }, [currentOutlet?.id]);
+
+  const resolveKind = useCallback(
+    (id: string): PaymentMethod => paymentMethods.find((p) => p.id === id)?.kind ?? "cash",
+    [paymentMethods],
+  );
 
   // Ensure selected payment method is always in the enabled set
   useEffect(() => {
     if (paymentMethods.length && !paymentMethods.find((pm) => pm.id === paymentMethod)) {
       setPaymentMethod(paymentMethods[0].id);
     }
-  }, [paymentMethods, paymentMethod]);
+    if (paymentMethods.length && !paymentMethods.find((pm) => pm.id === splitItemPaymentMethod)) {
+      setSplitItemPaymentMethod(paymentMethods[0].id);
+    }
+    if (paymentMethods.length && !paymentMethods.find((pm) => pm.id === partialPaymentMethod)) {
+      setPartialPaymentMethod(paymentMethods[0].id);
+    }
+  }, [paymentMethods, paymentMethod, splitItemPaymentMethod, partialPaymentMethod]);
 
   const outletConfig = useMemo(
     () => getOutletDiscountTipConfig(currentOutlet?.id ?? "default"),
@@ -663,20 +678,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             </div>
 
             <p className="text-sm font-medium">Payment Method</p>
-            <div className="grid grid-cols-2 gap-2">
-              {paymentMethods.map(pm => (
-                <button
-                  key={pm.id}
-                  onClick={() => setPaymentMethod(pm.id)}
-                  className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${
-                    paymentMethod === pm.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
-                  }`}
-                >
-                  {pm.icon}
-                  <span className="text-sm font-medium">{pm.label}</span>
-                </button>
-              ))}
-            </div>
+            {paymentMethods.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                No payment methods configured for this outlet. Ask an admin to add payment methods from the Outlets page.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {paymentMethods.map(pm => (
+                  <button
+                    key={pm.id}
+                    onClick={() => setPaymentMethod(pm.id)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border transition-all ${
+                      paymentMethod === pm.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
+                    }`}
+                  >
+                    {pm.icon}
+                    <span className="text-sm font-medium">{pm.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-2">
               <Button onClick={handleFullPayment} className="h-11">
@@ -714,7 +735,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                     const per = Math.floor(total / n);
                     const remainder = total - per * n;
                     setCustomAmounts(Array.from({ length: n }, (_, i) => ({
-                      method: "cash" as PaymentMethod,
+                      method: paymentMethods[0]?.id ?? "",
                       amount: (i === n - 1 ? per + remainder : per).toString()
                     })));
                   }}
@@ -733,7 +754,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                     const per = Math.floor(total / n);
                     const remainder = total - per * n;
                     setCustomAmounts(Array.from({ length: n }, (_, i) => ({
-                      method: "cash" as PaymentMethod,
+                      method: paymentMethods[0]?.id ?? "",
                       amount: (i === n - 1 ? per + remainder : per).toString()
                     })));
                   }}
@@ -752,7 +773,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                     value={ca.method}
                     onChange={e => {
                       const next = [...customAmounts];
-                      next[i] = { ...next[i], method: e.target.value as PaymentMethod };
+                      next[i] = { ...next[i], method: e.target.value };
                       setCustomAmounts(next);
                     }}
                     className="h-9 rounded-md border border-input bg-background px-2 text-sm"
