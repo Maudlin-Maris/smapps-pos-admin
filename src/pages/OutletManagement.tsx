@@ -312,6 +312,15 @@ export default function OutletManagement() {
         />
       )}
 
+      {locationOutlet && (
+        <LocationManagerDialog
+          open={!!locationOutlet}
+          onOpenChange={(open) => !open && setLocationOutlet(null)}
+          outletId={locationOutlet.id}
+          outletName={locationOutlet.name}
+        />
+      )}
+
       <AlertDialog open={!!statusToggleOutlet} onOpenChange={(o) => !o && setStatusToggleOutlet(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
