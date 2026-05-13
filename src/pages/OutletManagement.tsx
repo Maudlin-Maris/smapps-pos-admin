@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent, Tag, Wallet } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent, Tag, Wallet, QrCode } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
 import DepartmentManagerDialog from "@/components/outlets/DepartmentManagerDialog";
 import FeeManagerDialog from "@/components/outlets/FeeManagerDialog";
 import DiscountTipManagerDialog from "@/components/outlets/DiscountTipManagerDialog";
 import PaymentMethodManagerDialog from "@/components/outlets/PaymentMethodManagerDialog";
+import LocationManagerDialog from "@/components/outlets/LocationManagerDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -52,6 +53,7 @@ export default function OutletManagement() {
   const [discountTipOutlet, setDiscountTipOutlet] = useState<OutletData | null>(null);
   const [paymentMethodOutlet, setPaymentMethodOutlet] = useState<OutletData | null>(null);
   const [statusToggleOutlet, setStatusToggleOutlet] = useState<OutletData | null>(null);
+  const [locationOutlet, setLocationOutlet] = useState<OutletData | null>(null);
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -240,6 +242,17 @@ export default function OutletManagement() {
                   <Wallet className="h-3.5 w-3.5" />
                   Payment Methods
                 </Button>
+                {outlet.businessType === "restaurant" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setLocationOutlet(outlet)}
+                  >
+                    <QrCode className="h-3.5 w-3.5" />
+                    Locations & QR
+                  </Button>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted-foreground">Staff</p>
@@ -296,6 +309,15 @@ export default function OutletManagement() {
           onOpenChange={(open) => !open && setPaymentMethodOutlet(null)}
           outletId={paymentMethodOutlet.id}
           outletName={paymentMethodOutlet.name}
+        />
+      )}
+
+      {locationOutlet && (
+        <LocationManagerDialog
+          open={!!locationOutlet}
+          onOpenChange={(open) => !open && setLocationOutlet(null)}
+          outletId={locationOutlet.id}
+          outletName={locationOutlet.name}
         />
       )}
 
