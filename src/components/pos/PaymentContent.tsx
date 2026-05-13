@@ -291,7 +291,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handlePartialPayment = () => {
     const amt = parseFloat(partialAmount) || 0;
     if (!existingOrderId || amt <= 0) return;
-    addPayment(existingOrderId, { method: partialPaymentMethod, amount: amt });
+    addPayment(existingOrderId, { method: resolveKind(partialPaymentMethod), amount: amt });
     setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amt, id: existingOrderId });
     setStep("complete");
   };
