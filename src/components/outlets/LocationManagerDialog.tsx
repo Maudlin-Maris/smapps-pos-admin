@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Pencil, Trash2, Printer, QrCode, MapPin, ArrowLeft, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Printer, QrCode, MapPin, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   loadOutletLocations,
