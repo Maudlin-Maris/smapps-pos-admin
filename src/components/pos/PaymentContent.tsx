@@ -222,34 +222,38 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   };
 
   const initSplit = () => {
+    const def = paymentMethods[0]?.id ?? "";
+    const second = paymentMethods[1]?.id ?? def;
     if (existingOrderId) {
       setStep("split-choice");
     } else {
       setCustomAmounts([
-        { method: "cash", amount: "" },
-        { method: "card", amount: "" },
+        { method: def, amount: "" },
+        { method: second, amount: "" },
       ]);
       setStep("split");
     }
   };
 
   const initSplitByAmount = () => {
+    const def = paymentMethods[0]?.id ?? "";
+    const second = paymentMethods[1]?.id ?? def;
     setCustomAmounts([
-      { method: "cash", amount: "" },
-      { method: "card", amount: "" },
+      { method: def, amount: "" },
+      { method: second, amount: "" },
     ]);
     setStep("split");
   };
 
   const initSplitByItems = () => {
     setSelectedItems([]);
-    setSplitItemPaymentMethod("cash");
+    setSplitItemPaymentMethod(paymentMethods[0]?.id ?? "");
     setStep("split-items");
   };
 
   const initPartialPayment = () => {
     setPartialAmount("");
-    setPartialPaymentMethod("cash");
+    setPartialPaymentMethod(paymentMethods[0]?.id ?? "");
     setStep("partial");
   };
 
