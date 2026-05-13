@@ -59,11 +59,11 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
 
   // Split by items state
   const [selectedItems, setSelectedItems] = useState<{ itemId: string; qty: number }[]>([]);
-  const [splitItemPaymentMethod, setSplitItemPaymentMethod] = useState<PaymentMethod>("cash");
+  const [splitItemPaymentMethod, setSplitItemPaymentMethod] = useState<string>("");
 
   // Partial payment state
   const [partialAmount, setPartialAmount] = useState("");
-  const [partialPaymentMethod, setPartialPaymentMethod] = useState<PaymentMethod>("cash");
+  const [partialPaymentMethod, setPartialPaymentMethod] = useState<string>("");
 
   // Loyalty state
   const [loyaltyRedemption, setLoyaltyRedemption] = useState<LoyaltyRedemption | null>(null);
