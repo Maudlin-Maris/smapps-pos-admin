@@ -190,12 +190,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
 
   const handleFullPayment = () => {
     if (existingOrderId) {
-      addPayment(existingOrderId, { method: paymentMethod, amount: total });
+      addPayment(existingOrderId, { method: resolveKind(paymentMethod), amount: total });
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
-      addPayment(order.id, { method: paymentMethod, amount: total });
+      addPayment(order.id, { method: resolveKind(paymentMethod), amount: total });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
     setStep("complete");
@@ -206,7 +206,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     if (existingOrderId) {
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
-        if (amt > 0) addPayment(existingOrderId, { method: ca.method, amount: amt });
+        if (amt > 0) addPayment(existingOrderId, { method: resolveKind(ca.method), amount: amt });
       });
       setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
     } else {
@@ -214,7 +214,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
-        if (amt > 0) addPayment(order.id, { method: ca.method, amount: amt });
+        if (amt > 0) addPayment(order.id, { method: resolveKind(ca.method), amount: amt });
       });
       setCompletedOrder({ orderNumber: order.orderNumber, total, id: order.id });
     }
