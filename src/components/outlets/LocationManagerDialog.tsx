@@ -311,10 +311,7 @@ export default function LocationManagerDialog({ open, onOpenChange, outletId, ou
 
 // Render a QR SVG to string for the print window (no React in print doc).
 function qrSvgString(value: string): string {
-  // Lightweight: use a remote-free approach by rendering via QRCodeSVG-equivalent algorithm is heavy.
-  // Use Google Chart-free fallback: leverage the qrcode.react component server-side via renderToStaticMarkup.
-  // Simpler: use an inline data URI img generated from canvas at runtime.
-  // Here we use a lightweight encoder by dynamic import not available; fallback to <img> via qrserver.
-  const encoded = encodeURIComponent(value);
-  return `<img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encoded}" width="200" height="200" alt="QR" />`;
+  return renderToStaticMarkup(
+    <QRCodeSVG value={value} size={200} level="M" />
+  );
 }
