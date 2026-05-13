@@ -280,7 +280,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handleSplitItemsPayment = () => {
     if (!existingOrderId || selectedItemsTotal <= 0) return;
     addPayment(existingOrderId, {
-      method: splitItemPaymentMethod,
+      method: resolveKind(splitItemPaymentMethod),
       amount: selectedItemsTotal,
       paidItems: selectedItems.map(si => ({ itemId: si.itemId, qty: si.qty })),
     });
