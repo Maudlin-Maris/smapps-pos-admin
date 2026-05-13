@@ -39,10 +39,10 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [customerLastName, setCustomerLastName] = useState("");
   const customerName = [customerFirstName.trim(), customerLastName.trim()].filter(Boolean).join(" ");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [splitMode, setSplitMode] = useState<"equal" | "custom" | null>(null);
   const [splitCount, setSplitCount] = useState(2);
-  const [customAmounts, setCustomAmounts] = useState<{ method: PaymentMethod; amount: string }[]>([]);
+  const [customAmounts, setCustomAmounts] = useState<{ method: string; amount: string }[]>([]);
   const [completedOrder, setCompletedOrder] = useState<{ orderNumber: string; total: number; id: string } | null>(null);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [payNow, setPayNow] = useState(true);
