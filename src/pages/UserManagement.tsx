@@ -18,24 +18,32 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Copy, Search, ShieldAlert, Mail, Store, Building2, ShieldCheck } from "lucide-react";
+import { Plus, Pencil, UserX, UserCheck, Copy, Search, ShieldAlert, Mail, Phone, Store, Building2, ShieldCheck } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 interface FormState {
-  display_name: string;
+  first_name: string;
+  last_name: string;
   email: string;
+  phone: string;
   role_id: string;
   outlet_ids: string[];
   status: "active" | "inactive";
 }
 
 const emptyForm: FormState = {
-  display_name: "",
+  first_name: "",
+  last_name: "",
   email: "",
+  phone: "",
   role_id: "role_cashier",
   outlet_ids: [],
   status: "active",
 };
+
+function deriveDisplayName(first: string, last: string): string {
+  return `${first.trim()} ${last.trim()}`.trim();
+}
 
 export default function UserManagement() {
   const { user: currentUser, hasPermission } = useAuth();
@@ -79,9 +87,19 @@ export default function UserManagement() {
 
   const openEdit = (u: MockUser) => {
     setEditingId(u.id);
+    // Backward-compat: if first_name/last_name are empty, try to split display_name
+    let first = u.first_name;
+    let last = u.last_name;
+    if (!first && !last && u.display_name) {
+      const parts = u.display_name.trim().split(/\s+/);
+      first = parts[0] ?? "";
+      last = parts.slice(1).join(" ") ?? "";
+    }
     setForm({
-      display_name: u.display_name,
+      first_name: first,
+      last_name: last,
       email: u.email,
+      phone: u.phone,
       role_id: u.role_id,
       outlet_ids: u.outlet_ids,
       status: u.status,
@@ -92,7 +110,8 @@ export default function UserManagement() {
 
   const validate = (): boolean => {
     const e: typeof errors = {};
-    if (!form.display_name.trim()) e.display_name = "Name is required";
+    if (!form.first_name.trim()) e.first_name = "First name is required";
+    if (!form.last_name.trim()) e.last_name = "Last name is required";
     if (!form.email.trim()) e.email = "Email is required";
     else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email";
     if (!form.role_id) e.role_id = "Role is required";
@@ -108,13 +127,17 @@ export default function UserManagement() {
   const handleSubmit = (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
+    const displayName = deriveDisplayName(form.first_name, form.last_name);
     const all = loadUsers();
     if (editingId) {
       const idx = all.findIndex((u) => u.id === editingId);
       if (idx === -1) return;
       all[idx] = {
         ...all[idx],
-        display_name: form.display_name.trim(),
+        display_name: displayName,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        phone: form.phone.trim(),
         email: form.email.trim(),
         role_id: form.role_id,
         outlet_ids: form.outlet_ids,
@@ -131,8 +154,10 @@ export default function UserManagement() {
         id: `u_${Math.random().toString(36).slice(2, 10)}`,
         email: form.email.trim(),
         password,
-        display_name: form.display_name.trim(),
-        phone: "",
+        display_name: displayName,
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        phone: form.phone.trim(),
         avatar_url: null,
         role: form.role_id === "role_admin" ? "admin" : form.role_id === "role_manager" ? "manager" : "staff",
         role_id: form.role_id,
@@ -279,6 +304,12 @@ export default function UserManagement() {
                   <Mail className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate text-xs">{u.email}</span>
                 </div>
+                {u.phone && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate text-xs">{u.phone}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
                   <span className="text-xs">{roleName(u.role_id)}</span>
@@ -347,17 +378,32 @@ export default function UserManagement() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full name</Label>
+                <Label htmlFor="first_name">First name</Label>
                 <Input
-                  id="name"
-                  value={form.display_name}
-                  onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-                  aria-invalid={!!errors.display_name}
+                  id="first_name"
+                  value={form.first_name}
+                  onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                  aria-invalid={!!errors.first_name}
                 />
-                {errors.display_name && (
-                  <p className="text-xs text-destructive">{errors.display_name}</p>
+                {errors.first_name && (
+                  <p className="text-xs text-destructive">{errors.first_name}</p>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="last_name">Last name</Label>
+                <Input
+                  id="last_name"
+                  value={form.last_name}
+                  onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                  aria-invalid={!!errors.last_name}
+                />
+                {errors.last_name && (
+                  <p className="text-xs text-destructive">{errors.last_name}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -370,6 +416,16 @@ export default function UserManagement() {
                 {errors.email && (
                   <p className="text-xs text-destructive">{errors.email}</p>
                 )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+234 800 000 0000"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
               </div>
             </div>
 
