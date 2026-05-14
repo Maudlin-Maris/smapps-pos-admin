@@ -64,11 +64,16 @@ const DEFAULT_USERS: MockUser[] = [
 ];
 
 function migrateUser(u: any): MockUser {
+  const firstName = u.first_name ?? "";
+  const lastName = u.last_name ?? "";
+  const displayName = u.display_name ?? "";
   return {
     id: u.id,
     email: u.email,
     password: u.password,
-    display_name: u.display_name ?? "",
+    display_name: displayName || `${firstName} ${lastName}`.trim(),
+    first_name: firstName,
+    last_name: lastName,
     phone: u.phone ?? "",
     avatar_url: u.avatar_url ?? null,
     role: u.role ?? "staff",
