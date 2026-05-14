@@ -16,6 +16,8 @@ export interface MockUser {
   email: string;
   password: string; // mock only — never do this with real users
   display_name: string;
+  first_name: string;
+  last_name: string;
   phone: string;
   avatar_url: string | null;
   role: "admin" | "manager" | "staff"; // legacy free-form label (kept for compat)
