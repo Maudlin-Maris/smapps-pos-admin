@@ -1,18 +1,21 @@
 /**
  * Per-outlet payment method configuration.
- * Admin creates payment methods from the admin portal — there are no presets.
- * Each entry has a unique id and a `kind` that classifies it as one of the
- * underlying tender types the POS supports (used for icons & reporting).
+ * Admins create payment methods freely — no preset types.
+ * Each entry is just a name (label) plus an enabled flag.
+ * A `kind` field is retained internally for downstream POS/reporting
+ * compatibility, but it is always set to "cash" and never exposed in the UI.
  * Persisted in localStorage so the cashier POS reads what admin sets.
  */
 import type { PaymentMethod } from "./posData";
+
+export const MAX_PAYMENT_METHODS_PER_OUTLET = 10;
 
 export interface OutletPaymentMethod {
   /** Unique id for this payment method entry */
   id: string;
   /** Display label shown to cashier (e.g. "POS Terminal", "Opay Transfer") */
   label: string;
-  /** Underlying tender kind — drives icon and reporting bucket */
+  /** Internal tender bucket — kept for compatibility, always "cash". */
   kind: PaymentMethod;
   /** Whether this method is currently accepted at this outlet */
   enabled: boolean;
@@ -41,16 +44,15 @@ function saveAll(store: Store) {
 }
 
 function migrate(list: any[]): OutletPaymentMethod[] {
-  // Old shape: { id: PaymentMethod, label, enabled } — promote to new shape.
   return (list || []).map((m, idx) => {
     if (m && typeof m === "object" && "kind" in m && typeof m.id === "string" && m.id.length > 4) {
-      return m as OutletPaymentMethod;
+      return { ...m, kind: "cash" } as OutletPaymentMethod;
     }
-    const kind: PaymentMethod = (m?.kind ?? m?.id ?? "cash") as PaymentMethod;
+    const fallback = m?.label || m?.kind || m?.id || "Payment";
     return {
-      id: `${kind}-${idx}-${Date.now()}`,
-      label: m?.label || kind,
-      kind,
+      id: `pm-${idx}-${Date.now()}`,
+      label: String(fallback),
+      kind: "cash",
       enabled: m?.enabled ?? true,
     };
   });
@@ -76,19 +78,20 @@ export function setOutletPaymentMethods(
   saveAll(store);
 }
 
-function genId(kind: PaymentMethod) {
-  return `${kind}-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
+function genId() {
+  return `pm-${Math.random().toString(36).slice(2, 8)}-${Date.now().toString(36)}`;
 }
 
 export function addOutletPaymentMethod(
   outletId: string | number,
-  data: { label: string; kind: PaymentMethod; enabled?: boolean },
-): OutletPaymentMethod {
+  data: { label: string; enabled?: boolean },
+): OutletPaymentMethod | null {
   const list = getOutletPaymentMethods(outletId);
+  if (list.length >= MAX_PAYMENT_METHODS_PER_OUTLET) return null;
   const next: OutletPaymentMethod = {
-    id: genId(data.kind),
-    label: data.label.trim() || data.kind,
-    kind: data.kind,
+    id: genId(),
+    label: data.label.trim() || "Payment",
+    kind: "cash",
     enabled: data.enabled ?? true,
   };
   setOutletPaymentMethods(outletId, [...list, next]);
@@ -98,12 +101,16 @@ export function addOutletPaymentMethod(
 export function updateOutletPaymentMethod(
   outletId: string | number,
   id: string,
-  patch: Partial<Pick<OutletPaymentMethod, "label" | "kind" | "enabled">>,
+  patch: Partial<Pick<OutletPaymentMethod, "label" | "enabled">>,
 ) {
   const list = getOutletPaymentMethods(outletId);
   setOutletPaymentMethods(
     outletId,
-    list.map((m) => (m.id === id ? { ...m, ...patch, label: (patch.label ?? m.label).trim() || m.kind } : m)),
+    list.map((m) =>
+      m.id === id
+        ? { ...m, ...patch, label: (patch.label ?? m.label).trim() || m.label }
+        : m,
+    ),
   );
 }
 
