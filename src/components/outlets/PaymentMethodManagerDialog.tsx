@@ -3,17 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Banknote, CreditCard, Smartphone, ArrowRightLeft, Trash2, Wallet,
-  Plus, Pencil, X, Check,
-} from "lucide-react";
+import { Trash2, Wallet, Plus, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -26,9 +20,9 @@ import {
   addOutletPaymentMethod,
   updateOutletPaymentMethod,
   deleteOutletPaymentMethod,
+  MAX_PAYMENT_METHODS_PER_OUTLET,
   type OutletPaymentMethod,
 } from "@/data/outletPaymentMethods";
-import type { PaymentMethod } from "@/data/posData";
 
 interface Props {
   open: boolean;
@@ -37,43 +31,32 @@ interface Props {
   outletName: string;
 }
 
-const KIND_OPTIONS: { value: PaymentMethod; label: string; icon: React.ReactNode }[] = [
-  { value: "cash", label: "Cash", icon: <Banknote className="w-4 h-4" /> },
-  { value: "card", label: "Card", icon: <CreditCard className="w-4 h-4" /> },
-  { value: "mobile", label: "Mobile", icon: <Smartphone className="w-4 h-4" /> },
-  { value: "transfer", label: "Transfer", icon: <ArrowRightLeft className="w-4 h-4" /> },
-];
-
-const KIND_ICON: Record<PaymentMethod, React.ReactNode> = {
-  cash: <Banknote className="w-4 h-4" />,
-  card: <CreditCard className="w-4 h-4" />,
-  mobile: <Smartphone className="w-4 h-4" />,
-  transfer: <ArrowRightLeft className="w-4 h-4" />,
-};
-
 export default function PaymentMethodManagerDialog({ open, onOpenChange, outletId, outletName }: Props) {
   const [methods, setMethods] = useState<OutletPaymentMethod[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formLabel, setFormLabel] = useState("");
-  const [formKind, setFormKind] = useState<PaymentMethod>("cash");
   const [deleteTarget, setDeleteTarget] = useState<OutletPaymentMethod | null>(null);
 
   const reload = () => setMethods(getOutletPaymentMethods(outletId));
 
   useEffect(() => { if (open) { reload(); setShowForm(false); setEditingId(null); } }, [open, outletId]);
 
+  const atLimit = methods.length >= MAX_PAYMENT_METHODS_PER_OUTLET;
+
   const startCreate = () => {
+    if (atLimit) {
+      toast.error(`You can only add up to ${MAX_PAYMENT_METHODS_PER_OUTLET} payment methods per outlet.`);
+      return;
+    }
     setEditingId(null);
     setFormLabel("");
-    setFormKind("cash");
     setShowForm(true);
   };
 
   const startEdit = (m: OutletPaymentMethod) => {
     setEditingId(m.id);
     setFormLabel(m.label);
-    setFormKind(m.kind);
     setShowForm(true);
   };
 
@@ -83,10 +66,14 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
     const label = formLabel.trim();
     if (!label) { toast.error("Enter a name for the payment method"); return; }
     if (editingId) {
-      updateOutletPaymentMethod(outletId, editingId, { label, kind: formKind });
+      updateOutletPaymentMethod(outletId, editingId, { label });
       toast.success("Payment method updated");
     } else {
-      addOutletPaymentMethod(outletId, { label, kind: formKind, enabled: true });
+      const added = addOutletPaymentMethod(outletId, { label, enabled: true });
+      if (!added) {
+        toast.error(`Limit reached — max ${MAX_PAYMENT_METHODS_PER_OUTLET} payment methods per outlet.`);
+        return;
+      }
       toast.success("Payment method added");
     }
     reload();
@@ -116,37 +103,24 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
               Payment Methods — {outletName}
             </DialogTitle>
             <DialogDescription>
-              Create the payment methods cashiers can accept at this outlet. Cashiers will only see methods you add and enable here.
+              Add the payment methods cashiers can accept at this outlet. You can add up to {MAX_PAYMENT_METHODS_PER_OUTLET}.
             </DialogDescription>
           </DialogHeader>
 
           {showForm && (
             <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
               <p className="text-sm font-medium">{editingId ? "Edit Payment Method" : "New Payment Method"}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pm-label">Display name</Label>
-                  <Input
-                    id="pm-label"
-                    value={formLabel}
-                    onChange={(e) => setFormLabel(e.target.value)}
-                    placeholder="e.g. POS Terminal, Opay Transfer"
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="pm-kind">Type</Label>
-                  <Select value={formKind} onValueChange={(v) => setFormKind(v as PaymentMethod)}>
-                    <SelectTrigger id="pm-kind"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {KIND_OPTIONS.map(k => (
-                        <SelectItem key={k.value} value={k.value}>
-                          <span className="flex items-center gap-2">{k.icon}{k.label}</span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pm-label">Name</Label>
+                <Input
+                  id="pm-label"
+                  value={formLabel}
+                  onChange={(e) => setFormLabel(e.target.value)}
+                  placeholder="e.g. Cash, POS Terminal, Opay Transfer"
+                  maxLength={40}
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitForm(); } }}
+                />
               </div>
               <div className="flex justify-end gap-2 pt-1">
                 <Button variant="ghost" size="sm" onClick={cancelForm}>
@@ -164,7 +138,6 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="w-[140px]">Type</TableHead>
                   <TableHead className="w-[100px] text-center">Enabled</TableHead>
                   <TableHead className="w-[100px] text-right">Actions</TableHead>
                 </TableRow>
@@ -172,7 +145,7 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
               <TableBody>
                 {methods.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
+                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
                       No payment methods yet. Click "Add Method" to create one.
                     </TableCell>
                   </TableRow>
@@ -180,11 +153,6 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
                 {methods.map((m) => (
                   <TableRow key={m.id} className={!m.enabled ? "opacity-60" : ""}>
                     <TableCell className="font-medium">{m.label}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1.5 text-sm capitalize text-muted-foreground">
-                        {KIND_ICON[m.kind]} {m.kind}
-                      </span>
-                    </TableCell>
                     <TableCell className="text-center">
                       <Switch
                         checked={m.enabled}
@@ -205,8 +173,17 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
             </Table>
           </div>
 
+          <p className="text-xs text-muted-foreground">
+            {methods.length} of {MAX_PAYMENT_METHODS_PER_OUTLET} methods used.
+          </p>
+
           <DialogFooter className="sm:justify-between gap-2">
-            <Button variant="outline" size="sm" onClick={startCreate} disabled={showForm && !editingId}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={startCreate}
+              disabled={(showForm && !editingId) || atLimit}
+            >
               <Plus className="h-4 w-4 mr-1" /> Add Method
             </Button>
             <Button onClick={() => onOpenChange(false)}>Done</Button>
