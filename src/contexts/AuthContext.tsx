@@ -16,6 +16,8 @@ export interface MockUser {
   email: string;
   password: string; // mock only — never do this with real users
   display_name: string;
+  first_name: string;
+  last_name: string;
   phone: string;
   avatar_url: string | null;
   role: "admin" | "manager" | "staff"; // legacy free-form label (kept for compat)
@@ -34,6 +36,8 @@ const DEFAULT_USERS: MockUser[] = [
     email: "admin@smapps.com",
     password: "admin123",
     display_name: "Admin User",
+    first_name: "Admin",
+    last_name: "User",
     phone: "+234 800 000 0000",
     avatar_url: null,
     role: "admin",
@@ -47,6 +51,8 @@ const DEFAULT_USERS: MockUser[] = [
     email: "manager@smapps.com",
     password: "manager123",
     display_name: "Store Manager",
+    first_name: "Store",
+    last_name: "Manager",
     phone: "",
     avatar_url: null,
     role: "manager",
@@ -58,11 +64,16 @@ const DEFAULT_USERS: MockUser[] = [
 ];
 
 function migrateUser(u: any): MockUser {
+  const firstName = u.first_name ?? "";
+  const lastName = u.last_name ?? "";
+  const displayName = u.display_name ?? "";
   return {
     id: u.id,
     email: u.email,
     password: u.password,
-    display_name: u.display_name ?? "",
+    display_name: displayName || `${firstName} ${lastName}`.trim(),
+    first_name: firstName,
+    last_name: lastName,
     phone: u.phone ?? "",
     avatar_url: u.avatar_url ?? null,
     role: u.role ?? "staff",
