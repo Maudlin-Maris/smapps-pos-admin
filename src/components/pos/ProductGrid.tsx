@@ -253,7 +253,7 @@ export default function ProductGrid() {
       setDialogUnitId(undefined);
       setDialogProduct(product);
     } else {
-      addToCart({
+      void addWithGate({
         productId: product.id,
         productName: product.name,
         categoryId: product.categoryId,
@@ -267,7 +267,7 @@ export default function ProductGrid() {
 
   const handleOpenPriceConfirm = (price: number) => {
     if (!openPriceProduct) return;
-    addToCart({
+    void addWithGate({
       productId: openPriceProduct.id,
       productName: openPriceProduct.name,
       categoryId: openPriceProduct.categoryId,
@@ -275,9 +275,10 @@ export default function ProductGrid() {
       quantity: 1,
       unitPrice: price,
       totalPrice: price,
+    }).then((ok) => {
+      if (ok) toast.success(`Added ${openPriceProduct.name} at ${formatNaira(price)}`);
+      setOpenPriceProduct(null);
     });
-    toast.success(`Added ${openPriceProduct.name} at ${formatNaira(price)}`);
-    setOpenPriceProduct(null);
   };
 
   const handleConfirmVariantExtras = (
