@@ -99,7 +99,7 @@ export type MenuItemType = "simple" | "composite" | "service";
 /** Composite ingredient. Substitute fields (allowSubstitute, substituteMode,
  *  substitutes, substituteGroupIds) are inherited from ComponentSubstituteConfig
  *  and are fully optional/back-compat. */
-export interface MenuIngredient extends import("@/lib/composite-substitution").ComponentSubstituteConfig {
+export interface MenuIngredient extends ComponentSubstituteConfig {
   inventoryItemId: string;
   quantity: number;
   /** Unit the quantity is expressed in. Undefined = the item's base unit.
