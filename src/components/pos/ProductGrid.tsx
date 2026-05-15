@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Search, ScanLine, Camera, X, Gift, Tag, DollarSign } from "lucide-react";
+import type { POSCartItem } from "@/data/posData";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 import OpenPriceDialog from "./OpenPriceDialog";
@@ -18,8 +19,32 @@ import { useSubstitutionGate } from "@/hooks/use-substitution-gate";
 const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
 
 export default function ProductGrid() {
-  const { currentOutlet, addToCart } = usePOS();
-  const { pendingRequest, approve, reject } = useSubstitutionGate();
+  const { currentOutlet, addToCart, currentCashier } = usePOS() as any;
+  const { gate, pendingRequest, approve, reject } = useSubstitutionGate();
+
+  /**
+   * Wraps addToCart with the composite substitution gate. Silent for AUTO,
+   * blocks for STRICT, opens approval modal for MANUAL_APPROVAL. When a
+   * substitution occurs, the records are attached to the cart line so the
+   * cart UI can render the indicator and downstream order/audit can read it.
+   */
+  const addWithGate = useCallback(
+    async (item: Omit<POSCartItem, "id">): Promise<boolean> => {
+      const result = await gate({
+        productName: item.productName,
+        outletId: currentOutlet?.id,
+        cashier: currentCashier?.name,
+      });
+      if (!result.allowed) return false;
+      const merged: Omit<POSCartItem, "id"> = result.substitutions.length
+        ? { ...item, substitutions: [...(item.substitutions ?? []), ...result.substitutions] }
+        : item;
+      addToCart(merged);
+      return true;
+    },
+    [gate, addToCart, currentOutlet, currentCashier]
+  );
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -228,7 +253,7 @@ export default function ProductGrid() {
       setDialogUnitId(undefined);
       setDialogProduct(product);
     } else {
-      addToCart({
+      void addWithGate({
         productId: product.id,
         productName: product.name,
         categoryId: product.categoryId,
@@ -242,7 +267,7 @@ export default function ProductGrid() {
 
   const handleOpenPriceConfirm = (price: number) => {
     if (!openPriceProduct) return;
-    addToCart({
+    void addWithGate({
       productId: openPriceProduct.id,
       productName: openPriceProduct.name,
       categoryId: openPriceProduct.categoryId,
@@ -250,9 +275,10 @@ export default function ProductGrid() {
       quantity: 1,
       unitPrice: price,
       totalPrice: price,
+    }).then((ok) => {
+      if (ok) toast.success(`Added ${openPriceProduct.name} at ${formatNaira(price)}`);
+      setOpenPriceProduct(null);
     });
-    toast.success(`Added ${openPriceProduct.name} at ${formatNaira(price)}`);
-    setOpenPriceProduct(null);
   };
 
   const handleConfirmVariantExtras = (
@@ -265,7 +291,7 @@ export default function ProductGrid() {
     if (!dialogProduct) return;
     const extrasTotal = selectedExtras.reduce((s, e) => s + e.price * e.quantity, 0);
     const total = unitPrice + extrasTotal;
-    addToCart({
+    void addWithGate({
       productId: dialogProduct.id,
       productName: dialogProduct.name,
       categoryId: dialogProduct.categoryId,
