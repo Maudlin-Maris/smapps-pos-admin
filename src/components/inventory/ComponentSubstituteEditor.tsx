@@ -23,7 +23,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ChevronsUpDown, Check, ArrowUp, ArrowDown, X, Plus, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
+import { ChevronsUpDown, Check, ArrowUp, ArrowDown, X, Plus, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNaira } from "@/lib/currency";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
@@ -150,6 +151,14 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
               <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Substitute Items
               </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-[260px]">
+                  <p className="text-xs">Individual inventory items that can replace this component when stock is low. Ordered by priority — the system tries the first available substitute.</p>
+                </TooltipContent>
+              </Tooltip>
               <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button type="button" variant="ghost" size="sm" className="h-6 text-[11px] px-1.5">
@@ -283,6 +292,14 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
               <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Substitute Groups
               </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-[260px]">
+                  <p className="text-xs">Reusable groups of interchangeable items (e.g. &quot;Burger Patties&quot;). Link a group to let any item in that group substitute for this component automatically.</p>
+                </TooltipContent>
+              </Tooltip>
               <Popover open={groupPickerOpen} onOpenChange={setGroupPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
