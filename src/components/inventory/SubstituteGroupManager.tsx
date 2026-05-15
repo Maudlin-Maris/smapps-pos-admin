@@ -286,7 +286,20 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
                     </Badge>
                     <span className="text-sm font-medium truncate flex-1">{inv?.name ?? "Unknown"}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground">ratio</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-0.5 cursor-help">
+                            <span className="text-[10px] text-muted-foreground">ratio</span>
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-[240px]">
+                          <p className="text-xs">
+                            How many units of this item replace 1 unit of the original ingredient.
+                            Example: if 2 slices of cheddar replace 1 slice of American cheese, set ratio to 2.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
                       <Input
                         type="number"
                         step="0.01"
