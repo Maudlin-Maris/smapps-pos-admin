@@ -14,6 +14,7 @@ import MenuManagement from "@/pages/MenuManagement";
 import InventoryManagement from "@/pages/InventoryManagement";
 import AdvancedInventory from "@/pages/AdvancedInventory";
 import TransferManagement, { TransferManagementCreate, TransferManagementDetails } from "@/pages/TransferManagement";
+import InventoryHistory from "@/pages/InventoryHistory";
 import PurchaseOrders from "@/pages/PurchaseOrders";
 import CustomerManagement from "@/pages/CustomerManagement";
 
@@ -63,6 +64,7 @@ const App = () => (
                 <Route path="/inventory/transfers" element={<Protected><TransferManagement /></Protected>} />
                 <Route path="/inventory/transfers/new" element={<Protected><TransferManagementCreate /></Protected>} />
                 <Route path="/inventory/transfers/:id" element={<Protected><TransferManagementDetails /></Protected>} />
+                <Route path="/inventory/history" element={<Protected><InventoryHistory /></Protected>} />
                 <Route path="/purchase-orders" element={<Protected><PurchaseOrders /></Protected>} />
                 <Route path="/customers" element={<Protected><CustomerManagement /></Protected>} />
                 <Route path="/loyalty" element={<Protected><LoyaltyManagement /></Protected>} />
