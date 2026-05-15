@@ -22,7 +22,7 @@ import type { SubstituteGroup } from "@/data/substituteGroups";
 
 const COMPOSITES_KEY = "composites_store_v1";
 const GROUPS_KEY = "substitute_groups_v1";
-const SEED_FLAG = "substitution_mocks_seeded_v2";
+const SEED_FLAG = "substitution_mocks_seeded_v3";
 
 const SEED_GROUPS: SubstituteGroup[] = [
   {
@@ -32,6 +32,15 @@ const SEED_GROUPS: SubstituteGroup[] = [
     items: [
       { inventoryItemId: "sub-bun-sesame",  priority: 1, conversionRatio: 1 },
       { inventoryItemId: "sub-bun-brioche", priority: 2, conversionRatio: 1 },
+    ],
+  },
+  {
+    id: "grp-burger-sauces",
+    name: "Burger Sauces",
+    outletId: "outlet-1",
+    items: [
+      { inventoryItemId: "sub-sauce-honey",  priority: 1, conversionRatio: 1 },
+      { inventoryItemId: "sub-sauce-garlic", priority: 2, conversionRatio: 1 },
     ],
   },
 ];
@@ -112,6 +121,52 @@ const SEED_COMPOSITES: CompositeItem[] = [
       { inventoryItemId: "sub-bun-sesame",  quantity: 1, role: "primary" },
       { inventoryItemId: "sub-patty-spicy", quantity: 1, role: "primary" },
       { inventoryItemId: "sub-cheese",      quantity: 1, role: "primary" },
+    ],
+  },
+  // 5) MULTI — three components unavailable at once. Validates the consolidated
+  //    single-modal flow: cashier sees ONE dialog with all three substitutions
+  //    instead of three sequential pop-ups.
+  {
+    id: "comp-test-multi",
+    name: "Test MULTI Burger",
+    description: "Demo composite — bun, patty AND sauce all out simultaneously. Cashier resolves all three in one consolidated approval modal.",
+    outletId: "outlet-1",
+    sellPrice: 6200,
+    components: [
+      {
+        inventoryItemId: "sub-bun-classic",
+        quantity: 1,
+        role: "primary",
+        allowSubstitute: true,
+        substituteMode: "manual_approval",
+        substitutes: [
+          { inventoryItemId: "sub-bun-sesame",  priority: 1, conversionRatio: 1 },
+          { inventoryItemId: "sub-bun-brioche", priority: 2, conversionRatio: 1 },
+        ],
+      },
+      {
+        inventoryItemId: "sub-patty-chicken",
+        quantity: 1,
+        role: "primary",
+        allowSubstitute: true,
+        substituteMode: "manual_approval",
+        substitutes: [
+          { inventoryItemId: "sub-patty-spicy",  priority: 1, conversionRatio: 1 },
+          { inventoryItemId: "sub-patty-veggie", priority: 2, conversionRatio: 1 },
+        ],
+      },
+      {
+        inventoryItemId: "sub-sauce-bbq",
+        quantity: 1,
+        role: "primary",
+        allowSubstitute: true,
+        substituteMode: "manual_approval",
+        substitutes: [
+          { inventoryItemId: "sub-sauce-honey",  priority: 1, conversionRatio: 1 },
+          { inventoryItemId: "sub-sauce-garlic", priority: 2, conversionRatio: 1 },
+        ],
+      },
+      { inventoryItemId: "sub-cheese", quantity: 1, role: "primary" },
     ],
   },
 ];
