@@ -333,6 +333,7 @@ export default function InventoryManagement() {
     { key: "categories", label: "Categories" },
     { key: "units", label: "Units" },
     { key: "composite", label: "Composite Items" },
+    { key: "substitutes", label: "Substitute Groups" },
   ];
 
   return (
