@@ -48,7 +48,7 @@ const SEED_COMPOSITES: CompositeItem[] = [
       {
         inventoryItemId: "sub-bun-classic",
         quantity: 1,
-        role: "ingredient",
+        role: "primary",
         allowSubstitute: true,
         substituteMode: "auto",
         substitutes: [
@@ -56,8 +56,8 @@ const SEED_COMPOSITES: CompositeItem[] = [
           { inventoryItemId: "sub-bun-brioche", priority: 2, conversionRatio: 1 },
         ],
       },
-      { inventoryItemId: "sub-patty-spicy", quantity: 1, role: "ingredient" },
-      { inventoryItemId: "sub-cheese",      quantity: 1, role: "ingredient" },
+      { inventoryItemId: "sub-patty-spicy", quantity: 1, role: "primary" },
+      { inventoryItemId: "sub-cheese",      quantity: 1, role: "primary" },
     ],
   },
   // 2) MANUAL_APPROVAL — cashier picks from alternatives.
@@ -68,11 +68,11 @@ const SEED_COMPOSITES: CompositeItem[] = [
     outletId: "outlet-1",
     sellPrice: 5200,
     components: [
-      { inventoryItemId: "sub-bun-sesame", quantity: 1, role: "ingredient" },
+      { inventoryItemId: "sub-bun-sesame", quantity: 1, role: "primary" },
       {
         inventoryItemId: "sub-patty-chicken",
         quantity: 1,
-        role: "ingredient",
+        role: "primary",
         allowSubstitute: true,
         substituteMode: "manual_approval",
         substitutes: [
@@ -80,7 +80,7 @@ const SEED_COMPOSITES: CompositeItem[] = [
           { inventoryItemId: "sub-patty-veggie", priority: 2, conversionRatio: 1 },
         ],
       },
-      { inventoryItemId: "sub-cheese", quantity: 1, role: "ingredient" },
+      { inventoryItemId: "sub-cheese", quantity: 1, role: "primary" },
     ],
   },
   // 3) STRICT — sale blocked when primary unavailable.
@@ -94,11 +94,11 @@ const SEED_COMPOSITES: CompositeItem[] = [
       {
         inventoryItemId: "sub-bun-classic",
         quantity: 1,
-        role: "ingredient",
+        role: "primary",
         allowSubstitute: false,
         substituteMode: "strict",
       },
-      { inventoryItemId: "sub-patty-spicy", quantity: 1, role: "ingredient" },
+      { inventoryItemId: "sub-patty-spicy", quantity: 1, role: "primary" },
     ],
   },
   // 4) Control — primary in stock, passes through.
@@ -109,9 +109,9 @@ const SEED_COMPOSITES: CompositeItem[] = [
     outletId: "outlet-1",
     sellPrice: 4200,
     components: [
-      { inventoryItemId: "sub-bun-sesame",  quantity: 1, role: "ingredient" },
-      { inventoryItemId: "sub-patty-spicy", quantity: 1, role: "ingredient" },
-      { inventoryItemId: "sub-cheese",      quantity: 1, role: "ingredient" },
+      { inventoryItemId: "sub-bun-sesame",  quantity: 1, role: "primary" },
+      { inventoryItemId: "sub-patty-spicy", quantity: 1, role: "primary" },
+      { inventoryItemId: "sub-cheese",      quantity: 1, role: "primary" },
     ],
   },
 ];
