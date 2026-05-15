@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Minus, Plus, Trash2, ShoppingCart, Pencil, Gift, MoreVertical, Unlink, ArrowRightLeft, Package, Replace } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { formatNaira as fmtNaira } from "@/lib/currency";
+
 import { type POSCartItem } from "@/data/posData";
 import CartItemEditDialog from "./CartItemEditDialog";
 import { toast } from "sonner";
