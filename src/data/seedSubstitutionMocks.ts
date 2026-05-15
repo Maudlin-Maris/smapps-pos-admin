@@ -22,7 +22,7 @@ import type { SubstituteGroup } from "@/data/substituteGroups";
 
 const COMPOSITES_KEY = "composites_store_v1";
 const GROUPS_KEY = "substitute_groups_v1";
-const SEED_FLAG = "substitution_mocks_seeded_v2";
+const SEED_FLAG = "substitution_mocks_seeded_v3";
 
 const SEED_GROUPS: SubstituteGroup[] = [
   {
