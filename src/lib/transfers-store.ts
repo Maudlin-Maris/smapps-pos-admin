@@ -338,7 +338,7 @@ function seedTransfers(): StockTransferV2[] {
     ...overrides,
   });
 
-  const buildItem = (it: { id: string; name: string; sku: string; unitCost: number }, qty: number): TransferItem => ({
+  const buildItem = (it: { id: string; name: string; sku: string; costPrice: number }, qty: number): TransferItem => ({
     id: crypto.randomUUID(),
     inventoryItemId: it.id,
     itemName: it.name,
