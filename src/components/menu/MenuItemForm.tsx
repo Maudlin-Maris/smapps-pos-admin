@@ -301,6 +301,10 @@ function FormGroup({
 
 export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
+  const [allSubGroups] = useSubstituteGroups();
+  const subGroups = allSubGroups.filter(
+    (g) => !currentOutletId || !g.outletId || g.outletId === currentOutletId
+  );
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
