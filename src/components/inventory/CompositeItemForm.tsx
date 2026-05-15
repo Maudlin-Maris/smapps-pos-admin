@@ -546,6 +546,21 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                         </Button>
                       </div>
                     </div>
+                    {comp.inventoryItemId && (
+                      <ComponentSubstituteEditor
+                        originalItemId={comp.inventoryItemId}
+                        config={comp}
+                        onChange={(next) => {
+                          setForm((f) => {
+                            const updated = [...f.components];
+                            updated[i] = { ...updated[i], ...next };
+                            return { ...f, components: updated };
+                          });
+                        }}
+                        inventoryItems={inventoryItems}
+                        groups={groups}
+                      />
+                    )}
                   </div>
                 );
               })}
