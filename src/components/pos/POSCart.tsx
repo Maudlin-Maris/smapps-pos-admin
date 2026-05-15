@@ -120,9 +120,45 @@ export default function POSCart({ onCheckout }: Props) {
                   onClick={() => setEditingItem(item)}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {item.productName}
-                      {item.variantName && <span className="text-muted-foreground font-normal"> · {item.variantName}</span>}
+                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                      <span className="truncate">
+                        {item.productName}
+                        {item.variantName && <span className="text-muted-foreground font-normal"> · {item.variantName}</span>}
+                      </span>
+                      {item.substitutions && item.substitutions.length > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-semibold shrink-0 cursor-help"
+                            >
+                              <Replace className="w-2.5 h-2.5" />
+                              SUB
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="space-y-1.5 text-xs">
+                              <p className="font-semibold">Ingredient substitution{item.substitutions.length > 1 ? "s" : ""}</p>
+                              {item.substitutions.map((s, i) => (
+                                <div key={i} className="space-y-0.5 border-l-2 border-amber-500/40 pl-2">
+                                  <p>
+                                    <span className="line-through text-muted-foreground">{s.originalItemName}</span>
+                                    {" → "}
+                                    <span className="font-medium">{s.substituteItemName}</span>
+                                  </p>
+                                  <p className="text-muted-foreground">
+                                    {s.reason === "auto" ? "Auto-substituted" : s.reason === "manual_approval" ? "Approved by cashier" : "Fallback"}
+                                    {" · "}
+                                    <span className={s.costVariance < 0 ? "text-success" : s.costVariance > 0 ? "text-warning" : ""}>
+                                      {s.costVariance >= 0 ? "+" : ""}{formatNaira(s.costVariance)}
+                                    </span>
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </p>
                     {item.extras.length > 0 && (
                       <p className="text-[11px] text-muted-foreground truncate">
