@@ -34,6 +34,15 @@ const SEED_GROUPS: SubstituteGroup[] = [
       { inventoryItemId: "sub-bun-brioche", priority: 2, conversionRatio: 1 },
     ],
   },
+  {
+    id: "grp-burger-sauces",
+    name: "Burger Sauces",
+    outletId: "outlet-1",
+    items: [
+      { inventoryItemId: "sub-sauce-honey",  priority: 1, conversionRatio: 1 },
+      { inventoryItemId: "sub-sauce-garlic", priority: 2, conversionRatio: 1 },
+    ],
+  },
 ];
 
 const SEED_COMPOSITES: CompositeItem[] = [
