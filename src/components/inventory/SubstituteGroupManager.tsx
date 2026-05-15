@@ -144,9 +144,19 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Reusable substitute groups (e.g. "Burger Patties") for composite components.
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm text-muted-foreground">
+            Reusable substitute groups (e.g. "Burger Patties") for composite components.
+          </p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-[280px]">
+              <p className="text-xs">Create ordered lists of interchangeable inventory items. Composite components can link to these groups so substitutions happen automatically based on stock availability and priority.</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         {!readOnly && (
           <Button size="sm" onClick={openNew}>
             <Plus className="h-4 w-4 mr-1" /> Add Group
