@@ -29,19 +29,17 @@ export default function ProductGrid() {
    * cart UI can render the indicator and downstream order/audit can read it.
    */
   const addWithGate = useCallback(
-    async (item: Parameters<typeof addToCart>[0]) => {
+    async (item: Omit<POSCartItem, "id">): Promise<boolean> => {
       const result = await gate({
         productName: item.productName,
         outletId: currentOutlet?.id,
         cashier: currentCashier?.name,
       });
       if (!result.allowed) return false;
-      addToCart({
-        ...item,
-        substitutions: result.substitutions.length
-          ? [...(item.substitutions ?? []), ...result.substitutions]
-          : item.substitutions,
-      });
+      const merged: Omit<POSCartItem, "id"> = result.substitutions.length
+        ? { ...item, substitutions: [...(item.substitutions ?? []), ...result.substitutions] }
+        : item;
+      addToCart(merged);
       return true;
     },
     [gate, addToCart, currentOutlet, currentCashier]
