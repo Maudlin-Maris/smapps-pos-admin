@@ -209,48 +209,75 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
               const stock = item.stock ?? 0;
               return (
                 <div key={s.inventoryItemId} className="flex flex-wrap items-center gap-1.5 p-1.5 rounded border bg-muted/30">
-                  <Badge variant="outline" className="h-5 px-1.5 text-[10px] tabular-nums">
-                    #{idx + 1}
-                  </Badge>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="h-5 px-1.5 text-[10px] tabular-nums cursor-help">
+                        #{idx + 1}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px]">
+                      <p className="text-xs">Priority order — #1 is tried first when the original item is out of stock. Use arrows to reorder.</p>
+                    </TooltipContent>
+                  </Tooltip>
                   <span className="text-xs font-medium truncate flex-1 min-w-[100px]">{item.name}</span>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "h-5 px-1.5 text-[10px] tabular-nums",
-                      stock <= 0
-                        ? "border-destructive/40 text-destructive"
-                        : "border-success/40 text-success"
-                    )}
-                  >
-                    {stock} stk
-                  </Badge>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-muted-foreground">ratio</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={s.conversionRatio}
-                      onChange={(e) =>
-                        updateSub(s.inventoryItemId, {
-                          conversionRatio: Math.max(0.01, Number(e.target.value) || 1),
-                        })
-                      }
-                      className="h-6 w-14 text-[11px] px-1.5"
-                    />
-                  </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "h-5 px-1.5 text-[10px] tabular-nums cursor-help",
+                          stock <= 0
+                            ? "border-destructive/40 text-destructive"
+                            : "border-success/40 text-success"
+                        )}
+                      >
+                        {stock} stk
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[220px]">
+                      <p className="text-xs">Current stock level for this substitute item in the selected outlet.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1 cursor-help">
+                        <span className="text-[10px] text-muted-foreground">ratio</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          value={s.conversionRatio}
+                          onChange={(e) =>
+                            updateSub(s.inventoryItemId, {
+                              conversionRatio: Math.max(0.01, Number(e.target.value) || 1),
+                            })
+                          }
+                          className="h-6 w-14 text-[11px] px-1.5"
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[240px]">
+                      <p className="text-xs">Conversion ratio: how many units of this substitute are needed to replace 1 unit of the original component. Example: set 0.5 if two 500ml units replace one 1L unit.</p>
+                    </TooltipContent>
+                  </Tooltip>
                   {originalCost > 0 && (
-                    <span
-                      className={cn(
-                        "text-[10px] tabular-nums flex items-center gap-0.5",
-                        cheaper ? "text-success" : variance > 0 ? "text-warning" : "text-muted-foreground"
-                      )}
-                      title="Cost variance vs original (per 1 base unit replaced)"
-                    >
-                      {cheaper ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
-                      {variance >= 0 ? "+" : ""}
-                      {formatNaira(variance)}
-                    </span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={cn(
+                            "text-[10px] tabular-nums flex items-center gap-0.5 cursor-help",
+                            cheaper ? "text-success" : variance > 0 ? "text-warning" : "text-muted-foreground"
+                          )}
+                        >
+                          {cheaper ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
+                          {variance >= 0 ? "+" : ""}
+                          {formatNaira(variance)}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[240px]">
+                        <p className="text-xs">Cost variance versus the original component (per 1 base unit replaced). Green = cheaper substitute, amber = more expensive.</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                   <div className="flex items-center gap-0.5 ml-auto">
                     <Button
