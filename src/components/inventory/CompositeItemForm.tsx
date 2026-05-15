@@ -106,6 +106,11 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [search, setSearch] = useState("");
+  const [allGroups] = useSubstituteGroups();
+  const groups = useMemo(
+    () => allGroups.filter((g) => !selectedOutletId || g.outletId === selectedOutletId),
+    [allGroups, selectedOutletId]
+  );
 
   const openNew = () => {
     setEditing(null);
