@@ -345,6 +345,7 @@ function seedTransfers(): StockTransferV2[] {
     sku: it.sku,
     unit: "unit",
     unitCost: it.costPrice,
+    availableQty: 100,
     reservedQty: 0,
     transferableQty: 100,
     requestedQty: qty,
