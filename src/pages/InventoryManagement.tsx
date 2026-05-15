@@ -38,6 +38,7 @@ import ProfitabilityView from "@/components/inventory/ProfitabilityView";
 import { computeProfitability } from "@/lib/profitability";
 import { defaultInventoryItems } from "@/data/inventoryItems";
 import { useCompositesStore } from "@/hooks/use-composites-store";
+import SubstituteGroupManager from "@/components/inventory/SubstituteGroupManager";
 
 const defaultItems: InventoryItem[] = defaultInventoryItems;
 
