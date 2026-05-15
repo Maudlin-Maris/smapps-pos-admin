@@ -1159,6 +1159,19 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                             </div>
                           </div>
                         )}
+                        {g.inventoryItemId && (
+                          <ComponentSubstituteEditor
+                            originalItemId={g.inventoryItemId}
+                            config={g}
+                            onChange={(next) =>
+                              setIngredients((prev) =>
+                                prev.map((p, i) => (i === idx ? { ...p, ...next } : p))
+                              )
+                            }
+                            inventoryItems={inventoryItems}
+                            groups={subGroups}
+                          />
+                        )}
                       </div>
                     );
                   })}
