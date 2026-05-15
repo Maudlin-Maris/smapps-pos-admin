@@ -23,7 +23,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ChevronsUpDown, Check, ArrowUp, ArrowDown, X, Plus, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
+import { ChevronsUpDown, Check, ArrowUp, ArrowDown, X, Plus, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNaira } from "@/lib/currency";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
