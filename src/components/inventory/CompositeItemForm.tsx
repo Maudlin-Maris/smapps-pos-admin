@@ -32,11 +32,16 @@ import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatNaira } from "@/lib/currency";
+import { useSubstituteGroups } from "@/data/substituteGroups";
+import ComponentSubstituteEditor from "./ComponentSubstituteEditor";
+import { getProducibleWithSubstitutes, type ComponentSubstituteConfig } from "@/lib/composite-substitution";
 
 export type ComponentRole = "primary" | "secondary";
 export type CompositePricingMethod = "markup" | "margin" | "fixed";
 
-export interface CompositeComponent {
+/** Composite component. Substitute-related fields are optional & additive —
+ *  legacy components without them behave exactly as before. */
+export interface CompositeComponent extends ComponentSubstituteConfig {
   inventoryItemId: string;
   quantity: number;
   role: ComponentRole;
