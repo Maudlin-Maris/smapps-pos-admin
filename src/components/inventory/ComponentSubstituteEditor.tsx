@@ -291,17 +291,19 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
           {/* Substitute groups */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Substitute Groups
-              </span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent side="right" className="max-w-[260px]">
-                  <p className="text-xs">Reusable groups of interchangeable items (e.g. &quot;Burger Patties&quot;). Link a group to let any item in that group substitute for this component automatically.</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Substitute Groups
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[260px]">
+                    <p className="text-xs">Reusable groups of interchangeable items (e.g. &quot;Burger Patties&quot;). Link a group to let any item in that group substitute for this component automatically.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <Popover open={groupPickerOpen} onOpenChange={setGroupPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
