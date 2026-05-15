@@ -63,7 +63,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 type MenuItemOption = { id: string; name: string; variants: { id: string; name: string }[] };
 
-type Tab = "stock" | "categories" | "units" | "composite" | "adjustments" | "profitability";
+type Tab = "stock" | "categories" | "units" | "composite" | "substitutes" | "adjustments" | "profitability";
 
 const sampleMenuItems: MenuItemOption[] = [
   // Restaurant
