@@ -150,6 +150,16 @@ const KitchenDocket = forwardRef<HTMLDivElement, Props>(({ order, outlet, depart
                     + {(e.quantity || 1) > 1 ? `${e.quantity}x ` : ""}{e.name}
                   </p>
                 ))}
+                {/* Ingredient substitutions — kitchen MUST prep with the
+                    actual substitute used, not the original recipe. */}
+                {item.substitutions && item.substitutions.length > 0 && item.substitutions.map((s) => (
+                  <p
+                    key={`${s.originalItemId}-${s.timestamp}`}
+                    style={{ paddingLeft: "16px", fontSize: "12px", fontWeight: 700 }}
+                  >
+                    ⇄ SUB: {s.originalItemName} → {s.substituteItemName}
+                  </p>
+                ))}
                 {item.notes && (
                   <p style={{ paddingLeft: "16px", fontSize: "11px", fontStyle: "italic" }}>
                     Note: {item.notes}
