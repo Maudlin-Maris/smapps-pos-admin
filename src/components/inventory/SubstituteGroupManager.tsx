@@ -33,7 +33,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Pencil, Trash2, Layers, ArrowUp, ArrowDown, X, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, ArrowUp, ArrowDown, X, Check, Info } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryItem } from "./InventoryItemForm";
