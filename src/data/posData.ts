@@ -91,6 +91,29 @@ export interface POSCartItem {
   bundleDefaultMarketPrice?: number;
   /** The proportional base price assigned to this slot from the bundle price */
   bundleSlotBasePrice?: number;
+  /** Ingredient substitutions applied to this cart item (audit trail). */
+  substitutions?: CartSubstitutionRecord[];
+}
+
+/**
+ * Per-cart-item record of an ingredient substitution. Persisted on the cart
+ * line so the cashier UI can show indicators and downstream order/receipt
+ * flows can display the substitution that occurred.
+ */
+export interface CartSubstitutionRecord {
+  originalItemId: string;
+  originalItemName: string;
+  substituteItemId: string;
+  substituteItemName: string;
+  /** Substitute base-unit qty drawn. */
+  quantityUsed: number;
+  conversionRatio: number;
+  /** substituteCost*qty - originalCost*equivalentQty. Negative = saved. */
+  costVariance: number;
+  /** Why the substitution happened. */
+  reason: "auto" | "manual_approval" | "fallback";
+  approvedBy?: string;
+  timestamp: string;
 }
 
 export type OrderStatus = "open" | "in_progress" | "ready" | "served" | "paid" | "voided";
