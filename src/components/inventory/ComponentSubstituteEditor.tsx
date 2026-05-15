@@ -151,6 +151,14 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
               <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Substitute Items
               </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-[260px]">
+                  <p className="text-xs">Individual inventory items that can replace this component when stock is low. Ordered by priority — the system tries the first available substitute.</p>
+                </TooltipContent>
+              </Tooltip>
               <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
                 <PopoverTrigger asChild>
                   <Button type="button" variant="ghost" size="sm" className="h-6 text-[11px] px-1.5">
