@@ -83,7 +83,7 @@ function unitCost(item: InventoryItem | undefined): number {
 
 /** Build the prioritized list of substitute candidates: direct substitutes
  *  first, then group items, dedup'd by inventoryItemId. */
-function buildCandidates(
+export function buildCandidates(
   config: ComponentSubstituteConfig,
   groups: SubstituteGroup[],
 ): ComponentSubstitute[] {
@@ -104,6 +104,41 @@ function buildCandidates(
       seen.add(it.inventoryItemId);
       out.push({ ...it });
     }
+  }
+  return out;
+}
+
+/** Returns all in-stock substitute candidates (with their stock) the cashier
+ *  may pick from in the manual approval flow. Ordered by configured priority. */
+export interface ViableSubstitute extends ComponentSubstitute {
+  itemName: string;
+  stock: number;
+  unitCost: number;
+  /** True if this candidate alone can cover the remaining shortfall. */
+  coversShortfall: boolean;
+}
+
+export function getViableSubstitutes(
+  component: CompositeComponent & ComponentSubstituteConfig,
+  shortfallBaseQty: number,
+  inventory: InventoryItem[],
+  groups: SubstituteGroup[],
+): ViableSubstitute[] {
+  const candidates = buildCandidates(component, groups);
+  const out: ViableSubstitute[] = [];
+  for (const c of candidates) {
+    const item = inventory.find((i) => i.id === c.inventoryItemId);
+    if (!item) continue;
+    const stock = item.stock ?? 0;
+    if (stock <= 0) continue;
+    const ratio = c.conversionRatio > 0 ? c.conversionRatio : 1;
+    out.push({
+      ...c,
+      itemName: item.name,
+      stock,
+      unitCost: item.costPrice ?? 0,
+      coversShortfall: stock * ratio + 1e-9 >= shortfallBaseQty,
+    });
   }
   return out;
 }
