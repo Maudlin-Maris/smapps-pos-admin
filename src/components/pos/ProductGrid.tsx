@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Search, ScanLine, Camera, X, Gift, Tag, DollarSign } from "lucide-react";
+import type { POSCartItem } from "@/data/posData";
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 import OpenPriceDialog from "./OpenPriceDialog";
