@@ -49,6 +49,9 @@ import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
 import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
 import { formatNaira } from "@/lib/currency";
 import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
+import type { ComponentSubstituteConfig } from "@/lib/composite-substitution";
+import ComponentSubstituteEditor from "@/components/inventory/ComponentSubstituteEditor";
+import { useSubstituteGroups } from "@/data/substituteGroups";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
   { name: "Hour", abbreviation: "hr" },
@@ -95,7 +98,10 @@ export interface MenuExtra {
 
 export type MenuItemType = "simple" | "composite" | "service";
 
-export interface MenuIngredient {
+/** Composite ingredient. Substitute fields (allowSubstitute, substituteMode,
+ *  substitutes, substituteGroupIds) are inherited from ComponentSubstituteConfig
+ *  and are fully optional/back-compat. */
+export interface MenuIngredient extends ComponentSubstituteConfig {
   inventoryItemId: string;
   quantity: number;
   /** Unit the quantity is expressed in. Undefined = the item's base unit.
@@ -295,6 +301,10 @@ function FormGroup({
 
 export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
+  const [allSubGroups] = useSubstituteGroups();
+  const subGroups = allSubGroups.filter(
+    (g) => !currentOutletId || !g.outletId || g.outletId === currentOutletId
+  );
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -1148,6 +1158,19 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                               </Button>
                             </div>
                           </div>
+                        )}
+                        {g.inventoryItemId && (
+                          <ComponentSubstituteEditor
+                            originalItemId={g.inventoryItemId}
+                            config={g}
+                            onChange={(next) =>
+                              setIngredients((prev) =>
+                                prev.map((p, i) => (i === idx ? { ...p, ...next } : p))
+                              )
+                            }
+                            inventoryItems={inventoryItems}
+                            groups={subGroups}
+                          />
                         )}
                       </div>
                     );

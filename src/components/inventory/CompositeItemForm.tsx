@@ -32,11 +32,16 @@ import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatNaira } from "@/lib/currency";
+import { useSubstituteGroups } from "@/data/substituteGroups";
+import ComponentSubstituteEditor from "./ComponentSubstituteEditor";
+import { getProducibleWithSubstitutes, type ComponentSubstituteConfig } from "@/lib/composite-substitution";
 
 export type ComponentRole = "primary" | "secondary";
 export type CompositePricingMethod = "markup" | "margin" | "fixed";
 
-export interface CompositeComponent {
+/** Composite component. Substitute-related fields are optional & additive —
+ *  legacy components without them behave exactly as before. */
+export interface CompositeComponent extends ComponentSubstituteConfig {
   inventoryItemId: string;
   quantity: number;
   role: ComponentRole;
@@ -101,6 +106,11 @@ export default function CompositeItemForm({ composites, setComposites, inventory
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [search, setSearch] = useState("");
+  const [allGroups] = useSubstituteGroups();
+  const groups = useMemo(
+    () => allGroups.filter((g) => !selectedOutletId || g.outletId === selectedOutletId),
+    [allGroups, selectedOutletId]
+  );
 
   const openNew = () => {
     setEditing(null);
@@ -248,24 +258,23 @@ export default function CompositeItemForm({ composites, setComposites, inventory
     }
     return (comp.quantity || 0) * baseUnitsPer;
   };
-  /** Max producible composite units given current component stocks.
-   *  Returns { producible, limitingComponentId } — producible = Infinity if no valid components. */
+  /** Max producible composite units given current component stocks AND any
+   *  configured substitutes. Falls back to primary-only when components have
+   *  no substitute configuration (full backward compatibility). */
   const getProducibleQty = (components: CompositeComponent[]) => {
-    let min = Infinity;
-    let limitingId: string | undefined;
-    for (const c of components) {
-      if (!c.inventoryItemId) continue;
-      const consumed = getComponentBaseUnitsConsumed(c);
-      if (consumed <= 0) continue;
-      const item = getItem(c.inventoryItemId);
-      const stock = item?.stock ?? 0;
-      const possible = Math.floor(stock / consumed);
-      if (possible < min) {
-        min = possible;
-        limitingId = c.inventoryItemId;
-      }
-    }
-    return { producible: min === Infinity ? 0 : min, limitingId, hasComponents: min !== Infinity };
+    if (components.length === 0) return { producible: 0, limitingId: undefined as string | undefined, hasComponents: false };
+    const res = getProducibleWithSubstitutes(
+      components,
+      (c) => getComponentBaseUnitsConsumed(c),
+      inventoryItems,
+      groups,
+    );
+    return {
+      producible: res.producible,
+      limitingId: res.limitingId,
+      hasComponents: components.some((c) => !!c.inventoryItemId),
+      substituteHint: res.substituteHint,
+    };
   };
   // Back-compat for card list rendering
   const getItemUnit = (id: string) => {
@@ -537,6 +546,21 @@ export default function CompositeItemForm({ composites, setComposites, inventory
                         </Button>
                       </div>
                     </div>
+                    {comp.inventoryItemId && (
+                      <ComponentSubstituteEditor
+                        originalItemId={comp.inventoryItemId}
+                        config={comp}
+                        onChange={(next) => {
+                          setForm((f) => {
+                            const updated = [...f.components];
+                            updated[i] = { ...updated[i], ...next };
+                            return { ...f, components: updated };
+                          });
+                        }}
+                        inventoryItems={inventoryItems}
+                        groups={groups}
+                      />
+                    )}
                   </div>
                 );
               })}

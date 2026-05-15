@@ -12,11 +12,14 @@ import { Search, ScanLine, Camera, X, Gift, Tag, DollarSign } from "lucide-react
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 import OpenPriceDialog from "./OpenPriceDialog";
+import SubstituteApprovalDialog from "./SubstituteApprovalDialog";
+import { useSubstitutionGate } from "@/hooks/use-substitution-gate";
 
 const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
 
 export default function ProductGrid() {
   const { currentOutlet, addToCart } = usePOS();
+  const { pendingRequest, approve, reject } = useSubstitutionGate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -663,6 +666,12 @@ export default function ProductGrid() {
           </div>
         </SheetContent>
       </Sheet>
+      <SubstituteApprovalDialog
+        open={!!pendingRequest}
+        request={pendingRequest}
+        onApprove={approve}
+        onReject={reject}
+      />
     </div>
   );
 }

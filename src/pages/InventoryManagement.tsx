@@ -38,6 +38,7 @@ import ProfitabilityView from "@/components/inventory/ProfitabilityView";
 import { computeProfitability } from "@/lib/profitability";
 import { defaultInventoryItems } from "@/data/inventoryItems";
 import { useCompositesStore } from "@/hooks/use-composites-store";
+import SubstituteGroupManager from "@/components/inventory/SubstituteGroupManager";
 
 const defaultItems: InventoryItem[] = defaultInventoryItems;
 
@@ -63,7 +64,7 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
 
 type MenuItemOption = { id: string; name: string; variants: { id: string; name: string }[] };
 
-type Tab = "stock" | "categories" | "units" | "composite" | "adjustments" | "profitability";
+type Tab = "stock" | "categories" | "units" | "composite" | "substitutes" | "adjustments" | "profitability";
 
 const sampleMenuItems: MenuItemOption[] = [
   // Restaurant
@@ -332,6 +333,7 @@ export default function InventoryManagement() {
     { key: "categories", label: "Categories" },
     { key: "units", label: "Units" },
     { key: "composite", label: "Composite Items" },
+    { key: "substitutes", label: "Substitute Groups" },
   ];
 
   return (
@@ -504,6 +506,13 @@ export default function InventoryManagement() {
           menuItems={sampleMenuItems}
           readOnly={isAllOutlets}
           selectedOutletId={selectedOutletId}
+        />
+      )}
+      {tab === "substitutes" && (
+        <SubstituteGroupManager
+          inventoryItems={outletItems}
+          selectedOutletId={isAllOutlets ? undefined : selectedOutletId}
+          readOnly={isAllOutlets}
         />
       )}
 
