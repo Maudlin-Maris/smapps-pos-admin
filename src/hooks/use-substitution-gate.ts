@@ -17,8 +17,9 @@
  *
  * Returns: { allowed, substitutions } — substitutions array is attached to
  * the cart line by the caller (POSCartItem.substitutions) for audit trail.
- * Downstream kitchen tickets and inventory deduction read from this array
- * (NOT the original recipe) so the actual substitute ingredients are used.
+ * Downstream kitchen tickets and inventory deduction MUST read from this
+ * array (not the original recipe) so the actual substitute ingredients flow
+ * through to the docket and stock counts.
  */
 
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -51,7 +52,7 @@ export interface SubstitutionDecision {
   originalItemId: string;
   originalItemName: string;
   originalUnitCost: number;
-  /** Default selected substitute (highest-priority viable one). */
+  /** Default selected substitute (highest-priority viable in-stock one). */
   proposed: ViableSubstitute;
   /** All in-stock candidates (already filtered: NEVER includes out-of-stock). */
   alternatives: ViableSubstitute[];
@@ -106,12 +107,14 @@ export function useSubstitutionGate() {
       if (!composite) return { allowed: true, substitutions: [] };
 
       const substitutions: CartSubstitutionRecord[] = [];
-      // Collected manual-approval decisions to consolidate into ONE modal.
+      // Per-call scratch holding the manual decisions + their record builders.
       const pendingDecisions: SubstitutionDecision[] = [];
-      // Original item lookup for cost calc when building records post-modal.
-      const originalsByKey = new Map<string, InventoryItem | undefined>();
+      const builders = new Map<
+        string,
+        (chosen: ViableSubstitute, approver?: string) => CartSubstitutionRecord
+      >();
 
-      // ---- Pass 1: resolve every component without prompting. ----
+      // ---- Pass 1: silently resolve every component (no UI prompts). ----
       for (const comp of composite.components) {
         if (!comp.inventoryItemId) continue;
         const requiredBaseQty = comp.quantity || 0;
@@ -141,7 +144,12 @@ export function useSubstitutionGate() {
           alternatives.find((a) => a.inventoryItemId === sub.inventoryItemId) ?? alternatives[0];
         if (!proposed) continue;
 
-        const buildRecord = (
+        // Closure that builds the cart-attached audit record + writes a log.
+        // Captures `original`, `shortfall`, `comp` so the post-modal pass can
+        // produce a record from any cashier-chosen substitute.
+        const compInventoryId = comp.inventoryItemId;
+        const compositeOutletId = composite.outletId || outletId || "";
+        const buildAndLog = (
           chosen: ViableSubstitute,
           reason: CartSubstitutionRecord["reason"],
           approver?: string
@@ -150,8 +158,8 @@ export function useSubstitutionGate() {
           const qty = shortfall / ratio;
           const variance =
             chosen.unitCost * qty - (original?.costPrice ?? 0) * qty * ratio;
-          return {
-            originalItemId: comp.inventoryItemId,
+          const rec: CartSubstitutionRecord = {
+            originalItemId: compInventoryId,
             originalItemName: originalName,
             substituteItemId: chosen.inventoryItemId,
             substituteItemName: chosen.itemName,
@@ -162,11 +170,8 @@ export function useSubstitutionGate() {
             approvedBy: reason === "manual_approval" ? approver : undefined,
             timestamp: new Date().toISOString(),
           };
-        };
-
-        const writeLog = (rec: CartSubstitutionRecord, mode: "auto" | "manual_approval") =>
           logSubstitution({
-            outletId: composite.outletId || outletId || "",
+            outletId: compositeOutletId,
             orderRef,
             cashier,
             compositeName: composite.name,
@@ -176,38 +181,36 @@ export function useSubstitutionGate() {
             substituteItemName: rec.substituteItemName,
             quantityUsed: rec.quantityUsed,
             originalUnitCost: original?.costPrice ?? 0,
-            substituteUnitCost: rec.costVariance / Math.max(rec.quantityUsed, 1e-9)
-              + (original?.costPrice ?? 0) * (rec.conversionRatio || 1),
+            substituteUnitCost: chosen.unitCost,
             costVariance: rec.costVariance,
-            mode,
+            mode: reason === "auto" ? "auto" : "manual_approval",
           });
+          return rec;
+        };
 
         if (res.mode === "auto") {
           // SILENT path — record + log immediately, no UI interruption.
-          const rec = buildRecord(proposed, "auto");
-          substitutions.push(rec);
-          writeLog(rec, "auto");
+          substitutions.push(buildAndLog(proposed, "auto"));
           continue;
         }
 
         if (res.mode === "manual_approval") {
-          // Defer to the consolidated modal.
-          originalsByKey.set(comp.inventoryItemId, original);
           pendingDecisions.push({
-            key: comp.inventoryItemId,
-            originalItemId: comp.inventoryItemId,
+            key: compInventoryId,
+            originalItemId: compInventoryId,
             originalItemName: originalName,
             originalUnitCost: original?.costPrice ?? 0,
             proposed,
             alternatives,
             shortfallBaseQty: shortfall,
           });
-          // Stash the buildRecord/writeLog closures via the decision key.
-          deferredBuilders.set(comp.inventoryItemId, { buildRecord, writeLog });
+          builders.set(compInventoryId, (chosen, approver) =>
+            buildAndLog(chosen, "manual_approval", approver)
+          );
         }
       }
 
-      // ---- Pass 2: if any manual decisions, ask in a SINGLE modal. ----
+      // ---- Pass 2: if any manual decisions, ask in a SINGLE consolidated modal. ----
       if (pendingDecisions.length > 0) {
         const picks = await askForApproval({
           compositeName: composite.name,
@@ -223,13 +226,10 @@ export function useSubstitutionGate() {
 
         for (const decision of pendingDecisions) {
           const chosen = picks.get(decision.key) ?? decision.proposed;
-          const builder = deferredBuilders.get(decision.key);
-          if (!builder) continue;
-          const rec = builder.buildRecord(chosen, "manual_approval", cashier);
-          substitutions.push(rec);
-          builder.writeLog(rec, "manual_approval");
+          const make = builders.get(decision.key);
+          if (!make) continue;
+          substitutions.push(make(chosen, cashier));
         }
-        deferredBuilders.clear();
       }
 
       return { allowed: true, substitutions };
@@ -237,33 +237,12 @@ export function useSubstitutionGate() {
     [findComposite, inventory, groups, askForApproval]
   );
 
-  // Per-call scratch map of record-builders, keyed by originalItemId. Cleared
-  // after each gate() invocation. Lives outside React state because it holds
-  // closures and isn't UI-relevant.
-  // (Declared here so it shares lexical scope with `gate` above.)
-  const deferredBuilders = useMemo(
-    () =>
-      new Map<
-        string,
-        {
-          buildRecord: (
-            chosen: ViableSubstitute,
-            reason: CartSubstitutionRecord["reason"],
-            approver?: string
-          ) => CartSubstitutionRecord;
-          writeLog: (rec: CartSubstitutionRecord, mode: "auto" | "manual_approval") => void;
-        }
-      >(),
-    []
-  );
+  /** Approve all decisions with the cashier's chosen picks (per-row). */
+  const approve = useCallback((picks: Map<string, ViableSubstitute>) => {
+    resolveRef.current?.(picks);
+  }, []);
 
-  const approve = useCallback(
-    (picks: Map<string, ViableSubstitute>) => {
-      resolveRef.current?.(picks);
-    },
-    []
-  );
-
+  /** Reject the entire substitution — item is not added to cart. */
   const reject = useCallback(() => {
     resolveRef.current?.(null);
   }, []);
