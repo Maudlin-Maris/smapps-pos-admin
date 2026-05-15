@@ -427,6 +427,9 @@ const restaurantProducts: POSProduct[] = [
   { id: "p-sub-manual", name: "Test MANUAL Burger",      price: 5200, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
   { id: "p-sub-strict", name: "Test STRICT Burger",      price: 4800, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
   { id: "p-sub-ok",     name: "Test In-Stock Burger",    price: 4200, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
+  // Multi-component manual_approval — bun + patty + sauce all out simultaneously.
+  // Triggers the consolidated single-modal flow rather than 3 sequential modals.
+  { id: "p-sub-multi",  name: "Test MULTI Burger",       price: 6200, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
 ];
 
 // Pharmacy products (outlet-4)
