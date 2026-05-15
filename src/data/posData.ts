@@ -419,6 +419,14 @@ const restaurantProducts: POSProduct[] = [
   // Scenario: open pricing — cashier enters price at POS
   { id: "p29", name: "Market Fish (per kg)", price: 0, categoryId: "rcat-1", inStock: true, outletId: "outlet-1", openPricing: true },
   { id: "p30", name: "Custom Platter", price: 0, categoryId: "rcat-4", inStock: true, outletId: "outlet-1", openPricing: true },
+  // ============ Substitution test composites (outlet-1) ============
+  // Each name MUST match a CompositeItem name in src/data/seedSubstitutionMocks.ts
+  // so the cashier substitution gate resolves them. No variants/extras so the
+  // gate path runs directly on tap.
+  { id: "p-sub-auto",   name: "Test AUTO Burger",        price: 4500, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
+  { id: "p-sub-manual", name: "Test MANUAL Burger",      price: 5200, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
+  { id: "p-sub-strict", name: "Test STRICT Burger",      price: 4800, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
+  { id: "p-sub-ok",     name: "Test In-Stock Burger",    price: 4200, categoryId: "rcat-1", subcategoryId: "rsub-1a", inStock: true, outletId: "outlet-1" },
 ];
 
 // Pharmacy products (outlet-4)
