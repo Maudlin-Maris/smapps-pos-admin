@@ -50,6 +50,8 @@ import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/Me
 import { formatNaira } from "@/lib/currency";
 import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
 import type { ComponentSubstituteConfig } from "@/lib/composite-substitution";
+import ComponentSubstituteEditor from "@/components/inventory/ComponentSubstituteEditor";
+import { useSubstituteGroups } from "@/data/substituteGroups";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
   { name: "Hour", abbreviation: "hr" },
