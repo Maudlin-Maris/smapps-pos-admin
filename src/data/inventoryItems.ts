@@ -108,4 +108,8 @@ export const defaultInventoryItems: InventoryItem[] = [
   { id: "sub-patty-spicy",  name: "Spicy Chicken Patty",sku: "TST-PT-2",  categoryId: "2", unitId: "5", stock: 18, minStock: 5,  costPrice: 3.20, status: "good",     conversions: [], outletId: "outlet-1" },
   { id: "sub-patty-veggie", name: "Veggie Patty",       sku: "TST-PT-3",  categoryId: "2", unitId: "5", stock: 12, minStock: 5,  costPrice: 2.50, status: "good",     conversions: [], outletId: "outlet-1" },
   { id: "sub-cheese",       name: "Cheddar Slice",      sku: "TST-CH-1",  categoryId: "1", unitId: "5", stock: 50, minStock: 10, costPrice: 0.40, status: "good",     conversions: [], outletId: "outlet-1" },
+  // Sauce items — used by the MULTI consolidated-approval test composite.
+  { id: "sub-sauce-bbq",    name: "BBQ Sauce",          sku: "TST-SC-1",  categoryId: "1", unitId: "5", stock: 0,  minStock: 5,  costPrice: 0.60, status: "critical", conversions: [], outletId: "outlet-1" },
+  { id: "sub-sauce-honey",  name: "Honey Mustard Sauce",sku: "TST-SC-2",  categoryId: "1", unitId: "5", stock: 20, minStock: 5,  costPrice: 0.70, status: "good",     conversions: [], outletId: "outlet-1" },
+  { id: "sub-sauce-garlic", name: "Garlic Aioli",       sku: "TST-SC-3",  categoryId: "1", unitId: "5", stock: 15, minStock: 5,  costPrice: 0.80, status: "good",     conversions: [], outletId: "outlet-1" },
 ];
