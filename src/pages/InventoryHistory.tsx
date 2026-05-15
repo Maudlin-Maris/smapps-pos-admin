@@ -16,8 +16,12 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   ClipboardCheck, Search, RefreshCw, FileBarChart, AlertTriangle,
-  CheckCircle2, Clock, Layers, History, ArrowDownUp, MapPin,
+  CheckCircle2, Clock, Layers, History, ArrowDownUp, MapPin, HelpCircle,
 } from "lucide-react";
+
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "@/components/inventory/PaginationControls";
 
 import { outlets } from "@/data/outlets";
 import {
@@ -252,38 +256,115 @@ function KpiTile({ icon, label, value, tone }:
   );
 }
 
+const HEADER_TOOLTIPS: Record<string, string> = {
+  Date: "Business date for this stock snapshot.",
+  Item: "Inventory item name and SKU.",
+  Outlet: "Location where stock is held.",
+  Open: "Stock quantity at the start of the business day.",
+  "+Recv": "Quantity received from purchases or goods-received notes.",
+  "−Sold": "Quantity sold through the POS during the day.",
+  "+Ret": "Quantity returned by customers and added back to stock.",
+  "−Wast": "Quantity wasted, spoiled, or damaged.",
+  "±Adj": "Net quantity from manual stock adjustments.",
+  "+T-In": "Quantity transferred in from other outlets or warehouses.",
+  "−T-Out": "Quantity transferred out to other outlets or warehouses.",
+  Expected: "Computed closing stock (Open + In − Out).",
+  Actual: "Physically counted stock during reconciliation.",
+  "Var Qty": "Difference between Actual and Expected quantity.",
+  "Var Cost": "Monetary value of the variance at unit cost.",
+};
+
+function Th({ label }: { label: string }) {
+  const tip = HEADER_TOOLTIPS[label];
+  return (
+    <th className="text-left p-2.5">
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center gap-1 cursor-help">
+              {label}
+              <HelpCircle className="h-3 w-3 text-muted-foreground opacity-60" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <p className="text-xs">{tip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </th>
+  );
+}
+
+function ThNum({ label }: { label: string }) {
+  const tip = HEADER_TOOLTIPS[label];
+  return (
+    <th className="text-right p-2.5">
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center gap-1 cursor-help justify-end">
+              {label}
+              <HelpCircle className="h-3 w-3 text-muted-foreground opacity-60" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <p className="text-xs">{tip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </th>
+  );
+}
+
 // ── History table ──
 function HistoryTable({ snapshots, onDrill }:
   { snapshots: DailyInventorySnapshot[]; onDrill: (s: DailyInventorySnapshot) => void }) {
+  const {
+    page, setPage, perPage, setPerPage, totalPages,
+    paginatedItems, totalItems, pageSizeOptions,
+  } = usePagination(snapshots, 20);
+
   if (!snapshots.length) {
     return <Card className="p-8 text-center text-muted-foreground">No snapshots match these filters.</Card>;
   }
+
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden space-y-0">
+      <div className="p-3 border-b bg-muted/30">
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          perPage={perPage}
+          totalItems={totalItems}
+          pageSizeOptions={pageSizeOptions}
+          onPageChange={setPage}
+          onPerPageChange={setPerPage}
+        />
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b text-xs uppercase tracking-wide">
             <tr>
-              <th className="text-left p-2.5">Date</th>
-              <th className="text-left p-2.5">Item</th>
-              <th className="text-left p-2.5">Outlet</th>
-              <th className="text-right p-2.5">Open</th>
-              <th className="text-right p-2.5">+Recv</th>
-              <th className="text-right p-2.5">−Sold</th>
-              <th className="text-right p-2.5">+Ret</th>
-              <th className="text-right p-2.5">−Wast</th>
-              <th className="text-right p-2.5">±Adj</th>
-              <th className="text-right p-2.5">+T-In</th>
-              <th className="text-right p-2.5">−T-Out</th>
-              <th className="text-right p-2.5">Expected</th>
-              <th className="text-right p-2.5">Actual</th>
-              <th className="text-right p-2.5">Var Qty</th>
-              <th className="text-right p-2.5">Var Cost</th>
-              <th></th>
+              <Th label="Date" />
+              <Th label="Item" />
+              <Th label="Outlet" />
+              <ThNum label="Open" />
+              <ThNum label="+Recv" />
+              <ThNum label="−Sold" />
+              <ThNum label="+Ret" />
+              <ThNum label="−Wast" />
+              <ThNum label="±Adj" />
+              <ThNum label="+T-In" />
+              <ThNum label="−T-Out" />
+              <ThNum label="Expected" />
+              <ThNum label="Actual" />
+              <ThNum label="Var Qty" />
+              <ThNum label="Var Cost" />
+              <th className="p-2.5"></th>
             </tr>
           </thead>
           <tbody>
-            {snapshots.slice(0, 500).map((s) => {
+            {paginatedItems.map((s) => {
               const outletName = outlets.find((o) => o.id === s.outletId)?.name ?? s.outletId;
               const hasVar = s.varianceQty !== 0;
               return (
@@ -321,11 +402,17 @@ function HistoryTable({ snapshots, onDrill }:
           </tbody>
         </table>
       </div>
-      {snapshots.length > 500 && (
-        <div className="p-2 text-center text-xs text-muted-foreground border-t">
-          Showing first 500 of {snapshots.length}. Tighten filters to narrow results.
-        </div>
-      )}
+      <div className="p-3 border-t bg-muted/30">
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          perPage={perPage}
+          totalItems={totalItems}
+          pageSizeOptions={pageSizeOptions}
+          onPageChange={setPage}
+          onPerPageChange={setPerPage}
+        />
+      </div>
     </Card>
   );
 }
