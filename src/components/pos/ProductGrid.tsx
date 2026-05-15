@@ -12,6 +12,8 @@ import { Search, ScanLine, Camera, X, Gift, Tag, DollarSign } from "lucide-react
 import { toast } from "sonner";
 import VariantExtrasDialog from "./VariantExtrasDialog";
 import OpenPriceDialog from "./OpenPriceDialog";
+import SubstituteApprovalDialog from "./SubstituteApprovalDialog";
+import { useSubstitutionGate } from "@/hooks/use-substitution-gate";
 
 const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
 
