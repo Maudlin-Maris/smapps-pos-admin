@@ -16,8 +16,12 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   ClipboardCheck, Search, RefreshCw, FileBarChart, AlertTriangle,
-  CheckCircle2, Clock, Layers, History, ArrowDownUp, MapPin,
+  CheckCircle2, Clock, Layers, History, ArrowDownUp, MapPin, HelpCircle,
 } from "lucide-react";
+
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "@/components/inventory/PaginationControls";
 
 import { outlets } from "@/data/outlets";
 import {
