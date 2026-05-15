@@ -19,6 +19,7 @@ const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
 
 export default function ProductGrid() {
   const { currentOutlet, addToCart } = usePOS();
+  const { pendingRequest, approve, reject } = useSubstitutionGate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
