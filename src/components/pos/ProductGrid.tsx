@@ -18,8 +18,34 @@ import { useSubstitutionGate } from "@/hooks/use-substitution-gate";
 const MOBILE_REAR_CAMERA_REGEX = /back|rear|environment|world|traseira/i;
 
 export default function ProductGrid() {
-  const { currentOutlet, addToCart } = usePOS();
-  const { pendingRequest, approve, reject } = useSubstitutionGate();
+  const { currentOutlet, addToCart, currentCashier } = usePOS() as any;
+  const { gate, pendingRequest, approve, reject } = useSubstitutionGate();
+
+  /**
+   * Wraps addToCart with the composite substitution gate. Silent for AUTO,
+   * blocks for STRICT, opens approval modal for MANUAL_APPROVAL. When a
+   * substitution occurs, the records are attached to the cart line so the
+   * cart UI can render the indicator and downstream order/audit can read it.
+   */
+  const addWithGate = useCallback(
+    async (item: Parameters<typeof addToCart>[0]) => {
+      const result = await gate({
+        productName: item.productName,
+        outletId: currentOutlet?.id,
+        cashier: currentCashier?.name,
+      });
+      if (!result.allowed) return false;
+      addToCart({
+        ...item,
+        substitutions: result.substitutions.length
+          ? [...(item.substitutions ?? []), ...result.substitutions]
+          : item.substitutions,
+      });
+      return true;
+    },
+    [gate, addToCart, currentOutlet, currentCashier]
+  );
+
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
