@@ -4,25 +4,33 @@
  * configured substitute mode, and:
  *
  *  - STRICT:           blocks add if primary unavailable (toast)
- *  - AUTO:             proceeds + logs the substitution
- *  - MANUAL_APPROVAL:  opens a dialog; cashier approves -> proceed + log,
- *                      rejects -> abort
+ *  - AUTO:             proceeds silently + logs the substitution. NO toast,
+ *                      NO modal — cashier flow is uninterrupted. Substitution
+ *                      data is returned so the caller can attach it to the
+ *                      cart line for a subtle in-cart indicator.
+ *  - MANUAL_APPROVAL:  opens an approval dialog showing the unavailable
+ *                      ingredient, the proposed substitute, stock remaining,
+ *                      cost variance, AND any alternative substitutes the
+ *                      cashier can switch to before approving.
  *
- * Inventory state is read from the in-session composites/inventory pools.
- * Stock-mutating sales are out of scope here; this hook only handles the
- * decision flow + audit log so admins can see substitutions taking place.
+ * Returns: { allowed, substitutions } — substitutions array is attached to
+ * the cart line by the caller (POSCartItem.substitutions) for audit trail.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { defaultInventoryItems } from "@/data/inventoryItems";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import type { CompositeItem } from "@/components/inventory/CompositeItemForm";
 import { useCompositesStore } from "@/hooks/use-composites-store";
 import { useSubstituteGroups } from "@/data/substituteGroups";
-import { resolveComponent } from "@/lib/composite-substitution";
+import {
+  resolveComponent,
+  getViableSubstitutes,
+  type ViableSubstitute,
+} from "@/lib/composite-substitution";
 import { logSubstitution } from "@/data/substitutionLogs";
-import type { SubstituteApprovalRequest } from "@/components/pos/SubstituteApprovalDialog";
+import type { CartSubstitutionRecord } from "@/data/posData";
 
 interface GateInput {
   productName: string;
@@ -31,13 +39,30 @@ interface GateInput {
   orderRef?: string;
 }
 
+export interface SubstituteApprovalRequest {
+  compositeName: string;
+  originalItemName: string;
+  originalUnitCost: number;
+  /** Currently proposed substitute (cashier may pick another from alternatives). */
+  proposed: ViableSubstitute;
+  /** All in-stock candidates (including the proposed one), in priority order. */
+  alternatives: ViableSubstitute[];
+  /** Base-unit shortfall that must be covered. */
+  shortfallBaseQty: number;
+}
+
+export interface GateResult {
+  allowed: boolean;
+  substitutions: CartSubstitutionRecord[];
+}
+
 export function useSubstitutionGate() {
   const [composites] = useCompositesStore([]);
   const [groups] = useSubstituteGroups([]);
   const inventory: InventoryItem[] = defaultInventoryItems;
 
   const [pendingRequest, setPendingRequest] = useState<SubstituteApprovalRequest | null>(null);
-  const pendingResolveRef = useState<{ resolve?: (ok: boolean) => void }>({ })[0] as any;
+  const resolveRef = useRef<((picked: ViableSubstitute | null) => void) | null>(null);
 
   const findComposite = useCallback(
     (productName: string, outletId?: string): CompositeItem | undefined => {
@@ -51,104 +76,134 @@ export function useSubstitutionGate() {
     [composites]
   );
 
-  /**
-   * Returns true when the cart action may proceed. Returns false to abort.
-   * `proceed` is invoked synchronously for STRICT/AUTO and after user
-   * approval for MANUAL_APPROVAL.
-   */
+  const askForApproval = useCallback(
+    (req: SubstituteApprovalRequest): Promise<ViableSubstitute | null> =>
+      new Promise((resolve) => {
+        resolveRef.current = resolve;
+        setPendingRequest(req);
+      }),
+    []
+  );
+
   const gate = useCallback(
-    async ({ productName, outletId, cashier, orderRef }: GateInput): Promise<boolean> => {
+    async ({ productName, outletId, cashier, orderRef }: GateInput): Promise<GateResult> => {
       const composite = findComposite(productName, outletId);
-      if (!composite) return true; // not a tracked composite — pass through
+      if (!composite) return { allowed: true, substitutions: [] };
+
+      const substitutions: CartSubstitutionRecord[] = [];
 
       for (const comp of composite.components) {
         if (!comp.inventoryItemId) continue;
         const requiredBaseQty = comp.quantity || 0;
         if (requiredBaseQty <= 0) continue;
-        const res = resolveComponent({
-          component: comp,
-          requiredBaseQty,
-          inventory,
-          groups,
-        });
+
+        const res = resolveComponent({ component: comp, requiredBaseQty, inventory, groups });
         if (res.available && !res.primaryShort) continue;
 
         const original = inventory.find((i) => i.id === comp.inventoryItemId);
         const originalName = original?.name ?? "Component";
 
-        // No availability anywhere -> hard block
         if (!res.available) {
           toast.error(
             `${composite.name} unavailable — ${originalName} out of stock and no substitute has enough.`
           );
-          return false;
+          return { allowed: false, substitutions: [] };
         }
 
         const sub = res.substituteUsed;
         if (!sub) continue;
-        const subItem = inventory.find((i) => i.id === sub.inventoryItemId);
-        const subName = subItem?.name ?? "Substitute";
 
-        const logEntry = (mode: "auto" | "manual_approval") =>
+        // Compute viable alternatives the cashier can switch to.
+        const primaryStock = original?.stock ?? 0;
+        const shortfall = Math.max(0, requiredBaseQty - primaryStock);
+        const alternatives = getViableSubstitutes(comp, shortfall, inventory, groups);
+        const proposed =
+          alternatives.find((a) => a.inventoryItemId === sub.inventoryItemId) ?? alternatives[0];
+
+        const buildRecord = (
+          chosen: ViableSubstitute,
+          reason: CartSubstitutionRecord["reason"]
+        ): CartSubstitutionRecord => {
+          const ratio = chosen.conversionRatio || 1;
+          const qty = shortfall / ratio;
+          const variance =
+            chosen.unitCost * qty - (original?.costPrice ?? 0) * qty * ratio;
+          return {
+            originalItemId: comp.inventoryItemId,
+            originalItemName: originalName,
+            substituteItemId: chosen.inventoryItemId,
+            substituteItemName: chosen.itemName,
+            quantityUsed: qty,
+            conversionRatio: ratio,
+            costVariance: variance,
+            reason,
+            approvedBy: reason === "manual_approval" ? cashier : undefined,
+            timestamp: new Date().toISOString(),
+          };
+        };
+
+        const writeLog = (rec: CartSubstitutionRecord, mode: "auto" | "manual_approval") =>
           logSubstitution({
             outletId: composite.outletId || outletId || "",
             orderRef,
             cashier,
             compositeName: composite.name,
-            originalItemId: comp.inventoryItemId,
-            originalItemName: originalName,
-            substituteItemId: sub.inventoryItemId,
-            substituteItemName: subName,
-            quantityUsed: sub.qtyBase,
+            originalItemId: rec.originalItemId,
+            originalItemName: rec.originalItemName,
+            substituteItemId: rec.substituteItemId,
+            substituteItemName: rec.substituteItemName,
+            quantityUsed: rec.quantityUsed,
             originalUnitCost: original?.costPrice ?? 0,
-            substituteUnitCost: sub.unitCost,
-            costVariance:
-              sub.unitCost * sub.qtyBase -
-              (original?.costPrice ?? 0) * sub.qtyBase * sub.conversionRatio,
+            substituteUnitCost: alternatives.find(
+              (a) => a.inventoryItemId === rec.substituteItemId
+            )?.unitCost ?? 0,
+            costVariance: rec.costVariance,
             mode,
           });
 
         if (res.mode === "auto") {
-          logEntry("auto");
-          toast.info(`Auto-substituted ${originalName} → ${subName}`);
+          // SILENT: no toast, no modal — just record + log.
+          if (proposed) {
+            const rec = buildRecord(proposed, "auto");
+            substitutions.push(rec);
+            writeLog(rec, "auto");
+          }
           continue;
         }
 
-        if (res.mode === "manual_approval") {
-          // Pause the gate, open the approval dialog, await decision.
-          const approved = await new Promise<boolean>((resolve) => {
-            pendingResolveRef.resolve = resolve;
-            setPendingRequest({
-              compositeName: composite.name,
-              originalItemName: originalName,
-              originalUnitCost: original?.costPrice ?? 0,
-              substituteItemName: subName,
-              substituteUnitCost: sub.unitCost,
-              substituteQty: sub.qtyBase,
-              conversionRatio: sub.conversionRatio,
-            });
+        if (res.mode === "manual_approval" && proposed) {
+          const picked = await askForApproval({
+            compositeName: composite.name,
+            originalItemName: originalName,
+            originalUnitCost: original?.costPrice ?? 0,
+            proposed,
+            alternatives,
+            shortfallBaseQty: shortfall,
           });
           setPendingRequest(null);
-          if (!approved) {
+          resolveRef.current = null;
+          if (!picked) {
             toast.error("Substitution rejected. Item not added.");
-            return false;
+            return { allowed: false, substitutions: [] };
           }
-          logEntry("manual_approval");
+          const rec = buildRecord(picked, "manual_approval");
+          substitutions.push(rec);
+          writeLog(rec, "manual_approval");
         }
       }
 
-      return true;
+      return { allowed: true, substitutions };
     },
-    [findComposite, inventory, groups, pendingResolveRef]
+    [findComposite, inventory, groups, askForApproval]
   );
 
-  const approve = useCallback(() => {
-    pendingResolveRef.resolve?.(true);
-  }, [pendingResolveRef]);
+  const approve = useCallback((picked?: ViableSubstitute) => {
+    resolveRef.current?.(picked ?? pendingRequest?.proposed ?? null);
+  }, [pendingRequest]);
 
   const reject = useCallback(() => {
-    pendingResolveRef.resolve?.(false);
-  }, [pendingResolveRef]);
+    resolveRef.current?.(null);
+  }, []);
 
   return useMemo(
     () => ({ gate, pendingRequest, approve, reject }),
