@@ -666,6 +666,12 @@ export default function ProductGrid() {
           </div>
         </SheetContent>
       </Sheet>
+      <SubstituteApprovalDialog
+        open={!!pendingRequest}
+        request={pendingRequest}
+        onApprove={approve}
+        onReject={reject}
+      />
     </div>
   );
 }
