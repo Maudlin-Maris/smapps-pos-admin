@@ -65,6 +65,7 @@ const coreNavItems: NavItem[] = [
   { title: "Inventory", path: "/inventory", icon: Package, section: "Inventory", permission: "inventory.view" },
   { title: "Advanced Inventory", path: "/inventory/advanced", icon: ArrowLeftRight, section: "Inventory", permission: "inventory.view" },
   { title: "Stock Transfers", path: "/inventory/transfers", icon: Truck, section: "Inventory", permission: "inventory.view" },
+  { title: "History & Reconciliation", path: "/inventory/history", icon: CalendarClock, section: "Inventory", permission: "inventory.view" },
   { title: "Purchase Orders", path: "/purchase-orders", icon: Truck, section: "Inventory", permission: "purchase_orders.manage" },
   // Customers
   { title: "Customers", path: "/customers", icon: Heart, section: "Customers", permission: "customers.view" },
