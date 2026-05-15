@@ -508,6 +508,13 @@ export default function InventoryManagement() {
           selectedOutletId={selectedOutletId}
         />
       )}
+      {tab === "substitutes" && (
+        <SubstituteGroupManager
+          inventoryItems={outletItems}
+          selectedOutletId={isAllOutlets ? undefined : selectedOutletId}
+          readOnly={isAllOutlets}
+        />
+      )}
 
       <StockAdjustDialog
         open={adjustOpen}
