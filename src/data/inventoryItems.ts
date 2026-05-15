@@ -98,4 +98,14 @@ export const defaultInventoryItems: InventoryItem[] = [
   { id: "i47", name: "Closure 4x4 Straight", sku: "HW-003", categoryId: "11", unitId: "5", stock: 12, minStock: 5, costPrice: 30.0, status: "good", conversions: [], outletId: "outlet-12" },
   { id: "i48", name: "Wig Cap (Mesh)", sku: "HW-004", categoryId: "11", unitId: "10", stock: 3, minStock: 10, costPrice: 1.0, status: "critical", conversions: [], outletId: "outlet-12" },
   { id: "i49", name: "Edge Control Gel", sku: "HW-005", categoryId: "11", unitId: "5", stock: 25, minStock: 10, costPrice: 4.5, status: "good", conversions: [], outletId: "outlet-12" },
+  // ============ Substitution test items (outlet-1) ============
+  // These power the "Substitution Tests" composite items in the cashier POS.
+  // Stock levels are deliberately set to trigger each substitution mode.
+  { id: "sub-bun-classic",  name: "Classic Burger Bun", sku: "TST-BUN-1", categoryId: "2", unitId: "5", stock: 0,  minStock: 10, costPrice: 1.20, status: "critical", conversions: [], outletId: "outlet-1" },
+  { id: "sub-bun-sesame",   name: "Sesame Bun",         sku: "TST-BUN-2", categoryId: "2", unitId: "5", stock: 40, minStock: 10, costPrice: 1.10, status: "good",     conversions: [], outletId: "outlet-1" },
+  { id: "sub-bun-brioche",  name: "Brioche Bun",        sku: "TST-BUN-3", categoryId: "2", unitId: "5", stock: 25, minStock: 10, costPrice: 1.80, status: "good",     conversions: [], outletId: "outlet-1" },
+  { id: "sub-patty-chicken",name: "Chicken Patty",      sku: "TST-PT-1",  categoryId: "2", unitId: "5", stock: 0,  minStock: 10, costPrice: 3.00, status: "critical", conversions: [], outletId: "outlet-1" },
+  { id: "sub-patty-spicy",  name: "Spicy Chicken Patty",sku: "TST-PT-2",  categoryId: "2", unitId: "5", stock: 18, minStock: 5,  costPrice: 3.20, status: "good",     conversions: [], outletId: "outlet-1" },
+  { id: "sub-patty-veggie", name: "Veggie Patty",       sku: "TST-PT-3",  categoryId: "2", unitId: "5", stock: 12, minStock: 5,  costPrice: 2.50, status: "good",     conversions: [], outletId: "outlet-1" },
+  { id: "sub-cheese",       name: "Cheddar Slice",      sku: "TST-CH-1",  categoryId: "1", unitId: "5", stock: 50, minStock: 10, costPrice: 0.40, status: "good",     conversions: [], outletId: "outlet-1" },
 ];
