@@ -123,6 +123,52 @@ const SEED_COMPOSITES: CompositeItem[] = [
       { inventoryItemId: "sub-cheese",      quantity: 1, role: "primary" },
     ],
   },
+  // 5) MULTI — three components unavailable at once. Validates the consolidated
+  //    single-modal flow: cashier sees ONE dialog with all three substitutions
+  //    instead of three sequential pop-ups.
+  {
+    id: "comp-test-multi",
+    name: "Test MULTI Burger",
+    description: "Demo composite — bun, patty AND sauce all out simultaneously. Cashier resolves all three in one consolidated approval modal.",
+    outletId: "outlet-1",
+    sellPrice: 6200,
+    components: [
+      {
+        inventoryItemId: "sub-bun-classic",
+        quantity: 1,
+        role: "primary",
+        allowSubstitute: true,
+        substituteMode: "manual_approval",
+        substitutes: [
+          { inventoryItemId: "sub-bun-sesame",  priority: 1, conversionRatio: 1 },
+          { inventoryItemId: "sub-bun-brioche", priority: 2, conversionRatio: 1 },
+        ],
+      },
+      {
+        inventoryItemId: "sub-patty-chicken",
+        quantity: 1,
+        role: "primary",
+        allowSubstitute: true,
+        substituteMode: "manual_approval",
+        substitutes: [
+          { inventoryItemId: "sub-patty-spicy",  priority: 1, conversionRatio: 1 },
+          { inventoryItemId: "sub-patty-veggie", priority: 2, conversionRatio: 1 },
+        ],
+      },
+      {
+        inventoryItemId: "sub-sauce-bbq",
+        quantity: 1,
+        role: "primary",
+        allowSubstitute: true,
+        substituteMode: "manual_approval",
+        substitutes: [
+          { inventoryItemId: "sub-sauce-honey",  priority: 1, conversionRatio: 1 },
+          { inventoryItemId: "sub-sauce-garlic", priority: 2, conversionRatio: 1 },
+        ],
+      },
+      { inventoryItemId: "sub-cheese", quantity: 1, role: "primary" },
+    ],
+  },
 ];
 
 function readJSON<T>(key: string): T[] {
