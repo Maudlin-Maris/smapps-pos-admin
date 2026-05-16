@@ -79,7 +79,7 @@ const initialCashiers: CashierRecord[] = [
       phone: "+234 802 345 6789",
       pin: "5678",
       assignments: [
-        { outletId: "outlet-1", outletName: "Downtown Flagship", department: "Bar" },
+        { outletId: "outlet-1", outletName: "Downtown Flagship" },
       ],
     },
   },
