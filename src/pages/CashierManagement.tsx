@@ -284,9 +284,6 @@ export default function CashierManagement() {
                           <Badge key={a.outletId} variant="outline" className="text-[10px] px-2 py-0.5 font-normal gap-1">
                             <Store className="h-2.5 w-2.5 text-accent" />
                             {a.outletName}
-                            {a.department && (
-                              <span className="text-muted-foreground">· {a.department}</span>
-                            )}
                           </Badge>
                         ))}
                       </div>
