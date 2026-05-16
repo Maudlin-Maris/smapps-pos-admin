@@ -12,10 +12,8 @@ import AppLayout from "@/components/AppLayout";
 import Dashboard from "@/pages/Dashboard";
 import MenuManagement from "@/pages/MenuManagement";
 import InventoryManagement from "@/pages/InventoryManagement";
-import AdvancedInventory from "@/pages/AdvancedInventory";
 import TransferManagement, { TransferManagementCreate, TransferManagementDetails } from "@/pages/TransferManagement";
 import InventoryHistory from "@/pages/InventoryHistory";
-import PurchaseOrders from "@/pages/PurchaseOrders";
 import CustomerManagement from "@/pages/CustomerManagement";
 
 import AdvancedReports from "@/pages/AdvancedReports";
@@ -60,12 +58,10 @@ const App = () => (
                 <Route path="/bundles" element={<Protected><PromoBundleManagement /></Protected>} />
                 <Route path="/modifiers" element={<Protected><ModifierGroups /></Protected>} />
                 <Route path="/inventory" element={<Protected><InventoryManagement /></Protected>} />
-                <Route path="/inventory/advanced" element={<Protected><AdvancedInventory /></Protected>} />
                 <Route path="/inventory/transfers" element={<Protected><TransferManagement /></Protected>} />
                 <Route path="/inventory/transfers/new" element={<Protected><TransferManagementCreate /></Protected>} />
                 <Route path="/inventory/transfers/:id" element={<Protected><TransferManagementDetails /></Protected>} />
                 <Route path="/inventory/history" element={<Protected><InventoryHistory /></Protected>} />
-                <Route path="/purchase-orders" element={<Protected><PurchaseOrders /></Protected>} />
                 <Route path="/customers" element={<Protected><CustomerManagement /></Protected>} />
                 <Route path="/loyalty" element={<Protected><LoyaltyManagement /></Protected>} />
                 <Route path="/insights" element={<Protected><AdvancedReports /></Protected>} />
