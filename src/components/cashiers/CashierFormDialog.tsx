@@ -8,8 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { UserPlus, Pencil, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { UserPlus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 const availableOutlets = [
@@ -19,17 +18,9 @@ const availableOutlets = [
   { id: "outlet-4", name: "Suburban Store" },
 ];
 
-const departmentsByOutlet: Record<string, string[]> = {
-  "outlet-1": ["Kitchen", "Bar", "Front of House", "Drive-Through"],
-  "outlet-2": ["Sales Floor", "Checkout", "Customer Service", "Stock Room"],
-  "outlet-3": ["Counter", "Lounge Service"],
-  "outlet-4": ["Dispensary", "Front Desk", "Warehouse"],
-};
-
 export interface OutletAssignment {
   outletId: string;
   outletName: string;
-  department: string;
 }
 
 export interface CashierFormData {
