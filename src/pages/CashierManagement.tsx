@@ -146,9 +146,7 @@ export default function CashierManagement() {
       c.data.lastName.toLowerCase().includes(q) ||
       c.data.email.toLowerCase().includes(q) ||
       c.data.assignments.some(
-        (a) =>
-          a.outletName.toLowerCase().includes(q) ||
-          a.department.toLowerCase().includes(q)
+        (a) => a.outletName.toLowerCase().includes(q)
       )
     );
   });
