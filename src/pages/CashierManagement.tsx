@@ -65,8 +65,8 @@ const initialCashiers: CashierRecord[] = [
       phone: "+234 801 234 5678",
       pin: "1234",
       assignments: [
-        { outletId: "outlet-1", outletName: "Downtown Flagship", department: "Front of House" },
-        { outletId: "outlet-2", outletName: "Mall Branch", department: "Checkout" },
+        { outletId: "outlet-1", outletName: "Downtown Flagship" },
+        { outletId: "outlet-2", outletName: "Mall Branch" },
       ],
     },
   },
@@ -79,7 +79,7 @@ const initialCashiers: CashierRecord[] = [
       phone: "+234 802 345 6789",
       pin: "5678",
       assignments: [
-        { outletId: "outlet-1", outletName: "Downtown Flagship", department: "Bar" },
+        { outletId: "outlet-1", outletName: "Downtown Flagship" },
       ],
     },
   },
@@ -92,8 +92,8 @@ const initialCashiers: CashierRecord[] = [
       phone: "+234 803 456 7890",
       pin: "9012",
       assignments: [
-        { outletId: "outlet-3", outletName: "Airport Kiosk", department: "Counter" },
-        { outletId: "outlet-4", outletName: "Suburban Store", department: "Front Desk" },
+        { outletId: "outlet-3", outletName: "Airport Kiosk" },
+        { outletId: "outlet-4", outletName: "Suburban Store" },
       ],
     },
   },
@@ -146,9 +146,7 @@ export default function CashierManagement() {
       c.data.lastName.toLowerCase().includes(q) ||
       c.data.email.toLowerCase().includes(q) ||
       c.data.assignments.some(
-        (a) =>
-          a.outletName.toLowerCase().includes(q) ||
-          a.department.toLowerCase().includes(q)
+        (a) => a.outletName.toLowerCase().includes(q)
       )
     );
   });
@@ -286,9 +284,6 @@ export default function CashierManagement() {
                           <Badge key={a.outletId} variant="outline" className="text-[10px] px-2 py-0.5 font-normal gap-1">
                             <Store className="h-2.5 w-2.5 text-accent" />
                             {a.outletName}
-                            {a.department && (
-                              <span className="text-muted-foreground">· {a.department}</span>
-                            )}
                           </Badge>
                         ))}
                       </div>
