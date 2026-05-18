@@ -20,8 +20,6 @@ import {
   Heart,
   Gift,
   Globe,
-  Sun,
-  Moon,
   Shield,
   UserCog,
   Layers,
