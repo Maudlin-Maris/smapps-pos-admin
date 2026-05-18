@@ -176,9 +176,6 @@ export default function POSMain() {
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPrinterDialogOpen(true)} title="Printers">
               <Printer className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} title="Toggle Theme">
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSalesOpen(true)} title="My Sales">
               <BarChart3 className="w-4 h-4" />
             </Button>
