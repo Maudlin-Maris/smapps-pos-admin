@@ -17,13 +17,7 @@ interface Props {
 export default function CashierProfileDialog({ open, onClose }: Props) {
   const { currentCashier, availableOutlets } = usePOS();
 
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showPinForm, setShowPinForm] = useState(false);
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
