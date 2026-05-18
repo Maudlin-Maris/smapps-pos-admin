@@ -166,10 +166,12 @@ const MANAGER_PERMISSIONS: PermissionId[] = [
   "sales.reprint_receipt", "sales.open_cash_drawer",
   "catalog.view", "catalog.manage", "catalog.bundles.manage", "catalog.modifiers.manage",
   "inventory.view", "inventory.adjust", "inventory.receive", "inventory.transfer",
-  "purchase_orders.manage",
+  "inventory.stock_count", "inventory.history.view",
   "customers.view", "customers.manage", "loyalty.manage",
+  "bookings.view", "bookings.manage",
   "reports.view", "reports.financial", "reports.export",
   "expenses.manage",
+  "cashiers.manage", "cashiers.reset_pin", "cashiers.suspend",
 ];
 
 const CASHIER_PERMISSIONS: PermissionId[] = [
