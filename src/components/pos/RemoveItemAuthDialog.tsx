@@ -8,12 +8,14 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onAuthorized: () => void;
-  itemName: string;
+  itemName?: string;
+  title?: string;
+  description?: React.ReactNode;
 }
 
 const AUTH_CODE = "1234";
 
-export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, itemName }: Props) {
+export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, itemName, title, description }: Props) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
@@ -40,9 +42,11 @@ export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, item
           <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-2">
             <ShieldAlert className="w-6 h-6 text-destructive" />
           </div>
-          <SheetTitle className="text-base">Authorization Required</SheetTitle>
+          <SheetTitle className="text-base">{title || "Authorization Required"}</SheetTitle>
           <SheetDescription className="text-xs">
-            Enter 4-digit code to remove <span className="font-semibold text-foreground">{itemName}</span> from order.
+            {description || (
+              <>Enter 4-digit code to remove <span className="font-semibold text-foreground">{itemName}</span> from order.</>
+            )}
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col items-center gap-4 px-6 py-6">
