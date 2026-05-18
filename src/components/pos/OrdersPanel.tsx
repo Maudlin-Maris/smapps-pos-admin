@@ -51,7 +51,7 @@ interface OrdersPanelProps {
 }
 
 export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
-  const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder, acceptTransfer, rejectTransfer } = usePOS();
+  const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder, acceptTransfer, rejectTransfer, voidOrder, changeOrderLocation } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
@@ -73,6 +73,8 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
   const [printOrder, setPrintOrder] = useState<POSOrder | null>(null);
   const [transferTarget, setTransferTarget] = useState<string>("");
   const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
+  const [voidAuth, setVoidAuth] = useState<POSOrder | null>(null);
+  const [pendingLocation, setPendingLocation] = useState<string>("");
   const cashierId = currentCashier?.id || "";
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const hasLocations = features?.hasDineIn || features?.hasAppointments;
@@ -790,6 +792,51 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
                     </div>
                   )}
 
+                  {/* Change Location (unpaid/incomplete only) */}
+                  {hasLocations && selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && selectedOrder.paidAmount < selectedOrder.totalAmount && (() => {
+                    const outletLocations = posLocations.filter(l => l.outletId === selectedOrder.outletId);
+                    if (outletLocations.length === 0) return null;
+                    const locationLabel = features?.hasAppointments ? "Station" : "Table / Location";
+                    return (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5" /> Change {locationLabel}
+                        </p>
+                        <Select
+                          value={selectedOrder.locationName || "__none__"}
+                          onValueChange={val => {
+                            const newLoc = val === "__none__" ? undefined : val;
+                            changeOrderLocation(selectedOrder.id, newLoc);
+                            setSelectedOrder({ ...selectedOrder, locationName: newLoc });
+                          }}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Select location..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">No location</SelectItem>
+                            {outletLocations.map(l => {
+                              const occupied = orders.some(o =>
+                                o.id !== selectedOrder.id &&
+                                o.locationName === l.name &&
+                                o.status !== "paid" &&
+                                o.status !== "voided"
+                              );
+                              return (
+                                <SelectItem key={l.id} value={l.name}>
+                                  <span className="flex items-center justify-between gap-2 w-full">
+                                    {l.name}
+                                    {occupied && <Badge variant="secondary" className="h-4 px-1 text-[10px]">Occupied</Badge>}
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })()}
+
                   {/* Actions */}
                   <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sticky bottom-0 bg-background pt-2 pb-1 border-t border-border">
                     {selectedOrder.status !== "paid" && selectedOrder.status !== "voided" && (
@@ -805,6 +852,16 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
                         <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setShowMergeInline(true)}>
                           <Merge className="w-4 h-4 mr-1" /> Merge
                         </Button>
+                        {selectedOrder.paidAmount === 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full sm:w-auto text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                            onClick={() => setVoidAuth(selectedOrder)}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" /> Void
+                          </Button>
+                        )}
                       </>
                     )}
                     <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => { setPrintOrder(selectedOrder); setSelectedOrder(null); }}>
@@ -859,6 +916,22 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
           setRemoveAuth(null);
         }}
         itemName={removeAuth?.itemName || ""}
+      />
+
+      {/* Auth dialog for voiding an unpaid order */}
+      <RemoveItemAuthDialog
+        open={!!voidAuth}
+        onClose={() => setVoidAuth(null)}
+        onAuthorized={() => {
+          if (!voidAuth) return;
+          voidOrder(voidAuth.id);
+          setSelectedOrder(null);
+          setVoidAuth(null);
+        }}
+        title="Void Order"
+        description={
+          <>Enter 4-digit code to void order <span className="font-semibold text-foreground">{voidAuth?.orderNumber}</span>. This cannot be undone.</>
+        }
       />
     </div>
   );

@@ -20,8 +20,6 @@ import {
   Heart,
   Gift,
   Globe,
-  Sun,
-  Moon,
   Shield,
   UserCog,
   Layers,
@@ -30,7 +28,6 @@ import {
 } from "lucide-react";
 import type { PermissionId } from "@/lib/rbac";
 import { useState } from "react";
-import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -84,7 +81,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { theme, setTheme } = useTheme();
   const { user, signOut, hasPermission } = useAuth();
   const navigate = useNavigate();
 
@@ -248,13 +244,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
             <div className="hidden md:block text-sm text-muted-foreground">
               Today: {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             </div>
