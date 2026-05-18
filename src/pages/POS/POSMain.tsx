@@ -54,7 +54,7 @@ export default function POSMain() {
   const [outletToggleConfirm, setOutletToggleConfirm] = useState(false);
   const [printerDialogOpen, setPrinterDialogOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { theme, setTheme } = useTheme();
+  const { theme } = useTheme();
 
   const { printers, updatePrinters, routeOrderToPrinters } = usePrinters(currentOutlet?.id || "");
 
