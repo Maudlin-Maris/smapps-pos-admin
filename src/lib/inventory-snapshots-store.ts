@@ -3,6 +3,15 @@
 // Reconciliation service: drafts, submits, approves; posts adjustment movements.
 // Variance service: aggregates open variances across snapshots.
 //
+// Counting session workflow:
+//   DRAFT  ──submit──▶  IN_REVIEW  ──approve──▶  APPROVED  ──post──▶  POSTED
+//                                  └─reject──▶  REJECTED
+//
+// A DRAFT is a long-lived counting session. Partial counts (counted/skipped flags
+// per line) are persisted on every save, so a count can be resumed across
+// sessions, devices, or interruptions. Inventory ledger movements are only
+// written when the reconciliation transitions to POSTED.
+//
 // Integrates safely with the existing transfers-store inventory ledger:
 // transferred-in / transferred-out values are sourced from `listMovements()`.
 
@@ -12,6 +21,7 @@ import {
   type DailyInventorySnapshot,
   type InventoryReconciliation,
   type ReconciliationLine,
+  type ReconciliationProgress,
   type ReconciliationReason,
   type SnapshotFilter,
 } from "@/data/snapshotTypes";
@@ -254,7 +264,7 @@ export function listMovementsForSnapshot(s: DailyInventorySnapshot): MovementRow
 
 // ── Reconciliations ──
 export function listReconciliations(): InventoryReconciliation[] {
-  return read<InventoryReconciliation[]>(KEY_RECONS, []);
+  return read<InventoryReconciliation[]>(KEY_RECONS, []).map(normalizeRecon);
 }
 export function saveReconciliations(list: InventoryReconciliation[]) {
   write(KEY_RECONS, list);
@@ -268,48 +278,108 @@ export function upsertReconciliation(r: InventoryReconciliation) {
   if (idx >= 0) list[idx] = r; else list.unshift(r);
   saveReconciliations(list);
 }
+export function deleteReconciliation(id: string) {
+  const r = getReconciliation(id);
+  if (!r) return;
+  if (r.status !== "DRAFT" && r.status !== "REJECTED") {
+    throw new Error("Only DRAFT or REJECTED reconciliations can be deleted");
+  }
+  saveReconciliations(listReconciliations().filter((x) => x.id !== id));
+}
+
+// Backward-compat for any legacy "SUBMITTED" status in storage from before the
+// IN_REVIEW rename.
+function normalizeRecon(r: InventoryReconciliation): InventoryReconciliation {
+  const status = (r.status as unknown as string) === "SUBMITTED"
+    ? "IN_REVIEW" as const
+    : r.status;
+  const lines = (r.lines ?? []).map((l) => ({
+    counted: l.counted ?? (l.actualQty !== undefined && l.actualQty !== null),
+    skipped: l.skipped ?? false,
+    ...l,
+  }));
+  return {
+    ...r,
+    status,
+    lines,
+    progress: r.progress ?? computeProgress(lines, lines.length),
+  };
+}
 
 function recomputeTotals(lines: ReconciliationLine[]) {
   let varianceQty = 0, absVarianceQty = 0, varianceCost = 0, absVarianceCost = 0;
+  let counted = 0;
   for (const l of lines) {
-    varianceQty += l.varianceQty;
-    absVarianceQty += Math.abs(l.varianceQty);
-    varianceCost += l.varianceCost;
-    absVarianceCost += Math.abs(l.varianceCost);
+    if (l.counted) {
+      counted += 1;
+      varianceQty += l.varianceQty;
+      absVarianceQty += Math.abs(l.varianceQty);
+      varianceCost += l.varianceCost;
+      absVarianceCost += Math.abs(l.varianceCost);
+    }
   }
-  return { linesCounted: lines.length, varianceQty, absVarianceQty, varianceCost, absVarianceCost };
+  return { linesCounted: counted, varianceQty, absVarianceQty, varianceCost, absVarianceCost };
+}
+
+export function computeProgress(lines: ReconciliationLine[], total: number): ReconciliationProgress {
+  const counted = lines.filter((l) => l.counted).length;
+  const skipped = lines.filter((l) => l.skipped).length;
+  const pending = Math.max(0, total - counted - skipped);
+  const pct = total > 0 ? Math.round((counted / total) * 100) : 0;
+  return { total, counted, skipped, pending, pct };
+}
+
+// ── Counting session inputs ──
+export interface CountInput {
+  snapshotId: string;
+  actualQty?: number | null;   // undefined = not counted, null = explicit clear
+  skipped?: boolean;
+  reasonCode?: ReconciliationReason;
+  reasonNote?: string;
 }
 
 export interface CreateReconciliationInput {
   outletId: string;
   date: string;
-  counts: Array<{ snapshotId: string; actualQty: number; reasonCode?: ReconciliationReason; reasonNote?: string }>;
+  counts?: CountInput[];
   notes?: string;
   createdBy?: string;
 }
 
+// Build a full set of pending lines from snapshots for a (date, outletId).
+// Counting sessions are line-complete from the start; lines start uncounted
+// and are filled in by the operator.
+function buildLinesForSession(date: string, outletId: string): ReconciliationLine[] {
+  const snaps = querySnapshots({ locationId: outletId, fromDate: date, toDate: date });
+  return snaps.map((s) => ({
+    id: crypto.randomUUID(),
+    snapshotId: s.id,
+    inventoryItemId: s.inventoryItemId,
+    itemName: s.itemName,
+    sku: s.sku,
+    unit: s.unit,
+    unitCost: s.unitCost,
+    expectedQty: s.expectedClosingQty,
+    actualQty: 0,
+    varianceQty: 0,
+    varianceCost: 0,
+    counted: false,
+    skipped: false,
+  }));
+}
+
 export function createReconciliation(input: CreateReconciliationInput): InventoryReconciliation {
   const outletName = outlets.find((o) => o.id === input.outletId)?.name ?? input.outletId;
-  const lines: ReconciliationLine[] = [];
-  for (const c of input.counts) {
-    const snap = getSnapshot(c.snapshotId);
-    if (!snap) continue;
-    const variance = round(c.actualQty - snap.expectedClosingQty);
-    lines.push({
-      id: crypto.randomUUID(),
-      snapshotId: snap.id,
-      inventoryItemId: snap.inventoryItemId,
-      itemName: snap.itemName,
-      sku: snap.sku,
-      unit: snap.unit,
-      unitCost: snap.unitCost,
-      expectedQty: snap.expectedClosingQty,
-      actualQty: round(c.actualQty),
-      varianceQty: variance,
-      varianceCost: round(variance * snap.unitCost),
-      reasonCode: c.reasonCode,
-      reasonNote: c.reasonNote,
-    });
+
+  // Ensure snapshots exist for the date/outlet.
+  let snaps = querySnapshots({ locationId: input.outletId, fromDate: input.date, toDate: input.date });
+  if (snaps.length === 0) {
+    snaps = generateSnapshotsForDay(input.date, input.outletId);
+  }
+
+  let lines = buildLinesForSession(input.date, input.outletId);
+  if (input.counts?.length) {
+    lines = applyCountsToLines(lines, input.counts);
   }
 
   const recon: InventoryReconciliation = {
@@ -321,6 +391,7 @@ export function createReconciliation(input: CreateReconciliationInput): Inventor
     status: "DRAFT",
     lines,
     totals: recomputeTotals(lines),
+    progress: computeProgress(lines, lines.length),
     createdAt: new Date().toISOString(),
     createdBy: input.createdBy ?? "Current User",
     notes: input.notes,
@@ -329,31 +400,93 @@ export function createReconciliation(input: CreateReconciliationInput): Inventor
   return recon;
 }
 
-export function submitReconciliation(id: string) {
+function applyCountsToLines(lines: ReconciliationLine[], counts: CountInput[]): ReconciliationLine[] {
+  const bySnap = new Map(counts.map((c) => [c.snapshotId, c]));
+  const now = new Date().toISOString();
+  return lines.map((l) => {
+    const c = bySnap.get(l.snapshotId);
+    if (!c) return l;
+    if (c.skipped) {
+      return { ...l, skipped: true, counted: false, actualQty: 0, varianceQty: 0, varianceCost: 0 };
+    }
+    if (c.actualQty === undefined || c.actualQty === null) {
+      return { ...l, counted: false, skipped: false, actualQty: 0, varianceQty: 0, varianceCost: 0 };
+    }
+    const actual = round(Number(c.actualQty));
+    const variance = round(actual - l.expectedQty);
+    return {
+      ...l,
+      counted: true,
+      skipped: false,
+      actualQty: actual,
+      varianceQty: variance,
+      varianceCost: round(variance * l.unitCost),
+      reasonCode: c.reasonCode ?? l.reasonCode,
+      reasonNote: c.reasonNote ?? l.reasonNote,
+      countedAt: now,
+      countedBy: "Current User",
+    };
+  });
+}
+
+// Save partial counts to an existing DRAFT (or REJECTED → reopens as DRAFT).
+export interface SaveDraftInput {
+  reconciliationId: string;
+  counts?: CountInput[];
+  notes?: string;
+}
+export function saveReconciliationDraft(input: SaveDraftInput): InventoryReconciliation {
+  const r = getReconciliation(input.reconciliationId);
+  if (!r) throw new Error("Reconciliation not found");
+  if (r.status !== "DRAFT" && r.status !== "REJECTED") {
+    throw new Error("Only DRAFT or REJECTED reconciliations can be edited");
+  }
+  const lines = input.counts ? applyCountsToLines(r.lines, input.counts) : r.lines;
+  const updated: InventoryReconciliation = {
+    ...r,
+    status: "DRAFT",
+    lines,
+    totals: recomputeTotals(lines),
+    progress: computeProgress(lines, lines.length),
+    notes: input.notes ?? r.notes,
+    updatedAt: new Date().toISOString(),
+    rejectedAt: undefined,
+    rejectedBy: undefined,
+    rejectedReason: undefined,
+  };
+  upsertReconciliation(updated);
+  return updated;
+}
+
+export function submitReconciliation(id: string, submittedBy = "Current User") {
   const r = getReconciliation(id); if (!r) return;
-  if (r.status !== "DRAFT") throw new Error("Only DRAFT can be submitted");
-  r.status = "SUBMITTED";
+  if (r.status !== "DRAFT") throw new Error("Only DRAFT can be submitted for review");
+  if (r.progress.counted === 0) throw new Error("Count at least one item before submitting");
+  r.status = "IN_REVIEW";
   r.submittedAt = new Date().toISOString();
+  r.submittedBy = submittedBy;
   upsertReconciliation(r);
 }
 
-export function rejectReconciliation(id: string, reason: string) {
+export function rejectReconciliation(id: string, reason: string, rejectedBy = "Current User") {
   const r = getReconciliation(id); if (!r) return;
-  if (r.status !== "SUBMITTED") throw new Error("Only SUBMITTED can be rejected");
+  if (r.status !== "IN_REVIEW") throw new Error("Only IN_REVIEW can be rejected");
   r.status = "REJECTED";
   r.rejectedAt = new Date().toISOString();
+  r.rejectedBy = rejectedBy;
   r.rejectedReason = reason;
   upsertReconciliation(r);
 }
 
-// Approving posts the variance: adjusts effective stock by varianceQty,
-// stamps the snapshot, and writes an adjustment movement to the ledger so
-// downstream reports stay consistent.
+// Approve + post: stamps snapshots, writes ledger movements for variances.
+// In this implementation approval and posting are atomic — once approved the
+// adjustment hits the inventory ledger. Status becomes POSTED.
 export function approveReconciliation(id: string, approvedBy = "Current User") {
   const r = getReconciliation(id); if (!r) return;
-  if (r.status !== "SUBMITTED") throw new Error("Only SUBMITTED can be approved");
+  if (r.status !== "IN_REVIEW") throw new Error("Only IN_REVIEW can be approved");
 
-  for (const l of r.lines) {
+  const countedLines = r.lines.filter((l) => l.counted);
+  for (const l of countedLines) {
     if (l.varianceQty !== 0) {
       applyDelta(r.outletId, l.inventoryItemId, l.varianceQty);
       const before = getEffectiveStock(r.outletId, l.inventoryItemId) - l.varianceQty;
@@ -388,9 +521,12 @@ export function approveReconciliation(id: string, approvedBy = "Current User") {
       upsertSnapshot(snap);
     }
   }
-  r.status = "APPROVED";
-  r.approvedAt = new Date().toISOString();
+  const now = new Date().toISOString();
+  r.status = "POSTED";
+  r.approvedAt = now;
   r.approvedBy = approvedBy;
+  r.postedAt = now;
+  r.postedBy = approvedBy;
   upsertReconciliation(r);
 }
 
@@ -411,8 +547,8 @@ export function computeVarianceSummary(filter: SnapshotFilter): VarianceSummary 
     totalVarianceQty: 0, totalAbsVarianceQty: 0,
     totalVarianceCost: 0, totalAbsVarianceCost: 0,
     countedSnapshots: snaps.length,
-    pendingReconciliations: recs.filter((r) => r.status === "SUBMITTED" || r.status === "DRAFT").length,
-    approvedReconciliations: recs.filter((r) => r.status === "APPROVED").length,
+    pendingReconciliations: recs.filter((r) => r.status === "DRAFT" || r.status === "IN_REVIEW").length,
+    approvedReconciliations: recs.filter((r) => r.status === "APPROVED" || r.status === "POSTED").length,
   };
   for (const s of snaps) {
     summary.totalVarianceQty += s.varianceQty;
