@@ -211,10 +211,6 @@ export default function POSMain() {
                   <Printer className="w-4 h-4 mr-2" />
                   Printers
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-                  {theme === "dark" ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setSalesOpen(true)}>
                   <BarChart3 className="w-4 h-4 mr-2" />
                   My Sales
