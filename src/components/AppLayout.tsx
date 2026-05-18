@@ -20,7 +20,6 @@ import {
   Heart,
   Gift,
   Globe,
-  BarChart3,
   Sun,
   Moon,
   Shield,
@@ -70,7 +69,7 @@ const coreNavItems: NavItem[] = [
   // Finance & Reports
   { title: "Expenses", path: "/expenses", icon: Receipt, section: "Finance", permission: "expenses.manage" },
   { title: "Reports", path: "/reports", icon: FileBarChart, section: "Finance", permission: "reports.view" },
-  { title: "Advanced Insights", path: "/insights", icon: BarChart3, section: "Finance", permission: "reports.financial" },
+  
   // Settings
   { title: "Outlets", path: "/outlets", icon: Store, section: "Settings", permission: "outlets.manage" },
   { title: "Cashiers", path: "/cashiers", icon: Users, section: "Settings", permission: "cashiers.manage" },
