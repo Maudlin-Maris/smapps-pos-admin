@@ -23,11 +23,15 @@ export type PermissionId =
   | "inventory.adjust"
   | "inventory.receive"
   | "inventory.transfer"
-  | "purchase_orders.manage"
+  | "inventory.stock_count"
+  | "inventory.history.view"
   // Customers & Loyalty
   | "customers.view"
   | "customers.manage"
   | "loyalty.manage"
+  // Bookings
+  | "bookings.view"
+  | "bookings.manage"
   // Reports & Finance
   | "reports.view"
   | "reports.financial"
@@ -36,6 +40,8 @@ export type PermissionId =
   // Settings
   | "outlets.manage"
   | "cashiers.manage"
+  | "cashiers.suspend"
+  | "cashiers.reset_pin"
   | "subscription.manage"
   // Admin
   | "users.manage"
