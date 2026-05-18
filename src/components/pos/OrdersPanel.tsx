@@ -51,7 +51,7 @@ interface OrdersPanelProps {
 }
 
 export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
-  const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder, acceptTransfer, rejectTransfer } = usePOS();
+  const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder, acceptTransfer, rejectTransfer, voidOrder, changeOrderLocation } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
