@@ -5,9 +5,10 @@
 
 export type ReconciliationStatus =
   | "DRAFT"
-  | "SUBMITTED"
+  | "IN_REVIEW"
   | "APPROVED"
-  | "REJECTED";
+  | "REJECTED"
+  | "POSTED";
 
 export type MovementKind =
   | "OPENING"
@@ -66,6 +67,11 @@ export interface ReconciliationLine {
   varianceCost: number;
   reasonCode?: ReconciliationReason;
   reasonNote?: string;
+  // Counting session state
+  counted: boolean;            // user entered a quantity
+  skipped: boolean;            // user explicitly skipped
+  countedAt?: string;
+  countedBy?: string;
 }
 
 export type ReconciliationReason =
@@ -77,6 +83,14 @@ export type ReconciliationReason =
   | "THEFT"
   | "RECEIVING_ERROR"
   | "OTHER";
+
+export interface ReconciliationProgress {
+  total: number;
+  counted: number;
+  skipped: number;
+  pending: number;
+  pct: number;                 // 0-100, counted/total
+}
 
 export interface InventoryReconciliation {
   id: string;
@@ -93,12 +107,18 @@ export interface InventoryReconciliation {
     varianceCost: number;      // sum (signed)
     absVarianceCost: number;
   };
+  progress: ReconciliationProgress;
   createdAt: string;
   createdBy: string;
+  updatedAt?: string;
   submittedAt?: string;
+  submittedBy?: string;
   approvedAt?: string;
   approvedBy?: string;
+  postedAt?: string;
+  postedBy?: string;
   rejectedAt?: string;
+  rejectedBy?: string;
   rejectedReason?: string;
   notes?: string;
 }
@@ -121,4 +141,12 @@ export const RECONCILIATION_REASON_LABELS: Record<ReconciliationReason, string> 
   THEFT: "Suspected theft",
   RECEIVING_ERROR: "Receiving error",
   OTHER: "Other",
+};
+
+export const RECONCILIATION_STATUS_LABELS: Record<ReconciliationStatus, string> = {
+  DRAFT: "Draft",
+  IN_REVIEW: "In Review",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  POSTED: "Posted",
 };
