@@ -27,8 +27,9 @@ export default function POSLogin() {
   }, [selectedCashier]);
 
   const outletCashiers = useMemo(() => {
-    if (!currentOutlet) return posCashiers;
-    return posCashiers.filter(c => c.assignedOutlets.includes(currentOutlet.id));
+    const active = posCashiers.filter(c => c.status !== "suspended");
+    if (!currentOutlet) return active;
+    return active.filter(c => c.assignedOutlets.includes(currentOutlet.id));
   }, [currentOutlet]);
 
   const filteredCashiers = useMemo(() => {
