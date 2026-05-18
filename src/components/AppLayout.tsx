@@ -81,7 +81,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { theme, setTheme } = useTheme();
   const { user, signOut, hasPermission } = useAuth();
   const navigate = useNavigate();
 
