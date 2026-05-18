@@ -16,7 +16,7 @@ import TransferManagement, { TransferManagementCreate, TransferManagementDetails
 import InventoryHistory from "@/pages/InventoryHistory";
 import CustomerManagement from "@/pages/CustomerManagement";
 
-import AdvancedReports from "@/pages/AdvancedReports";
+
 import Reports from "@/pages/Reports";
 import ExpenseManagement from "@/pages/ExpenseManagement";
 import OutletManagement from "@/pages/OutletManagement";
