@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { User, KeyRound, Lock, Eye, EyeOff, Mail } from "lucide-react";
+import { User, KeyRound, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -17,13 +17,7 @@ interface Props {
 export default function CashierProfileDialog({ open, onClose }: Props) {
   const { currentCashier, availableOutlets } = usePOS();
 
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [showPinForm, setShowPinForm] = useState(false);
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const [currentPin, setCurrentPin] = useState("");
   const [newPin, setNewPin] = useState("");
@@ -36,32 +30,10 @@ export default function CashierProfileDialog({ open, onClose }: Props) {
     .map(o => o.name);
 
   const resetForms = () => {
-    setShowPasswordForm(false);
     setShowPinForm(false);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
     setCurrentPin("");
     setNewPin("");
     setConfirmPin("");
-    setShowNewPassword(false);
-  };
-
-  const handleChangePassword = () => {
-    if (!currentPassword.trim()) {
-      toast.error("Enter your current password");
-      return;
-    }
-    if (newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-    toast.success("Password updated successfully");
-    resetForms();
   };
 
   const handleChangePin = () => {
@@ -121,45 +93,9 @@ export default function CashierProfileDialog({ open, onClose }: Props) {
 
           <Separator />
 
-          {/* Change Password */}
-          {!showPasswordForm ? (
-            <Button variant="outline" className="w-full gap-2" onClick={() => { setShowPasswordForm(true); setShowPinForm(false); }}>
-              <Lock className="w-4 h-4" /> Change Password
-            </Button>
-          ) : (
-            <div className="space-y-3 rounded-lg border border-border p-3">
-              <p className="text-sm font-medium flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" /> Change Password
-              </p>
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-xs">Current Password</Label>
-                  <Input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Enter current password" className="h-8 text-sm" />
-                </div>
-                <div>
-                  <Label className="text-xs">New Password</Label>
-                  <div className="relative">
-                    <Input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Min 6 characters" className="h-8 text-sm pr-8" />
-                    <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowNewPassword(!showNewPassword)}>
-                      {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-xs">Confirm New Password</Label>
-                  <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Re-enter new password" className="h-8 text-sm" />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" className="flex-1" onClick={() => { setShowPasswordForm(false); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}>Cancel</Button>
-                <Button size="sm" className="flex-1" onClick={handleChangePassword}>Update Password</Button>
-              </div>
-            </div>
-          )}
-
           {/* Change PIN */}
           {!showPinForm ? (
-            <Button variant="outline" className="w-full gap-2" onClick={() => { setShowPinForm(true); setShowPasswordForm(false); }}>
+            <Button variant="outline" className="w-full gap-2" onClick={() => setShowPinForm(true)}>
               <KeyRound className="w-4 h-4" /> Change PIN
             </Button>
           ) : (
