@@ -186,6 +186,7 @@ export interface POSCashier {
   avatar?: string;
   assignedOutlets: string[];
   role: "cashier" | "manager";
+  status?: "active" | "suspended";
 }
 
 export interface OutletFee {

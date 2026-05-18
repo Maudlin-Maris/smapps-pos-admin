@@ -25,12 +25,11 @@ export interface CashierFormData {
   lastName: string;
   email: string;
   phone: string;
-  pin: string;
   assignments: OutletAssignment[];
 }
 
 const emptyForm: CashierFormData = {
-  firstName: "", lastName: "", email: "", phone: "", pin: "", assignments: [],
+  firstName: "", lastName: "", email: "", phone: "", assignments: [],
 };
 
 interface CashierFormDialogProps {
@@ -104,10 +103,10 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
               <Label htmlFor="cashierPhone">Phone</Label>
               <Input id="cashierPhone" type="tel" placeholder="+234 800 000 0000" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="pin">Cashier PIN</Label>
-              <Input id="pin" type="password" maxLength={6} placeholder="4-6 digit PIN" value={form.pin} onChange={(e) => update("pin", e.target.value.replace(/\D/g, "").slice(0, 6))} />
-              <p className="text-xs text-muted-foreground">Used for POS login and transactions</p>
+            <div className="space-y-2 sm:col-span-2 rounded-lg border border-dashed border-border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">
+                A secure 4-digit PIN will be generated automatically when this cashier is created and emailed to them. You can regenerate it later from the cashier list.
+              </p>
             </div>
           </div>
 

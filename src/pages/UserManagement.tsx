@@ -170,7 +170,7 @@ export default function UserManagement() {
       setGeneratedPassword(password);
       setGeneratedFor(newUser.email);
       refresh();
-      toast({ title: "User created" });
+      toast({ title: "User created", description: `Temporary password emailed to ${newUser.email}` });
     }
   };
 
@@ -499,8 +499,8 @@ export default function UserManagement() {
           <DialogHeader>
             <DialogTitle>Temporary password</DialogTitle>
             <DialogDescription>
-              Share this password with <span className="font-medium text-foreground">{generatedFor}</span>.
-              It won't be shown again.
+              We've emailed this temporary password to{" "}
+              <span className="font-medium text-foreground">{generatedFor}</span>. You can also copy it below — it won't be shown again.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3 font-mono text-sm">
@@ -512,7 +512,7 @@ export default function UserManagement() {
           <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs">
             <ShieldAlert className="w-4 h-4 text-warning shrink-0 mt-0.5" />
             <span>
-              Ask the user to change this password on first sign-in via Profile → Change password.
+              The user should change this password on first sign-in via Profile → Change password.
             </span>
           </div>
           <DialogFooter>

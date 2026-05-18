@@ -23,11 +23,15 @@ export type PermissionId =
   | "inventory.adjust"
   | "inventory.receive"
   | "inventory.transfer"
-  | "purchase_orders.manage"
+  | "inventory.stock_count"
+  | "inventory.history.view"
   // Customers & Loyalty
   | "customers.view"
   | "customers.manage"
   | "loyalty.manage"
+  // Bookings
+  | "bookings.view"
+  | "bookings.manage"
   // Reports & Finance
   | "reports.view"
   | "reports.financial"
@@ -36,6 +40,8 @@ export type PermissionId =
   // Settings
   | "outlets.manage"
   | "cashiers.manage"
+  | "cashiers.suspend"
+  | "cashiers.reset_pin"
   | "subscription.manage"
   // Admin
   | "users.manage"
@@ -81,7 +87,8 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
       { id: "inventory.adjust", label: "Adjust stock", description: "Record stock adjustments and write-offs" },
       { id: "inventory.receive", label: "Receive stock", description: "Receive incoming inventory" },
       { id: "inventory.transfer", label: "Transfer between outlets", description: "Move stock between locations" },
-      { id: "purchase_orders.manage", label: "Manage purchase orders", description: "Create and approve POs" },
+      { id: "inventory.stock_count", label: "Stock counts & reconciliation", description: "Run physical stock counts, save drafts, submit for review and post adjustments" },
+      { id: "inventory.history.view", label: "View inventory history", description: "Access stock movement ledger, snapshots and count history" },
     ],
   },
   {
@@ -90,6 +97,13 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
       { id: "customers.view", label: "View customers", description: "Browse the customer directory" },
       { id: "customers.manage", label: "Manage customers", description: "Add, edit and delete customer records" },
       { id: "loyalty.manage", label: "Manage loyalty program", description: "Configure points, rewards and tiers" },
+    ],
+  },
+  {
+    group: "Bookings",
+    permissions: [
+      { id: "bookings.view", label: "View bookings", description: "See service appointments and calendar" },
+      { id: "bookings.manage", label: "Manage bookings", description: "Create, reschedule and cancel service appointments" },
     ],
   },
   {
@@ -105,7 +119,9 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
     group: "Settings",
     permissions: [
       { id: "outlets.manage", label: "Manage outlets", description: "Create and configure store locations" },
-      { id: "cashiers.manage", label: "Manage cashiers", description: "Manage POS cashier accounts and PINs" },
+      { id: "cashiers.manage", label: "Manage cashiers", description: "Manage POS cashier accounts and outlet assignments" },
+      { id: "cashiers.reset_pin", label: "Regenerate cashier PINs", description: "Issue a new auto-generated PIN for a cashier" },
+      { id: "cashiers.suspend", label: "Suspend cashier access", description: "Disable or reactivate a cashier's POS access" },
       { id: "subscription.manage", label: "Manage subscription & billing", description: "Plan, payment methods and invoices" },
     ],
   },
@@ -150,10 +166,12 @@ const MANAGER_PERMISSIONS: PermissionId[] = [
   "sales.reprint_receipt", "sales.open_cash_drawer",
   "catalog.view", "catalog.manage", "catalog.bundles.manage", "catalog.modifiers.manage",
   "inventory.view", "inventory.adjust", "inventory.receive", "inventory.transfer",
-  "purchase_orders.manage",
+  "inventory.stock_count", "inventory.history.view",
   "customers.view", "customers.manage", "loyalty.manage",
+  "bookings.view", "bookings.manage",
   "reports.view", "reports.financial", "reports.export",
   "expenses.manage",
+  "cashiers.manage", "cashiers.reset_pin", "cashiers.suspend",
 ];
 
 const CASHIER_PERMISSIONS: PermissionId[] = [
