@@ -25,12 +25,11 @@ export interface CashierFormData {
   lastName: string;
   email: string;
   phone: string;
-  pin: string;
   assignments: OutletAssignment[];
 }
 
 const emptyForm: CashierFormData = {
-  firstName: "", lastName: "", email: "", phone: "", pin: "", assignments: [],
+  firstName: "", lastName: "", email: "", phone: "", assignments: [],
 };
 
 interface CashierFormDialogProps {
