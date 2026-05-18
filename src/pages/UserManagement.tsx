@@ -170,7 +170,7 @@ export default function UserManagement() {
       setGeneratedPassword(password);
       setGeneratedFor(newUser.email);
       refresh();
-      toast({ title: "User created" });
+      toast({ title: "User created", description: `Temporary password emailed to ${newUser.email}` });
     }
   };
 
