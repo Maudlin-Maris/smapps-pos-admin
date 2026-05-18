@@ -78,6 +78,7 @@ interface POSContextType {
   transferOrder: (orderId: string, toCashierId: string) => void;
   acceptTransfer: (orderId: string) => void;
   rejectTransfer: (orderId: string) => void;
+  changeOrderLocation: (orderId: string, locationName: string | undefined) => void;
 
   // UI state
   orderType: OrderType;
