@@ -917,6 +917,22 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
         }}
         itemName={removeAuth?.itemName || ""}
       />
+
+      {/* Auth dialog for voiding an unpaid order */}
+      <RemoveItemAuthDialog
+        open={!!voidAuth}
+        onClose={() => setVoidAuth(null)}
+        onAuthorized={() => {
+          if (!voidAuth) return;
+          voidOrder(voidAuth.id);
+          setSelectedOrder(null);
+          setVoidAuth(null);
+        }}
+        title="Void Order"
+        description={
+          <>Enter 4-digit code to void order <span className="font-semibold text-foreground">{voidAuth?.orderNumber}</span>. This cannot be undone.</>
+        }
+      />
     </div>
   );
 }
