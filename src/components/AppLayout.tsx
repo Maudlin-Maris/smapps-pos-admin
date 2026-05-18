@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import type { PermissionId } from "@/lib/rbac";
 import { useState } from "react";
-import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
