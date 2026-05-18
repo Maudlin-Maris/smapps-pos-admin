@@ -234,7 +234,9 @@ export function POSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginWithPin = useCallback((pin: string) => {
-    if (currentCashier && currentCashier.pin === pin) {
+    if (!currentCashier) return false;
+    if (currentCashier.status === "suspended") return false;
+    if (currentCashier.pin === pin) {
       setAuthState("active");
       if (!currentOutlet) {
         const outlet = posOutlets.find(o => currentCashier.assignedOutlets.includes(o.id));
