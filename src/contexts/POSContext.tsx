@@ -515,6 +515,10 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, transferredToCashierId: undefined, updatedAt: new Date() } : o));
   }, []);
 
+  const changeOrderLocation = useCallback((orderId: string, locationName: string | undefined) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, locationName, updatedAt: new Date() } : o));
+  }, []);
+
   return (
     <POSContext.Provider value={{
       linkedBusiness, linkDevice, unlinkDevice, selectOutletAndProceed,
@@ -522,7 +526,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets, outletOpen, toggleOutletOpen,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal, removeBundleFromCart, breakBundle, swapBundleItem,
-      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder, acceptTransfer, rejectTransfer,
+      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder, acceptTransfer, rejectTransfer, changeOrderLocation,
       orderType, setOrderType,
     }}>
       {children}
