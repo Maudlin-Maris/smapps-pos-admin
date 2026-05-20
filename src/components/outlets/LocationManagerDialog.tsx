@@ -125,7 +125,6 @@ export default function LocationManagerDialog({ open, onOpenChange, outletId, ou
             ${loc.description ? `<div class="desc">${loc.description}</div>` : ""}
             <div class="qr">${qrSvgString(url)}</div>
             <div class="instr">Scan to view our menu</div>
-            <div class="url">${url}</div>
           </div>
         `;
       })
@@ -145,7 +144,6 @@ export default function LocationManagerDialog({ open, onOpenChange, outletId, ou
             .qr { display: flex; justify-content: center; margin: 12px 0; }
             .qr svg { width: 200px; height: 200px; }
             .instr { font-size: 14px; font-weight: 600; margin-top: 8px; }
-            .url { font-size: 10px; color: #888; word-break: break-all; margin-top: 6px; }
             @media print { body { padding: 0; } .grid { gap: 8px; } }
           </style>
         </head>
@@ -275,9 +273,6 @@ export default function LocationManagerDialog({ open, onOpenChange, outletId, ou
                 <QRCodeSVG value={buildLocationMenuUrl(outletId, qrLocation.id)} size={220} level="M" />
               </div>
               <p className="text-sm font-medium">Scan to view our menu</p>
-              <p className="text-[11px] text-muted-foreground break-all max-w-md text-center px-4">
-                {buildLocationMenuUrl(outletId, qrLocation.id)}
-              </p>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => setView("list")}>Back</Button>
                 <Button onClick={() => printQRCodes([qrLocation])}>
