@@ -82,7 +82,7 @@ export default function TerminalManagement() {
 
   // Register form
   const [formName, setFormName] = useState("");
-  const [formOutlets, setFormOutlets] = useState<string[]>([]);
+  const [formOutlet, setFormOutlet] = useState<string>("");
   const [generatedId, setGeneratedId] = useState("");
   const [showGenerated, setShowGenerated] = useState(false);
 
@@ -108,14 +108,8 @@ export default function TerminalManagement() {
 
   const openRegister = () => {
     setFormName("");
-    setFormOutlets([]);
+    setFormOutlet("");
     setDialogOpen(true);
-  };
-
-  const toggleOutlet = (id: string) => {
-    setFormOutlets((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
   };
 
   const handleRegister = () => {
@@ -123,8 +117,8 @@ export default function TerminalManagement() {
       toast({ title: "Please enter a terminal name", variant: "destructive" });
       return;
     }
-    if (!formOutlets.length) {
-      toast({ title: "Please assign at least one outlet", variant: "destructive" });
+    if (!formOutlet) {
+      toast({ title: "Please assign an outlet", variant: "destructive" });
       return;
     }
 
@@ -135,7 +129,7 @@ export default function TerminalManagement() {
       deviceName: formName.trim(),
       businessId: "biz-new",
       businessName: "My Business",
-      assignedOutlets: formOutlets,
+      assignedOutlets: [formOutlet],
       linkedAt: new Date().toISOString(),
       lastSeen: new Date().toISOString(),
       status: "offline",
