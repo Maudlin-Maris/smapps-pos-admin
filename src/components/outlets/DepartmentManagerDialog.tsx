@@ -27,7 +27,6 @@ import {
   UtensilsCrossed,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
   Search,
   LayoutGrid,
 } from "lucide-react";
