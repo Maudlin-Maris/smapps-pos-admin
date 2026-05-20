@@ -58,7 +58,6 @@ export default function DepartmentManagerDialog({
   const [deptName, setDeptName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
   const [menuSearch, setMenuSearch] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const categoryMap = getCategoryMap(sampleMenuItems);
 
