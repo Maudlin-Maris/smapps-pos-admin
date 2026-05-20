@@ -27,7 +27,6 @@ import {
   UtensilsCrossed,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
   Search,
   LayoutGrid,
 } from "lucide-react";
@@ -59,7 +58,6 @@ export default function DepartmentManagerDialog({
   const [deptName, setDeptName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
   const [menuSearch, setMenuSearch] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   const categoryMap = getCategoryMap(sampleMenuItems);
 
@@ -113,63 +111,19 @@ export default function DepartmentManagerDialog({
       departments.map((d) => {
         if (d.id !== deptId) return d;
         const has = d.assignedCategories.includes(category);
-        const subcats = categoryMap[category] || [];
-        const subcatKeys = subcats.map((s) => `${category}::${s}`);
         if (has) {
-          // Remove category
           return {
             ...d,
             assignedCategories: d.assignedCategories.filter((c) => c !== category),
           };
         } else {
-          // Add category, remove individual subcategories since whole category is selected
           return {
             ...d,
             assignedCategories: [...d.assignedCategories, category],
-            assignedSubcategories: d.assignedSubcategories.filter(
-              (s) => !subcatKeys.includes(s)
-            ),
           };
         }
       })
     );
-  };
-
-  const toggleSubcategory = (deptId: string, category: string, subcategory: string) => {
-    const key = `${category}::${subcategory}`;
-    onUpdateDepartments(
-      departments.map((d) => {
-        if (d.id !== deptId) return d;
-        // If full category is assigned, don't allow individual subcategory toggle
-        if (d.assignedCategories.includes(category)) return d;
-        const has = d.assignedSubcategories.includes(key);
-        const newSubcats = has
-          ? d.assignedSubcategories.filter((s) => s !== key)
-          : [...d.assignedSubcategories, key];
-
-        // Check if all subcategories are now selected → promote to full category
-        const allSubs = categoryMap[category] || [];
-        const selectedSubs = newSubcats.filter((s) => s.startsWith(`${category}::`));
-        if (allSubs.length > 0 && selectedSubs.length === allSubs.length) {
-          return {
-            ...d,
-            assignedCategories: [...d.assignedCategories, category],
-            assignedSubcategories: newSubcats.filter((s) => !s.startsWith(`${category}::`)),
-          };
-        }
-
-        return { ...d, assignedSubcategories: newSubcats };
-      })
-    );
-  };
-
-  const toggleExpanded = (category: string) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(category)) next.delete(category);
-      else next.add(category);
-      return next;
-    });
   };
 
   // Sync selectedDept with latest departments data
@@ -180,29 +134,13 @@ export default function DepartmentManagerDialog({
   // Filter categories by search
   const allCategories = Object.keys(categoryMap).sort();
   const filteredCategories = menuSearch
-    ? allCategories.filter((cat) => {
-        const matchesCat = cat.toLowerCase().includes(menuSearch.toLowerCase());
-        const matchesSub = categoryMap[cat].some((sub) =>
-          sub.toLowerCase().includes(menuSearch.toLowerCase())
-        );
-        return matchesCat || matchesSub;
-      })
+    ? allCategories.filter((cat) =>
+        cat.toLowerCase().includes(menuSearch.toLowerCase())
+      )
     : allCategories;
-
-  const getFilteredSubcategories = (category: string) => {
-    if (!menuSearch) return categoryMap[category];
-    const catMatches = category.toLowerCase().includes(menuSearch.toLowerCase());
-    if (catMatches) return categoryMap[category];
-    return categoryMap[category].filter((sub) =>
-      sub.toLowerCase().includes(menuSearch.toLowerCase())
-    );
-  };
 
   const getItemCountForCategory = (category: string) =>
     sampleMenuItems.filter((m) => m.category === category).length;
-
-  const getItemCountForSubcategory = (category: string, subcategory: string) =>
-    sampleMenuItems.filter((m) => m.category === category && m.subcategory === subcategory).length;
 
   return (
     <>
@@ -298,7 +236,6 @@ export default function DepartmentManagerDialog({
                         onClick={() => {
                           setSelectedDept(dept);
                           setMenuSearch("");
-                          setExpandedCategories(new Set());
                         }}
                       >
                         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-accent">
@@ -342,7 +279,6 @@ export default function DepartmentManagerDialog({
                           onClick={() => {
                             setSelectedDept(dept);
                             setMenuSearch("");
-                            setExpandedCategories(new Set());
                           }}
                         />
                       </div>
@@ -361,7 +297,7 @@ export default function DepartmentManagerDialog({
               </div>
             </div>
           ) : (
-            /* Department Detail — Category / Subcategory Assignment */
+            /* Department Detail — Category Assignment */
             <div className="space-y-4 overflow-y-auto flex-1">
               <div className="flex items-center gap-2">
                 <Button
@@ -382,92 +318,32 @@ export default function DepartmentManagerDialog({
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search categories or subcategories..."
+                  placeholder="Search categories..."
                   className="pl-9 h-9"
                   value={menuSearch}
                   onChange={(e) => setMenuSearch(e.target.value)}
                 />
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {filteredCategories.map((category) => {
-                  const subcategories = getFilteredSubcategories(category);
                   const isCategoryAssigned = currentSelectedDept.assignedCategories.includes(category);
-                  const assignedSubCount = subcategories.filter((sub) =>
-                    currentSelectedDept.assignedSubcategories.includes(`${category}::${sub}`)
-                  ).length;
-                  const isPartial = !isCategoryAssigned && assignedSubCount > 0;
-                  const isExpanded = expandedCategories.has(category) || !!menuSearch;
 
                   return (
-                    <div key={category} className="rounded-lg border border-border overflow-hidden">
-                      {/* Category Header */}
-                      <div
-                        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
-                          isCategoryAssigned ? "bg-accent/10" : isPartial ? "bg-accent/5" : "hover:bg-muted/50"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={isCategoryAssigned}
-                          onCheckedChange={() => toggleCategory(currentSelectedDept.id, category)}
-                        />
-                        <div
-                          className="flex items-center gap-2 flex-1"
-                          onClick={() => toggleExpanded(category)}
-                        >
-                          <span className="text-sm font-medium">{category}</span>
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {getItemCountForCategory(category)} items
-                          </Badge>
-                          {isPartial && (
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-accent border-accent/30">
-                              {assignedSubCount} sub selected
-                            </Badge>
-                          )}
-                        </div>
-                        <ChevronDown
-                          className={`h-4 w-4 text-muted-foreground transition-transform ${
-                            isExpanded ? "rotate-180" : ""
-                          }`}
-                          onClick={() => toggleExpanded(category)}
-                        />
-                      </div>
-
-                      {/* Subcategories */}
-                      {isExpanded && subcategories.length > 0 && (
-                        <div className="border-t border-border bg-muted/20">
-                          {subcategories.map((sub) => {
-                            const isSubAssigned =
-                              isCategoryAssigned ||
-                              currentSelectedDept.assignedSubcategories.includes(`${category}::${sub}`);
-                            return (
-                              <div
-                                key={sub}
-                                className={`flex items-center gap-3 px-3 py-2 pl-10 cursor-pointer transition-colors ${
-                                  isSubAssigned ? "bg-accent/5" : "hover:bg-muted/30"
-                                }`}
-                                onClick={() => {
-                                  if (!isCategoryAssigned) {
-                                    toggleSubcategory(currentSelectedDept.id, category, sub);
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={isSubAssigned}
-                                  disabled={isCategoryAssigned}
-                                  onCheckedChange={() =>
-                                    toggleSubcategory(currentSelectedDept.id, category, sub)
-                                  }
-                                />
-                                <span className="text-sm">{sub}</span>
-                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-auto">
-                                  {getItemCountForSubcategory(category, sub)} items
-                                </Badge>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                    <div
+                      key={category}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border cursor-pointer transition-colors ${
+                        isCategoryAssigned ? "bg-accent/10" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={isCategoryAssigned}
+                        onCheckedChange={() => toggleCategory(currentSelectedDept.id, category)}
+                      />
+                      <span className="text-sm font-medium flex-1">{category}</span>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {getItemCountForCategory(category)} items
+                      </Badge>
                     </div>
                   );
                 })}
