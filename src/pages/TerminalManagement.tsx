@@ -70,8 +70,7 @@ function saveTerminals(t: LinkedTerminal[]) {
 }
 
 function generateLinkingId(): string {
-  const num = Math.floor(100 + Math.random() * 900);
-  return `SMAPPS-${num}`;
+  return (crypto as any).randomUUID ? (crypto as any).randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 export default function TerminalManagement() {
