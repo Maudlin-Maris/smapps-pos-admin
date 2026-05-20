@@ -311,24 +311,20 @@ export default function TerminalManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label>Assigned outlets</Label>
+              <Label htmlFor="termOutlet">Assigned outlet</Label>
               <p className="text-xs text-muted-foreground">
-                Select which outlets this terminal can access.
+                A terminal can only be assigned to one outlet.
               </p>
-              <div className="grid sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto rounded-md border p-3">
-                {posOutlets.map((o) => (
-                  <label
-                    key={o.id}
-                    className="flex items-center gap-2 text-sm cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={formOutlets.includes(o.id)}
-                      onCheckedChange={() => toggleOutlet(o.id)}
-                    />
-                    <span className="truncate">{o.name}</span>
-                  </label>
-                ))}
-              </div>
+              <Select value={formOutlet} onValueChange={setFormOutlet}>
+                <SelectTrigger id="termOutlet">
+                  <SelectValue placeholder="Select an outlet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {posOutlets.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
