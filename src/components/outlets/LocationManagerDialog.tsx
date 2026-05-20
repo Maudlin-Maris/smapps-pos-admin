@@ -275,9 +275,6 @@ export default function LocationManagerDialog({ open, onOpenChange, outletId, ou
                 <QRCodeSVG value={buildLocationMenuUrl(outletId, qrLocation.id)} size={220} level="M" />
               </div>
               <p className="text-sm font-medium">Scan to view our menu</p>
-              <p className="text-[11px] text-muted-foreground break-all max-w-md text-center px-4">
-                {buildLocationMenuUrl(outletId, qrLocation.id)}
-              </p>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" onClick={() => setView("list")}>Back</Button>
                 <Button onClick={() => printQRCodes([qrLocation])}>
