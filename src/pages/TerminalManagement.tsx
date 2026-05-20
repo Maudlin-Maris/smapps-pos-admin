@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -82,7 +83,7 @@ export default function TerminalManagement() {
 
   // Register form
   const [formName, setFormName] = useState("");
-  const [formOutlets, setFormOutlets] = useState<string[]>([]);
+  const [formOutlet, setFormOutlet] = useState<string>("");
   const [generatedId, setGeneratedId] = useState("");
   const [showGenerated, setShowGenerated] = useState(false);
 
@@ -108,14 +109,8 @@ export default function TerminalManagement() {
 
   const openRegister = () => {
     setFormName("");
-    setFormOutlets([]);
+    setFormOutlet("");
     setDialogOpen(true);
-  };
-
-  const toggleOutlet = (id: string) => {
-    setFormOutlets((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
   };
 
   const handleRegister = () => {
@@ -123,8 +118,8 @@ export default function TerminalManagement() {
       toast({ title: "Please enter a terminal name", variant: "destructive" });
       return;
     }
-    if (!formOutlets.length) {
-      toast({ title: "Please assign at least one outlet", variant: "destructive" });
+    if (!formOutlet) {
+      toast({ title: "Please assign an outlet", variant: "destructive" });
       return;
     }
 
@@ -135,7 +130,7 @@ export default function TerminalManagement() {
       deviceName: formName.trim(),
       businessId: "biz-new",
       businessName: "My Business",
-      assignedOutlets: formOutlets,
+      assignedOutlets: [formOutlet],
       linkedAt: new Date().toISOString(),
       lastSeen: new Date().toISOString(),
       status: "offline",
@@ -317,24 +312,20 @@ export default function TerminalManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label>Assigned outlets</Label>
+              <Label htmlFor="termOutlet">Assigned outlet</Label>
               <p className="text-xs text-muted-foreground">
-                Select which outlets this terminal can access.
+                A terminal can only be assigned to one outlet.
               </p>
-              <div className="grid sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto rounded-md border p-3">
-                {posOutlets.map((o) => (
-                  <label
-                    key={o.id}
-                    className="flex items-center gap-2 text-sm cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={formOutlets.includes(o.id)}
-                      onCheckedChange={() => toggleOutlet(o.id)}
-                    />
-                    <span className="truncate">{o.name}</span>
-                  </label>
-                ))}
-              </div>
+              <Select value={formOutlet} onValueChange={setFormOutlet}>
+                <SelectTrigger id="termOutlet">
+                  <SelectValue placeholder="Select an outlet" />
+                </SelectTrigger>
+                <SelectContent>
+                  {posOutlets.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
