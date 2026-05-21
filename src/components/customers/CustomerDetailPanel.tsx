@@ -15,7 +15,8 @@ type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
 interface Customer {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   loyaltyTier: LoyaltyTier;
@@ -24,7 +25,6 @@ interface Customer {
   visitCount: number;
   lastVisit: Date | null;
   notes: string;
-  tags: string[];
   createdAt: Date;
 }
 
@@ -141,12 +141,9 @@ export default function CustomerDetailPanel({ customer, open, onOpenChange, onEd
         <SheetHeader className="px-5 pt-5 pb-4 border-b border-border">
           <div className="flex items-start justify-between">
             <div>
-              <SheetTitle className="text-lg font-heading">{customer.name}</SheetTitle>
+              <SheetTitle className="text-lg font-heading">{customer.firstName} {customer.lastName}</SheetTitle>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary" className={cn("text-xs", tc.color)}>{tc.label}</Badge>
-                {customer.tags.map((t) => (
-                  <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
-                ))}
               </div>
             </div>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { onOpenChange(false); onEdit(customer); }}>

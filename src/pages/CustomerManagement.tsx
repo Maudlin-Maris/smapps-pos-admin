@@ -26,7 +26,8 @@ type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
 interface Customer {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   loyaltyTier: LoyaltyTier;
@@ -35,7 +36,6 @@ interface Customer {
   visitCount: number;
   lastVisit: Date | null;
   notes: string;
-  tags: string[];
   createdAt: Date;
 }
 
@@ -56,11 +56,11 @@ const tierConfig: Record<LoyaltyTier, { label: string; color: string; minPoints:
 };
 
 const defaultCustomers: Customer[] = [
-  { id: "c1", name: "Adebayo Johnson", email: "adebayo@email.com", phone: "+234 801 111 2222", loyaltyTier: "gold", points: 2450, totalSpent: 185000, visitCount: 47, lastVisit: new Date("2024-06-12"), notes: "Prefers organic coffee", tags: ["VIP", "Regular"], createdAt: new Date("2023-06-01") },
-  { id: "c2", name: "Chioma Okafor", email: "chioma@email.com", phone: "+234 802 333 4444", loyaltyTier: "platinum", points: 6200, totalSpent: 340000, visitCount: 102, lastVisit: new Date("2024-06-14"), notes: "Loves croissants", tags: ["VIP", "Birthday:March"], createdAt: new Date("2023-03-15") },
-  { id: "c3", name: "Musa Abdullahi", email: "musa@email.com", phone: "+234 803 555 6666", loyaltyTier: "silver", points: 820, totalSpent: 65000, visitCount: 18, lastVisit: new Date("2024-06-08"), notes: "", tags: ["New"], createdAt: new Date("2024-01-10") },
-  { id: "c4", name: "Ngozi Eze", email: "ngozi@email.com", phone: "+234 804 777 8888", loyaltyTier: "bronze", points: 150, totalSpent: 12500, visitCount: 5, lastVisit: new Date("2024-05-20"), notes: "Walk-in customer", tags: [], createdAt: new Date("2024-04-20") },
-  { id: "c5", name: "Tunde Bakare", email: "tunde@email.com", phone: "+234 805 999 0000", loyaltyTier: "gold", points: 3100, totalSpent: 220000, visitCount: 64, lastVisit: new Date("2024-06-13"), notes: "Corporate account", tags: ["Corporate", "VIP"], createdAt: new Date("2023-09-01") },
+  { id: "c1", firstName: "Adebayo", lastName: "Johnson", email: "adebayo@email.com", phone: "+234 801 111 2222", loyaltyTier: "gold", points: 2450, totalSpent: 185000, visitCount: 47, lastVisit: new Date("2024-06-12"), notes: "Prefers organic coffee", createdAt: new Date("2023-06-01") },
+  { id: "c2", firstName: "Chioma", lastName: "Okafor", email: "chioma@email.com", phone: "+234 802 333 4444", loyaltyTier: "platinum", points: 6200, totalSpent: 340000, visitCount: 102, lastVisit: new Date("2024-06-14"), notes: "Loves croissants", createdAt: new Date("2023-03-15") },
+  { id: "c3", firstName: "Musa", lastName: "Abdullahi", email: "musa@email.com", phone: "+234 803 555 6666", loyaltyTier: "silver", points: 820, totalSpent: 65000, visitCount: 18, lastVisit: new Date("2024-06-08"), notes: "", createdAt: new Date("2024-01-10") },
+  { id: "c4", firstName: "Ngozi", lastName: "Eze", email: "ngozi@email.com", phone: "+234 804 777 8888", loyaltyTier: "bronze", points: 150, totalSpent: 12500, visitCount: 5, lastVisit: new Date("2024-05-20"), notes: "Walk-in customer", createdAt: new Date("2024-04-20") },
+  { id: "c5", firstName: "Tunde", lastName: "Bakare", email: "tunde@email.com", phone: "+234 805 999 0000", loyaltyTier: "gold", points: 3100, totalSpent: 220000, visitCount: 64, lastVisit: new Date("2024-06-13"), notes: "Corporate account", createdAt: new Date("2023-09-01") },
 ];
 
 const defaultRewards: LoyaltyReward[] = [
@@ -83,22 +83,23 @@ function CustomerFormDialog({
 }: {
   open: boolean; onOpenChange: (o: boolean) => void; customer: Customer | null; onSave: (c: Customer) => void;
 }) {
-  const [name, setName] = useState(customer?.name ?? "");
+  const [firstName, setFirstName] = useState(customer?.firstName ?? "");
+  const [lastName, setLastName] = useState(customer?.lastName ?? "");
   const [email, setEmail] = useState(customer?.email ?? "");
   const [phone, setPhone] = useState(customer?.phone ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
-  const [tagsStr, setTagsStr] = useState(customer?.tags.join(", ") ?? "");
 
   const handleSave = () => {
-    if (!name.trim()) { toast.error("Name is required"); return; }
+    if (!firstName.trim()) { toast.error("First name is required"); return; }
+    if (!lastName.trim()) { toast.error("Last name is required"); return; }
     onSave({
       id: customer?.id ?? crypto.randomUUID(),
-      name: name.trim(), email: email.trim(), phone: phone.trim(),
+      firstName: firstName.trim(), lastName: lastName.trim(),
+      email: email.trim(), phone: phone.trim(),
       loyaltyTier: customer?.loyaltyTier ?? "bronze",
       points: customer?.points ?? 0, totalSpent: customer?.totalSpent ?? 0,
       visitCount: customer?.visitCount ?? 0, lastVisit: customer?.lastVisit ?? null,
       notes: notes.trim(),
-      tags: tagsStr.split(",").map((t) => t.trim()).filter(Boolean),
       createdAt: customer?.createdAt ?? new Date(),
     });
     onOpenChange(false);
@@ -109,12 +110,14 @@ function CustomerFormDialog({
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>{customer ? "Edit Customer" : "Add Customer"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>First Name *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+            <div><Label>Last Name *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
           </div>
-          <div><Label>Tags (comma-separated)</Label><Input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="VIP, Corporate..." /></div>
           <div><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
@@ -142,7 +145,7 @@ export default function CustomerManagement() {
     if (tierFilter !== "all") list = list.filter((c) => c.loyaltyTier === tierFilter);
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter((c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q));
+      list = list.filter((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q));
     }
     return list;
   }, [customers, tierFilter, search]);
@@ -260,7 +263,6 @@ export default function CustomerManagement() {
                     <th className="text-right p-3 font-medium">Total Spent</th>
                     <th className="text-right p-3 font-medium">Visits</th>
                     <th className="text-left p-3 font-medium">Last Visit</th>
-                    <th className="text-left p-3 font-medium">Tags</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -269,7 +271,7 @@ export default function CustomerManagement() {
                     return (
                       <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setDetailCustomer(c); setDetailOpen(true); }}>
                         <td className="p-3">
-                          <div className="font-medium">{c.name}</div>
+                          <div className="font-medium">{c.firstName} {c.lastName}</div>
                           <div className="text-xs text-muted-foreground">{c.email || c.phone}</div>
                         </td>
                         <td className="p-3"><Badge variant="secondary" className={cn("text-xs", tc.color)}>{tc.label}</Badge></td>
@@ -277,11 +279,6 @@ export default function CustomerManagement() {
                         <td className="p-3 text-right">{fmt(c.totalSpent)}</td>
                         <td className="p-3 text-right">{c.visitCount}</td>
                         <td className="p-3 text-muted-foreground">{c.lastVisit ? format(c.lastVisit, "MMM d, yyyy") : "—"}</td>
-                        <td className="p-3">
-                          <div className="flex gap-1 flex-wrap">
-                            {c.tags.map((t) => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}
-                          </div>
-                        </td>
                       </tr>
                     );
                   })}
