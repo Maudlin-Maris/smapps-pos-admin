@@ -130,9 +130,7 @@ function CustomerFormDialog({
 }
 
 export default function CustomerManagement() {
-  const [tab, setTab] = useState<Tab>("customers");
   const [customers, setCustomers] = useState<Customer[]>(defaultCustomers);
-  const [rewards, setRewards] = useState<LoyaltyReward[]>(defaultRewards);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
@@ -169,22 +167,12 @@ export default function CustomerManagement() {
     setEditCustomer(null);
   };
 
-  const toggleReward = (id: string) => {
-    setRewards((prev) => prev.map((r) => r.id === id ? { ...r, isActive: !r.isActive } : r));
-  };
-
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "customers", label: `Customers (${customers.length})` },
-    { key: "loyalty", label: "Loyalty Tiers" },
-    { key: "rewards", label: `Rewards (${rewards.filter((r) => r.isActive).length})` },
-  ];
-
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight">Customers & Loyalty</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage customer relationships and loyalty programs</p>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">Customers</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage customer relationships</p>
         </div>
         <Button className="gap-1.5" onClick={() => { setEditCustomer(null); setFormOpen(true); }}>
           <Plus className="h-4 w-4" /> Add Customer
@@ -219,129 +207,65 @@ export default function CustomerManagement() {
         </Card>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-muted p-1 rounded-lg w-fit">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={cn("px-4 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap", tab === t.key ? "bg-card shadow-sm" : "text-muted-foreground")}>{t.label}</button>
-        ))}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input className="pl-9 h-9" placeholder="Search customers..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <Select value={tierFilter} onValueChange={setTierFilter}>
+          <SelectTrigger className="w-[130px] h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tiers</SelectItem>
+            {Object.entries(tierConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
-      {tab === "customers" && (
-        <>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9 h-9" placeholder="Search customers..." value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
-            <Select value={tierFilter} onValueChange={setTierFilter}>
-              <SelectTrigger className="w-[130px] h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tiers</SelectItem>
-                {Object.entries(tierConfig).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+      <PaginationControls
+        page={page}
+        totalPages={totalPages}
+        perPage={perPage}
+        totalItems={totalItems}
+        pageSizeOptions={pageSizeOptions}
+        onPageChange={setPage}
+        onPerPageChange={setPerPage}
+      />
 
-          <PaginationControls
-            page={page}
-            totalPages={totalPages}
-            perPage={perPage}
-            totalItems={totalItems}
-            pageSizeOptions={pageSizeOptions}
-            onPageChange={setPage}
-            onPerPageChange={setPerPage}
-          />
-
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="text-left p-3 font-medium">Customer</th>
-                    <th className="text-left p-3 font-medium">Tier</th>
-                    <th className="text-right p-3 font-medium">Points</th>
-                    <th className="text-right p-3 font-medium">Total Spent</th>
-                    <th className="text-right p-3 font-medium">Visits</th>
-                    <th className="text-left p-3 font-medium">Last Visit</th>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b">
+              <tr>
+                <th className="text-left p-3 font-medium">Customer</th>
+                <th className="text-left p-3 font-medium">Tier</th>
+                <th className="text-right p-3 font-medium">Points</th>
+                <th className="text-right p-3 font-medium">Total Spent</th>
+                <th className="text-right p-3 font-medium">Visits</th>
+                <th className="text-left p-3 font-medium">Last Visit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedCustomers.map((c) => {
+                const tc = tierConfig[c.loyaltyTier];
+                return (
+                  <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setDetailCustomer(c); setDetailOpen(true); }}>
+                    <td className="p-3">
+                      <div className="font-medium">{c.firstName} {c.lastName}</div>
+                      <div className="text-xs text-muted-foreground">{c.email || c.phone}</div>
+                    </td>
+                    <td className="p-3"><Badge variant="secondary" className={cn("text-xs", tc.color)}>{tc.label}</Badge></td>
+                    <td className="p-3 text-right font-medium">{c.points.toLocaleString()}</td>
+                    <td className="p-3 text-right">{fmt(c.totalSpent)}</td>
+                    <td className="p-3 text-right">{c.visitCount}</td>
+                    <td className="p-3 text-muted-foreground">{c.lastVisit ? format(c.lastVisit, "MMM d, yyyy") : "—"}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {paginatedCustomers.map((c) => {
-                    const tc = tierConfig[c.loyaltyTier];
-                    return (
-                      <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setDetailCustomer(c); setDetailOpen(true); }}>
-                        <td className="p-3">
-                          <div className="font-medium">{c.firstName} {c.lastName}</div>
-                          <div className="text-xs text-muted-foreground">{c.email || c.phone}</div>
-                        </td>
-                        <td className="p-3"><Badge variant="secondary" className={cn("text-xs", tc.color)}>{tc.label}</Badge></td>
-                        <td className="p-3 text-right font-medium">{c.points.toLocaleString()}</td>
-                        <td className="p-3 text-right">{fmt(c.totalSpent)}</td>
-                        <td className="p-3 text-right">{c.visitCount}</td>
-                        <td className="p-3 text-muted-foreground">{c.lastVisit ? format(c.lastVisit, "MMM d, yyyy") : "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-        </>
-      )}
-
-      {tab === "loyalty" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.entries(tierConfig).map(([key, tc]) => {
-            const count = customers.filter((c) => c.loyaltyTier === key).length;
-            const Icon = tc.icon;
-            return (
-              <Card key={key} className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={cn("h-12 w-12 rounded-xl flex items-center justify-center", tc.color)}>
-                    <Icon className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-heading font-semibold text-lg">{tc.label}</h3>
-                    <p className="text-xs text-muted-foreground">{tc.minPoints.toLocaleString()}+ points</p>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Members</span><span className="font-medium">{count}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Earn Rate</span><span className="font-medium">₦100 = 1 pt</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Bonus</span><span className="font-medium">{key === "platinum" ? "3x" : key === "gold" ? "2x" : key === "silver" ? "1.5x" : "1x"} points</span></div>
-                </div>
-              </Card>
-            );
-          })}
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-      )}
+      </Card>
 
-      {tab === "rewards" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rewards.map((r) => (
-            <Card key={r.id} className={cn("p-5 transition-opacity", !r.isActive && "opacity-50")}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                    <Gift className="h-5 w-5 text-warning" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{r.name}</h3>
-                    <p className="text-xs text-muted-foreground">{r.description}</p>
-                  </div>
-                </div>
-                <Badge variant={r.isActive ? "default" : "secondary"} className="text-xs cursor-pointer" onClick={() => toggleReward(r.id)}>
-                  {r.isActive ? "Active" : "Inactive"}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Star className="h-4 w-4 text-warning" />
-                <span className="font-medium">{r.pointsCost.toLocaleString()} points</span>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
 
       <CustomerFormDialog open={formOpen} onOpenChange={setFormOpen} customer={editCustomer} onSave={handleSave} />
       <CustomerDetailPanel
