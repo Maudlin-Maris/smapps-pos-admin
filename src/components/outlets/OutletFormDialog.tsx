@@ -179,11 +179,6 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>{isEdit ? "Save Changes" : "Create Outlet"}</Button>
-          </div>
-
           <Separator />
 
           <div className="space-y-4">
@@ -250,6 +245,11 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSubmit}>{isEdit ? "Save Changes" : "Create Outlet"}</Button>
         </div>
       </DialogContent>
     </Dialog>
