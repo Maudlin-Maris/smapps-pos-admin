@@ -145,7 +145,7 @@ export default function CustomerManagement() {
     if (tierFilter !== "all") list = list.filter((c) => c.loyaltyTier === tierFilter);
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter((c) => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q));
+      list = list.filter((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q));
     }
     return list;
   }, [customers, tierFilter, search]);
