@@ -385,7 +385,7 @@ export default function LoyaltyManagement() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                    <p className="text-2xl font-heading font-bold">{kpi.value}</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-heading font-bold">{kpi.value}</p>
                     {kpi.sub && <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>}
                   </div>
                 </div>
@@ -409,7 +409,7 @@ export default function LoyaltyManagement() {
                       </Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                      <p className="text-3xl font-heading font-bold">{t.count}</p>
+                      <p className="text-xl sm:text-2xl lg:text-3xl font-heading font-bold">{t.count}</p>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Users className="h-3.5 w-3.5" />
                         <span>customers</span>
