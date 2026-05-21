@@ -840,9 +840,12 @@ export default function LoyaltyManagement() {
             <p className="text-xs text-muted-foreground mt-4">
               Bronze always starts at 0. Thresholds must increase with each tier.
             </p>
-
-            <Button className="mt-6" onClick={() => toast.success("Settings saved")}>Save Settings</Button>
           </Card>
+
+          {/* Save applies to Points Earning Rules, Per-Outlet Overrides, and Tier Thresholds */}
+          <div className="flex justify-end">
+            <Button onClick={() => toast.success("Settings saved")}>Save Settings</Button>
+          </div>
 
           {/* Program behaviour */}
           <Card className="p-6">
