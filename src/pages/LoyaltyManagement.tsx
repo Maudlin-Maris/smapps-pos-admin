@@ -408,9 +408,15 @@ export default function LoyaltyManagement() {
                         {t.label}
                       </Badge>
                     </div>
-                    <p className="text-3xl font-heading font-bold">{t.count}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-3xl font-heading font-bold">{t.count}</p>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Users className="h-3.5 w-3.5" />
+                        <span>customers</span>
+                      </div>
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {t.minPoints.toLocaleString()}+ pts • {t.earnMultiplier}x earn rate
+                      {t.minPoints.toLocaleString()}+ pts &bull; {t.earnMultiplier}x earn rate
                     </p>
                   </Card>
                 );
