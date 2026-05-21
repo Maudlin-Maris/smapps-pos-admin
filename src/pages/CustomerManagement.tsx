@@ -26,7 +26,8 @@ type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
 interface Customer {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   loyaltyTier: LoyaltyTier;
@@ -35,7 +36,6 @@ interface Customer {
   visitCount: number;
   lastVisit: Date | null;
   notes: string;
-  tags: string[];
   createdAt: Date;
 }
 
