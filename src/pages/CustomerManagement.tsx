@@ -83,22 +83,23 @@ function CustomerFormDialog({
 }: {
   open: boolean; onOpenChange: (o: boolean) => void; customer: Customer | null; onSave: (c: Customer) => void;
 }) {
-  const [name, setName] = useState(customer?.name ?? "");
+  const [firstName, setFirstName] = useState(customer?.firstName ?? "");
+  const [lastName, setLastName] = useState(customer?.lastName ?? "");
   const [email, setEmail] = useState(customer?.email ?? "");
   const [phone, setPhone] = useState(customer?.phone ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
-  const [tagsStr, setTagsStr] = useState(customer?.tags.join(", ") ?? "");
 
   const handleSave = () => {
-    if (!name.trim()) { toast.error("Name is required"); return; }
+    if (!firstName.trim()) { toast.error("First name is required"); return; }
+    if (!lastName.trim()) { toast.error("Last name is required"); return; }
     onSave({
       id: customer?.id ?? crypto.randomUUID(),
-      name: name.trim(), email: email.trim(), phone: phone.trim(),
+      firstName: firstName.trim(), lastName: lastName.trim(),
+      email: email.trim(), phone: phone.trim(),
       loyaltyTier: customer?.loyaltyTier ?? "bronze",
       points: customer?.points ?? 0, totalSpent: customer?.totalSpent ?? 0,
       visitCount: customer?.visitCount ?? 0, lastVisit: customer?.lastVisit ?? null,
       notes: notes.trim(),
-      tags: tagsStr.split(",").map((t) => t.trim()).filter(Boolean),
       createdAt: customer?.createdAt ?? new Date(),
     });
     onOpenChange(false);
@@ -109,12 +110,14 @@ function CustomerFormDialog({
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>{customer ? "Edit Customer" : "Add Customer"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          <div><Label>Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>First Name *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
+            <div><Label>Last Name *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
           </div>
-          <div><Label>Tags (comma-separated)</Label><Input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="VIP, Corporate..." /></div>
           <div><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
