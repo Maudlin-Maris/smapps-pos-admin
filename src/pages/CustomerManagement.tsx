@@ -263,7 +263,6 @@ export default function CustomerManagement() {
                     <th className="text-right p-3 font-medium">Total Spent</th>
                     <th className="text-right p-3 font-medium">Visits</th>
                     <th className="text-left p-3 font-medium">Last Visit</th>
-                    <th className="text-left p-3 font-medium">Tags</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -272,7 +271,7 @@ export default function CustomerManagement() {
                     return (
                       <tr key={c.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => { setDetailCustomer(c); setDetailOpen(true); }}>
                         <td className="p-3">
-                          <div className="font-medium">{c.name}</div>
+                          <div className="font-medium">{c.firstName} {c.lastName}</div>
                           <div className="text-xs text-muted-foreground">{c.email || c.phone}</div>
                         </td>
                         <td className="p-3"><Badge variant="secondary" className={cn("text-xs", tc.color)}>{tc.label}</Badge></td>
@@ -280,11 +279,6 @@ export default function CustomerManagement() {
                         <td className="p-3 text-right">{fmt(c.totalSpent)}</td>
                         <td className="p-3 text-right">{c.visitCount}</td>
                         <td className="p-3 text-muted-foreground">{c.lastVisit ? format(c.lastVisit, "MMM d, yyyy") : "—"}</td>
-                        <td className="p-3">
-                          <div className="flex gap-1 flex-wrap">
-                            {c.tags.map((t) => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}
-                          </div>
-                        </td>
                       </tr>
                     );
                   })}
