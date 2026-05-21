@@ -130,9 +130,7 @@ function CustomerFormDialog({
 }
 
 export default function CustomerManagement() {
-  const [tab, setTab] = useState<Tab>("customers");
   const [customers, setCustomers] = useState<Customer[]>(defaultCustomers);
-  const [rewards, setRewards] = useState<LoyaltyReward[]>(defaultRewards);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
