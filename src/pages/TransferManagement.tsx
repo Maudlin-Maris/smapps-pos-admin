@@ -238,6 +238,7 @@ function TransferCreate() {
     })) ?? []
   );
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<null | "draft" | "submit">(null);
 
   // Guard: can only edit DRAFT transfers via this screen
   useEffect(() => {
