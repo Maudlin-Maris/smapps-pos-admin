@@ -583,6 +583,7 @@ function TransferDetails() {
   const transfers = useTransfers();
   const t = transfers.find((x) => x.id === id);
   const [actionDialog, setActionDialog] = useState<null | "approve" | "reject" | "dispatch" | "receive" | "cancel">(null);
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   if (!t) {
     return (
