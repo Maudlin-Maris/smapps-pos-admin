@@ -220,8 +220,19 @@ function TransferCreate() {
   const [notes, setNotes]       = useState(existing?.notes ?? "");
   const [carrier, setCarrier]   = useState(existing?.carrier ?? "");
   const [search, setSearch]     = useState("");
-  const [lines, setLines]       = useState<{ itemId: string; qty: number }[]>(
-    existing?.items.map((it) => ({ itemId: it.inventoryItemId, qty: it.requestedQty })) ?? []
+  type LineDraft = {
+    itemId: string;
+    qty: number;
+    strategy: ValuationStrategy;
+    customCost?: number;
+  };
+  const [lines, setLines] = useState<LineDraft[]>(
+    existing?.items.map((it) => ({
+      itemId: it.inventoryItemId,
+      qty: it.requestedQty,
+      strategy: it.valuationStrategy ?? "source",
+      customCost: it.customUnitCost,
+    })) ?? []
   );
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -252,10 +263,14 @@ function TransferCreate() {
     : [];
 
   const addLine = (itemId: string) => {
-    setLines((prev) => prev.find((l) => l.itemId === itemId) ? prev : [...prev, { itemId, qty: 1 }]);
+    setLines((prev) => prev.find((l) => l.itemId === itemId) ? prev : [...prev, { itemId, qty: 1, strategy: "source" }]);
   };
   const updateQty = (itemId: string, qty: number) =>
     setLines((prev) => prev.map((l) => l.itemId === itemId ? { ...l, qty } : l));
+  const updateStrategy = (itemId: string, strategy: ValuationStrategy) =>
+    setLines((prev) => prev.map((l) => l.itemId === itemId ? { ...l, strategy } : l));
+  const updateCustomCost = (itemId: string, customCost: number) =>
+    setLines((prev) => prev.map((l) => l.itemId === itemId ? { ...l, customCost } : l));
   const removeLine = (itemId: string) =>
     setLines((prev) => prev.filter((l) => l.itemId !== itemId));
 
