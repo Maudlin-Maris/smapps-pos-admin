@@ -629,12 +629,7 @@ function TransferDetails() {
                 <Pencil className="h-4 w-4" /> Edit Draft
               </Button>
               <Button size="sm" variant="outline" className="gap-1.5 text-destructive"
-                      onClick={() => {
-                        if (!confirm("Discard this draft? This cannot be undone.")) return;
-                        deleteTransfer(t.id);
-                        toast.success("Draft discarded");
-                        nav("/inventory/transfers");
-                      }}>
+                      onClick={() => setDiscardOpen(true)}>
                 <Trash2 className="h-4 w-4" /> Discard
               </Button>
               <Button size="sm" className="gap-1.5"
