@@ -774,29 +774,46 @@ function TransferDetails() {
                 <th className="text-right p-3 font-medium">Received</th>
                 <th className="text-right p-3 font-medium">Damaged</th>
                 <th className="text-right p-3 font-medium">Variance</th>
-                <th className="text-right p-3 font-medium">Cost</th>
+                <th className="text-right p-3 font-medium" title="Cost used to recompute destination WAC">Incoming Cost</th>
+                <th className="text-right p-3 font-medium" title="Destination WAC before this transfer">Dest. WAC (before)</th>
+                <th className="text-right p-3 font-medium" title="Destination WAC after this transfer">Dest. WAC (after)</th>
+                <th className="text-right p-3 font-medium">Line Total</th>
               </tr>
             </thead>
             <tbody>
-              {t.items.map((it) => (
-                <tr key={it.id} className="border-b">
-                  <td className="p-3">
-                    <div className="font-medium">{it.itemName}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{it.sku} · {it.unit}</div>
-                  </td>
-                  <td className="p-3 text-right">{it.requestedQty}</td>
-                  <td className="p-3 text-right">{it.approvedQty}</td>
-                  <td className="p-3 text-right">{it.dispatchedQty}</td>
-                  <td className="p-3 text-right text-success">{it.receivedQty}</td>
-                  <td className="p-3 text-right text-destructive">{it.damagedQty}</td>
-                  <td className={cn("p-3 text-right", it.varianceQty !== 0 && "text-warning font-medium")}>
-                    {it.varianceQty}
-                  </td>
-                  <td className="p-3 text-right text-muted-foreground">
-                    ₦{(it.unitCost * (it.dispatchedQty || it.approvedQty || it.requestedQty)).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
+              {t.items.map((it) => {
+                const incoming = typeof it.incomingUnitCost === "number"
+                  ? it.incomingUnitCost
+                  : (it.valuationStrategy === "custom" && it.customUnitCost ? it.customUnitCost : it.unitCost);
+                const strategyLabel = it.valuationStrategy === "custom" ? "Custom" : "Source WAC";
+                return (
+                  <tr key={it.id} className="border-b">
+                    <td className="p-3">
+                      <div className="font-medium">{it.itemName}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{it.sku} · {it.unit}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">Valuation: {strategyLabel}</div>
+                    </td>
+                    <td className="p-3 text-right">{it.requestedQty}</td>
+                    <td className="p-3 text-right">{it.approvedQty}</td>
+                    <td className="p-3 text-right">{it.dispatchedQty}</td>
+                    <td className="p-3 text-right text-success">{it.receivedQty}</td>
+                    <td className="p-3 text-right text-destructive">{it.damagedQty}</td>
+                    <td className={cn("p-3 text-right", it.varianceQty !== 0 && "text-warning font-medium")}>
+                      {it.varianceQty}
+                    </td>
+                    <td className="p-3 text-right">₦{incoming.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                    <td className="p-3 text-right text-muted-foreground">
+                      {typeof it.destWacBefore === "number" ? `₦${it.destWacBefore.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
+                    </td>
+                    <td className="p-3 text-right font-medium text-info">
+                      {typeof it.destWacAfter === "number" ? `₦${it.destWacAfter.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
+                    </td>
+                    <td className="p-3 text-right text-muted-foreground">
+                      ₦{(incoming * (it.dispatchedQty || it.approvedQty || it.requestedQty)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
