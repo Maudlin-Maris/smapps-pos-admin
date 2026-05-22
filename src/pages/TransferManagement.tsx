@@ -238,6 +238,7 @@ function TransferCreate() {
     })) ?? []
   );
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<null | "draft" | "submit">(null);
 
   // Guard: can only edit DRAFT transfers via this screen
   useEffect(() => {
@@ -681,8 +682,8 @@ function TransferCreate() {
       </Card>
 
       <div className="flex flex-col sm:flex-row justify-end gap-2">
-        <Button variant="outline" onClick={() => onSave(false)}>{isEditing ? "Save Draft" : "Save as Draft"}</Button>
-        <Button onClick={() => onSave(true)} className="gap-1.5">
+        <Button variant="outline" onClick={() => setConfirmAction("draft")}>{isEditing ? "Save Draft" : "Save as Draft"}</Button>
+        <Button onClick={() => setConfirmAction("submit")} className="gap-1.5">
           <Send className="h-4 w-4" /> Submit for Approval
         </Button>
       </div>
@@ -703,6 +704,28 @@ function TransferCreate() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirm Draft / Submit */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(o) => !o && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === "draft" ? (isEditing ? "Update Draft?" : "Save as Draft?") : "Submit for Approval?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === "draft"
+                ? (isEditing ? "This will overwrite the existing draft with your changes." : "This will save the transfer as a draft you can edit later.")
+                : "This will submit the transfer for approval. You won't be able to edit it afterwards."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmAction(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { onSave(confirmAction === "submit"); setConfirmAction(null); }}>
+              {confirmAction === "draft" ? "Save Draft" : "Submit"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -717,6 +740,7 @@ function TransferDetails() {
   const t = transfers.find((x) => x.id === id);
   const [actionDialog, setActionDialog] = useState<null | "approve" | "reject" | "dispatch" | "receive" | "cancel">(null);
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [confirmSubmit, setConfirmSubmit] = useState(false);
 
   if (!t) {
     return (
@@ -766,7 +790,7 @@ function TransferDetails() {
                 <Trash2 className="h-4 w-4" /> Discard
               </Button>
               <Button size="sm" className="gap-1.5"
-                      onClick={() => { try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); } }}>
+                      onClick={() => setConfirmSubmit(true)}>
                 <Send className="h-4 w-4" /> Submit
               </Button>
             </>
@@ -972,6 +996,29 @@ function TransferDetails() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Submit from details page */}
+      <AlertDialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit for Approval?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will submit the transfer for approval. You won't be able to edit it afterwards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmSubmit(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); }
+                setConfirmSubmit(false);
+              }}
+            >
+              Submit
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
