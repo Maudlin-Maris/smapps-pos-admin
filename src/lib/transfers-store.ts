@@ -62,11 +62,42 @@ export function getEffectiveStock(outletId: string, itemId: string): number {
   return seedQty + (o[overlayKey(outletId, itemId)] || 0);
 }
 
-// All items at a given location (seeded items at that outlet, with overlay applied)
-export function listLocationInventory(outletId: string) {
-  return defaultInventoryItems
-    .filter((i) => i.outletId === outletId)
-    .map((i) => ({
+// ── Cost (WAC) overlay ──
+type CostOverlay = Record<string, number>;
+function loadCostOverlay(): CostOverlay { return read<CostOverlay>(KEY_COST, {}); }
+function saveCostOverlay(o: CostOverlay) { write(KEY_COST, o); }
+
+export function getEffectiveCost(outletId: string, itemId: string): number {
+  const o = loadCostOverlay();
+  const override = o[overlayKey(outletId, itemId)];
+  if (typeof override === "number") return override;
+  const seed = defaultInventoryItems.find(
+    (i) => i.id === itemId && i.outletId === outletId
+  );
+  if (seed) return seed.costPrice;
+  // Fall back to any seed for that item (e.g. dest doesn't yet stock it)
+  const any = defaultInventoryItems.find((i) => i.id === itemId);
+  return any ? any.costPrice : 0;
+}
+
+export function setEffectiveCost(outletId: string, itemId: string, wac: number) {
+  const o = loadCostOverlay();
+  o[overlayKey(outletId, itemId)] = wac;
+  saveCostOverlay(o);
+}
+
+// Compute projected destination WAC after receiving `qty` at `incomingCost`.
+export function projectDestWac(
+  destOutletId: string, itemId: string, qty: number, incomingCost: number
+): { before: number; after: number } {
+  const destQty = getEffectiveStock(destOutletId, itemId);
+  const destWac = getEffectiveCost(destOutletId, itemId);
+  const totalQty = destQty + qty;
+  const after = totalQty > 0
+    ? ((destQty * destWac) + (qty * incomingCost)) / totalQty
+    : incomingCost;
+  return { before: destWac, after };
+}
       id: i.id,
       name: i.name,
       sku: i.sku,
