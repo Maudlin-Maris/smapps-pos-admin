@@ -790,7 +790,7 @@ function TransferDetails() {
                 <Trash2 className="h-4 w-4" /> Discard
               </Button>
               <Button size="sm" className="gap-1.5"
-                      onClick={() => { try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); } }}>
+                      onClick={() => setConfirmSubmit(true)}>
                 <Send className="h-4 w-4" /> Submit
               </Button>
             </>
