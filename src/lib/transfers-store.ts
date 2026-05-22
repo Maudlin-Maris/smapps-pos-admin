@@ -306,6 +306,21 @@ export function receiveTransfer(
     const dmgDelta  = Math.max(0, Math.min(r.damaged,  it.dispatchedQty - it.receivedQty - recvDelta));
 
     if (recvDelta > 0) {
+      // Recompute destination WAC against actual received qty using the chosen incoming cost
+      const incomingCost = typeof it.incomingUnitCost === "number"
+        ? it.incomingUnitCost
+        : (it.valuationStrategy === "custom" && typeof it.customUnitCost === "number"
+            ? it.customUnitCost
+            : it.unitCost);
+      const destQty = getEffectiveStock(t.destination.id, it.inventoryItemId);
+      const destWac = getEffectiveCost(t.destination.id, it.inventoryItemId);
+      const totalQty = destQty + recvDelta;
+      const newWac = totalQty > 0
+        ? ((destQty * destWac) + (recvDelta * incomingCost)) / totalQty
+        : incomingCost;
+      setEffectiveCost(t.destination.id, it.inventoryItemId, newWac);
+      it.destWacAfter = newWac;
+
       applyDelta(t.destination.id, it.inventoryItemId, +recvDelta);
       appendMovement(buildMovement(t, it, "TRANSFER_IN", t.destination.id, +recvDelta, r.notes));
       it.receivedQty += recvDelta;
