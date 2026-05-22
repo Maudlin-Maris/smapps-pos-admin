@@ -601,7 +601,7 @@ function TransferDetails() {
     approve: t.status === "PENDING_APPROVAL",
     dispatch: t.status === "APPROVED",
     receive: t.status === "IN_TRANSIT" || t.status === "PARTIALLY_RECEIVED",
-    cancel: !["RECEIVED", "CANCELLED", "REJECTED"].includes(t.status),
+    cancel: t.status !== "DRAFT" && !["RECEIVED", "CANCELLED", "REJECTED"].includes(t.status),
   };
 
   return (
