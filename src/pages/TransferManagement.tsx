@@ -222,6 +222,7 @@ function TransferCreate() {
   const [lines, setLines]       = useState<{ itemId: string; qty: number }[]>(
     existing?.items.map((it) => ({ itemId: it.inventoryItemId, qty: it.requestedQty })) ?? []
   );
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   // Guard: can only edit DRAFT transfers via this screen
   useEffect(() => {
