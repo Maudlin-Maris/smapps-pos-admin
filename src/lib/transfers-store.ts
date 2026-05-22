@@ -18,6 +18,7 @@ import {
 const KEY_TRANSFERS = "smapps_transfers_v2";
 const KEY_MOVEMENTS = "smapps_inventory_movements_v1";
 const KEY_OVERLAY   = "smapps_inventory_stock_overlay_v1";
+const KEY_COST      = "smapps_inventory_cost_overlay_v1";
 const KEY_COUNTER   = "smapps_transfers_counter_v1";
 
 // ── Utilities ──
