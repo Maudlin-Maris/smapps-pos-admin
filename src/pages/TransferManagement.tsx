@@ -1000,6 +1000,29 @@ function TransferDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirm Submit from details page */}
+      <AlertDialog open={confirmSubmit} onOpenChange={setConfirmSubmit}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Submit for Approval?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will submit the transfer for approval. You won't be able to edit it afterwards.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmSubmit(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); }
+                setConfirmSubmit(false);
+              }}
+            >
+              Submit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
