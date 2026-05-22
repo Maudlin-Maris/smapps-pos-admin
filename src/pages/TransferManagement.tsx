@@ -12,6 +12,10 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -218,6 +222,7 @@ function TransferCreate() {
   const [lines, setLines]       = useState<{ itemId: string; qty: number }[]>(
     existing?.items.map((it) => ({ itemId: it.inventoryItemId, qty: it.requestedQty })) ?? []
   );
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   // Guard: can only edit DRAFT transfers via this screen
   useEffect(() => {
@@ -255,7 +260,10 @@ function TransferCreate() {
 
   const onDiscard = () => {
     if (!existing) { nav("/inventory/transfers"); return; }
-    if (!confirm("Discard this draft? This cannot be undone.")) return;
+    setDiscardOpen(true);
+  };
+  const confirmDiscard = () => {
+    if (!existing) return;
     deleteTransfer(existing.id);
     toast.success("Draft discarded");
     nav("/inventory/transfers");
@@ -545,6 +553,23 @@ function TransferCreate() {
           <Send className="h-4 w-4" /> Submit for Approval
         </Button>
       </div>
+
+      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the draft transfer. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDiscard} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -558,6 +583,7 @@ function TransferDetails() {
   const transfers = useTransfers();
   const t = transfers.find((x) => x.id === id);
   const [actionDialog, setActionDialog] = useState<null | "approve" | "reject" | "dispatch" | "receive" | "cancel">(null);
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   if (!t) {
     return (
@@ -603,12 +629,7 @@ function TransferDetails() {
                 <Pencil className="h-4 w-4" /> Edit Draft
               </Button>
               <Button size="sm" variant="outline" className="gap-1.5 text-destructive"
-                      onClick={() => {
-                        if (!confirm("Discard this draft? This cannot be undone.")) return;
-                        deleteTransfer(t.id);
-                        toast.success("Draft discarded");
-                        nav("/inventory/transfers");
-                      }}>
+                      onClick={() => setDiscardOpen(true)}>
                 <Trash2 className="h-4 w-4" /> Discard
               </Button>
               <Button size="sm" className="gap-1.5"
@@ -781,6 +802,30 @@ function TransferDetails() {
         transfer={t}
         onClose={() => setActionDialog(null)}
       />
+
+      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the draft transfer. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteTransfer(t.id);
+                toast.success("Draft discarded");
+                nav("/inventory/transfers");
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
