@@ -16,13 +16,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   ArrowLeft, ArrowLeftRight, ArrowRight, Plus, Search, Trash2, Truck,
   PackageCheck, Send, ShieldCheck, ShieldX, X, Eye, History, AlertTriangle,
-  Warehouse, Store as StoreIcon, ScanBarcode, Pencil,
+  Warehouse, Store as StoreIcon, ScanBarcode, Pencil, Info,
 } from "lucide-react";
 import {
   listTransfers, listLocations, listLocationInventory, getEffectiveStock,
@@ -534,19 +537,84 @@ function TransferCreate() {
             {lines.length > 0 && (
               <div className="border rounded-lg overflow-x-auto">
                 <table className="w-full text-sm min-w-[900px]">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="text-left p-2 font-medium">Selected Item</th>
-                      <th className="text-right p-2 font-medium">Transferable</th>
-                      <th className="text-right p-2 font-medium">Qty</th>
-                      <th className="text-right p-2 font-medium" title="Available quantity at destination outlet">Dest. Qty</th>
-                      <th className="text-right p-2 font-medium" title="Source WAC (current cost at source outlet)">Source Cost</th>
-                      <th className="text-left p-2 font-medium">Valuation</th>
-                      <th className="text-right p-2 font-medium">Incoming Cost</th>
-                      <th className="text-right p-2 font-medium" title="Projected destination WAC after this transfer">Expected Dest. WAC</th>
-                      <th className="p-2" />
-                    </tr>
-                  </thead>
+                  <TooltipProvider>
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-2 font-medium">Selected Item</th>
+                        <th className="text-right p-2 font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                Transferable <Info className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Quantity available to transfer after accounting for reservations.</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="text-right p-2 font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                Qty <Info className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Quantity you want to transfer.</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="text-right p-2 font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                Dest. Qty <Info className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Current available quantity of this item at the destination outlet.</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="text-right p-2 font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                Source Cost <Info className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Current weighted average cost (WAC) of this item at the source outlet.</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="text-left p-2 font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                Valuation <Info className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Choose whether to use the source WAC or a custom cost for this transfer.</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="text-right p-2 font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                Incoming Cost <Info className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Unit cost that will be applied to this incoming stock at the destination.</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="text-right p-2 font-medium">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="inline-flex items-center gap-1 cursor-help">
+                                Expected Dest. Cost <Info className="h-3 w-3 text-muted-foreground" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>Projected destination WAC after receiving this transfer.</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="p-2" />
+                      </tr>
+                    </thead>
+                  </TooltipProvider>
                   <tbody>
                     {lines.map((l) => {
                       const i = listLocationInventory(sourceId).find((x) => x.id === l.itemId);
