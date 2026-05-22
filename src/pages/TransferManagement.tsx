@@ -541,7 +541,6 @@ function TransferCreate() {
                       <th className="text-right p-2 font-medium">Qty</th>
                       <th className="text-right p-2 font-medium" title="Available quantity at destination outlet">Dest. Qty</th>
                       <th className="text-right p-2 font-medium" title="Source WAC (current cost at source outlet)">Source Cost</th>
-                      <th className="text-right p-2 font-medium" title="Destination WAC before this transfer">Dest. WAC</th>
                       <th className="text-left p-2 font-medium">Valuation</th>
                       <th className="text-right p-2 font-medium">Incoming Cost</th>
                       <th className="text-right p-2 font-medium" title="Projected destination WAC after this transfer">Expected Dest. WAC</th>
@@ -555,7 +554,6 @@ function TransferCreate() {
                       const reserved = getReservedQty(sourceId, i.id);
                       const transferable = Math.max(0, i.stock - reserved);
                       const destQty = destId ? getEffectiveStock(destId, i.id) : 0;
-                      const destWac = destId ? getEffectiveCost(destId, i.id) : 0;
                       const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
                       const projected = destId
                         ? projectDestWac(destId, i.id, Math.max(0, l.qty || 0), incomingCost).after
@@ -576,9 +574,6 @@ function TransferCreate() {
                             {destId ? destQty : <span className="text-muted-foreground">—</span>}
                           </td>
                           <td className="p-2 text-right">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-                          <td className="p-2 text-right">
-                            {destId ? `₦${destWac.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : <span className="text-muted-foreground">—</span>}
-                          </td>
                           <td className="p-2">
                             <Select value={l.strategy} onValueChange={(v) => updateStrategy(l.itemId, v as ValuationStrategy)}>
                               <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
