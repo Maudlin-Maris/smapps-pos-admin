@@ -26,13 +26,14 @@ import {
 } from "lucide-react";
 import {
   listTransfers, listLocations, listLocationInventory, getEffectiveStock,
+  getEffectiveCost, projectDestWac,
   getReservedQty, nextReference, upsertTransfer, getTransfer,
   submitForApproval, approveTransfer, rejectTransfer, dispatchTransfer,
   receiveTransfer, cancelTransfer, listMovements, deleteTransfer, audit,
 } from "@/lib/transfers-store";
 import {
   type StockTransferV2, type TransferStatus, type TransferItem,
-  type TransferLocation, type TransferReason,
+  type TransferLocation, type TransferReason, type ValuationStrategy,
   TRANSFER_STATUS_META, REASON_LABELS, ACTIVE_STATUSES,
 } from "@/data/transferTypes";
 
