@@ -98,11 +98,17 @@ export function projectDestWac(
     : incomingCost;
   return { before: destWac, after };
 }
+
+// All items at a given location (seeded items at that outlet, with overlay applied)
+export function listLocationInventory(outletId: string) {
+  return defaultInventoryItems
+    .filter((i) => i.outletId === outletId)
+    .map((i) => ({
       id: i.id,
       name: i.name,
       sku: i.sku,
       unit: "unit",
-      unitCost: i.costPrice,
+      unitCost: getEffectiveCost(outletId, i.id),
       stock: getEffectiveStock(outletId, i.id),
       minStock: i.minStock,
     }));
