@@ -24,7 +24,7 @@ import {
   listTransfers, listLocations, listLocationInventory, getEffectiveStock,
   getReservedQty, nextReference, upsertTransfer, getTransfer,
   submitForApproval, approveTransfer, rejectTransfer, dispatchTransfer,
-  receiveTransfer, cancelTransfer, listMovements,
+  receiveTransfer, cancelTransfer, listMovements, deleteTransfer, audit,
 } from "@/lib/transfers-store";
 import {
   type StockTransferV2, type TransferStatus, type TransferItem,
