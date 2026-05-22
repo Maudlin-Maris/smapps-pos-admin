@@ -533,12 +533,18 @@ function TransferCreate() {
             {/* Selected lines */}
             {lines.length > 0 && (
               <div className="border rounded-lg overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[900px]">
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="text-left p-2 font-medium">Selected Item</th>
                       <th className="text-right p-2 font-medium">Transferable</th>
-                      <th className="text-right p-2 font-medium">Requested Qty</th>
+                      <th className="text-right p-2 font-medium">Qty</th>
+                      <th className="text-right p-2 font-medium" title="Available quantity at destination outlet">Dest. Qty</th>
+                      <th className="text-right p-2 font-medium" title="Source WAC (current cost at source outlet)">Source Cost</th>
+                      <th className="text-right p-2 font-medium" title="Destination WAC before this transfer">Dest. WAC</th>
+                      <th className="text-left p-2 font-medium">Valuation</th>
+                      <th className="text-right p-2 font-medium">Incoming Cost</th>
+                      <th className="text-right p-2 font-medium" title="Projected destination WAC after this transfer">Expected Dest. WAC</th>
                       <th className="p-2" />
                     </tr>
                   </thead>
@@ -548,8 +554,14 @@ function TransferCreate() {
                       if (!i) return null;
                       const reserved = getReservedQty(sourceId, i.id);
                       const transferable = Math.max(0, i.stock - reserved);
+                      const destQty = destId ? getEffectiveStock(destId, i.id) : 0;
+                      const destWac = destId ? getEffectiveCost(destId, i.id) : 0;
+                      const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
+                      const projected = destId
+                        ? projectDestWac(destId, i.id, Math.max(0, l.qty || 0), incomingCost).after
+                        : incomingCost;
                       return (
-                        <tr key={l.itemId} className="border-t">
+                        <tr key={l.itemId} className="border-t align-top">
                           <td className="p-2">
                             <div className="font-medium">{i.name}</div>
                             <div className="text-xs text-muted-foreground font-mono">{i.sku}</div>
@@ -558,7 +570,36 @@ function TransferCreate() {
                           <td className="p-2 text-right">
                             <Input type="number" min={1} max={transferable} value={l.qty}
                                    onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 0)}
-                                   className="h-8 w-24 ml-auto text-right" />
+                                   className="h-8 w-20 ml-auto text-right" />
+                          </td>
+                          <td className="p-2 text-right">
+                            {destId ? destQty : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="p-2 text-right">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                          <td className="p-2 text-right">
+                            {destId ? `₦${destWac.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="p-2">
+                            <Select value={l.strategy} onValueChange={(v) => updateStrategy(l.itemId, v as ValuationStrategy)}>
+                              <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="source">Source WAC</SelectItem>
+                                <SelectItem value="custom">Custom Cost</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-2 text-right">
+                            {l.strategy === "custom" ? (
+                              <Input type="number" min={0} step="0.01" value={l.customCost ?? ""}
+                                     placeholder="Cost"
+                                     onChange={(e) => updateCustomCost(l.itemId, parseFloat(e.target.value) || 0)}
+                                     className="h-8 w-28 ml-auto text-right" />
+                            ) : (
+                              <span className="text-muted-foreground">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-right font-medium text-info">
+                            {destId ? `₦${projected.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : <span className="text-muted-foreground">—</span>}
                           </td>
                           <td className="p-2 text-right">
                             <Button size="icon" variant="ghost" onClick={() => removeLine(l.itemId)}>
