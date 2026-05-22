@@ -539,7 +539,7 @@ function TransferCreate() {
       </Card>
 
       <div className="flex flex-col sm:flex-row justify-end gap-2">
-        <Button variant="outline" onClick={() => onSave(false)}>Save as Draft</Button>
+        <Button variant="outline" onClick={() => onSave(false)}>{isEditing ? "Save Draft" : "Save as Draft"}</Button>
         <Button onClick={() => onSave(true)} className="gap-1.5">
           <Send className="h-4 w-4" /> Submit for Approval
         </Button>
