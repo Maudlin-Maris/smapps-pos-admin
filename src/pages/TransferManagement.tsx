@@ -304,7 +304,14 @@ function TransferCreate() {
       if (submit) {
         if (l.qty <= 0) return toast.error(`Quantity for ${i.name} must be > 0`);
         if (l.qty > transferable) return toast.error(`${i.name}: only ${transferable} transferable`);
+        if (l.strategy === "custom" && (!l.customCost || l.customCost <= 0)) {
+          return toast.error(`${i.name}: enter a valid custom unit cost`);
+        }
       }
+      const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
+      const destAvailable = getEffectiveStock(destId, i.id);
+      const { before, after } = projectDestWac(destId, i.id, Math.max(0, l.qty || 0), incomingCost);
+
       // Preserve existing line id if editing
       const prior = existing?.items.find((it) => it.inventoryItemId === i.id);
       items.push({
@@ -323,6 +330,12 @@ function TransferCreate() {
         receivedQty: 0,
         damagedQty: 0,
         varianceQty: 0,
+        destAvailableQty: destAvailable,
+        destWacBefore: before,
+        valuationStrategy: l.strategy,
+        customUnitCost: l.strategy === "custom" ? l.customCost : undefined,
+        incomingUnitCost: incomingCost,
+        destWacAfter: after,
       });
     }
 
