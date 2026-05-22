@@ -128,6 +128,10 @@ export function upsertTransfer(t: StockTransferV2) {
   if (idx >= 0) list[idx] = t; else list.unshift(t);
   saveTransfers(list);
 }
+export function deleteTransfer(id: string) {
+  const list = listTransfers().filter((t) => t.id !== id);
+  saveTransfers(list);
+}
 
 // ── Movements ledger ──
 export function listMovements(): InventoryMovement[] {
