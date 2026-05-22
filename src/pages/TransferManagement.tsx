@@ -553,6 +553,23 @@ function TransferCreate() {
           <Send className="h-4 w-4" /> Submit for Approval
         </Button>
       </div>
+
+      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard Draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the draft transfer. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDiscard} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
