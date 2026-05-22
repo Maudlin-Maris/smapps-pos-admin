@@ -704,6 +704,28 @@ function TransferCreate() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirm Draft / Submit */}
+      <AlertDialog open={!!confirmAction} onOpenChange={(o) => !o && setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction === "draft" ? (isEditing ? "Update Draft?" : "Save as Draft?") : "Submit for Approval?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction === "draft"
+                ? (isEditing ? "This will overwrite the existing draft with your changes." : "This will save the transfer as a draft you can edit later.")
+                : "This will submit the transfer for approval. You won't be able to edit it afterwards."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmAction(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { onSave(confirmAction === "submit"); setConfirmAction(null); }}>
+              {confirmAction === "draft" ? "Save Draft" : "Submit"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
