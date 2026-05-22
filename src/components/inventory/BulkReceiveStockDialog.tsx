@@ -13,7 +13,6 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { Store, MapPin } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Package, TrendingUp, Tag, Truck, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Package, TrendingUp, Truck, ChevronDown, ChevronUp, MapPin, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryItem } from "./InventoryItemForm";
