@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { Store, MapPin } from "lucide-react";
 import {
   Select,
   SelectContent,
