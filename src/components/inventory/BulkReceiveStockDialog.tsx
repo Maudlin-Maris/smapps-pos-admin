@@ -81,8 +81,8 @@ export default function BulkReceiveStockDialog({
     outletId && outletId !== "all" ? outletId : (outlets[0]?.id ?? "")
   );
 
-  const isAllMode = outletId === "all";
-  const effectiveOutletId = isAllMode ? activeOutletId : outletId;
+  // Outlet selector is always available on the form regardless of context
+  const effectiveOutletId = activeOutletId;
   const outlet = outlets.find(o => o.id === effectiveOutletId);
   const isRetail = outlet ? RETAIL_BUSINESS_TYPES.includes(outlet.businessType) : false;
   const isBatchTracked = outlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(outlet.businessType) : false;
