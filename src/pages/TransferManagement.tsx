@@ -260,7 +260,10 @@ function TransferCreate() {
 
   const onDiscard = () => {
     if (!existing) { nav("/inventory/transfers"); return; }
-    if (!confirm("Discard this draft? This cannot be undone.")) return;
+    setDiscardOpen(true);
+  };
+  const confirmDiscard = () => {
+    if (!existing) return;
     deleteTransfer(existing.id);
     toast.success("Draft discarded");
     nav("/inventory/transfers");
