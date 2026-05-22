@@ -599,7 +599,7 @@ function TransferDetails() {
             <>
               <Button size="sm" variant="outline" className="gap-1.5"
                       onClick={() => nav(`/inventory/transfers/${t.id}/edit`)}>
-                <Plus className="h-4 w-4 rotate-45" /> Edit Draft
+                <Pencil className="h-4 w-4" /> Edit Draft
               </Button>
               <Button size="sm" variant="outline" className="gap-1.5 text-destructive"
                       onClick={() => {
