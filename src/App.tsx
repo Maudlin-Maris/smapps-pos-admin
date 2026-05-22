@@ -60,6 +60,7 @@ const App = () => (
                 <Route path="/inventory" element={<Protected><InventoryManagement /></Protected>} />
                 <Route path="/inventory/transfers" element={<Protected><TransferManagement /></Protected>} />
                 <Route path="/inventory/transfers/new" element={<Protected><TransferManagementCreate /></Protected>} />
+                <Route path="/inventory/transfers/:id/edit" element={<Protected><TransferManagementCreate /></Protected>} />
                 <Route path="/inventory/transfers/:id" element={<Protected><TransferManagementDetails /></Protected>} />
                 <Route path="/inventory/history" element={<Protected><InventoryHistory /></Protected>} />
                 <Route path="/customers" element={<Protected><CustomerManagement /></Protected>} />

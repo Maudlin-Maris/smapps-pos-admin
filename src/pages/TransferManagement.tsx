@@ -18,13 +18,13 @@ import { format } from "date-fns";
 import {
   ArrowLeft, ArrowLeftRight, ArrowRight, Plus, Search, Trash2, Truck,
   PackageCheck, Send, ShieldCheck, ShieldX, X, Eye, History, AlertTriangle,
-  Warehouse, Store as StoreIcon, ScanBarcode,
+  Warehouse, Store as StoreIcon, ScanBarcode, Pencil,
 } from "lucide-react";
 import {
   listTransfers, listLocations, listLocationInventory, getEffectiveStock,
   getReservedQty, nextReference, upsertTransfer, getTransfer,
   submitForApproval, approveTransfer, rejectTransfer, dispatchTransfer,
-  receiveTransfer, cancelTransfer, listMovements,
+  receiveTransfer, cancelTransfer, listMovements, deleteTransfer, audit,
 } from "@/lib/transfers-store";
 import {
   type StockTransferV2, type TransferStatus, type TransferItem,
@@ -202,14 +202,41 @@ function TransferList() {
 // ─────────────────────────────────────────────────────────────────────────────
 function TransferCreate() {
   const nav = useNavigate();
+  const { id: editId } = useParams();
   const locations = listLocations();
-  const [sourceId, setSourceId] = useState("");
-  const [destId, setDestId]     = useState("");
-  const [reason, setReason]     = useState<TransferReason>("replenishment");
-  const [notes, setNotes]       = useState("");
-  const [carrier, setCarrier]   = useState("");
+
+  // Load existing draft if editing
+  const existing = useMemo(() => (editId ? getTransfer(editId) : undefined), [editId]);
+  const isEditing = Boolean(editId);
+
+  const [sourceId, setSourceId] = useState(existing?.source.id ?? "");
+  const [destId, setDestId]     = useState(existing?.destination.id ?? "");
+  const [reason, setReason]     = useState<TransferReason>(existing?.reason ?? "replenishment");
+  const [notes, setNotes]       = useState(existing?.notes ?? "");
+  const [carrier, setCarrier]   = useState(existing?.carrier ?? "");
   const [search, setSearch]     = useState("");
-  const [lines, setLines]       = useState<{ itemId: string; qty: number }[]>([]);
+  const [lines, setLines]       = useState<{ itemId: string; qty: number }[]>(
+    existing?.items.map((it) => ({ itemId: it.inventoryItemId, qty: it.requestedQty })) ?? []
+  );
+
+  // Guard: can only edit DRAFT transfers via this screen
+  useEffect(() => {
+    if (isEditing && existing && existing.status !== "DRAFT") {
+      toast.error("Only draft transfers can be edited");
+      nav(`/inventory/transfers/${existing.id}`, { replace: true });
+    }
+    if (isEditing && !existing) {
+      toast.error("Draft not found");
+      nav("/inventory/transfers", { replace: true });
+    }
+  }, [isEditing, existing, nav]);
+
+  // If source changes, drop lines that no longer exist at the new source
+  useEffect(() => {
+    if (!sourceId) return;
+    const inv = listLocationInventory(sourceId);
+    setLines((prev) => prev.filter((l) => inv.some((i) => i.id === l.itemId)));
+  }, [sourceId]);
 
   const sourceItems = sourceId
     ? listLocationInventory(sourceId).filter((i) =>
@@ -226,10 +253,18 @@ function TransferCreate() {
   const removeLine = (itemId: string) =>
     setLines((prev) => prev.filter((l) => l.itemId !== itemId));
 
+  const onDiscard = () => {
+    if (!existing) { nav("/inventory/transfers"); return; }
+    if (!confirm("Discard this draft? This cannot be undone.")) return;
+    deleteTransfer(existing.id);
+    toast.success("Draft discarded");
+    nav("/inventory/transfers");
+  };
+
   const onSave = (submit: boolean) => {
     if (!sourceId || !destId) return toast.error("Select source and destination");
     if (sourceId === destId) return toast.error("Source and destination must differ");
-    if (lines.length === 0) return toast.error("Add at least one item");
+    if (submit && lines.length === 0) return toast.error("Add at least one item");
 
     const src = locations.find((l) => l.id === sourceId)!;
     const dst = locations.find((l) => l.id === destId)!;
@@ -242,10 +277,14 @@ function TransferCreate() {
       if (!i) continue;
       const reserved = getReservedQty(sourceId, i.id);
       const transferable = Math.max(0, i.stock - reserved);
-      if (l.qty <= 0) return toast.error(`Quantity for ${i.name} must be > 0`);
-      if (l.qty > transferable) return toast.error(`${i.name}: only ${transferable} transferable`);
+      if (submit) {
+        if (l.qty <= 0) return toast.error(`Quantity for ${i.name} must be > 0`);
+        if (l.qty > transferable) return toast.error(`${i.name}: only ${transferable} transferable`);
+      }
+      // Preserve existing line id if editing
+      const prior = existing?.items.find((it) => it.inventoryItemId === i.id);
       items.push({
-        id: crypto.randomUUID(),
+        id: prior?.id ?? crypto.randomUUID(),
         inventoryItemId: i.id,
         itemName: i.name,
         sku: i.sku,
@@ -254,7 +293,7 @@ function TransferCreate() {
         availableQty: i.stock,
         reservedQty: reserved,
         transferableQty: transferable,
-        requestedQty: l.qty,
+        requestedQty: Math.max(0, l.qty || 0),
         approvedQty: 0,
         dispatchedQty: 0,
         receivedQty: 0,
@@ -263,43 +302,70 @@ function TransferCreate() {
       });
     }
 
-    const t: StockTransferV2 = {
-      id: crypto.randomUUID(),
-      reference: nextReference(),
-      source: src,
-      destination: dst,
-      status: "DRAFT",
-      reason,
-      items,
-      notes: notes.trim(),
-      carrier: carrier.trim() || undefined,
-      createdAt: new Date().toISOString(),
-      createdBy: "Current User",
-      audit: [{
-        id: crypto.randomUUID(),
-        ts: new Date().toISOString(),
-        actor: "Current User",
-        action: "CREATED",
-      }],
-    };
+    const t: StockTransferV2 = existing
+      ? {
+          ...existing,
+          source: src,
+          destination: dst,
+          reason,
+          notes: notes.trim(),
+          carrier: carrier.trim() || undefined,
+          items,
+        }
+      : {
+          id: crypto.randomUUID(),
+          reference: nextReference(),
+          source: src,
+          destination: dst,
+          status: "DRAFT",
+          reason,
+          items,
+          notes: notes.trim(),
+          carrier: carrier.trim() || undefined,
+          createdAt: new Date().toISOString(),
+          createdBy: "Current User",
+          audit: [{
+            id: crypto.randomUUID(),
+            ts: new Date().toISOString(),
+            actor: "Current User",
+            action: "CREATED",
+          }],
+        };
+
+    if (existing) {
+      audit(t, { actor: "Current User", action: "EDITED" });
+    }
     upsertTransfer(t);
 
     if (submit) {
       try { submitForApproval(t.id); } catch (e: any) { toast.error(e.message); return; }
       toast.success("Transfer submitted for approval");
+      nav(`/inventory/transfers/${t.id}`);
     } else {
-      toast.success("Draft saved");
+      toast.success(isEditing ? "Draft updated" : "Draft saved");
+      nav(`/inventory/transfers/${t.id}`);
     }
-    nav(`/inventory/transfers/${t.id}`);
   };
 
   return (
     <div className="space-y-5 max-w-5xl pb-20 lg:pb-0">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={() => nav("/inventory/transfers")}>
-          <ArrowLeft className="h-4 w-4 mr-1" /> Back
-        </Button>
-        <h1 className="text-xl font-heading font-bold">New Stock Transfer</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => nav("/inventory/transfers")}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+          <h1 className="text-xl font-heading font-bold">
+            {isEditing ? "Edit Draft Transfer" : "New Stock Transfer"}
+          </h1>
+          {isEditing && existing && (
+            <span className="font-mono text-xs text-muted-foreground">{existing.reference}</span>
+          )}
+        </div>
+        {isEditing && (
+          <Button variant="outline" size="sm" className="gap-1.5 text-destructive" onClick={onDiscard}>
+            <Trash2 className="h-4 w-4" /> Discard Draft
+          </Button>
+        )}
       </div>
 
       <Card className="p-4 space-y-4">
@@ -473,7 +539,7 @@ function TransferCreate() {
       </Card>
 
       <div className="flex flex-col sm:flex-row justify-end gap-2">
-        <Button variant="outline" onClick={() => onSave(false)}>Save as Draft</Button>
+        <Button variant="outline" onClick={() => onSave(false)}>{isEditing ? "Save Draft" : "Save as Draft"}</Button>
         <Button onClick={() => onSave(true)} className="gap-1.5">
           <Send className="h-4 w-4" /> Submit for Approval
         </Button>
@@ -530,10 +596,25 @@ function TransferDetails() {
         </div>
         <div className="flex flex-wrap gap-2">
           {can.submit && (
-            <Button size="sm" className="gap-1.5"
-                    onClick={() => { try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); } }}>
-              <Send className="h-4 w-4" /> Submit
-            </Button>
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5"
+                      onClick={() => nav(`/inventory/transfers/${t.id}/edit`)}>
+                <Pencil className="h-4 w-4" /> Edit Draft
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5 text-destructive"
+                      onClick={() => {
+                        if (!confirm("Discard this draft? This cannot be undone.")) return;
+                        deleteTransfer(t.id);
+                        toast.success("Draft discarded");
+                        nav("/inventory/transfers");
+                      }}>
+                <Trash2 className="h-4 w-4" /> Discard
+              </Button>
+              <Button size="sm" className="gap-1.5"
+                      onClick={() => { try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); } }}>
+                <Send className="h-4 w-4" /> Submit
+              </Button>
+            </>
           )}
           {can.approve && (
             <>
