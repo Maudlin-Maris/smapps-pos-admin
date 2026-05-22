@@ -198,29 +198,45 @@ export default function BulkReceiveStockDialog({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-3xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+        <SheetHeader className="px-6 pt-6 pb-5 border-b bg-gradient-to-br from-primary/5 via-background to-background">
+          <div className="flex items-start gap-3">
+            <div className="h-11 w-11 rounded-xl bg-primary/10 ring-1 ring-primary/20 flex items-center justify-center shrink-0">
               <Truck className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <SheetTitle className="text-lg">Receive Shipment</SheetTitle>
+              <SheetTitle className="text-lg leading-tight">Receive Shipment</SheetTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Select items, enter quantities, and receive all at once{!isAllMode && outlet ? ` — ${outlet.name}` : ""}
+                Select items, enter quantities and cost, then receive in one go.
               </p>
             </div>
-            {isAllMode && (
-              <Select value={activeOutletId} onValueChange={setActiveOutletId}>
-                <SelectTrigger className="w-[200px] h-9">
-                  <SelectValue placeholder="Select outlet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {outlets.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+          </div>
+
+          {/* Destination outlet selector */}
+          <div className="mt-4 rounded-lg border bg-card px-3 py-2.5 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-md bg-accent/10 flex items-center justify-center shrink-0">
+              <MapPin className="h-4 w-4 text-accent-foreground/70" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Receive into outlet</p>
+              <p className="text-xs text-muted-foreground/80 truncate">
+                {outlet ? `${outletItems.length} item${outletItems.length === 1 ? "" : "s"} available at this location` : "Choose a destination location"}
+              </p>
+            </div>
+            <Select value={activeOutletId} onValueChange={setActiveOutletId}>
+              <SelectTrigger className="w-[200px] h-9">
+                <SelectValue placeholder="Select outlet" />
+              </SelectTrigger>
+              <SelectContent>
+                {outlets.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    <div className="flex items-center gap-2">
+                      <Store className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>{o.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </SheetHeader>
 
