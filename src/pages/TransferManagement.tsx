@@ -596,10 +596,25 @@ function TransferDetails() {
         </div>
         <div className="flex flex-wrap gap-2">
           {can.submit && (
-            <Button size="sm" className="gap-1.5"
-                    onClick={() => { try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); } }}>
-              <Send className="h-4 w-4" /> Submit
-            </Button>
+            <>
+              <Button size="sm" variant="outline" className="gap-1.5"
+                      onClick={() => nav(`/inventory/transfers/${t.id}/edit`)}>
+                <Plus className="h-4 w-4 rotate-45" /> Edit Draft
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5 text-destructive"
+                      onClick={() => {
+                        if (!confirm("Discard this draft? This cannot be undone.")) return;
+                        deleteTransfer(t.id);
+                        toast.success("Draft discarded");
+                        nav("/inventory/transfers");
+                      }}>
+                <Trash2 className="h-4 w-4" /> Discard
+              </Button>
+              <Button size="sm" className="gap-1.5"
+                      onClick={() => { try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); } }}>
+                <Send className="h-4 w-4" /> Submit
+              </Button>
+            </>
           )}
           {can.approve && (
             <>
