@@ -18,7 +18,7 @@ import { format } from "date-fns";
 import {
   ArrowLeft, ArrowLeftRight, ArrowRight, Plus, Search, Trash2, Truck,
   PackageCheck, Send, ShieldCheck, ShieldX, X, Eye, History, AlertTriangle,
-  Warehouse, Store as StoreIcon, ScanBarcode,
+  Warehouse, Store as StoreIcon, ScanBarcode, Pencil,
 } from "lucide-react";
 import {
   listTransfers, listLocations, listLocationInventory, getEffectiveStock,
