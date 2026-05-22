@@ -212,6 +212,15 @@ export function approveTransfer(id: string, lineApprovals: Record<string, number
                - getReservedQty(t.source.id, it.inventoryItemId)
                + (it.approvedQty); // exclude self
     it.approvedQty = Math.max(0, Math.min(approved, Math.max(0, live)));
+
+    // Recalculate destination WAC using chosen incoming cost
+    const incomingCost = it.valuationStrategy === "custom" && typeof it.customUnitCost === "number"
+      ? it.customUnitCost
+      : it.unitCost;
+    const { before, after } = projectDestWac(t.destination.id, it.inventoryItemId, it.approvedQty, incomingCost);
+    it.incomingUnitCost = incomingCost;
+    it.destWacBefore = before;
+    it.destWacAfter = after;
   }
   t.status = "APPROVED";
   t.approvedAt = new Date().toISOString();
