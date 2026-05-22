@@ -20,6 +20,8 @@ export interface TransferLocation {
   kind: LocationKind;
 }
 
+export type ValuationStrategy = "source" | "custom";
+
 export interface TransferItem {
   id: string;                  // line id
   inventoryItemId: string;
@@ -27,7 +29,7 @@ export interface TransferItem {
   sku: string;
   barcode?: string;
   unit: string;                // unit label snapshot
-  unitCost: number;            // snapshot at create time
+  unitCost: number;            // source WAC snapshot at create time
 
   // Quantities — every column in the lifecycle
   availableQty: number;        // snapshot of source stock at creation
@@ -39,6 +41,14 @@ export interface TransferItem {
   receivedQty: number;
   damagedQty: number;
   varianceQty: number;         // dispatched - (received + damaged); set on receive
+
+  // Destination valuation (WAC) snapshots
+  destAvailableQty?: number;
+  destWacBefore?: number;
+  valuationStrategy?: ValuationStrategy;
+  customUnitCost?: number;
+  incomingUnitCost?: number;
+  destWacAfter?: number;
 
   // Optional batch / expiry support (pharmacy, grocery)
   batchNumber?: string;

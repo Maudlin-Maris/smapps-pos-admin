@@ -18,6 +18,7 @@ import {
 const KEY_TRANSFERS = "smapps_transfers_v2";
 const KEY_MOVEMENTS = "smapps_inventory_movements_v1";
 const KEY_OVERLAY   = "smapps_inventory_stock_overlay_v1";
+const KEY_COST      = "smapps_inventory_cost_overlay_v1";
 const KEY_COUNTER   = "smapps_transfers_counter_v1";
 
 // ── Utilities ──
@@ -61,6 +62,43 @@ export function getEffectiveStock(outletId: string, itemId: string): number {
   return seedQty + (o[overlayKey(outletId, itemId)] || 0);
 }
 
+// ── Cost (WAC) overlay ──
+type CostOverlay = Record<string, number>;
+function loadCostOverlay(): CostOverlay { return read<CostOverlay>(KEY_COST, {}); }
+function saveCostOverlay(o: CostOverlay) { write(KEY_COST, o); }
+
+export function getEffectiveCost(outletId: string, itemId: string): number {
+  const o = loadCostOverlay();
+  const override = o[overlayKey(outletId, itemId)];
+  if (typeof override === "number") return override;
+  const seed = defaultInventoryItems.find(
+    (i) => i.id === itemId && i.outletId === outletId
+  );
+  if (seed) return seed.costPrice;
+  // Fall back to any seed for that item (e.g. dest doesn't yet stock it)
+  const any = defaultInventoryItems.find((i) => i.id === itemId);
+  return any ? any.costPrice : 0;
+}
+
+export function setEffectiveCost(outletId: string, itemId: string, wac: number) {
+  const o = loadCostOverlay();
+  o[overlayKey(outletId, itemId)] = wac;
+  saveCostOverlay(o);
+}
+
+// Compute projected destination WAC after receiving `qty` at `incomingCost`.
+export function projectDestWac(
+  destOutletId: string, itemId: string, qty: number, incomingCost: number
+): { before: number; after: number } {
+  const destQty = getEffectiveStock(destOutletId, itemId);
+  const destWac = getEffectiveCost(destOutletId, itemId);
+  const totalQty = destQty + qty;
+  const after = totalQty > 0
+    ? ((destQty * destWac) + (qty * incomingCost)) / totalQty
+    : incomingCost;
+  return { before: destWac, after };
+}
+
 // All items at a given location (seeded items at that outlet, with overlay applied)
 export function listLocationInventory(outletId: string) {
   return defaultInventoryItems
@@ -70,7 +108,7 @@ export function listLocationInventory(outletId: string) {
       name: i.name,
       sku: i.sku,
       unit: "unit",
-      unitCost: i.costPrice,
+      unitCost: getEffectiveCost(outletId, i.id),
       stock: getEffectiveStock(outletId, i.id),
       minStock: i.minStock,
     }));
@@ -174,6 +212,15 @@ export function approveTransfer(id: string, lineApprovals: Record<string, number
                - getReservedQty(t.source.id, it.inventoryItemId)
                + (it.approvedQty); // exclude self
     it.approvedQty = Math.max(0, Math.min(approved, Math.max(0, live)));
+
+    // Recalculate destination WAC using chosen incoming cost
+    const incomingCost = it.valuationStrategy === "custom" && typeof it.customUnitCost === "number"
+      ? it.customUnitCost
+      : it.unitCost;
+    const { before, after } = projectDestWac(t.destination.id, it.inventoryItemId, it.approvedQty, incomingCost);
+    it.incomingUnitCost = incomingCost;
+    it.destWacBefore = before;
+    it.destWacAfter = after;
   }
   t.status = "APPROVED";
   t.approvedAt = new Date().toISOString();
@@ -259,6 +306,21 @@ export function receiveTransfer(
     const dmgDelta  = Math.max(0, Math.min(r.damaged,  it.dispatchedQty - it.receivedQty - recvDelta));
 
     if (recvDelta > 0) {
+      // Recompute destination WAC against actual received qty using the chosen incoming cost
+      const incomingCost = typeof it.incomingUnitCost === "number"
+        ? it.incomingUnitCost
+        : (it.valuationStrategy === "custom" && typeof it.customUnitCost === "number"
+            ? it.customUnitCost
+            : it.unitCost);
+      const destQty = getEffectiveStock(t.destination.id, it.inventoryItemId);
+      const destWac = getEffectiveCost(t.destination.id, it.inventoryItemId);
+      const totalQty = destQty + recvDelta;
+      const newWac = totalQty > 0
+        ? ((destQty * destWac) + (recvDelta * incomingCost)) / totalQty
+        : incomingCost;
+      setEffectiveCost(t.destination.id, it.inventoryItemId, newWac);
+      it.destWacAfter = newWac;
+
       applyDelta(t.destination.id, it.inventoryItemId, +recvDelta);
       appendMovement(buildMovement(t, it, "TRANSFER_IN", t.destination.id, +recvDelta, r.notes));
       it.receivedQty += recvDelta;

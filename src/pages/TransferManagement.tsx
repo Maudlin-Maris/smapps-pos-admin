@@ -26,13 +26,14 @@ import {
 } from "lucide-react";
 import {
   listTransfers, listLocations, listLocationInventory, getEffectiveStock,
+  getEffectiveCost, projectDestWac,
   getReservedQty, nextReference, upsertTransfer, getTransfer,
   submitForApproval, approveTransfer, rejectTransfer, dispatchTransfer,
   receiveTransfer, cancelTransfer, listMovements, deleteTransfer, audit,
 } from "@/lib/transfers-store";
 import {
   type StockTransferV2, type TransferStatus, type TransferItem,
-  type TransferLocation, type TransferReason,
+  type TransferLocation, type TransferReason, type ValuationStrategy,
   TRANSFER_STATUS_META, REASON_LABELS, ACTIVE_STATUSES,
 } from "@/data/transferTypes";
 
@@ -219,8 +220,19 @@ function TransferCreate() {
   const [notes, setNotes]       = useState(existing?.notes ?? "");
   const [carrier, setCarrier]   = useState(existing?.carrier ?? "");
   const [search, setSearch]     = useState("");
-  const [lines, setLines]       = useState<{ itemId: string; qty: number }[]>(
-    existing?.items.map((it) => ({ itemId: it.inventoryItemId, qty: it.requestedQty })) ?? []
+  type LineDraft = {
+    itemId: string;
+    qty: number;
+    strategy: ValuationStrategy;
+    customCost?: number;
+  };
+  const [lines, setLines] = useState<LineDraft[]>(
+    existing?.items.map((it) => ({
+      itemId: it.inventoryItemId,
+      qty: it.requestedQty,
+      strategy: it.valuationStrategy ?? "source",
+      customCost: it.customUnitCost,
+    })) ?? []
   );
   const [discardOpen, setDiscardOpen] = useState(false);
 
@@ -251,10 +263,14 @@ function TransferCreate() {
     : [];
 
   const addLine = (itemId: string) => {
-    setLines((prev) => prev.find((l) => l.itemId === itemId) ? prev : [...prev, { itemId, qty: 1 }]);
+    setLines((prev) => prev.find((l) => l.itemId === itemId) ? prev : [...prev, { itemId, qty: 1, strategy: "source" }]);
   };
   const updateQty = (itemId: string, qty: number) =>
     setLines((prev) => prev.map((l) => l.itemId === itemId ? { ...l, qty } : l));
+  const updateStrategy = (itemId: string, strategy: ValuationStrategy) =>
+    setLines((prev) => prev.map((l) => l.itemId === itemId ? { ...l, strategy } : l));
+  const updateCustomCost = (itemId: string, customCost: number) =>
+    setLines((prev) => prev.map((l) => l.itemId === itemId ? { ...l, customCost } : l));
   const removeLine = (itemId: string) =>
     setLines((prev) => prev.filter((l) => l.itemId !== itemId));
 
@@ -288,7 +304,14 @@ function TransferCreate() {
       if (submit) {
         if (l.qty <= 0) return toast.error(`Quantity for ${i.name} must be > 0`);
         if (l.qty > transferable) return toast.error(`${i.name}: only ${transferable} transferable`);
+        if (l.strategy === "custom" && (!l.customCost || l.customCost <= 0)) {
+          return toast.error(`${i.name}: enter a valid custom unit cost`);
+        }
       }
+      const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
+      const destAvailable = getEffectiveStock(destId, i.id);
+      const { before, after } = projectDestWac(destId, i.id, Math.max(0, l.qty || 0), incomingCost);
+
       // Preserve existing line id if editing
       const prior = existing?.items.find((it) => it.inventoryItemId === i.id);
       items.push({
@@ -307,6 +330,12 @@ function TransferCreate() {
         receivedQty: 0,
         damagedQty: 0,
         varianceQty: 0,
+        destAvailableQty: destAvailable,
+        destWacBefore: before,
+        valuationStrategy: l.strategy,
+        customUnitCost: l.strategy === "custom" ? l.customCost : undefined,
+        incomingUnitCost: incomingCost,
+        destWacAfter: after,
       });
     }
 
@@ -504,12 +533,18 @@ function TransferCreate() {
             {/* Selected lines */}
             {lines.length > 0 && (
               <div className="border rounded-lg overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[900px]">
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="text-left p-2 font-medium">Selected Item</th>
                       <th className="text-right p-2 font-medium">Transferable</th>
-                      <th className="text-right p-2 font-medium">Requested Qty</th>
+                      <th className="text-right p-2 font-medium">Qty</th>
+                      <th className="text-right p-2 font-medium" title="Available quantity at destination outlet">Dest. Qty</th>
+                      <th className="text-right p-2 font-medium" title="Source WAC (current cost at source outlet)">Source Cost</th>
+                      <th className="text-right p-2 font-medium" title="Destination WAC before this transfer">Dest. WAC</th>
+                      <th className="text-left p-2 font-medium">Valuation</th>
+                      <th className="text-right p-2 font-medium">Incoming Cost</th>
+                      <th className="text-right p-2 font-medium" title="Projected destination WAC after this transfer">Expected Dest. WAC</th>
                       <th className="p-2" />
                     </tr>
                   </thead>
@@ -519,8 +554,14 @@ function TransferCreate() {
                       if (!i) return null;
                       const reserved = getReservedQty(sourceId, i.id);
                       const transferable = Math.max(0, i.stock - reserved);
+                      const destQty = destId ? getEffectiveStock(destId, i.id) : 0;
+                      const destWac = destId ? getEffectiveCost(destId, i.id) : 0;
+                      const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
+                      const projected = destId
+                        ? projectDestWac(destId, i.id, Math.max(0, l.qty || 0), incomingCost).after
+                        : incomingCost;
                       return (
-                        <tr key={l.itemId} className="border-t">
+                        <tr key={l.itemId} className="border-t align-top">
                           <td className="p-2">
                             <div className="font-medium">{i.name}</div>
                             <div className="text-xs text-muted-foreground font-mono">{i.sku}</div>
@@ -529,7 +570,36 @@ function TransferCreate() {
                           <td className="p-2 text-right">
                             <Input type="number" min={1} max={transferable} value={l.qty}
                                    onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 0)}
-                                   className="h-8 w-24 ml-auto text-right" />
+                                   className="h-8 w-20 ml-auto text-right" />
+                          </td>
+                          <td className="p-2 text-right">
+                            {destId ? destQty : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="p-2 text-right">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                          <td className="p-2 text-right">
+                            {destId ? `₦${destWac.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="p-2">
+                            <Select value={l.strategy} onValueChange={(v) => updateStrategy(l.itemId, v as ValuationStrategy)}>
+                              <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="source">Source WAC</SelectItem>
+                                <SelectItem value="custom">Custom Cost</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="p-2 text-right">
+                            {l.strategy === "custom" ? (
+                              <Input type="number" min={0} step="0.01" value={l.customCost ?? ""}
+                                     placeholder="Cost"
+                                     onChange={(e) => updateCustomCost(l.itemId, parseFloat(e.target.value) || 0)}
+                                     className="h-8 w-28 ml-auto text-right" />
+                            ) : (
+                              <span className="text-muted-foreground">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-right font-medium text-info">
+                            {destId ? `₦${projected.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : <span className="text-muted-foreground">—</span>}
                           </td>
                           <td className="p-2 text-right">
                             <Button size="icon" variant="ghost" onClick={() => removeLine(l.itemId)}>
@@ -704,29 +774,46 @@ function TransferDetails() {
                 <th className="text-right p-3 font-medium">Received</th>
                 <th className="text-right p-3 font-medium">Damaged</th>
                 <th className="text-right p-3 font-medium">Variance</th>
-                <th className="text-right p-3 font-medium">Cost</th>
+                <th className="text-right p-3 font-medium" title="Cost used to recompute destination WAC">Incoming Cost</th>
+                <th className="text-right p-3 font-medium" title="Destination WAC before this transfer">Dest. WAC (before)</th>
+                <th className="text-right p-3 font-medium" title="Destination WAC after this transfer">Dest. WAC (after)</th>
+                <th className="text-right p-3 font-medium">Line Total</th>
               </tr>
             </thead>
             <tbody>
-              {t.items.map((it) => (
-                <tr key={it.id} className="border-b">
-                  <td className="p-3">
-                    <div className="font-medium">{it.itemName}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{it.sku} · {it.unit}</div>
-                  </td>
-                  <td className="p-3 text-right">{it.requestedQty}</td>
-                  <td className="p-3 text-right">{it.approvedQty}</td>
-                  <td className="p-3 text-right">{it.dispatchedQty}</td>
-                  <td className="p-3 text-right text-success">{it.receivedQty}</td>
-                  <td className="p-3 text-right text-destructive">{it.damagedQty}</td>
-                  <td className={cn("p-3 text-right", it.varianceQty !== 0 && "text-warning font-medium")}>
-                    {it.varianceQty}
-                  </td>
-                  <td className="p-3 text-right text-muted-foreground">
-                    ₦{(it.unitCost * (it.dispatchedQty || it.approvedQty || it.requestedQty)).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
+              {t.items.map((it) => {
+                const incoming = typeof it.incomingUnitCost === "number"
+                  ? it.incomingUnitCost
+                  : (it.valuationStrategy === "custom" && it.customUnitCost ? it.customUnitCost : it.unitCost);
+                const strategyLabel = it.valuationStrategy === "custom" ? "Custom" : "Source WAC";
+                return (
+                  <tr key={it.id} className="border-b">
+                    <td className="p-3">
+                      <div className="font-medium">{it.itemName}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{it.sku} · {it.unit}</div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">Valuation: {strategyLabel}</div>
+                    </td>
+                    <td className="p-3 text-right">{it.requestedQty}</td>
+                    <td className="p-3 text-right">{it.approvedQty}</td>
+                    <td className="p-3 text-right">{it.dispatchedQty}</td>
+                    <td className="p-3 text-right text-success">{it.receivedQty}</td>
+                    <td className="p-3 text-right text-destructive">{it.damagedQty}</td>
+                    <td className={cn("p-3 text-right", it.varianceQty !== 0 && "text-warning font-medium")}>
+                      {it.varianceQty}
+                    </td>
+                    <td className="p-3 text-right">₦{incoming.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                    <td className="p-3 text-right text-muted-foreground">
+                      {typeof it.destWacBefore === "number" ? `₦${it.destWacBefore.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
+                    </td>
+                    <td className="p-3 text-right font-medium text-info">
+                      {typeof it.destWacAfter === "number" ? `₦${it.destWacAfter.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : "—"}
+                    </td>
+                    <td className="p-3 text-right text-muted-foreground">
+                      ₦{(incoming * (it.dispatchedQty || it.approvedQty || it.requestedQty)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
