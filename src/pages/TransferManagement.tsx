@@ -507,7 +507,8 @@ function TransferCreate() {
                   </thead>
                   <tbody>
                     {lines.map((l) => {
-                      const i = listLocationInventory(sourceId).find((x) => x.id === l.itemId)!;
+                      const i = listLocationInventory(sourceId).find((x) => x.id === l.itemId);
+                      if (!i) return null;
                       const reserved = getReservedQty(sourceId, i.id);
                       const transferable = Math.max(0, i.stock - reserved);
                       return (
