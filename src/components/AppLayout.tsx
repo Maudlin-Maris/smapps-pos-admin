@@ -24,6 +24,7 @@ import {
   UserCog,
   Layers,
   Monitor,
+  Coins,
   type LucideIcon,
 } from "lucide-react";
 import type { PermissionId } from "@/lib/rbac";
@@ -65,6 +66,7 @@ const coreNavItems: NavItem[] = [
   { title: "Loyalty & Rewards", path: "/loyalty", icon: Gift, section: "Customers", permission: "loyalty.manage" },
   // Finance & Reports
   { title: "Expenses", path: "/expenses", icon: Receipt, section: "Finance", permission: "expenses.manage" },
+  { title: "Tips & Payouts", path: "/tips", icon: Coins, section: "Finance", permission: "tips.view" },
   { title: "Reports", path: "/reports", icon: FileBarChart, section: "Finance", permission: "reports.view" },
   
   // Settings

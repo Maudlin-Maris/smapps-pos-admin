@@ -23,6 +23,7 @@ import OutletManagement from "@/pages/OutletManagement";
 import SubscriptionManagement from "@/pages/SubscriptionManagement";
 import CashierManagement from "@/pages/CashierManagement";
 import LoyaltyManagement from "@/pages/LoyaltyManagement";
+import TipsManagement from "@/pages/TipsManagement";
 import POSMain from "@/pages/POS/POSMain";
 import PromoBundleManagement from "@/pages/PromoBundleManagement";
 import Auth from "@/pages/Auth";
@@ -68,6 +69,7 @@ const App = () => (
                 
                 <Route path="/reports" element={<Protected><Reports /></Protected>} />
                 <Route path="/expenses" element={<Protected><ExpenseManagement /></Protected>} />
+                <Route path="/tips" element={<Protected><TipsManagement /></Protected>} />
                 <Route path="/outlets" element={<Protected><OutletManagement /></Protected>} />
                 <Route path="/cashiers" element={<Protected><CashierManagement /></Protected>} />
                 <Route path="/subscription" element={<Protected><SubscriptionManagement /></Protected>} />
