@@ -37,6 +37,11 @@ export type PermissionId =
   | "reports.financial"
   | "reports.export"
   | "expenses.manage"
+  // Tips & Payouts
+  | "tips.view"
+  | "tips.payout.process"
+  | "tips.payout.approve"
+  | "tips.payout.reverse"
   // Settings
   | "outlets.manage"
   | "cashiers.manage"
@@ -116,6 +121,15 @@ export const PERMISSION_CATALOG: PermissionGroup[] = [
     ],
   },
   {
+    group: "Tips & Payouts",
+    permissions: [
+      { id: "tips.view", label: "View tips & payouts", description: "Access tips dashboard, ledgers and payout history" },
+      { id: "tips.payout.process", label: "Process tip payouts", description: "Create draft payouts and record full or partial disbursements" },
+      { id: "tips.payout.approve", label: "Approve tip payouts", description: "Approve and mark payouts as paid" },
+      { id: "tips.payout.reverse", label: "Reverse tip payouts", description: "Reverse a paid payout and restore tip liabilities" },
+    ],
+  },
+  {
     group: "Settings",
     permissions: [
       { id: "outlets.manage", label: "Manage outlets", description: "Create and configure store locations" },
@@ -171,6 +185,7 @@ const MANAGER_PERMISSIONS: PermissionId[] = [
   "bookings.view", "bookings.manage",
   "reports.view", "reports.financial", "reports.export",
   "expenses.manage",
+  "tips.view", "tips.payout.process", "tips.payout.approve",
   "cashiers.manage", "cashiers.reset_pin", "cashiers.suspend",
 ];
 
