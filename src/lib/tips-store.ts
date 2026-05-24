@@ -20,7 +20,7 @@ import { outlets } from "@/data/outlets";
 const TIPS_KEY = "smapps_tips_ledger_v1";
 const PAYOUTS_KEY = "smapps_tips_payouts_v1";
 const AUDIT_KEY = "smapps_tips_audit_v1";
-const SEEDED_KEY = "smapps_tips_seeded_v1";
+const SEEDED_KEY = "smapps_tips_seeded_v2";
 
 const DEFAULT_BUSINESS = "biz_default";
 
@@ -71,6 +71,11 @@ function seedIfNeeded() {
       for (let k = 0; k < count; k++) {
         const orderAmount = Math.round((2500 + Math.random() * 22500) / 50) * 50;
         const amount = Math.round((500 + Math.random() * 4500) / 50) * 50;
+        // Most orders are fully paid; ~20% are partially paid
+        const isPartial = Math.random() < 0.2;
+        const orderPaidAmount = isPartial
+          ? Math.round((orderAmount * (0.3 + Math.random() * 0.5)) / 50) * 50
+          : orderAmount;
         tips.push({
           id: uid("tip"),
           businessId: DEFAULT_BUSINESS,
@@ -80,6 +85,7 @@ function seedIfNeeded() {
           staffName: staff.name,
           orderId: `ORD-${1000 + i * 10 + k}`,
           orderAmount,
+          orderPaidAmount,
           amount,
           paidAmount: 0,
           status: "pending",

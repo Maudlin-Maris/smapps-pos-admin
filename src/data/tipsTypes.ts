@@ -26,6 +26,8 @@ export interface TipEntry {
   orderId?: string;
   /** Original order total amount (for reference) */
   orderAmount?: number;
+  /** Amount the customer has paid against the order */
+  orderPaidAmount?: number;
   /** Tip amount earned in this transaction */
   amount: number;
   /** Amount that has been paid out to the staff member already */
