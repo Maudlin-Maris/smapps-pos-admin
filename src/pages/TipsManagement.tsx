@@ -157,6 +157,24 @@ export default function TipsManagement() {
               <TableHead>Cashier</TableHead>
               <TableHead>Outlet</TableHead>
               <TableHead className="text-right">Order amount</TableHead>
+              <TableHead className="text-right">Amount paid</TableHead>
+              <TableHead className="text-right">Tip</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {orderRows.map((t) => (
+              <TableRow key={t.id}>
+                <TableCell>{new Date(t.earnedAt).toLocaleDateString()}</TableCell>
+                <TableCell className="font-mono text-xs">{t.orderId || "—"}</TableCell>
+                <TableCell>{t.staffName}</TableCell>
+                <TableCell>{t.outletName}</TableCell>
+                <TableCell className="text-right">
+                  {t.orderAmount ? formatNaira(t.orderAmount) : "—"}
+                </TableCell>
+                <TableCell className="text-right">
+                  {t.orderPaidAmount != null ? formatNaira(t.orderPaidAmount) : "—"}
+                </TableCell>
+                <TableCell className="text-right font-medium">{formatNaira(t.amount)}</TableCell>
               </TableRow>
             ))}
             {orderRows.length === 0 && (
