@@ -20,7 +20,7 @@ import { outlets } from "@/data/outlets";
 const TIPS_KEY = "smapps_tips_ledger_v1";
 const PAYOUTS_KEY = "smapps_tips_payouts_v1";
 const AUDIT_KEY = "smapps_tips_audit_v1";
-const SEEDED_KEY = "smapps_tips_seeded_v1";
+const SEEDED_KEY = "smapps_tips_seeded_v2";
 
 const DEFAULT_BUSINESS = "biz_default";
 
