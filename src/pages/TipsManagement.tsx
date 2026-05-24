@@ -162,7 +162,7 @@ export default function TipsManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orderRows.map((t) => (
+            {ordersPg.paginatedItems.map((t) => (
               <TableRow key={t.id}>
                 <TableCell>{new Date(t.earnedAt).toLocaleDateString()}</TableCell>
                 <TableCell className="font-mono text-xs">{t.orderId || "—"}</TableCell>
