@@ -156,7 +156,9 @@ export default function TipsManagement() {
               <TableHead>Order</TableHead>
               <TableHead>Cashier</TableHead>
               <TableHead>Outlet</TableHead>
+              <TableHead className="text-right">Order amount</TableHead>
               <TableHead className="text-right">Tip</TableHead>
+              <TableHead className="text-right">Paid</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -168,12 +170,18 @@ export default function TipsManagement() {
                 </TableCell>
                 <TableCell className="font-medium">{t.staffName}</TableCell>
                 <TableCell className="text-xs">{t.outletName}</TableCell>
+                <TableCell className="text-right text-xs">
+                  {t.orderAmount ? formatNaira(t.orderAmount) : "—"}
+                </TableCell>
                 <TableCell className="text-right">{formatNaira(t.amount)}</TableCell>
+                <TableCell className="text-right text-xs text-muted-foreground">
+                  {formatNaira(t.paidAmount)}
+                </TableCell>
               </TableRow>
             ))}
             {orderRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No orders with tips for the selected filters.
                 </TableCell>
               </TableRow>

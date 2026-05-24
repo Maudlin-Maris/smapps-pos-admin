@@ -69,6 +69,7 @@ function seedIfNeeded() {
       const outletName = outlets.find((o) => o.id === outletId)?.name || outletId;
       const count = 4 + (i % 3);
       for (let k = 0; k < count; k++) {
+        const orderAmount = Math.round((2500 + Math.random() * 22500) / 50) * 50;
         const amount = Math.round((500 + Math.random() * 4500) / 50) * 50;
         tips.push({
           id: uid("tip"),
@@ -78,6 +79,7 @@ function seedIfNeeded() {
           staffId: staff.id,
           staffName: staff.name,
           orderId: `ORD-${1000 + i * 10 + k}`,
+          orderAmount,
           amount,
           paidAmount: 0,
           status: "pending",

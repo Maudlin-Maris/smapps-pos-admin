@@ -24,6 +24,8 @@ export interface TipEntry {
   staffName: string;
   /** Originating POS order, if available */
   orderId?: string;
+  /** Original order total amount (for reference) */
+  orderAmount?: number;
   /** Tip amount earned in this transaction */
   amount: number;
   /** Amount that has been paid out to the staff member already */
