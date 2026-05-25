@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, Eye, Clock, Truck } from "lucide-react";
+import { AlertTriangle, Eye, Clock, Truck, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
@@ -34,6 +34,7 @@ import StockAdjustmentHistory, {
   type AdjustmentType,
 } from "@/components/inventory/StockAdjustmentHistory";
 import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialog";
+import BulkImportInventoryDialog from "@/components/inventory/BulkImportInventoryDialog";
 import ProfitabilityView from "@/components/inventory/ProfitabilityView";
 import { computeProfitability } from "@/lib/profitability";
 import { defaultInventoryItems } from "@/data/inventoryItems";
@@ -120,6 +121,7 @@ export default function InventoryManagement() {
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [bulkReceiveOpen, setBulkReceiveOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
@@ -343,7 +345,16 @@ export default function InventoryManagement() {
           <h1 className="text-2xl font-heading font-bold tracking-tight">Inventory</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and composite items</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-2"
+            onClick={() => setBulkImportOpen(true)}
+          >
+            <Upload className="h-4 w-4" />
+            Bulk Import
+          </Button>
           <Button
             size="sm"
             className="gap-2"
@@ -531,6 +542,16 @@ export default function InventoryManagement() {
         units={units}
         outletId={selectedOutletId}
         onReceive={handleAdjustStock}
+      />
+
+      <BulkImportInventoryDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        categories={categories}
+        units={units}
+        selectedOutletId={selectedOutletId}
+        existingItems={items}
+        onImport={(newItems) => setItems((prev) => [...prev, ...newItems])}
       />
     </div>
   );
