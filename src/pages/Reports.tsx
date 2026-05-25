@@ -45,7 +45,7 @@ import {
   filterSales as filterSalesForExport,
 } from "@/lib/sales-export";
 import { initialReportTransactions } from "@/components/reports/ReportTransactions";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/xlsx-compat";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);

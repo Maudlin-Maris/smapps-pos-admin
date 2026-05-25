@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/xlsx-compat";
 import type { MenuItem, MenuVariant, MenuItemType } from "./MenuItemForm";
 import { formatNaira } from "@/lib/currency";
 import {
@@ -73,7 +73,7 @@ const SAMPLE_DATA = [
 
 const ITEMS_PER_PAGE = 10;
 
-function downloadTemplate() {
+async function downloadTemplate() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([EXPECTED_HEADERS, ...SAMPLE_DATA]);
 
@@ -84,11 +84,11 @@ function downloadTemplate() {
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "Catalog Items");
-  XLSX.writeFile(wb, "catalog-import-template.xlsx");
+  await XLSX.writeFile(wb, "catalog-import-template.xlsx");
 }
 
-function parseFile(data: ArrayBuffer): { rows: ParsedRow[]; errors: string[] } {
-  const wb = XLSX.read(data, { type: "array" });
+async function parseFile(data: ArrayBuffer): Promise<{ rows: ParsedRow[]; errors: string[] }> {
+  const wb = await XLSX.read(data);
   const ws = wb.Sheets[wb.SheetNames[0]];
   const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
@@ -308,9 +308,9 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
     setFileName(file.name);
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const data = ev.target?.result as ArrayBuffer;
-      const { rows, errors } = parseFile(data);
+      const { rows, errors } = await parseFile(data);
       setParseErrors(errors);
       const items = rowsToMenuItems(rows);
       setParsedItems(items);

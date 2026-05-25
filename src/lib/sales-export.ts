@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/xlsx-compat";
 import { format } from "date-fns";
 import type { SalesRecord } from "@/hooks/use-financial-data";
 import { outlets } from "@/data/outlets";
