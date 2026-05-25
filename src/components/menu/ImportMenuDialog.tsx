@@ -308,9 +308,9 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
     setFileName(file.name);
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const data = ev.target?.result as ArrayBuffer;
-      const { rows, errors } = parseFile(data);
+      const { rows, errors } = await parseFile(data);
       setParseErrors(errors);
       const items = rowsToMenuItems(rows);
       setParsedItems(items);
