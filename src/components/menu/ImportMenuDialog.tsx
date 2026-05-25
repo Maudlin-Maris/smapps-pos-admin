@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/xlsx-compat";
 import type { MenuItem, MenuVariant, MenuItemType } from "./MenuItemForm";
 import { formatNaira } from "@/lib/currency";
 import {

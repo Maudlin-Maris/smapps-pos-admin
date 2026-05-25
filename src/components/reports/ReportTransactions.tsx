@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Search, ChevronLeft, ChevronRight, Download, FileSpreadsheet, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/xlsx-compat";
 import type { Transaction } from "@/components/TransactionsTable";
 import TransactionDetailDialog from "./TransactionDetailDialog";
 

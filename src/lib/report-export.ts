@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import * as XLSX from "@/lib/xlsx-compat";
 import { format } from "date-fns";
 import type { PnLData, StoredAdjustment } from "@/hooks/use-financial-data";
 
