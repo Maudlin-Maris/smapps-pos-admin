@@ -6,6 +6,8 @@ import { formatNaira } from "@/lib/currency";
 import { KpiCard } from "@/components/KpiCard";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -23,7 +25,8 @@ import {
 } from "@/components/ui/select";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { usePagination } from "@/hooks/use-pagination";
-import { Wallet, CircleCheck, Hourglass, Lock } from "lucide-react";
+import ProcessPayoutDialog from "@/components/tips/ProcessPayoutDialog";
+import { Wallet, CircleCheck, Hourglass, Lock, BadgeDollarSign } from "lucide-react";
 
 function fmtDateTime(d?: string) {
   if (!d) return "—";
