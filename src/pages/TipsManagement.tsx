@@ -6,6 +6,8 @@ import { formatNaira } from "@/lib/currency";
 import { KpiCard } from "@/components/KpiCard";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -23,7 +25,8 @@ import {
 } from "@/components/ui/select";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { usePagination } from "@/hooks/use-pagination";
-import { Wallet, CircleCheck, Hourglass, Lock } from "lucide-react";
+import ProcessPayoutDialog from "@/components/tips/ProcessPayoutDialog";
+import { Wallet, CircleCheck, Hourglass, Lock, BadgeDollarSign } from "lucide-react";
 
 function fmtDateTime(d?: string) {
   if (!d) return "—";
@@ -36,9 +39,17 @@ function fmtDateTime(d?: string) {
 }
 
 export default function TipsManagement() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [outletId, setOutletId] = useState<string>("all");
   const [staffId, setStaffId] = useState<string>("all");
+  const [payoutCtx, setPayoutCtx] = useState<{
+    staffId: string;
+    staffName: string;
+    outletId: string;
+    outletName: string;
+    outstanding: number;
+  } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   if (!hasPermission("tips.view")) {
     return (
@@ -56,7 +67,7 @@ export default function TipsManagement() {
     if (outletId !== "all") list = list.filter((t) => t.outletId === outletId);
     if (staffId !== "all") list = list.filter((t) => t.staffId === staffId);
     return list;
-  }, [outletId, staffId]);
+  }, [outletId, staffId, refreshKey]);
 
   const payouts = useMemo(() => {
     let list = getPayouts().filter((p) => p.status === "paid");
@@ -65,7 +76,7 @@ export default function TipsManagement() {
     return list.sort((a, b) =>
       (b.paidAt || b.createdAt).localeCompare(a.paidAt || a.createdAt),
     );
-  }, [outletId, staffId]);
+  }, [outletId, staffId, refreshKey]);
 
   const totalTips = tips.reduce((s, t) => s + t.amount, 0);
   const paidTips = tips.reduce((s, t) => s + t.paidAmount, 0);
@@ -76,6 +87,32 @@ export default function TipsManagement() {
     () => [...tips].sort((a, b) => b.earnedAt.localeCompare(a.earnedAt)),
     [tips],
   );
+
+  // Awaiting-payment groups, only meaningful when a specific cashier is selected.
+  const awaitingGroups = useMemo(() => {
+    if (staffId === "all") return [];
+    const unpaid = tips.filter((t) => t.status !== "paid" && t.amount - t.paidAmount > 0);
+    const byOutlet = new Map<
+      string,
+      { outletId: string; outletName: string; outstanding: number; count: number }
+    >();
+    for (const t of unpaid) {
+      const cur =
+        byOutlet.get(t.outletId) || {
+          outletId: t.outletId,
+          outletName: t.outletName,
+          outstanding: 0,
+          count: 0,
+        };
+      cur.outstanding += t.amount - t.paidAmount;
+      cur.count += 1;
+      byOutlet.set(t.outletId, cur);
+    }
+    return Array.from(byOutlet.values()).sort((a, b) => b.outstanding - a.outstanding);
+  }, [tips, staffId]);
+
+  const selectedStaffName =
+    TIP_STAFF.find((s) => s.id === staffId)?.name || "";
 
   const ordersPg = usePagination(orderRows, 10);
   const payoutsPg = usePagination(payouts, 10);
@@ -131,6 +168,64 @@ export default function TipsManagement() {
           icon={Hourglass}
         />
       </div>
+
+      {/* Awaiting payment per cashier */}
+      {staffId !== "all" && (
+        <Card className="p-4 lg:p-5 space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h3 className="font-heading font-semibold">
+                Awaiting payment — {selectedStaffName}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Tips collected at the POS that still need to be paid out.
+              </p>
+            </div>
+            <Badge variant="secondary">{formatNaira(awaitingTips)} outstanding</Badge>
+          </div>
+          {awaitingGroups.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-6">
+              All tips for this cashier are fully paid.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {awaitingGroups.map((g) => (
+                <div
+                  key={g.outletId}
+                  className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm truncate">{g.outletName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {g.count} unpaid {g.count === 1 ? "tip" : "tips"} ·{" "}
+                      <span className="font-medium text-foreground">
+                        {formatNaira(g.outstanding)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={!hasPermission("tips.payout.process")}
+                    onClick={() =>
+                      setPayoutCtx({
+                        staffId,
+                        staffName: selectedStaffName,
+                        outletId: g.outletId,
+                        outletName: g.outletName,
+                        outstanding: g.outstanding,
+                      })
+                    }
+                  >
+                    <BadgeDollarSign className="h-4 w-4" />
+                    Process payout
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
 
       {/* Orders with tips */}
       <Card className="p-4 lg:p-5 space-y-4">
@@ -237,6 +332,21 @@ export default function TipsManagement() {
           </TableBody>
         </Table>
       </Card>
+
+      {payoutCtx && (
+        <ProcessPayoutDialog
+          open={!!payoutCtx}
+          onOpenChange={(o) => !o && setPayoutCtx(null)}
+          staffId={payoutCtx.staffId}
+          staffName={payoutCtx.staffName}
+          outletId={payoutCtx.outletId}
+          outletName={payoutCtx.outletName}
+          outstandingAmount={payoutCtx.outstanding}
+          businessEmail={user?.email || "business@smapps.com"}
+          actor={user?.display_name || user?.email || "system"}
+          onConfirmed={() => setRefreshKey((k) => k + 1)}
+        />
+      )}
     </div>
   );
 }
