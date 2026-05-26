@@ -39,9 +39,17 @@ function fmtDateTime(d?: string) {
 }
 
 export default function TipsManagement() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [outletId, setOutletId] = useState<string>("all");
   const [staffId, setStaffId] = useState<string>("all");
+  const [payoutCtx, setPayoutCtx] = useState<{
+    staffId: string;
+    staffName: string;
+    outletId: string;
+    outletName: string;
+    outstanding: number;
+  } | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   if (!hasPermission("tips.view")) {
     return (
