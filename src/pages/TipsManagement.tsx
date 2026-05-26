@@ -332,6 +332,21 @@ export default function TipsManagement() {
           </TableBody>
         </Table>
       </Card>
+
+      {payoutCtx && (
+        <ProcessPayoutDialog
+          open={!!payoutCtx}
+          onOpenChange={(o) => !o && setPayoutCtx(null)}
+          staffId={payoutCtx.staffId}
+          staffName={payoutCtx.staffName}
+          outletId={payoutCtx.outletId}
+          outletName={payoutCtx.outletName}
+          outstandingAmount={payoutCtx.outstanding}
+          businessEmail={user?.email || "business@smapps.com"}
+          actor={user?.display_name || user?.email || "system"}
+          onConfirmed={() => setRefreshKey((k) => k + 1)}
+        />
+      )}
     </div>
   );
 }
