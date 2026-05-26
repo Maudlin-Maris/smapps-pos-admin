@@ -76,7 +76,7 @@ export default function TipsManagement() {
     return list.sort((a, b) =>
       (b.paidAt || b.createdAt).localeCompare(a.paidAt || a.createdAt),
     );
-  }, [outletId, staffId]);
+  }, [outletId, staffId, refreshKey]);
 
   const totalTips = tips.reduce((s, t) => s + t.amount, 0);
   const paidTips = tips.reduce((s, t) => s + t.paidAmount, 0);
