@@ -88,6 +88,32 @@ export default function TipsManagement() {
     [tips],
   );
 
+  // Awaiting-payment groups, only meaningful when a specific cashier is selected.
+  const awaitingGroups = useMemo(() => {
+    if (staffId === "all") return [];
+    const unpaid = tips.filter((t) => t.status !== "paid" && t.amount - t.paidAmount > 0);
+    const byOutlet = new Map<
+      string,
+      { outletId: string; outletName: string; outstanding: number; count: number }
+    >();
+    for (const t of unpaid) {
+      const cur =
+        byOutlet.get(t.outletId) || {
+          outletId: t.outletId,
+          outletName: t.outletName,
+          outstanding: 0,
+          count: 0,
+        };
+      cur.outstanding += t.amount - t.paidAmount;
+      cur.count += 1;
+      byOutlet.set(t.outletId, cur);
+    }
+    return Array.from(byOutlet.values()).sort((a, b) => b.outstanding - a.outstanding);
+  }, [tips, staffId]);
+
+  const selectedStaffName =
+    TIP_STAFF.find((s) => s.id === staffId)?.name || "";
+
   const ordersPg = usePagination(orderRows, 10);
   const payoutsPg = usePagination(payouts, 10);
 
