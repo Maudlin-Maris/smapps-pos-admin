@@ -169,6 +169,64 @@ export default function TipsManagement() {
         />
       </div>
 
+      {/* Awaiting payment per cashier */}
+      {staffId !== "all" && (
+        <Card className="p-4 lg:p-5 space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h3 className="font-heading font-semibold">
+                Awaiting payment — {selectedStaffName}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Tips collected at the POS that still need to be paid out.
+              </p>
+            </div>
+            <Badge variant="secondary">{formatNaira(awaitingTips)} outstanding</Badge>
+          </div>
+          {awaitingGroups.length === 0 ? (
+            <div className="text-center text-sm text-muted-foreground py-6">
+              All tips for this cashier are fully paid.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {awaitingGroups.map((g) => (
+                <div
+                  key={g.outletId}
+                  className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium text-sm truncate">{g.outletName}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {g.count} unpaid {g.count === 1 ? "tip" : "tips"} ·{" "}
+                      <span className="font-medium text-foreground">
+                        {formatNaira(g.outstanding)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={!hasPermission("tips.payout" as any)}
+                    onClick={() =>
+                      setPayoutCtx({
+                        staffId,
+                        staffName: selectedStaffName,
+                        outletId: g.outletId,
+                        outletName: g.outletName,
+                        outstanding: g.outstanding,
+                      })
+                    }
+                  >
+                    <BadgeDollarSign className="h-4 w-4" />
+                    Process payout
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+
       {/* Orders with tips */}
       <Card className="p-4 lg:p-5 space-y-4">
         <div className="flex items-center justify-between">
