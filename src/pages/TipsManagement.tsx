@@ -67,7 +67,7 @@ export default function TipsManagement() {
     if (outletId !== "all") list = list.filter((t) => t.outletId === outletId);
     if (staffId !== "all") list = list.filter((t) => t.staffId === staffId);
     return list;
-  }, [outletId, staffId]);
+  }, [outletId, staffId, refreshKey]);
 
   const payouts = useMemo(() => {
     let list = getPayouts().filter((p) => p.status === "paid");
