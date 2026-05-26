@@ -205,7 +205,7 @@ export default function TipsManagement() {
                   </div>
                   <Button
                     size="sm"
-                    disabled={!hasPermission("tips.payout" as any)}
+                    disabled={!hasPermission("tips.payout.process")}
                     onClick={() =>
                       setPayoutCtx({
                         staffId,
