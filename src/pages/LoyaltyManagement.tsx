@@ -77,6 +77,21 @@ function RewardFormDialog({
   const [availabilityMode, setAvailabilityMode] = useState<"all" | "specific">(
     (reward?.outletIds?.length ?? 0) > 0 ? "specific" : "all"
   );
+  const [freeItemId, setFreeItemId] = useState<string | undefined>(reward?.freeItemId);
+  const [freeItemQuantity, setFreeItemQuantity] = useState<string>(
+    reward?.freeItemQuantity?.toString() ?? "1"
+  );
+  const [itemPickerOpen, setItemPickerOpen] = useState(false);
+
+  // Filter inventory by outlet availability scope
+  const availableInventory = useMemo(() => {
+    if (availabilityMode === "specific" && selectedOutletIds.length > 0) {
+      return defaultInventoryItems.filter(i => selectedOutletIds.includes(i.outletId));
+    }
+    return defaultInventoryItems;
+  }, [availabilityMode, selectedOutletIds]);
+
+  const selectedItem = freeItemId ? defaultInventoryItems.find(i => i.id === freeItemId) : null;
 
   const toggleOutlet = (id: string) => {
     setSelectedOutletIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
