@@ -39,6 +39,10 @@ import {
 } from "@/data/loyaltyData";
 import { outlets } from "@/data/outlets";
 import { Checkbox } from "@/components/ui/checkbox";
+import { defaultInventoryItems } from "@/data/inventoryItems";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, Package } from "lucide-react";
 
 type Tab = "overview" | "rewards" | "settings" | "activity";
 
@@ -73,6 +77,21 @@ function RewardFormDialog({
   const [availabilityMode, setAvailabilityMode] = useState<"all" | "specific">(
     (reward?.outletIds?.length ?? 0) > 0 ? "specific" : "all"
   );
+  const [freeItemId, setFreeItemId] = useState<string | undefined>(reward?.freeItemId);
+  const [freeItemQuantity, setFreeItemQuantity] = useState<string>(
+    reward?.freeItemQuantity?.toString() ?? "1"
+  );
+  const [itemPickerOpen, setItemPickerOpen] = useState(false);
+
+  // Filter inventory by outlet availability scope
+  const availableInventory = useMemo(() => {
+    if (availabilityMode === "specific" && selectedOutletIds.length > 0) {
+      return defaultInventoryItems.filter(i => selectedOutletIds.includes(i.outletId));
+    }
+    return defaultInventoryItems;
+  }, [availabilityMode, selectedOutletIds]);
+
+  const selectedItem = freeItemId ? defaultInventoryItems.find(i => i.id === freeItemId) : null;
 
   const toggleOutlet = (id: string) => {
     setSelectedOutletIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -82,6 +101,8 @@ function RewardFormDialog({
     if (!name.trim()) { toast.error("Reward name is required"); return; }
     if (!pointsCost || Number(pointsCost) <= 0) { toast.error("Points cost must be greater than 0"); return; }
     if (availabilityMode === "specific" && selectedOutletIds.length === 0) { toast.error("Select at least one outlet"); return; }
+    if (type === "free_item" && !freeItemId) { toast.error("Select an inventory item for this free item reward"); return; }
+    const qty = type === "free_item" ? Math.max(1, Number(freeItemQuantity) || 1) : undefined;
     onSave({
       id: reward?.id ?? `r${Date.now()}`,
       name: name.trim(),
@@ -91,6 +112,8 @@ function RewardFormDialog({
       value: type === "free_item" ? 0 : Number(value) || 0,
       isActive,
       outletIds: availabilityMode === "all" ? [] : selectedOutletIds,
+      freeItemId: type === "free_item" ? freeItemId : undefined,
+      freeItemQuantity: qty,
     });
     onOpenChange(false);
   };
@@ -136,6 +159,87 @@ function RewardFormDialog({
               <Input type="number" min="1" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "discount_percentage" ? "10" : "1000"} />
             </div>
           )}
+
+          {type === "free_item" && (
+            <div className="space-y-3 rounded-lg border border-dashed p-3 bg-muted/30">
+              <div>
+                <Label className="flex items-center gap-1.5">
+                  <Package className="h-3.5 w-3.5" /> Inventory Item *
+                </Label>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Stock will be deducted from inventory each time this reward is redeemed.
+                </p>
+                <Popover open={itemPickerOpen} onOpenChange={setItemPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
+                    >
+                      {selectedItem ? (
+                        <span className="truncate">
+                          {selectedItem.name}
+                          <span className="text-muted-foreground ml-1.5 text-xs">
+                            ({selectedItem.sku} · {selectedItem.stock} in stock)
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Select inventory item…</span>
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search items by name or SKU…" />
+                      <CommandList>
+                        <CommandEmpty>
+                          {availabilityMode === "specific" && selectedOutletIds.length === 0
+                            ? "Select an outlet first."
+                            : "No items found."}
+                        </CommandEmpty>
+                        <CommandGroup>
+                          {availableInventory.map((item) => {
+                            const outlet = outlets.find(o => o.id === item.outletId);
+                            return (
+                              <CommandItem
+                                key={item.id}
+                                value={`${item.name} ${item.sku} ${outlet?.name ?? ""}`}
+                                onSelect={() => {
+                                  setFreeItemId(item.id);
+                                  setItemPickerOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", freeItemId === item.id ? "opacity-100" : "opacity-0")} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm truncate">{item.name}</div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {item.sku} · {outlet?.name ?? "—"} · {item.stock} in stock
+                                  </div>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Quantity per Redemption</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={freeItemQuantity}
+                  onChange={(e) => setFreeItemQuantity(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+            </div>
+          )}
+
 
           {/* Outlet availability */}
           <div>
