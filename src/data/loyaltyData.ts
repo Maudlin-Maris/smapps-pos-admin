@@ -27,6 +27,10 @@ export interface LoyaltyReward {
   isActive: boolean;
   /** Empty array = available at ALL outlets (global). Non-empty = only at listed outlet IDs. */
   outletIds: string[];
+  /** For type === "free_item": the inventory item ID redeemed (deducts stock when redeemed). */
+  freeItemId?: string;
+  /** Quantity of inventory item granted per redemption (defaults to 1). */
+  freeItemQuantity?: number;
 }
 
 export interface LoyaltyRedemption {
