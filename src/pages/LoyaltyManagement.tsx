@@ -39,6 +39,10 @@ import {
 } from "@/data/loyaltyData";
 import { outlets } from "@/data/outlets";
 import { Checkbox } from "@/components/ui/checkbox";
+import { defaultInventoryItems } from "@/data/inventoryItems";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown, Package } from "lucide-react";
 
 type Tab = "overview" | "rewards" | "settings" | "activity";
 
