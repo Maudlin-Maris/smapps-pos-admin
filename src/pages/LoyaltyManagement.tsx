@@ -101,6 +101,8 @@ function RewardFormDialog({
     if (!name.trim()) { toast.error("Reward name is required"); return; }
     if (!pointsCost || Number(pointsCost) <= 0) { toast.error("Points cost must be greater than 0"); return; }
     if (availabilityMode === "specific" && selectedOutletIds.length === 0) { toast.error("Select at least one outlet"); return; }
+    if (type === "free_item" && !freeItemId) { toast.error("Select an inventory item for this free item reward"); return; }
+    const qty = type === "free_item" ? Math.max(1, Number(freeItemQuantity) || 1) : undefined;
     onSave({
       id: reward?.id ?? `r${Date.now()}`,
       name: name.trim(),
@@ -110,6 +112,8 @@ function RewardFormDialog({
       value: type === "free_item" ? 0 : Number(value) || 0,
       isActive,
       outletIds: availabilityMode === "all" ? [] : selectedOutletIds,
+      freeItemId: type === "free_item" ? freeItemId : undefined,
+      freeItemQuantity: qty,
     });
     onOpenChange(false);
   };
