@@ -54,10 +54,54 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
     const printWindow = window.open("", "_blank", "width=320,height=600");
     if (!printWindow) { toast.error("Please allow popups to print"); return; }
     const content = element.outerHTML;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>* { margin: 0; padding: 0; box-sizing: border-box; } html, body { width: 80mm; } body { font-family: 'Courier New', monospace; display: block !important; margin: 0; padding: 0; } body > div { width: 302px !important; margin: 0 auto !important; display: block !important; gap: 0 !important; } body > div > div { page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; } body > div > div:last-child { page-break-after: auto; break-after: auto; } .text-center { text-align: center; } @media print { @page { margin: 0; size: 80mm auto; } html, body { width: 80mm; margin: 0; padding: 0; } }</style></head><body>${content}</body></html>`);
+    const css = `
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 80mm; background: #fff; color: #000; }
+      body {
+        font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        display: block !important;
+        margin: 0; padding: 0;
+        color: #000;
+      }
+      /* Tailwind class fallbacks (print window has no Tailwind loaded) */
+      .bg-white { background-color: #ffffff !important; }
+      .text-black { color: #000000 !important; }
+      .text-center { text-align: center; }
+      .font-mono { font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      /* Root wrapper (KitchenDocket flex column) → stack as block pages */
+      body > div {
+        width: 302px !important;
+        margin: 0 auto !important;
+        display: block !important;
+        gap: 0 !important;
+        padding: 0 !important;
+      }
+      /* Each department docket */
+      body > div > div {
+        width: 302px !important;
+        margin: 0 auto !important;
+        page-break-after: always;
+        break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      body > div > div:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+      @media print {
+        @page { margin: 0; size: 80mm auto; }
+        html, body { width: 80mm; margin: 0; padding: 0; }
+      }
+    `;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title><meta charset="utf-8"><style>${css}</style></head><body>${content}</body></html>`);
     printWindow.document.close();
-    setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
+    // Wait for layout/fonts before printing
+    const doPrint = () => { try { printWindow.focus(); printWindow.print(); } finally { setTimeout(() => printWindow.close(), 100); } };
+    if (printWindow.document.readyState === "complete") setTimeout(doPrint, 200);
+    else printWindow.addEventListener("load", () => setTimeout(doPrint, 200));
   };
+
 
   const handlePrint = (ref: React.RefObject<HTMLDivElement>, title: string) => {
     if (!ref.current) return;
