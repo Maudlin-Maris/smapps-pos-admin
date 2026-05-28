@@ -156,7 +156,7 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
             <TabsTrigger value="docket" className="gap-1.5 text-xs"><ChefHat className="w-3.5 h-3.5" /> Dockets</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="receipt" className="mt-0 flex flex-col flex-1 min-h-0">
+          <TabsContent value="receipt" className="mt-0 flex-1 min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:!hidden">
             <div className="flex-1 overflow-y-auto px-4 py-3">
               <div className="flex justify-center">
                 <div className="border border-border rounded-lg overflow-hidden shadow-sm">
@@ -173,7 +173,7 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
             </div>
           </TabsContent>
 
-          <TabsContent value="docket" className="mt-0 flex-1 min-h-0 overflow-hidden">
+          <TabsContent value="docket" className="mt-0 flex-1 min-h-0 overflow-hidden data-[state=active]:block data-[state=inactive]:!hidden">
             <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
               <div className="min-h-0 overflow-y-auto px-4 py-3">
                 <div className="space-y-4">
