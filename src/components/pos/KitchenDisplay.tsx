@@ -103,11 +103,28 @@ export default function KitchenDisplay() {
               </div>
 
               {/* Customer/Table */}
-              <div className="mb-3 text-xs text-muted-foreground">
+              <div className="mb-2 text-xs text-muted-foreground">
                 {order.tableNumber && <span className="font-medium text-foreground">{order.tableNumber} · </span>}
                 <span className="capitalize">{order.type.replace("_", " ")}</span>
+                {order.locationName && <span> · <span className="font-medium text-foreground">{order.locationName}</span></span>}
                 {order.customerName && <span> · {order.customerName}</span>}
               </div>
+
+              {order.notes && (
+                <div className="mb-2 px-2 py-1.5 rounded-md bg-[hsl(var(--warning))]/10 border border-[hsl(var(--warning))]/30">
+                  <p className="text-xs font-semibold text-[hsl(var(--warning))]">⚠ {order.notes}</p>
+                </div>
+              )}
+
+              {order.loyaltyRedemption && (
+                <div className="mb-2 text-[11px] text-foreground/80">
+                  <p className="font-semibold">★ Loyalty: {order.loyaltyRedemption.customerName}</p>
+                  {order.loyaltyRedemption.rewardName && (
+                    <p className="pl-3 text-muted-foreground">Reward: {order.loyaltyRedemption.rewardName}</p>
+                  )}
+                </div>
+              )}
+
 
               {/* Bulk status selector */}
               <Select
@@ -144,11 +161,36 @@ export default function KitchenDisplay() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex gap-2 min-w-0 flex-1">
                           <span className="font-bold text-foreground shrink-0">{item.quantity}×</span>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <span className="font-medium text-foreground text-sm">{item.productName}</span>
-                            {item.variantName && <span className="text-muted-foreground text-xs"> ({item.variantName})</span>}
+                            {item.variantName && (
+                              <p className="text-xs text-muted-foreground pl-3">▸ {item.variantName}</p>
+                            )}
                             {item.extras.length > 0 && (
-                              <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
+                              <div className="pl-3 mt-0.5 space-y-0.5">
+                                {item.extras.map((e) => (
+                                  <p key={e.id} className="text-xs text-foreground/80">
+                                    + {(e.quantity || 1) > 1 ? `${e.quantity}× ` : ""}{e.name}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {item.substitutions && item.substitutions.length > 0 && (
+                              <div className="pl-3 mt-1 space-y-0.5">
+                                {item.substitutions.map((s) => (
+                                  <p
+                                    key={`${s.originalItemId}-${s.timestamp}`}
+                                    className="text-xs font-bold text-[hsl(var(--warning))]"
+                                  >
+                                    ⇄ SUB: {s.originalItemName} → {s.substituteItemName}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {item.notes && (
+                              <p className="pl-3 mt-1 text-xs italic text-muted-foreground">
+                                Note: {item.notes}
+                              </p>
                             )}
                           </div>
                         </div>
@@ -173,6 +215,7 @@ export default function KitchenDisplay() {
                           </SelectContent>
                         </Select>
                       </div>
+
                       {cfg.nextLabel && (
                         <Button
                           onClick={() => handleNextItem(order.id, item.id, status)}
