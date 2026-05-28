@@ -54,7 +54,7 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
     const printWindow = window.open("", "_blank", "width=320,height=600");
     if (!printWindow) { toast.error("Please allow popups to print"); return; }
     const content = element.outerHTML;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>* { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: 'Courier New', monospace; display: flex; justify-content: center; width: 80mm; margin: 0 auto; } body > div { width: 302px; margin: 0 auto; } .text-center { text-align: center; } @media print { @page { margin: 0; size: 80mm auto; } body { width: 80mm; } }</style></head><body>${content}</body></html>`);
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${title}</title><style>* { margin: 0; padding: 0; box-sizing: border-box; } html, body { width: 80mm; } body { font-family: 'Courier New', monospace; display: block; margin: 0; padding: 0; } body > div { width: 302px; margin: 0 auto; display: block; } .text-center { text-align: center; } @media print { @page { margin: 0; size: 80mm auto; } html, body { width: 80mm; margin: 0; padding: 0; } body > div { page-break-inside: avoid; break-inside: avoid; } }</style></head><body>${content}</body></html>`);
     printWindow.document.close();
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 250);
   };
