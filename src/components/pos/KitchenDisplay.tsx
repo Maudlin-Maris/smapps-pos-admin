@@ -144,30 +144,44 @@ export default function KitchenDisplay() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex gap-2 min-w-0 flex-1">
                           <span className="font-bold text-foreground shrink-0">{item.quantity}×</span>
-                          <div className="min-w-0">
+                    <div key={item.id} className={`rounded-lg p-2.5 border border-border/50 ${cfg.bgColor}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex gap-2 min-w-0 flex-1">
+                          <span className="font-bold text-foreground shrink-0">{item.quantity}×</span>
+                          <div className="min-w-0 flex-1">
                             <span className="font-medium text-foreground text-sm">{item.productName}</span>
-                            {item.variantName && <span className="text-muted-foreground text-xs"> ({item.variantName})</span>}
+                            {item.variantName && (
+                              <p className="text-xs text-muted-foreground pl-3">▸ {item.variantName}</p>
+                            )}
                             {item.extras.length > 0 && (
-                              <p className="text-xs text-muted-foreground">+{item.extras.map(e => e.name).join(", ")}</p>
+                              <div className="pl-3 mt-0.5 space-y-0.5">
+                                {item.extras.map((e) => (
+                                  <p key={e.id} className="text-xs text-foreground/80">
+                                    + {(e.quantity || 1) > 1 ? `${e.quantity}× ` : ""}{e.name}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {item.substitutions && item.substitutions.length > 0 && (
+                              <div className="pl-3 mt-1 space-y-0.5">
+                                {item.substitutions.map((s) => (
+                                  <p
+                                    key={`${s.originalItemId}-${s.timestamp}`}
+                                    className="text-xs font-bold text-[hsl(var(--warning))]"
+                                  >
+                                    ⇄ SUB: {s.originalItemName} → {s.substituteItemName}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            {item.notes && (
+                              <p className="pl-3 mt-1 text-xs italic text-muted-foreground">
+                                Note: {item.notes}
+                              </p>
                             )}
                           </div>
                         </div>
-                        <Select
-                          value={status}
-                          onValueChange={(val: string) => updateItemStatus(order.id, item.id, val as ItemStatus)}
-                        >
-                          <SelectTrigger className={`h-6 w-[100px] text-[10px] px-2 gap-1 ${cfg.color}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {itemStatusFlow.map(s => {
-                              const c = itemStatusConfig[s];
-                              return (
-                                <SelectItem key={s} value={s} className="text-xs">
-                                  <span className={`flex items-center gap-1.5 ${c.color}`}>
-                                    {c.icon} {c.label}
-                                  </span>
-                                </SelectItem>
+
                               );
                             })}
                           </SelectContent>
