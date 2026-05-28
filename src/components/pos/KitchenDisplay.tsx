@@ -144,10 +144,6 @@ export default function KitchenDisplay() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex gap-2 min-w-0 flex-1">
                           <span className="font-bold text-foreground shrink-0">{item.quantity}×</span>
-                    <div key={item.id} className={`rounded-lg p-2.5 border border-border/50 ${cfg.bgColor}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex gap-2 min-w-0 flex-1">
-                          <span className="font-bold text-foreground shrink-0">{item.quantity}×</span>
                           <div className="min-w-0 flex-1">
                             <span className="font-medium text-foreground text-sm">{item.productName}</span>
                             {item.variantName && (
@@ -181,12 +177,28 @@ export default function KitchenDisplay() {
                             )}
                           </div>
                         </div>
-
+                        <Select
+                          value={status}
+                          onValueChange={(val: string) => updateItemStatus(order.id, item.id, val as ItemStatus)}
+                        >
+                          <SelectTrigger className={`h-6 w-[100px] text-[10px] px-2 gap-1 ${cfg.color}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {itemStatusFlow.map(s => {
+                              const c = itemStatusConfig[s];
+                              return (
+                                <SelectItem key={s} value={s} className="text-xs">
+                                  <span className={`flex items-center gap-1.5 ${c.color}`}>
+                                    {c.icon} {c.label}
+                                  </span>
+                                </SelectItem>
                               );
                             })}
                           </SelectContent>
                         </Select>
                       </div>
+
                       {cfg.nextLabel && (
                         <Button
                           onClick={() => handleNextItem(order.id, item.id, status)}
