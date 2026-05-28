@@ -173,8 +173,10 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
             </div>
           </TabsContent>
 
-          <TabsContent value="docket" forceMount className="mt-0 data-[state=inactive]:hidden flex-1 min-h-0 flex flex-col overflow-hidden">
-            <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4">
+          <TabsContent value="docket" className="mt-0 flex-1 min-h-0 overflow-hidden">
+            <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
+              <div className="min-h-0 overflow-y-auto px-4 py-3">
+                <div className="space-y-4">
               {docketGroups.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No department dockets for this order</p>
               ) : (
@@ -195,10 +197,12 @@ export default function PrintReceiptDialog({ open, onClose, order, onBack, print
                   </div>
                 ))
               )}
-            </div>
-            <div className="shrink-0 border-t border-border p-4 space-y-2">
+                </div>
+              </div>
+              <div className="border-t border-border p-4 space-y-2">
               <Button onClick={handlePrintAllDockets} className="w-full gap-2"><Printer className="w-4 h-4" /> Print All Dockets</Button>
               <p className="text-[10px] text-muted-foreground text-center">Each department docket prints on a separate page</p>
+              </div>
             </div>
             <div aria-hidden className="sr-only" style={{ position: "fixed", left: "-99999px", top: 0, width: "302px", pointerEvents: "none", visibility: "hidden" }}>
               <KitchenDocket ref={docketRef} order={order} outlet={currentOutlet} />
