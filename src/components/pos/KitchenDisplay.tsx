@@ -103,11 +103,28 @@ export default function KitchenDisplay() {
               </div>
 
               {/* Customer/Table */}
-              <div className="mb-3 text-xs text-muted-foreground">
+              <div className="mb-2 text-xs text-muted-foreground">
                 {order.tableNumber && <span className="font-medium text-foreground">{order.tableNumber} · </span>}
                 <span className="capitalize">{order.type.replace("_", " ")}</span>
+                {order.locationName && <span> · <span className="font-medium text-foreground">{order.locationName}</span></span>}
                 {order.customerName && <span> · {order.customerName}</span>}
               </div>
+
+              {order.notes && (
+                <div className="mb-2 px-2 py-1.5 rounded-md bg-[hsl(var(--warning))]/10 border border-[hsl(var(--warning))]/30">
+                  <p className="text-xs font-semibold text-[hsl(var(--warning))]">⚠ {order.notes}</p>
+                </div>
+              )}
+
+              {order.loyaltyRedemption && (
+                <div className="mb-2 text-[11px] text-foreground/80">
+                  <p className="font-semibold">★ Loyalty: {order.loyaltyRedemption.customerName}</p>
+                  {order.loyaltyRedemption.rewardName && (
+                    <p className="pl-3 text-muted-foreground">Reward: {order.loyaltyRedemption.rewardName}</p>
+                  )}
+                </div>
+              )}
+
 
               {/* Bulk status selector */}
               <Select
