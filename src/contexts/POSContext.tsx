@@ -130,8 +130,6 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const resolveInitialOutlet = (): POSOutlet | null => {
     if (!linkedBusiness) return null;
     const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
-    // Single outlet → auto-select
-    if (deviceOutlets.length === 1) return deviceOutlets[0];
     // Session outlet
     if (saved?.outletId) {
       const o = deviceOutlets.find(o => o.id === saved.outletId);
@@ -143,7 +141,8 @@ export function POSProvider({ children }: { children: ReactNode }) {
       const o = deviceOutlets.find(o => o.id === lastId);
       if (o) return o;
     }
-    return null;
+    // Default to first assigned outlet — device link auto-selects
+    return deviceOutlets[0] || null;
   };
 
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
