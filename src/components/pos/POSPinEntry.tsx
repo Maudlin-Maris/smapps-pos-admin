@@ -57,7 +57,10 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
   if (showUserList) {
     return (
       <div className="min-h-screen flex bg-[#F8FAFC]">
-        <POSBrandPanel subtitle="Switch between signed-in team members" />
+        <POSBrandPanel
+          businessName={linkedBusiness?.name}
+          subtitle={currentOutlet ? `Terminal — ${currentOutlet.name}` : "Switch between signed-in team members"}
+        />
 
         <div className="flex-1 flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-sm">
