@@ -127,8 +127,8 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
   return (
     <div className="min-h-screen flex bg-[#F8FAFC]">
       <POSBrandPanel
-        businessName={currentCashier?.name}
-        subtitle={mode === "locked" ? "Screen locked" : "Enter your passcode"}
+        businessName={linkedBusiness?.name}
+        subtitle={currentOutlet ? `Terminal — ${currentOutlet.name}` : (mode === "locked" ? "Screen locked" : "Enter your passcode")}
       />
 
       <div
@@ -142,7 +142,15 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
       >
         <div className="w-full max-w-sm">
           <div className="lg:hidden text-center mb-6">
-            <img src={logoDark} alt="Smapps" className="h-6 mx-auto mb-4" />
+            <img src={logoDark} alt="Smapps" className="h-6 mx-auto mb-2" />
+            {linkedBusiness && (
+              <h2 className="text-sm font-semibold text-[#1A2042]">{linkedBusiness.name}</h2>
+            )}
+            {currentOutlet && (
+              <div className="flex items-center justify-center gap-1 text-[11px] text-[#6B7280] mt-1">
+                <Store className="w-3 h-3" /> {currentOutlet.name}
+              </div>
+            )}
           </div>
 
           {/* Profile */}
@@ -151,6 +159,12 @@ export default function POSPinEntry({ mode }: POSPinEntryProps) {
               {currentCashier?.name.charAt(0)}
             </div>
             <h2 className="text-xl font-bold text-[#1A2042]">{currentCashier?.name}</h2>
+            {currentOutlet && (
+              <div className="flex items-center justify-center gap-1.5 text-xs text-[#9CA3AF] mt-1">
+                <Store className="w-3 h-3" />
+                {currentOutlet.name}
+              </div>
+            )}
             <p className="text-[#6B7280] text-sm mt-2">
               {mode === "locked" ? "Screen locked — enter PIN to continue" : "Enter your 4-digit PIN"}
             </p>
