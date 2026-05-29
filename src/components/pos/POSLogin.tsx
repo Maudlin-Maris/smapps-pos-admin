@@ -207,8 +207,8 @@ export default function POSLogin() {
   return (
     <div className="min-h-screen flex bg-[#F8FAFC]">
       <POSBrandPanel
-        businessName={selectedCashier.name}
-        subtitle={currentOutlet?.name || "Enter your passcode"}
+        businessName={linkedBusiness?.name}
+        subtitle={currentOutlet ? `Terminal — ${currentOutlet.name}` : "Enter your passcode"}
       />
 
       <div
