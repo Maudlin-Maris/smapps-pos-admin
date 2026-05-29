@@ -98,11 +98,6 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const initialAuthState = (): AuthState => {
     if (!linkedBusiness) return "device_link";
-    // Check if we need outlet selection
-    const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
-    const lastOutletId = localStorage.getItem("pos_last_outlet_id");
-    const lastOutlet = lastOutletId ? deviceOutlets.find(o => o.id === lastOutletId) : null;
-    if (deviceOutlets.length > 1 && !lastOutlet) return "outlet_select";
     // Check for session
     try {
       const raw = sessionStorage.getItem("pos_session");
@@ -135,8 +130,6 @@ export function POSProvider({ children }: { children: ReactNode }) {
   const resolveInitialOutlet = (): POSOutlet | null => {
     if (!linkedBusiness) return null;
     const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
-    // Single outlet → auto-select
-    if (deviceOutlets.length === 1) return deviceOutlets[0];
     // Session outlet
     if (saved?.outletId) {
       const o = deviceOutlets.find(o => o.id === saved.outletId);
@@ -148,7 +141,8 @@ export function POSProvider({ children }: { children: ReactNode }) {
       const o = deviceOutlets.find(o => o.id === lastId);
       if (o) return o;
     }
-    return null;
+    // Default to first assigned outlet — device link auto-selects
+    return deviceOutlets[0] || null;
   };
 
   const [authState, setAuthState] = useState<AuthState>(initialAuthState);
@@ -174,13 +168,13 @@ export function POSProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("pos_linked_business", JSON.stringify(biz));
     setLinkedBusiness(biz);
     const deviceOutlets = posOutlets.filter(o => biz.assignedOutlets.includes(o.id));
-    if (deviceOutlets.length === 1) {
-      setCurrentOutletState(deviceOutlets[0]);
-      localStorage.setItem("pos_last_outlet_id", deviceOutlets[0].id);
-      setAuthState("login");
-    } else {
-      setAuthState("outlet_select");
+    // Auto-select first assigned outlet — skip the outlet picker
+    const outlet = deviceOutlets[0];
+    if (outlet) {
+      setCurrentOutletState(outlet);
+      localStorage.setItem("pos_last_outlet_id", outlet.id);
     }
+    setAuthState("login");
     return true;
   }, []);
 
