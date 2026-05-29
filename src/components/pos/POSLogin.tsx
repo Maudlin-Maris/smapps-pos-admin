@@ -224,7 +224,15 @@ export default function POSLogin() {
         <div className="w-full max-w-sm">
           {/* Mobile header */}
           <div className="lg:hidden text-center mb-2">
-            <img src={logoDark} alt="Smapps" className="h-6 mx-auto mb-4" />
+            <img src={logoDark} alt="Smapps" className="h-6 mx-auto mb-2" />
+            {linkedBusiness && (
+              <h2 className="text-sm font-semibold text-[#1A2042]">{linkedBusiness.name}</h2>
+            )}
+            {currentOutlet && (
+              <div className="flex items-center justify-center gap-1 text-[11px] text-[#6B7280] mb-2">
+                <Store className="w-3 h-3" /> {currentOutlet.name}
+              </div>
+            )}
           </div>
 
           {/* Profile */}
