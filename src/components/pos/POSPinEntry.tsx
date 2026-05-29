@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, LogOut, Delete, LogIn, Users } from "lucide-react";
+import { ArrowLeft, LogOut, Delete, LogIn, Users, Store } from "lucide-react";
 import logoDark from "@/assets/logo-dark.png";
 import POSBrandPanel from "./POSBrandPanel";
 
@@ -10,7 +10,7 @@ interface POSPinEntryProps {
 }
 
 export default function POSPinEntry({ mode }: POSPinEntryProps) {
-  const { currentCashier, signedInCashiers, loginWithPin, logout, selectCashier } = usePOS();
+  const { currentCashier, signedInCashiers, loginWithPin, logout, selectCashier, linkedBusiness, currentOutlet } = usePOS();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
