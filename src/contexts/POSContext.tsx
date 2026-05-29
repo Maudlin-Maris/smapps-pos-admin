@@ -98,11 +98,6 @@ export function POSProvider({ children }: { children: ReactNode }) {
 
   const initialAuthState = (): AuthState => {
     if (!linkedBusiness) return "device_link";
-    // Check if we need outlet selection
-    const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
-    const lastOutletId = localStorage.getItem("pos_last_outlet_id");
-    const lastOutlet = lastOutletId ? deviceOutlets.find(o => o.id === lastOutletId) : null;
-    if (deviceOutlets.length > 1 && !lastOutlet) return "outlet_select";
     // Check for session
     try {
       const raw = sessionStorage.getItem("pos_session");
