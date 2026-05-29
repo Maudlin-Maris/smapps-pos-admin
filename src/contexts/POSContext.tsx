@@ -168,13 +168,13 @@ export function POSProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("pos_linked_business", JSON.stringify(biz));
     setLinkedBusiness(biz);
     const deviceOutlets = posOutlets.filter(o => biz.assignedOutlets.includes(o.id));
-    if (deviceOutlets.length === 1) {
-      setCurrentOutletState(deviceOutlets[0]);
-      localStorage.setItem("pos_last_outlet_id", deviceOutlets[0].id);
-      setAuthState("login");
-    } else {
-      setAuthState("outlet_select");
+    // Auto-select first assigned outlet — skip the outlet picker
+    const outlet = deviceOutlets[0];
+    if (outlet) {
+      setCurrentOutletState(outlet);
+      localStorage.setItem("pos_last_outlet_id", outlet.id);
     }
+    setAuthState("login");
     return true;
   }, []);
 
