@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { usePOS } from "@/contexts/POSContext";
-import { posOutlets } from "@/data/posData";
 import { getFeatures } from "@/data/businessTypes";
 import POSLogin from "@/components/pos/POSLogin";
 import POSDeviceLink from "@/components/pos/POSDeviceLink";
-import POSOutletSelect from "@/components/pos/POSOutletSelect";
 import POSPinEntry from "@/components/pos/POSPinEntry";
 import ProductGrid from "@/components/pos/ProductGrid";
 import POSCart from "@/components/pos/POSCart";
@@ -40,9 +38,9 @@ type POSTab = "catalog" | "orders" | "kitchen";
 
 export default function POSMain() {
   const {
-    authState, currentCashier, currentOutlet, setCurrentOutlet, availableOutlets,
+    authState, currentCashier, currentOutlet,
     lockScreen, logout, cart, cartTotal, currentShift, outletOpen, toggleOutletOpen, orders,
-    linkedBusiness, linkDevice, unlinkDevice, selectOutletAndProceed,
+    linkedBusiness, linkDevice,
   } = usePOS();
   const [activeTab, setActiveTab] = useState<POSTab>("catalog");
   const [showCheckout, setShowCheckout] = useState(false);
@@ -73,15 +71,9 @@ export default function POSMain() {
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const showKitchen = features?.hasDineIn || features?.hasMenu;
 
-  // Handle auth states
+  // Handle auth states — terminal is bound to a single outlet; no outlet picker
   if (authState === "device_link") return <POSDeviceLink onLink={linkDevice} />;
-  if (authState === "outlet_select") {
-    const deviceOutlets = linkedBusiness
-      ? posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id))
-      : [];
-    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} onUnlink={unlinkDevice} />;
-  }
-  if (authState === "login" || authState === "pin") return <POSLogin />;
+  if (authState === "login" || authState === "pin" || authState === "outlet_select") return <POSLogin />;
   if (authState === "locked") return <POSPinEntry mode="locked" />;
 
   const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
@@ -97,21 +89,14 @@ export default function POSMain() {
       {/* Top bar */}
       <header className="flex items-center gap-1.5 sm:gap-2 h-14 px-2 sm:px-3 border-b border-border bg-card shrink-0 overflow-hidden">
         <img src={theme === "dark" ? logoIconLight : logoIconDark} alt="Smapps" className="h-7 w-7 shrink-0" />
-        {/* Outlet selector */}
-        <Select value={currentOutlet?.id || ""} onValueChange={id => {
-          const outlet = availableOutlets.find(o => o.id === id);
-          if (outlet) setCurrentOutlet(outlet);
-        }}>
-          <SelectTrigger className="h-8 w-auto max-w-[180px] text-xs gap-1 border-0 bg-muted/50">
-            <Store className="w-3.5 h-3.5 shrink-0" />
-            <SelectValue placeholder="Select outlet" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableOutlets.map(o => (
-              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Outlet (terminal is bound to one outlet — not switchable) */}
+        <div
+          className="flex items-center gap-1.5 h-8 px-2 rounded-md bg-muted/50 text-xs font-medium text-foreground max-w-[200px]"
+          title={currentOutlet?.name}
+        >
+          <Store className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate">{currentOutlet?.name || "No outlet"}</span>
+        </div>
 
         {/* Business open/close toggle */}
         <button
