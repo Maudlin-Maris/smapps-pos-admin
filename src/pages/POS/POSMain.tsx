@@ -73,15 +73,9 @@ export default function POSMain() {
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const showKitchen = features?.hasDineIn || features?.hasMenu;
 
-  // Handle auth states
+  // Handle auth states — terminal is bound to a single outlet; no outlet picker
   if (authState === "device_link") return <POSDeviceLink onLink={linkDevice} />;
-  if (authState === "outlet_select") {
-    const deviceOutlets = linkedBusiness
-      ? posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id))
-      : [];
-    return <POSOutletSelect businessName={linkedBusiness?.name || ""} outlets={deviceOutlets} onSelect={selectOutletAndProceed} onUnlink={unlinkDevice} />;
-  }
-  if (authState === "login" || authState === "pin") return <POSLogin />;
+  if (authState === "login" || authState === "pin" || authState === "outlet_select") return <POSLogin />;
   if (authState === "locked") return <POSPinEntry mode="locked" />;
 
   const cartItemCount = cart.reduce((s, i) => s + i.quantity, 0);
