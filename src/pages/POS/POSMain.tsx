@@ -97,21 +97,14 @@ export default function POSMain() {
       {/* Top bar */}
       <header className="flex items-center gap-1.5 sm:gap-2 h-14 px-2 sm:px-3 border-b border-border bg-card shrink-0 overflow-hidden">
         <img src={theme === "dark" ? logoIconLight : logoIconDark} alt="Smapps" className="h-7 w-7 shrink-0" />
-        {/* Outlet selector */}
-        <Select value={currentOutlet?.id || ""} onValueChange={id => {
-          const outlet = availableOutlets.find(o => o.id === id);
-          if (outlet) setCurrentOutlet(outlet);
-        }}>
-          <SelectTrigger className="h-8 w-auto max-w-[180px] text-xs gap-1 border-0 bg-muted/50">
-            <Store className="w-3.5 h-3.5 shrink-0" />
-            <SelectValue placeholder="Select outlet" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableOutlets.map(o => (
-              <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Outlet (terminal is bound to one outlet — not switchable) */}
+        <div
+          className="flex items-center gap-1.5 h-8 px-2 rounded-md bg-muted/50 text-xs font-medium text-foreground max-w-[200px]"
+          title={currentOutlet?.name}
+        >
+          <Store className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate">{currentOutlet?.name || "No outlet"}</span>
+        </div>
 
         {/* Business open/close toggle */}
         <button
