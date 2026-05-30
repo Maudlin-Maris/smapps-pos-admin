@@ -256,11 +256,18 @@ export function POSProvider({ children }: { children: ReactNode }) {
     setSignedInCashiers(prev => prev.filter(c => c.id !== currentCashier?.id));
     setAuthState("login");
     setCurrentCashier(null);
-    setCurrentOutletState(null);
+    // Keep currentOutlet — terminal is bound to its outlet via device link.
+    // Re-resolve from linked business if it was cleared.
+    if (!currentOutlet && linkedBusiness) {
+      const deviceOutlets = posOutlets.filter(o => linkedBusiness.assignedOutlets.includes(o.id));
+      const lastId = localStorage.getItem("pos_last_outlet_id");
+      const outlet = (lastId && deviceOutlets.find(o => o.id === lastId)) || deviceOutlets[0] || null;
+      if (outlet) setCurrentOutletState(outlet);
+    }
     setCart([]);
     setCurrentShift(null);
     sessionStorage.removeItem("pos_session");
-  }, [currentCashier]);
+  }, [currentCashier, currentOutlet, linkedBusiness]);
 
   const startShift = useCallback((openingCash: number) => {
     const shift: POSShift = {
