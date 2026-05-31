@@ -219,10 +219,47 @@ const addons: AddonDef[] = [
   { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks" },
   { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI" },
 ];
-...
+
 const comparisonPlans = [
-...
+  {
+    name: "Starter",
+    price: "₦29,000",
+    priceValue: 29000,
+    tier: 0,
+    tagline: "Single outlet essentials",
+    outlets: 1,
+    staff: 10,
+    transactions: "5,000",
+    reports: "Basic",
+    support: "Email",
+  },
+  {
+    name: "Business Pro",
+    price: "₦79,000",
+    priceValue: 79000,
+    tier: 1,
+    tagline: "Multi-outlet growth",
+    outlets: 10,
+    staff: 50,
+    transactions: "50,000",
+    reports: "Advanced",
+    support: "Priority",
+    current: true,
+  },
+  {
+    name: "Enterprise",
+    price: "₦199,000",
+    priceValue: 199000,
+    tier: 2,
+    tagline: "Scale, security & API",
+    outlets: "Unlimited",
+    staff: "Unlimited",
+    transactions: "Unlimited",
+    reports: "Custom + BI",
+    support: "Dedicated CSM",
+  },
 ];
+
 
 /** Numeric entitlement limits per plan (Infinity = unlimited). */
 const planLimits: Record<string, Record<string, number>> = {
