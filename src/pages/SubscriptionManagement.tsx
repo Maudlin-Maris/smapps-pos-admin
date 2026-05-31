@@ -1144,6 +1144,13 @@ export default function SubscriptionManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PlanChangeDialog
+        open={planDialogTarget !== null}
+        onOpenChange={(o) => !o && setPlanDialogTarget(null)}
+        targetPlan={planDialogTarget}
+        onConfirm={handlePlanChangeConfirm}
+      />
     </div>
   );
 }
