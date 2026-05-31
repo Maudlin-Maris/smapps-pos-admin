@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +6,15 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -126,6 +135,7 @@ const comparisonPlans = [
   {
     name: "Starter",
     price: "₦29,000",
+    priceValue: 29000,
     tier: 0,
     outlets: 1,
     staff: 10,
@@ -138,6 +148,7 @@ const comparisonPlans = [
   {
     name: "Business Pro",
     price: "₦79,000",
+    priceValue: 79000,
     tier: 1,
     outlets: 10,
     staff: 50,
@@ -151,6 +162,7 @@ const comparisonPlans = [
   {
     name: "Enterprise",
     price: "₦199,000",
+    priceValue: 199000,
     tier: 2,
     outlets: "Unlimited",
     staff: "Unlimited",
@@ -161,6 +173,30 @@ const comparisonPlans = [
     whiteLabel: true,
   },
 ];
+
+/** Numeric entitlement limits per plan (Infinity = unlimited). */
+const planLimits: Record<string, Record<string, number>> = {
+  Starter: { outlets: 1, staff: 10, cashiers: 5, registers: 3, transactions: 5000, storage: 20 },
+  "Business Pro": { outlets: 10, staff: 50, cashiers: 25, registers: 15, transactions: 50000, storage: 100 },
+  Enterprise: {
+    outlets: Infinity, staff: Infinity, cashiers: Infinity,
+    registers: Infinity, transactions: Infinity, storage: 1000,
+  },
+};
+
+/** Feature entitlements per plan — used to diff gain/loss on plan change. */
+const planFeatures: Record<string, string[]> = {
+  Starter: ["Inventory Management", "Staff Roles & PINs"],
+  "Business Pro": [
+    "Inventory Management", "Stock Transfers", "Loyalty Program",
+    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
+  ],
+  Enterprise: [
+    "Inventory Management", "Stock Transfers", "Loyalty Program",
+    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
+    "API Access", "White Label", "Multi-Business Groups",
+  ],
+};
 
 const auditLog = [
   { date: "Feb 15, 2026", type: "renewal", title: "Subscription renewed", desc: "Business Pro — ₦118,000 charged to Visa •••• 4242" },
@@ -237,6 +273,292 @@ const auditIconMap: Record<string, { icon: LucideIcon; cls: string }> = {
 };
 
 /* -------------------------------------------------------------------------- */
+/*               Plan-change workflow: eligibility + preview                  */
+/* -------------------------------------------------------------------------- */
+
+const fmtNaira = (n: number) =>
+  "₦" + Math.round(n).toLocaleString("en-NG");
+const fmtLimit = (n: number) => (n === Infinity ? "Unlimited" : n.toLocaleString());
+
+interface PlanChangePreview {
+  kind: "upgrade" | "downgrade" | "same";
+  current: typeof comparisonPlans[number];
+  target: typeof comparisonPlans[number];
+  /** Blocking issues that must be resolved before the change is allowed. */
+  blockers: { resource: string; used: number; newLimit: number }[];
+  /** Non-blocking warnings (e.g. features the user will lose). */
+  warnings: string[];
+  /** Entitlement diffs displayed in the dialog. */
+  limitDiff: { label: string; from: string; to: string; tone: "up" | "down" | "same" }[];
+  featureDiff: { gained: string[]; lost: string[] };
+  /** Proration math + next invoice preview line items. */
+  proration: number; // credit (negative on downgrade, positive on upgrade)
+  invoiceItems: { label: string; amount: number }[];
+  invoiceTotal: number;
+  /** Days remaining in the current billing cycle. */
+  daysLeft: number;
+  cycleDays: number;
+}
+
+function buildPlanChangePreview(targetName: string): PlanChangePreview | null {
+  const current = comparisonPlans.find((p) => p.current);
+  const target = comparisonPlans.find((p) => p.name === targetName);
+  if (!current || !target) return null;
+
+  const kind: PlanChangePreview["kind"] =
+    target.tier === current.tier ? "same" : target.tier > current.tier ? "upgrade" : "downgrade";
+
+  // Eligibility: downgrades blocked when current usage exceeds the target's limits.
+  const targetLimits = planLimits[target.name] ?? {};
+  const blockers = usage
+    .map((u) => ({ resource: u.label, used: u.used, newLimit: targetLimits[u.key] ?? Infinity }))
+    .filter((b) => b.used > b.newLimit);
+
+  // Feature diff
+  const cur = new Set(planFeatures[current.name] ?? []);
+  const tgt = new Set(planFeatures[target.name] ?? []);
+  const gained = [...tgt].filter((f) => !cur.has(f));
+  const lost = [...cur].filter((f) => !tgt.has(f));
+
+  // Limit diff
+  const limitKeys: { key: string; label: string }[] = [
+    { key: "outlets", label: "Outlets" },
+    { key: "staff", label: "Staff seats" },
+    { key: "cashiers", label: "Cashiers" },
+    { key: "registers", label: "Registers" },
+    { key: "transactions", label: "Transactions / mo" },
+    { key: "storage", label: "Storage (GB)" },
+  ];
+  const limitDiff = limitKeys.map(({ key, label }) => {
+    const from = planLimits[current.name]?.[key] ?? 0;
+    const to = planLimits[target.name]?.[key] ?? 0;
+    return {
+      label,
+      from: fmtLimit(from),
+      to: fmtLimit(to),
+      tone: (to > from ? "up" : to < from ? "down" : "same") as "up" | "down" | "same",
+    };
+  });
+
+  // Proration: credit unused days of current plan, charge full target for next cycle.
+  const cycleDays = 30;
+  const daysLeft = subscription.daysLeft;
+  const unusedRatio = daysLeft / cycleDays;
+  const credit = Math.round(current.priceValue * unusedRatio);
+  const proratedTarget = Math.round(target.priceValue * unusedRatio);
+
+  const invoiceItems: { label: string; amount: number }[] = [];
+  if (kind === "upgrade") {
+    invoiceItems.push({
+      label: `${target.name} — prorated (${daysLeft} of ${cycleDays} days)`,
+      amount: proratedTarget,
+    });
+    invoiceItems.push({
+      label: `Credit for unused ${current.name}`,
+      amount: -credit,
+    });
+  } else if (kind === "downgrade") {
+    invoiceItems.push({
+      label: `${target.name} — applies at next renewal (${subscription.renewalDate})`,
+      amount: 0,
+    });
+    invoiceItems.push({
+      label: `Account credit (unused ${current.name})`,
+      amount: -credit,
+    });
+  }
+  const proration = invoiceItems.reduce((s, i) => s + i.amount, 0);
+  const invoiceTotal = Math.max(0, proration);
+
+  const warnings: string[] = [];
+  if (lost.length) warnings.push(`You'll lose access to ${lost.length} feature${lost.length > 1 ? "s" : ""} on ${target.name}.`);
+  if (kind === "downgrade" && blockers.length === 0) {
+    warnings.push("Downgrade takes effect at the end of the current billing cycle.");
+  }
+
+  return {
+    kind, current, target, blockers, warnings,
+    limitDiff, featureDiff: { gained, lost },
+    proration, invoiceItems, invoiceTotal, daysLeft, cycleDays,
+  };
+}
+
+interface PlanChangeDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  targetPlan: string | null;
+  onConfirm: (preview: PlanChangePreview) => void;
+}
+
+function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanChangeDialogProps) {
+  const preview = useMemo(
+    () => (targetPlan ? buildPlanChangePreview(targetPlan) : null),
+    [targetPlan],
+  );
+
+  if (!preview) return null;
+  const { kind, current, target, blockers, warnings, limitDiff, featureDiff, invoiceItems, invoiceTotal, daysLeft } = preview;
+  const isBlocked = blockers.length > 0;
+  const KindIcon = kind === "upgrade" ? ArrowUpRight : kind === "downgrade" ? ArrowDownRight : RefreshCw;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-heading">
+            <KindIcon className={cn(
+              "h-5 w-5",
+              kind === "upgrade" && "text-info",
+              kind === "downgrade" && "text-warning",
+            )} />
+            {kind === "upgrade" ? "Upgrade to" : kind === "downgrade" ? "Downgrade to" : "Switch to"} {target.name}
+          </DialogTitle>
+          <DialogDescription>
+            {current.name} ({fmtNaira(current.priceValue)}/mo) → {target.name} ({fmtNaira(target.priceValue)}/mo)
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Eligibility blockers */}
+        {isBlocked && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-destructive font-medium text-sm">
+              <AlertTriangle className="h-4 w-4" />
+              Not eligible — usage exceeds {target.name} limits
+            </div>
+            <ul className="text-xs space-y-1 ml-6 list-disc text-foreground/80">
+              {blockers.map((b) => (
+                <li key={b.resource}>
+                  <span className="font-medium">{b.resource}:</span> {b.used.toLocaleString()} in use, {target.name} allows {fmtLimit(b.newLimit)}.
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-muted-foreground ml-6">
+              Reduce usage below the new plan's limits, then retry.
+            </p>
+          </div>
+        )}
+
+        {/* Non-blocking warnings */}
+        {!isBlocked && warnings.length > 0 && (
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-1">
+            {warnings.map((w) => (
+              <div key={w} className="flex items-start gap-2 text-xs text-foreground/80">
+                <AlertCircle className="h-3.5 w-3.5 text-warning mt-0.5 shrink-0" />
+                <span>{w}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Entitlements diff */}
+        <div>
+          <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">New entitlements</h4>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="h-9">Resource</TableHead>
+                  <TableHead className="h-9">{current.name}</TableHead>
+                  <TableHead className="h-9">{target.name}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {limitDiff.map((d) => (
+                  <TableRow key={d.label}>
+                    <TableCell className="text-xs font-medium py-2">{d.label}</TableCell>
+                    <TableCell className="text-xs py-2 text-muted-foreground">{d.from}</TableCell>
+                    <TableCell className={cn(
+                      "text-xs py-2 font-medium flex items-center gap-1",
+                      d.tone === "up" && "text-success",
+                      d.tone === "down" && "text-destructive",
+                    )}>
+                      {d.tone === "up" && <ArrowUpRight className="h-3 w-3" />}
+                      {d.tone === "down" && <ArrowDownRight className="h-3 w-3" />}
+                      {d.to}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        {/* Feature gains / losses */}
+        {(featureDiff.gained.length > 0 || featureDiff.lost.length > 0) && (
+          <div className="grid sm:grid-cols-2 gap-3">
+            {featureDiff.gained.length > 0 && (
+              <div className="rounded-lg border border-success/30 bg-success/5 p-3">
+                <p className="text-xs font-semibold text-success mb-1.5">You'll gain</p>
+                <ul className="space-y-1">
+                  {featureDiff.gained.map((f) => (
+                    <li key={f} className="text-xs flex items-center gap-1.5">
+                      <Check className="h-3 w-3 text-success" /> {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {featureDiff.lost.length > 0 && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-xs font-semibold text-destructive mb-1.5">You'll lose</p>
+                <ul className="space-y-1">
+                  {featureDiff.lost.map((f) => (
+                    <li key={f} className="text-xs flex items-center gap-1.5">
+                      <X className="h-3 w-3 text-destructive" /> {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Next invoice preview */}
+        {invoiceItems.length > 0 && (
+          <div>
+            <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+              {kind === "upgrade" ? "Today's prorated charge" : "Next invoice preview"}
+            </h4>
+            <div className="rounded-lg border border-border p-3 space-y-1.5">
+              {invoiceItems.map((i) => (
+                <div key={i.label} className="flex justify-between text-xs py-1 border-b border-border/50 last:border-0">
+                  <span className="text-muted-foreground">{i.label}</span>
+                  <span className={cn("font-medium tabular-nums", i.amount < 0 && "text-success")}>
+                    {i.amount < 0 ? `− ${fmtNaira(Math.abs(i.amount))}` : fmtNaira(i.amount)}
+                  </span>
+                </div>
+              ))}
+              <Separator className="my-1" />
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-medium">
+                  {kind === "upgrade" ? "Due today" : "Due at next renewal"}
+                </span>
+                <span className="text-lg font-heading font-bold">{fmtNaira(invoiceTotal)}</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Based on {daysLeft} days remaining in the current billing cycle.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button
+            disabled={isBlocked || kind === "same"}
+            onClick={() => onConfirm(preview)}
+            variant={kind === "downgrade" ? "outline" : "default"}
+          >
+            {isBlocked ? "Not eligible" : kind === "upgrade" ? "Confirm upgrade & pay" : "Schedule downgrade"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+/* -------------------------------------------------------------------------- */
 /*                                 Component                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -245,10 +567,31 @@ export default function SubscriptionManagement() {
   const [activeAddons, setActiveAddons] = useState(
     Object.fromEntries(addons.map((a) => [a.key, a.active])),
   );
+  const [planDialogTarget, setPlanDialogTarget] = useState<string | null>(null);
   const health = healthMap[subscription.status];
   const HealthIcon = health.icon;
 
   const warnings = usage.filter((u) => pct(u.used, u.limit) >= 80);
+
+  const openPlanChange = (planName: string) => setPlanDialogTarget(planName);
+  const handlePlanChangeConfirm = (preview: PlanChangePreview) => {
+    setPlanDialogTarget(null);
+    if (preview.kind === "upgrade") {
+      toast.success(`Upgraded to ${preview.target.name}`, {
+        description: `${fmtNaira(preview.invoiceTotal)} charged. Entitlements updated immediately.`,
+      });
+    } else if (preview.kind === "downgrade") {
+      toast.success(`Downgrade scheduled`, {
+        description: `${preview.target.name} takes effect on ${subscription.renewalDate}.`,
+      });
+    }
+  };
+
+  // Default target for the "Upgrade" header button — first plan above current.
+  const nextUpgrade = comparisonPlans.find(
+    (p) => !p.current && p.tier > (comparisonPlans.find((c) => c.current)?.tier ?? 0),
+  );
+
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -265,7 +608,7 @@ export default function SubscriptionManagement() {
             <FileText className="h-4 w-4" />
             Billing Portal
           </Button>
-          <Button size="sm">
+          <Button size="sm" disabled={!nextUpgrade} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>
             <TrendingUp className="h-4 w-4" />
             Upgrade
           </Button>
@@ -284,7 +627,7 @@ export default function SubscriptionManagement() {
               {warnings.map((w) => w.label).join(", ")} — consider upgrading to avoid overage.
             </p>
           </div>
-          <Button size="sm" variant="outline">Review</Button>
+          <Button size="sm" variant="outline" disabled={!nextUpgrade} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Review</Button>
         </div>
       )}
 
@@ -345,7 +688,7 @@ export default function SubscriptionManagement() {
             </div>
 
             <div className="flex flex-wrap gap-2 mt-5">
-              <Button size="sm" variant="outline">Change Plan</Button>
+              <Button size="sm" variant="outline" onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Change Plan</Button>
               <Button size="sm" variant="ghost">Update Payment</Button>
               <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">Cancel</Button>
             </div>
@@ -674,7 +1017,8 @@ export default function SubscriptionManagement() {
           <div className="grid gap-4 lg:grid-cols-3">
             {comparisonPlans.map((p) => {
               const current = p.current;
-              const isUpgrade = !current && p.tier > 1;
+              const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
+              const isUpgrade = !current && p.tier > currentTier;
               return (
                 <Card
                   key={p.name}
@@ -696,6 +1040,7 @@ export default function SubscriptionManagement() {
                     size="sm"
                     className="w-full mt-4"
                     disabled={current}
+                    onClick={() => !current && openPlanChange(p.name)}
                   >
                     {current ? "Current" : isUpgrade ? (<><ArrowUpRight className="h-3.5 w-3.5" /> Upgrade</>) : (<><ArrowDownRight className="h-3.5 w-3.5" /> Downgrade</>)}
                   </Button>
@@ -799,6 +1144,13 @@ export default function SubscriptionManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <PlanChangeDialog
+        open={planDialogTarget !== null}
+        onOpenChange={(o) => !o && setPlanDialogTarget(null)}
+        targetPlan={planDialogTarget}
+        onConfirm={handlePlanChangeConfirm}
+      />
     </div>
   );
 }
