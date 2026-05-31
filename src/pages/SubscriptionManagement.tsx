@@ -83,95 +83,145 @@ const usage = [
   { key: "storage", label: "Storage", icon: HardDrive, used: 84, limit: 100, unit: " GB" },
 ];
 
-const enabledFeatures = [
-  { name: "Inventory Management", desc: "Stock tracking, WAC valuation" },
-  { name: "Stock Transfers", desc: "Inter-outlet transfers" },
-  { name: "Loyalty Program", desc: "Points, tiers, rewards" },
-  { name: "Advanced Reports", desc: "P&L, COGS, contribution" },
-  { name: "Multi-Outlet", desc: "Centralised admin" },
-  { name: "Staff Roles & PINs", desc: "Granular permissions" },
+/**
+ * Master feature catalog — derived from the actual application modules
+ * (POS, Menu, Inventory, Reports, Outlets, Loyalty, Bookings, KDS, etc.).
+ *
+ * tier: 0=Starter (Core), 1=Business Pro (Advanced), 2=Enterprise.
+ * addon: true means the feature can also be purchased à la carte
+ *        below the tier where it becomes included.
+ */
+interface FeatureDef {
+  name: string;
+  desc: string;
+  category: string;
+  tier: 0 | 1 | 2;
+  addon?: boolean;
+}
+
+const featureCatalog: FeatureDef[] = [
+  // ───── POS & Checkout (Core) ─────
+  { category: "POS & Checkout", tier: 0, name: "Core POS & Catalog",       desc: "Cart, checkout, item search, variants" },
+  { category: "POS & Checkout", tier: 0, name: "Cashier PIN & Lock Screen",desc: "Multi-session sign-in, fast switching" },
+  { category: "POS & Checkout", tier: 0, name: "Receipt Printing",         desc: "Thermal & A4 receipt printing" },
+  { category: "POS & Checkout", tier: 0, name: "Shift Management",         desc: "Open / close shifts, cash drawer reconciliation" },
+  { category: "POS & Checkout", tier: 1, name: "Split Payments & Tips",    desc: "Multi-tender, tip pooling & payouts" },
+  { category: "POS & Checkout", tier: 1, name: "Order Merging & Modifiers",desc: "Combine tickets, auth-protected edits" },
+  { category: "POS & Checkout", tier: 1, name: "Barcode Scan & Print",     desc: "Camera + hardware scanners, bulk label printing" },
+
+  // ───── Menu & Catalog ─────
+  { category: "Menu & Catalog", tier: 0, name: "Menu Management",          desc: "Items, categories, basic variants" },
+  { category: "Menu & Catalog", tier: 1, name: "Modifier Groups",          desc: "Reusable add-ons & forced choices" },
+  { category: "Menu & Catalog", tier: 1, name: "Composite Items & Recipes",desc: "BOM, unit mappings, substitutions" },
+  { category: "Menu & Catalog", tier: 1, name: "Promo Bundles",            desc: "Locked groups, Toast-style upcharges" },
+
+  // ───── Inventory ─────
+  { category: "Inventory",      tier: 0, name: "Stock Tracking",           desc: "On-hand quantities & low-stock alerts" },
+  { category: "Inventory",      tier: 1, name: "WAC Valuation",            desc: "Weighted-average cost, live recalc" },
+  { category: "Inventory",      tier: 1, name: "Batch & FEFO Tracking",    desc: "Lot IDs, expiry-first depletion" },
+  { category: "Inventory",      tier: 1, name: "Inventory History & Audit",desc: "Full adjustment log with reasons" },
+  { category: "Inventory",      tier: 1, name: "Stock Transfers",          desc: "Inter-outlet transfers & approvals" },
+  { category: "Inventory",      tier: 1, name: "Bulk Import / Receive",    desc: "CSV import, bulk receive workflows" },
+
+  // ───── Outlets & Operations ─────
+  { category: "Outlets",        tier: 0, name: "Single Outlet",            desc: "One location, one terminal pool" },
+  { category: "Outlets",        tier: 1, name: "Multi-Outlet Management",  desc: "Centralised admin across locations" },
+  { category: "Outlets",        tier: 1, name: "Departments & Routing",    desc: "Kitchen / bar / counter routing" },
+  { category: "Outlets",        tier: 1, name: "Fees, Taxes & Discounts",  desc: "Location-specific charges & rules" },
+  { category: "Outlets",        tier: 1, name: "Terminal Management",      desc: "Device linking IDs, per-outlet binding" },
+  { category: "Outlets",        tier: 2, name: "Multi-Business Groups",    desc: "Parent-child org hierarchy" },
+
+  // ───── Customers & Loyalty ─────
+  { category: "Customers",      tier: 0, name: "Customer Database",        desc: "Profiles, contact info, order history" },
+  { category: "Customers",      tier: 1, name: "Loyalty Program",          desc: "Points, tiers, location overrides", addon: true },
+  { category: "Customers",      tier: 1, name: "Service Bookings",         desc: "Appointments, duration & status",   addon: true },
+
+  // ───── Reports & Analytics ─────
+  { category: "Reports",        tier: 0, name: "Basic Sales Reports",      desc: "Daily totals, by item, by cashier" },
+  { category: "Reports",        tier: 1, name: "Advanced Reports",         desc: "P&L, COGS, raw-material contribution" },
+  { category: "Reports",        tier: 1, name: "Profitability Analytics",  desc: "Margin by item, category, department" },
+  { category: "Reports",        tier: 1, name: "Report Exports",           desc: "Excel / CSV / PDF export bundles" },
+  { category: "Reports",        tier: 2, name: "Custom Reports & BI Feed", desc: "Custom dashboards & data warehouse sync", addon: true },
+
+  // ───── Finance ─────
+  { category: "Finance",        tier: 1, name: "Expense Management",       desc: "Track outlet expenses & categories" },
+  { category: "Finance",        tier: 1, name: "Tips Management",          desc: "Pooling rules & cashier payouts" },
+
+  // ───── Kitchen & Fulfillment ─────
+  { category: "Kitchen",        tier: 1, name: "Kitchen Display (KDS)",    desc: "Live tickets, station routing",       addon: true },
+  { category: "Kitchen",        tier: 2, name: "Delivery & Dispatch",      desc: "Rider assignment & tracking",         addon: true },
+  { category: "Kitchen",        tier: 2, name: "Online Ordering",          desc: "Branded order-ahead web storefront",  addon: true },
+
+  // ───── Users & Security ─────
+  { category: "Users & Security", tier: 0, name: "Staff Roles & PINs",     desc: "Basic role assignment" },
+  { category: "Users & Security", tier: 1, name: "Granular RBAC",          desc: "Permission matrix per role" },
+  { category: "Users & Security", tier: 2, name: "SSO / SAML",             desc: "Enterprise identity provider login" },
+  { category: "Users & Security", tier: 2, name: "Advanced Audit Logs",    desc: "Tamper-evident activity trail" },
+
+  // ───── Platform & Extensibility ─────
+  { category: "Platform",       tier: 2, name: "API Access & Webhooks",    desc: "REST endpoints & event webhooks",     addon: true },
+  { category: "Platform",       tier: 2, name: "White Label",              desc: "Custom branding & domain" },
+  { category: "Platform",       tier: 2, name: "WhatsApp Receipts",        desc: "Auto-send digital receipts",          addon: true },
+
+  // ───── Support & SLA ─────
+  { category: "Support",        tier: 0, name: "Email Support",            desc: "Standard email response" },
+  { category: "Support",        tier: 1, name: "Priority Support",         desc: "Faster response, in-app chat" },
+  { category: "Support",        tier: 2, name: "Dedicated CSM & 99.9% SLA",desc: "Named success manager, uptime SLA" },
 ];
 
-const disabledFeatures = [
-  { name: "API Access", desc: "REST endpoints & webhooks" },
-  { name: "White Label", desc: "Custom branding & domain" },
-  { name: "Multi-Business Groups", desc: "Parent-child org structure" },
-];
-
-const addons = [
-  { key: "loyalty", name: "Loyalty Engine", icon: Heart, price: "₦12,000/mo", active: true, desc: "Tier rules & redemption" },
-  { key: "delivery", name: "Delivery", icon: Truck, price: "₦18,000/mo", active: true, desc: "Rider dispatch & tracking" },
-  { key: "kds", name: "Kitchen Display", icon: ChefHat, price: "₦9,000/mo", active: true, desc: "Real-time kitchen tickets" },
-  { key: "whatsapp", name: "WhatsApp Receipts", icon: MessageSquare, price: "₦6,000/mo", active: false, desc: "Auto-send to customers" },
-  { key: "api", name: "API Access", icon: Code2, price: "₦25,000/mo", active: false, desc: "Developer endpoints" },
-];
-
-const paymentMethods = [
-  { id: "pm_1", brand: "Visa", last4: "4242", exp: "08/27", default: true },
-  { id: "pm_2", brand: "Mastercard", last4: "8801", exp: "12/26", default: false },
-];
-
-const upcomingInvoice = {
-  number: "INV-2026-003",
-  date: "March 15, 2026",
-  amount: "₦118,000",
-  items: [
-    { label: "Business Pro — Monthly", amount: "₦79,000" },
-    { label: "Loyalty Engine add-on", amount: "₦12,000" },
-    { label: "Delivery add-on", amount: "₦18,000" },
-    { label: "Kitchen Display add-on", amount: "₦9,000" },
-  ],
+const planByTier: Record<0 | 1 | 2, string> = {
+  0: "Starter",
+  1: "Business Pro",
+  2: "Enterprise",
 };
 
-const invoiceHistory = [
-  { id: "INV-2026-002", date: "Feb 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2026-001", date: "Jan 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2025-012", date: "Dec 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2025-011", date: "Nov 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2025-010", date: "Oct 15, 2025", amount: "₦79,000", status: "Paid", method: "Visa •••• 4242" },
-];
+/** Plan name → set of feature names included by that tier (cumulative). */
+const planFeatures: Record<string, string[]> = {
+  Starter:        featureCatalog.filter((f) => f.tier <= 0).map((f) => f.name),
+  "Business Pro": featureCatalog.filter((f) => f.tier <= 1).map((f) => f.name),
+  Enterprise:     featureCatalog.filter((f) => f.tier <= 2).map((f) => f.name),
+};
 
+const CURRENT_PLAN = subscription.plan;
+const enabledFeatures = featureCatalog.filter((f) => planFeatures[CURRENT_PLAN].includes(f.name));
+const disabledFeatures = featureCatalog.filter((f) => !planFeatures[CURRENT_PLAN].includes(f.name));
+
+/** Icon resolution for add-on cards. */
+const addonIcons: Record<string, LucideIcon> = {
+  loyalty: Heart,
+  kds: ChefHat,
+  bookings: Calendar,
+  delivery: Truck,
+  online: Store,
+  whatsapp: MessageSquare,
+  api: Code2,
+  bi: TrendingUp,
+};
+
+interface AddonDef {
+  key: string;
+  name: string;
+  icon: LucideIcon;
+  price: string;
+  active: boolean;
+  desc: string;
+  /** Tier at which the add-on is bundled for free (no longer billable). */
+  includedFromTier: 0 | 1 | 2;
+}
+
+const addons: AddonDef[] = [
+  { key: "loyalty",  name: "Loyalty Engine",     icon: addonIcons.loyalty,  price: "₦12,000/mo", active: true,  includedFromTier: 1, desc: "Points, tiers & redemption rules" },
+  { key: "kds",      name: "Kitchen Display",    icon: addonIcons.kds,      price: "₦9,000/mo",  active: true,  includedFromTier: 1, desc: "Real-time kitchen station tickets" },
+  { key: "bookings", name: "Service Bookings",   icon: addonIcons.bookings, price: "₦8,000/mo",  active: false, includedFromTier: 1, desc: "Appointments for salons & services" },
+  { key: "delivery", name: "Delivery & Dispatch",icon: addonIcons.delivery, price: "₦18,000/mo", active: true,  includedFromTier: 2, desc: "Rider assignment & live tracking" },
+  { key: "online",   name: "Online Ordering",    icon: addonIcons.online,   price: "₦22,000/mo", active: false, includedFromTier: 2, desc: "Branded order-ahead storefront" },
+  { key: "whatsapp", name: "WhatsApp Receipts",  icon: addonIcons.whatsapp, price: "₦6,000/mo",  active: false, includedFromTier: 2, desc: "Auto-send digital receipts" },
+  { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks" },
+  { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI" },
+];
+...
 const comparisonPlans = [
-  {
-    name: "Starter",
-    price: "₦29,000",
-    priceValue: 29000,
-    tier: 0,
-    outlets: 1,
-    staff: 10,
-    transactions: "5,000",
-    reports: "Basic",
-    support: "Email",
-    api: false,
-    whiteLabel: false,
-  },
-  {
-    name: "Business Pro",
-    price: "₦79,000",
-    priceValue: 79000,
-    tier: 1,
-    outlets: 10,
-    staff: 50,
-    transactions: "50,000",
-    reports: "Advanced",
-    support: "Priority",
-    api: false,
-    whiteLabel: false,
-    current: true,
-  },
-  {
-    name: "Enterprise",
-    price: "₦199,000",
-    priceValue: 199000,
-    tier: 2,
-    outlets: "Unlimited",
-    staff: "Unlimited",
-    transactions: "Unlimited",
-    reports: "Custom",
-    support: "Dedicated CSM",
-    api: true,
-    whiteLabel: true,
-  },
+...
 ];
 
 /** Numeric entitlement limits per plan (Infinity = unlimited). */
@@ -182,20 +232,6 @@ const planLimits: Record<string, Record<string, number>> = {
     outlets: Infinity, staff: Infinity, cashiers: Infinity,
     registers: Infinity, transactions: Infinity, storage: 1000,
   },
-};
-
-/** Feature entitlements per plan — used to diff gain/loss on plan change. */
-const planFeatures: Record<string, string[]> = {
-  Starter: ["Inventory Management", "Staff Roles & PINs"],
-  "Business Pro": [
-    "Inventory Management", "Stock Transfers", "Loyalty Program",
-    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
-  ],
-  Enterprise: [
-    "Inventory Management", "Stock Transfers", "Loyalty Program",
-    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
-    "API Access", "White Label", "Multi-Business Groups",
-  ],
 };
 
 const auditLog = [
