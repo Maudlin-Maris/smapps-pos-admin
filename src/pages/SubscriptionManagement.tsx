@@ -259,6 +259,31 @@ const comparisonPlans = [
     support: "Dedicated CSM",
   },
 ];
+const paymentMethods = [
+  { id: "pm_1", brand: "Visa", last4: "4242", exp: "08/27", default: true },
+  { id: "pm_2", brand: "Mastercard", last4: "8801", exp: "12/26", default: false },
+];
+
+const upcomingInvoice = {
+  number: "INV-2026-003",
+  date: "March 15, 2026",
+  amount: "₦118,000",
+  items: [
+    { label: "Business Pro — Monthly", amount: "₦79,000" },
+    { label: "Loyalty Engine add-on", amount: "₦12,000" },
+    { label: "Delivery & Dispatch add-on", amount: "₦18,000" },
+    { label: "Kitchen Display add-on", amount: "₦9,000" },
+  ],
+};
+
+const invoiceHistory = [
+  { id: "INV-2026-002", date: "Feb 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2026-001", date: "Jan 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2025-012", date: "Dec 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2025-011", date: "Nov 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2025-010", date: "Oct 15, 2025", amount: "₦79,000", status: "Paid", method: "Visa •••• 4242" },
+];
+
 
 
 /** Numeric entitlement limits per plan (Infinity = unlimited). */
