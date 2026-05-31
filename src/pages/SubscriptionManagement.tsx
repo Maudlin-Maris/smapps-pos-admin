@@ -567,10 +567,31 @@ export default function SubscriptionManagement() {
   const [activeAddons, setActiveAddons] = useState(
     Object.fromEntries(addons.map((a) => [a.key, a.active])),
   );
+  const [planDialogTarget, setPlanDialogTarget] = useState<string | null>(null);
   const health = healthMap[subscription.status];
   const HealthIcon = health.icon;
 
   const warnings = usage.filter((u) => pct(u.used, u.limit) >= 80);
+
+  const openPlanChange = (planName: string) => setPlanDialogTarget(planName);
+  const handlePlanChangeConfirm = (preview: PlanChangePreview) => {
+    setPlanDialogTarget(null);
+    if (preview.kind === "upgrade") {
+      toast.success(`Upgraded to ${preview.target.name}`, {
+        description: `${fmtNaira(preview.invoiceTotal)} charged. Entitlements updated immediately.`,
+      });
+    } else if (preview.kind === "downgrade") {
+      toast.success(`Downgrade scheduled`, {
+        description: `${preview.target.name} takes effect on ${subscription.renewalDate}.`,
+      });
+    }
+  };
+
+  // Default target for the "Upgrade" header button — first plan above current.
+  const nextUpgrade = comparisonPlans.find(
+    (p) => !p.current && p.tier > (comparisonPlans.find((c) => c.current)?.tier ?? 0),
+  );
+
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
