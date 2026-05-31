@@ -963,7 +963,9 @@ export default function SubscriptionManagement() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {addons.map((a) => {
               const Icon = a.icon;
-              const isActive = activeAddons[a.key];
+              const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
+              const isIncluded = currentTier >= a.includedFromTier;
+              const isActive = isIncluded || activeAddons[a.key];
               return (
                 <Card
                   key={a.key}
@@ -982,30 +984,38 @@ export default function SubscriptionManagement() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold">{a.name}</p>
-                        <p className="text-xs text-muted-foreground">{a.price}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isIncluded ? `Included in ${planByTier[a.includedFromTier]}` : a.price}
+                        </p>
                       </div>
                     </div>
-                    {isActive && (
+                    {isIncluded ? (
+                      <Badge className="text-[10px] h-5 bg-info/10 text-info border-info/20 border" variant="outline">
+                        Included
+                      </Badge>
+                    ) : isActive ? (
                       <Badge className="text-[10px] h-5 bg-success/10 text-success border-success/20 border" variant="outline">
                         Active
                       </Badge>
-                    )}
+                    ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">{a.desc}</p>
                   <Button
                     size="sm"
                     variant={isActive ? "outline" : "default"}
                     className="w-full mt-3"
+                    disabled={isIncluded}
                     onClick={() =>
                       setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
                     }
                   >
-                    {isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
+                    {isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
                   </Button>
                 </Card>
               );
             })}
           </div>
+
         </TabsContent>
 
         {/* ============================ BILLING ============================ */}
