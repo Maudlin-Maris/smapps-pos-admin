@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell, AreaChart, Area,
+  Cell, AreaChart, Area, LineChart, Line,
 } from "recharts";
 import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, User, CalendarRange, Clock, CreditCard } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
@@ -411,7 +411,7 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           {filteredSales.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={salesByHour} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <LineChart data={salesByHour} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} className="text-xs" interval={1} />
                   <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={45} />
@@ -422,17 +422,33 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     }}
                     labelFormatter={(_, payload) => (payload?.[0]?.payload as { fullLabel?: string } | undefined)?.fullLabel || ""}
                     contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
-                    cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
+                    cursor={{ stroke: "hsl(var(--muted-foreground) / 0.3)" }}
                   />
-                  <Bar dataKey="sales" name="Net Sales" radius={[4, 4, 0, 0]}>
-                    {salesByHour.map((entry) => (
-                      <Cell
-                        key={entry.hour}
-                        fill={entry.hour === peakHour?.hour ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.35)"}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
+                  <Line
+                    type="monotone"
+                    dataKey="sales"
+                    name="Net Sales"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={(props: any) => {
+                      const { cx, cy, payload, index } = props;
+                      const isPeak = payload?.hour === peakHour?.hour;
+                      return (
+                        <circle
+                          key={index}
+                          cx={cx}
+                          cy={cy}
+                          r={isPeak ? 5 : 3}
+                          fill={isPeak ? "hsl(var(--primary))" : "hsl(var(--card))"}
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                        />
+                      );
+                    }}
+                    activeDot={{ r: 6, fill: "hsl(var(--primary))" }}
+                  />
+                </LineChart>
+
               </ResponsiveContainer>
               {peakHour && peakHour.sales > 0 && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary/5 p-2 sm:p-3">
