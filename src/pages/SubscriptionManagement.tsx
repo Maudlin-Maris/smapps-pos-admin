@@ -135,6 +135,7 @@ const comparisonPlans = [
   {
     name: "Starter",
     price: "₦29,000",
+    priceValue: 29000,
     tier: 0,
     outlets: 1,
     staff: 10,
@@ -147,6 +148,7 @@ const comparisonPlans = [
   {
     name: "Business Pro",
     price: "₦79,000",
+    priceValue: 79000,
     tier: 1,
     outlets: 10,
     staff: 50,
@@ -160,6 +162,7 @@ const comparisonPlans = [
   {
     name: "Enterprise",
     price: "₦199,000",
+    priceValue: 199000,
     tier: 2,
     outlets: "Unlimited",
     staff: "Unlimited",
@@ -170,6 +173,30 @@ const comparisonPlans = [
     whiteLabel: true,
   },
 ];
+
+/** Numeric entitlement limits per plan (Infinity = unlimited). */
+const planLimits: Record<string, Record<string, number>> = {
+  Starter: { outlets: 1, staff: 10, cashiers: 5, registers: 3, transactions: 5000, storage: 20 },
+  "Business Pro": { outlets: 10, staff: 50, cashiers: 25, registers: 15, transactions: 50000, storage: 100 },
+  Enterprise: {
+    outlets: Infinity, staff: Infinity, cashiers: Infinity,
+    registers: Infinity, transactions: Infinity, storage: 1000,
+  },
+};
+
+/** Feature entitlements per plan — used to diff gain/loss on plan change. */
+const planFeatures: Record<string, string[]> = {
+  Starter: ["Inventory Management", "Staff Roles & PINs"],
+  "Business Pro": [
+    "Inventory Management", "Stock Transfers", "Loyalty Program",
+    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
+  ],
+  Enterprise: [
+    "Inventory Management", "Stock Transfers", "Loyalty Program",
+    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
+    "API Access", "White Label", "Multi-Business Groups",
+  ],
+};
 
 const auditLog = [
   { date: "Feb 15, 2026", type: "renewal", title: "Subscription renewed", desc: "Business Pro — ₦118,000 charged to Visa •••• 4242" },
