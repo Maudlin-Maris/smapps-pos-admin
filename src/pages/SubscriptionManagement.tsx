@@ -56,9 +56,34 @@ import {
   Heart,
   Activity,
   AlertCircle,
+  Info,
   type LucideIcon,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+/* -------------------------------------------------------------------------- */
+/*                       Click-to-reveal feature tooltip                      */
+/* -------------------------------------------------------------------------- */
+function FeatureInfo({ title, description }: { title: string; description: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          aria-label={`What is ${title}?`}
+          className="inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors shrink-0"
+        >
+          <Info className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-64 p-3">
+        <p className="text-xs font-semibold mb-1">{title}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                   Data                                     */
