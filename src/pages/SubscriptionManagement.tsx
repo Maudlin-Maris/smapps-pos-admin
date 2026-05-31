@@ -688,7 +688,7 @@ export default function SubscriptionManagement() {
             </div>
 
             <div className="flex flex-wrap gap-2 mt-5">
-              <Button size="sm" variant="outline">Change Plan</Button>
+              <Button size="sm" variant="outline" onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Change Plan</Button>
               <Button size="sm" variant="ghost">Update Payment</Button>
               <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">Cancel</Button>
             </div>
