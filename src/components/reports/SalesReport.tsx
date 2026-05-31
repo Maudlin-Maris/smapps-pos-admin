@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell, AreaChart, Area,
+  Cell, AreaChart, Area, LineChart, Line,
 } from "recharts";
 import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, User, CalendarRange, Clock, CreditCard } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
