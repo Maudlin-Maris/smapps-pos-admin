@@ -947,7 +947,10 @@ export default function SubscriptionManagement() {
                       <Check className="h-3.5 w-3.5 text-success" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{f.name}</p>
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        {f.name}
+                        <FeatureInfo title={f.name} description={f.desc} />
+                      </p>
                       <p className="text-xs text-muted-foreground">{f.desc}</p>
                     </div>
                   </div>
