@@ -1129,6 +1129,7 @@ export default function SubscriptionManagement() {
                     <Badge className="absolute -top-2.5 left-4 text-[10px]">Current Plan</Badge>
                   )}
                   <h4 className="font-heading font-bold">{p.name}</h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{p.tagline}</p>
                   <div className="mt-2 flex items-baseline gap-1">
                     <p className="text-2xl font-heading font-bold">{p.price}</p>
                     <span className="text-xs text-muted-foreground">/mo</span>
@@ -1142,15 +1143,29 @@ export default function SubscriptionManagement() {
                   >
                     {current ? "Current" : isUpgrade ? (<><ArrowUpRight className="h-3.5 w-3.5" /> Upgrade</>) : (<><ArrowDownRight className="h-3.5 w-3.5" /> Downgrade</>)}
                   </Button>
+                  <ul className="mt-4 space-y-1.5 text-xs">
+                    {featureCatalog
+                      .filter((f) => f.tier === p.tier)
+                      .slice(0, 6)
+                      .map((f) => (
+                        <li key={f.name} className="flex items-start gap-1.5">
+                          <Check className="h-3 w-3 text-success mt-0.5 shrink-0" />
+                          <span className="text-foreground/80">{f.name}</span>
+                        </li>
+                      ))}
+                  </ul>
                 </Card>
               );
             })}
           </div>
 
-          {/* Comparison table */}
+          {/* Comparison table — limits + capabilities grouped by category */}
           <Card className="p-0 overflow-hidden">
             <div className="p-5 pb-3">
               <h3 className="font-heading font-semibold text-sm">Side-by-Side Comparison</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Capabilities are cumulative — every plan includes everything from the plan below.
+              </p>
             </div>
             <Table>
               <TableHeader>
@@ -1165,6 +1180,12 @@ export default function SubscriptionManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Limits section */}
+                <TableRow className="bg-muted/40">
+                  <TableCell colSpan={1 + comparisonPlans.length} className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5">
+                    Limits
+                  </TableCell>
+                </TableRow>
                 {[
                   { label: "Outlets", key: "outlets" },
                   { label: "Staff seats", key: "staff" },
@@ -1181,27 +1202,43 @@ export default function SubscriptionManagement() {
                     ))}
                   </TableRow>
                 ))}
-                {[
-                  { label: "API Access", key: "api" },
-                  { label: "White Label", key: "whiteLabel" },
-                ].map((row) => (
-                  <TableRow key={row.label}>
-                    <TableCell className="text-sm font-medium">{row.label}</TableCell>
-                    {comparisonPlans.map((p) => (
-                      <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
-                        {(p as any)[row.key] ? (
-                          <Check className="h-4 w-4 text-success" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground/50" />
-                        )}
+
+                {/* Capability sections — grouped by feature category */}
+                {Array.from(new Set(featureCatalog.map((f) => f.category))).map((category) => (
+                  <Fragment key={category}>
+                    <TableRow className="bg-muted/40">
+                      <TableCell colSpan={1 + comparisonPlans.length} className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5">
+                        {category}
                       </TableCell>
-                    ))}
-                  </TableRow>
+                    </TableRow>
+                    {featureCatalog
+                      .filter((f) => f.category === category)
+                      .map((f) => (
+                        <TableRow key={f.name}>
+                          <TableCell className="text-sm font-medium">
+                            {f.name}
+                            {f.addon && (
+                              <Badge variant="outline" className="ml-2 text-[9px] h-4 px-1">Add-on</Badge>
+                            )}
+                          </TableCell>
+                          {comparisonPlans.map((p) => (
+                            <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
+                              {planFeatures[p.name].includes(f.name) ? (
+                                <Check className="h-4 w-4 text-success" />
+                              ) : (
+                                <X className="h-4 w-4 text-muted-foreground/40" />
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
           </Card>
         </TabsContent>
+
 
         {/* =========================== ACTIVITY =========================== */}
         <TabsContent value="activity" className="space-y-4">
