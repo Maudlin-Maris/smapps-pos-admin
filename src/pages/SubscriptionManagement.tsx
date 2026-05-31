@@ -56,9 +56,34 @@ import {
   Heart,
   Activity,
   AlertCircle,
+  Info,
   type LucideIcon,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+
+/* -------------------------------------------------------------------------- */
+/*                       Click-to-reveal feature tooltip                      */
+/* -------------------------------------------------------------------------- */
+function FeatureInfo({ title, description }: { title: string; description: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          aria-label={`What is ${title}?`}
+          className="inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors shrink-0"
+        >
+          <Info className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="start" className="w-64 p-3">
+        <p className="text-xs font-semibold mb-1">{title}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                   Data                                     */
@@ -922,7 +947,10 @@ export default function SubscriptionManagement() {
                       <Check className="h-3.5 w-3.5 text-success" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{f.name}</p>
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        {f.name}
+                        <FeatureInfo title={f.name} description={f.desc} />
+                      </p>
                       <p className="text-xs text-muted-foreground">{f.desc}</p>
                     </div>
                   </div>
@@ -945,7 +973,10 @@ export default function SubscriptionManagement() {
                       <X className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground">{f.name}</p>
+                      <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        {f.name}
+                        <FeatureInfo title={f.name} description={f.desc} />
+                      </p>
                       <p className="text-xs text-muted-foreground/80">{f.desc}</p>
                     </div>
                     <Button size="sm" variant="ghost" className="h-7 text-xs">
@@ -1160,7 +1191,8 @@ export default function SubscriptionManagement() {
                       .map((f) => (
                         <li key={f.name} className="flex items-start gap-1.5">
                           <Check className="h-3 w-3 text-success mt-0.5 shrink-0" />
-                          <span className="text-foreground/80">{f.name}</span>
+                          <span className="text-foreground/80 flex-1">{f.name}</span>
+                          <FeatureInfo title={f.name} description={f.desc} />
                         </li>
                       ))}
                   </ul>
@@ -1226,10 +1258,13 @@ export default function SubscriptionManagement() {
                       .map((f) => (
                         <TableRow key={f.name}>
                           <TableCell className="text-sm font-medium">
-                            {f.name}
-                            {f.addon && (
-                              <Badge variant="outline" className="ml-2 text-[9px] h-4 px-1">Add-on</Badge>
-                            )}
+                            <span className="inline-flex items-center gap-1.5">
+                              {f.name}
+                              <FeatureInfo title={f.name} description={f.desc} />
+                              {f.addon && (
+                                <Badge variant="outline" className="ml-1 text-[9px] h-4 px-1">Add-on</Badge>
+                              )}
+                            </span>
                           </TableCell>
                           {comparisonPlans.map((p) => (
                             <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
