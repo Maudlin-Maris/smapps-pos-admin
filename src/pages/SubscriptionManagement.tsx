@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,29 +83,182 @@ const usage = [
   { key: "storage", label: "Storage", icon: HardDrive, used: 84, limit: 100, unit: " GB" },
 ];
 
-const enabledFeatures = [
-  { name: "Inventory Management", desc: "Stock tracking, WAC valuation" },
-  { name: "Stock Transfers", desc: "Inter-outlet transfers" },
-  { name: "Loyalty Program", desc: "Points, tiers, rewards" },
-  { name: "Advanced Reports", desc: "P&L, COGS, contribution" },
-  { name: "Multi-Outlet", desc: "Centralised admin" },
-  { name: "Staff Roles & PINs", desc: "Granular permissions" },
+/**
+ * Master feature catalog — derived from the actual application modules
+ * (POS, Menu, Inventory, Reports, Outlets, Loyalty, Bookings, KDS, etc.).
+ *
+ * tier: 0=Starter (Core), 1=Business Pro (Advanced), 2=Enterprise.
+ * addon: true means the feature can also be purchased à la carte
+ *        below the tier where it becomes included.
+ */
+interface FeatureDef {
+  name: string;
+  desc: string;
+  category: string;
+  tier: 0 | 1 | 2;
+  addon?: boolean;
+}
+
+const featureCatalog: FeatureDef[] = [
+  // ───── POS & Checkout (Core) ─────
+  { category: "POS & Checkout", tier: 0, name: "Core POS & Catalog",       desc: "Cart, checkout, item search, variants" },
+  { category: "POS & Checkout", tier: 0, name: "Cashier PIN & Lock Screen",desc: "Multi-session sign-in, fast switching" },
+  { category: "POS & Checkout", tier: 0, name: "Receipt Printing",         desc: "Thermal & A4 receipt printing" },
+  { category: "POS & Checkout", tier: 0, name: "Shift Management",         desc: "Open / close shifts, cash drawer reconciliation" },
+  { category: "POS & Checkout", tier: 1, name: "Split Payments & Tips",    desc: "Multi-tender, tip pooling & payouts" },
+  { category: "POS & Checkout", tier: 1, name: "Order Merging & Modifiers",desc: "Combine tickets, auth-protected edits" },
+  { category: "POS & Checkout", tier: 1, name: "Barcode Scan & Print",     desc: "Camera + hardware scanners, bulk label printing" },
+
+  // ───── Menu & Catalog ─────
+  { category: "Menu & Catalog", tier: 0, name: "Menu Management",          desc: "Items, categories, basic variants" },
+  { category: "Menu & Catalog", tier: 1, name: "Modifier Groups",          desc: "Reusable add-ons & forced choices" },
+  { category: "Menu & Catalog", tier: 1, name: "Composite Items & Recipes",desc: "BOM, unit mappings, substitutions" },
+  { category: "Menu & Catalog", tier: 1, name: "Promo Bundles",            desc: "Locked groups, Toast-style upcharges" },
+
+  // ───── Inventory ─────
+  { category: "Inventory",      tier: 0, name: "Stock Tracking",           desc: "On-hand quantities & low-stock alerts" },
+  { category: "Inventory",      tier: 1, name: "WAC Valuation",            desc: "Weighted-average cost, live recalc" },
+  { category: "Inventory",      tier: 1, name: "Batch & FEFO Tracking",    desc: "Lot IDs, expiry-first depletion" },
+  { category: "Inventory",      tier: 1, name: "Inventory History & Audit",desc: "Full adjustment log with reasons" },
+  { category: "Inventory",      tier: 1, name: "Stock Transfers",          desc: "Inter-outlet transfers & approvals" },
+  { category: "Inventory",      tier: 1, name: "Bulk Import / Receive",    desc: "CSV import, bulk receive workflows" },
+
+  // ───── Outlets & Operations ─────
+  { category: "Outlets",        tier: 0, name: "Single Outlet",            desc: "One location, one terminal pool" },
+  { category: "Outlets",        tier: 1, name: "Multi-Outlet Management",  desc: "Centralised admin across locations" },
+  { category: "Outlets",        tier: 1, name: "Departments & Routing",    desc: "Kitchen / bar / counter routing" },
+  { category: "Outlets",        tier: 1, name: "Fees, Taxes & Discounts",  desc: "Location-specific charges & rules" },
+  { category: "Outlets",        tier: 1, name: "Terminal Management",      desc: "Device linking IDs, per-outlet binding" },
+  { category: "Outlets",        tier: 2, name: "Multi-Business Groups",    desc: "Parent-child org hierarchy" },
+
+  // ───── Customers & Loyalty ─────
+  { category: "Customers",      tier: 0, name: "Customer Database",        desc: "Profiles, contact info, order history" },
+  { category: "Customers",      tier: 1, name: "Loyalty Program",          desc: "Points, tiers, location overrides", addon: true },
+  { category: "Customers",      tier: 1, name: "Service Bookings",         desc: "Appointments, duration & status",   addon: true },
+
+  // ───── Reports & Analytics ─────
+  { category: "Reports",        tier: 0, name: "Basic Sales Reports",      desc: "Daily totals, by item, by cashier" },
+  { category: "Reports",        tier: 1, name: "Advanced Reports",         desc: "P&L, COGS, raw-material contribution" },
+  { category: "Reports",        tier: 1, name: "Profitability Analytics",  desc: "Margin by item, category, department" },
+  { category: "Reports",        tier: 1, name: "Report Exports",           desc: "Excel / CSV / PDF export bundles" },
+  { category: "Reports",        tier: 2, name: "Custom Reports & BI Feed", desc: "Custom dashboards & data warehouse sync", addon: true },
+
+  // ───── Finance ─────
+  { category: "Finance",        tier: 1, name: "Expense Management",       desc: "Track outlet expenses & categories" },
+  { category: "Finance",        tier: 1, name: "Tips Management",          desc: "Pooling rules & cashier payouts" },
+
+  // ───── Kitchen & Fulfillment ─────
+  { category: "Kitchen",        tier: 1, name: "Kitchen Display (KDS)",    desc: "Live tickets, station routing",       addon: true },
+  { category: "Kitchen",        tier: 2, name: "Delivery & Dispatch",      desc: "Rider assignment & tracking",         addon: true },
+  { category: "Kitchen",        tier: 2, name: "Online Ordering",          desc: "Branded order-ahead web storefront",  addon: true },
+
+  // ───── Users & Security ─────
+  { category: "Users & Security", tier: 0, name: "Staff Roles & PINs",     desc: "Basic role assignment" },
+  { category: "Users & Security", tier: 1, name: "Granular RBAC",          desc: "Permission matrix per role" },
+  { category: "Users & Security", tier: 2, name: "SSO / SAML",             desc: "Enterprise identity provider login" },
+  { category: "Users & Security", tier: 2, name: "Advanced Audit Logs",    desc: "Tamper-evident activity trail" },
+
+  // ───── Platform & Extensibility ─────
+  { category: "Platform",       tier: 2, name: "API Access & Webhooks",    desc: "REST endpoints & event webhooks",     addon: true },
+  { category: "Platform",       tier: 2, name: "White Label",              desc: "Custom branding & domain" },
+  { category: "Platform",       tier: 2, name: "WhatsApp Receipts",        desc: "Auto-send digital receipts",          addon: true },
+
+  // ───── Support & SLA ─────
+  { category: "Support",        tier: 0, name: "Email Support",            desc: "Standard email response" },
+  { category: "Support",        tier: 1, name: "Priority Support",         desc: "Faster response, in-app chat" },
+  { category: "Support",        tier: 2, name: "Dedicated CSM & 99.9% SLA",desc: "Named success manager, uptime SLA" },
 ];
 
-const disabledFeatures = [
-  { name: "API Access", desc: "REST endpoints & webhooks" },
-  { name: "White Label", desc: "Custom branding & domain" },
-  { name: "Multi-Business Groups", desc: "Parent-child org structure" },
+const planByTier: Record<0 | 1 | 2, string> = {
+  0: "Starter",
+  1: "Business Pro",
+  2: "Enterprise",
+};
+
+/** Plan name → set of feature names included by that tier (cumulative). */
+const planFeatures: Record<string, string[]> = {
+  Starter:        featureCatalog.filter((f) => f.tier <= 0).map((f) => f.name),
+  "Business Pro": featureCatalog.filter((f) => f.tier <= 1).map((f) => f.name),
+  Enterprise:     featureCatalog.filter((f) => f.tier <= 2).map((f) => f.name),
+};
+
+const CURRENT_PLAN = subscription.plan;
+const enabledFeatures = featureCatalog.filter((f) => planFeatures[CURRENT_PLAN].includes(f.name));
+const disabledFeatures = featureCatalog.filter((f) => !planFeatures[CURRENT_PLAN].includes(f.name));
+
+/** Icon resolution for add-on cards. */
+const addonIcons: Record<string, LucideIcon> = {
+  loyalty: Heart,
+  kds: ChefHat,
+  bookings: Calendar,
+  delivery: Truck,
+  online: Store,
+  whatsapp: MessageSquare,
+  api: Code2,
+  bi: TrendingUp,
+};
+
+interface AddonDef {
+  key: string;
+  name: string;
+  icon: LucideIcon;
+  price: string;
+  active: boolean;
+  desc: string;
+  /** Tier at which the add-on is bundled for free (no longer billable). */
+  includedFromTier: 0 | 1 | 2;
+}
+
+const addons: AddonDef[] = [
+  { key: "loyalty",  name: "Loyalty Engine",     icon: addonIcons.loyalty,  price: "₦12,000/mo", active: true,  includedFromTier: 1, desc: "Points, tiers & redemption rules" },
+  { key: "kds",      name: "Kitchen Display",    icon: addonIcons.kds,      price: "₦9,000/mo",  active: true,  includedFromTier: 1, desc: "Real-time kitchen station tickets" },
+  { key: "bookings", name: "Service Bookings",   icon: addonIcons.bookings, price: "₦8,000/mo",  active: false, includedFromTier: 1, desc: "Appointments for salons & services" },
+  { key: "delivery", name: "Delivery & Dispatch",icon: addonIcons.delivery, price: "₦18,000/mo", active: true,  includedFromTier: 2, desc: "Rider assignment & live tracking" },
+  { key: "online",   name: "Online Ordering",    icon: addonIcons.online,   price: "₦22,000/mo", active: false, includedFromTier: 2, desc: "Branded order-ahead storefront" },
+  { key: "whatsapp", name: "WhatsApp Receipts",  icon: addonIcons.whatsapp, price: "₦6,000/mo",  active: false, includedFromTier: 2, desc: "Auto-send digital receipts" },
+  { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks" },
+  { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI" },
 ];
 
-const addons = [
-  { key: "loyalty", name: "Loyalty Engine", icon: Heart, price: "₦12,000/mo", active: true, desc: "Tier rules & redemption" },
-  { key: "delivery", name: "Delivery", icon: Truck, price: "₦18,000/mo", active: true, desc: "Rider dispatch & tracking" },
-  { key: "kds", name: "Kitchen Display", icon: ChefHat, price: "₦9,000/mo", active: true, desc: "Real-time kitchen tickets" },
-  { key: "whatsapp", name: "WhatsApp Receipts", icon: MessageSquare, price: "₦6,000/mo", active: false, desc: "Auto-send to customers" },
-  { key: "api", name: "API Access", icon: Code2, price: "₦25,000/mo", active: false, desc: "Developer endpoints" },
+const comparisonPlans = [
+  {
+    name: "Starter",
+    price: "₦29,000",
+    priceValue: 29000,
+    tier: 0,
+    tagline: "Single outlet essentials",
+    outlets: 1,
+    staff: 10,
+    transactions: "5,000",
+    reports: "Basic",
+    support: "Email",
+  },
+  {
+    name: "Business Pro",
+    price: "₦79,000",
+    priceValue: 79000,
+    tier: 1,
+    tagline: "Multi-outlet growth",
+    outlets: 10,
+    staff: 50,
+    transactions: "50,000",
+    reports: "Advanced",
+    support: "Priority",
+    current: true,
+  },
+  {
+    name: "Enterprise",
+    price: "₦199,000",
+    priceValue: 199000,
+    tier: 2,
+    tagline: "Scale, security & API",
+    outlets: "Unlimited",
+    staff: "Unlimited",
+    transactions: "Unlimited",
+    reports: "Custom + BI",
+    support: "Dedicated CSM",
+  },
 ];
-
 const paymentMethods = [
   { id: "pm_1", brand: "Visa", last4: "4242", exp: "08/27", default: true },
   { id: "pm_2", brand: "Mastercard", last4: "8801", exp: "12/26", default: false },
@@ -118,7 +271,7 @@ const upcomingInvoice = {
   items: [
     { label: "Business Pro — Monthly", amount: "₦79,000" },
     { label: "Loyalty Engine add-on", amount: "₦12,000" },
-    { label: "Delivery add-on", amount: "₦18,000" },
+    { label: "Delivery & Dispatch add-on", amount: "₦18,000" },
     { label: "Kitchen Display add-on", amount: "₦9,000" },
   ],
 };
@@ -131,48 +284,7 @@ const invoiceHistory = [
   { id: "INV-2025-010", date: "Oct 15, 2025", amount: "₦79,000", status: "Paid", method: "Visa •••• 4242" },
 ];
 
-const comparisonPlans = [
-  {
-    name: "Starter",
-    price: "₦29,000",
-    priceValue: 29000,
-    tier: 0,
-    outlets: 1,
-    staff: 10,
-    transactions: "5,000",
-    reports: "Basic",
-    support: "Email",
-    api: false,
-    whiteLabel: false,
-  },
-  {
-    name: "Business Pro",
-    price: "₦79,000",
-    priceValue: 79000,
-    tier: 1,
-    outlets: 10,
-    staff: 50,
-    transactions: "50,000",
-    reports: "Advanced",
-    support: "Priority",
-    api: false,
-    whiteLabel: false,
-    current: true,
-  },
-  {
-    name: "Enterprise",
-    price: "₦199,000",
-    priceValue: 199000,
-    tier: 2,
-    outlets: "Unlimited",
-    staff: "Unlimited",
-    transactions: "Unlimited",
-    reports: "Custom",
-    support: "Dedicated CSM",
-    api: true,
-    whiteLabel: true,
-  },
-];
+
 
 /** Numeric entitlement limits per plan (Infinity = unlimited). */
 const planLimits: Record<string, Record<string, number>> = {
@@ -182,20 +294,6 @@ const planLimits: Record<string, Record<string, number>> = {
     outlets: Infinity, staff: Infinity, cashiers: Infinity,
     registers: Infinity, transactions: Infinity, storage: 1000,
   },
-};
-
-/** Feature entitlements per plan — used to diff gain/loss on plan change. */
-const planFeatures: Record<string, string[]> = {
-  Starter: ["Inventory Management", "Staff Roles & PINs"],
-  "Business Pro": [
-    "Inventory Management", "Stock Transfers", "Loyalty Program",
-    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
-  ],
-  Enterprise: [
-    "Inventory Management", "Stock Transfers", "Loyalty Program",
-    "Advanced Reports", "Multi-Outlet", "Staff Roles & PINs",
-    "API Access", "White Label", "Multi-Business Groups",
-  ],
 };
 
 const auditLog = [
@@ -865,7 +963,9 @@ export default function SubscriptionManagement() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {addons.map((a) => {
               const Icon = a.icon;
-              const isActive = activeAddons[a.key];
+              const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
+              const isIncluded = currentTier >= a.includedFromTier;
+              const isActive = isIncluded || activeAddons[a.key];
               return (
                 <Card
                   key={a.key}
@@ -884,30 +984,38 @@ export default function SubscriptionManagement() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold">{a.name}</p>
-                        <p className="text-xs text-muted-foreground">{a.price}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isIncluded ? `Included in ${planByTier[a.includedFromTier]}` : a.price}
+                        </p>
                       </div>
                     </div>
-                    {isActive && (
+                    {isIncluded ? (
+                      <Badge className="text-[10px] h-5 bg-info/10 text-info border-info/20 border" variant="outline">
+                        Included
+                      </Badge>
+                    ) : isActive ? (
                       <Badge className="text-[10px] h-5 bg-success/10 text-success border-success/20 border" variant="outline">
                         Active
                       </Badge>
-                    )}
+                    ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">{a.desc}</p>
                   <Button
                     size="sm"
                     variant={isActive ? "outline" : "default"}
                     className="w-full mt-3"
+                    disabled={isIncluded}
                     onClick={() =>
                       setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
                     }
                   >
-                    {isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
+                    {isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
                   </Button>
                 </Card>
               );
             })}
           </div>
+
         </TabsContent>
 
         {/* ============================ BILLING ============================ */}
@@ -1031,6 +1139,7 @@ export default function SubscriptionManagement() {
                     <Badge className="absolute -top-2.5 left-4 text-[10px]">Current Plan</Badge>
                   )}
                   <h4 className="font-heading font-bold">{p.name}</h4>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{p.tagline}</p>
                   <div className="mt-2 flex items-baseline gap-1">
                     <p className="text-2xl font-heading font-bold">{p.price}</p>
                     <span className="text-xs text-muted-foreground">/mo</span>
@@ -1044,15 +1153,29 @@ export default function SubscriptionManagement() {
                   >
                     {current ? "Current" : isUpgrade ? (<><ArrowUpRight className="h-3.5 w-3.5" /> Upgrade</>) : (<><ArrowDownRight className="h-3.5 w-3.5" /> Downgrade</>)}
                   </Button>
+                  <ul className="mt-4 space-y-1.5 text-xs">
+                    {featureCatalog
+                      .filter((f) => f.tier === p.tier)
+                      .slice(0, 6)
+                      .map((f) => (
+                        <li key={f.name} className="flex items-start gap-1.5">
+                          <Check className="h-3 w-3 text-success mt-0.5 shrink-0" />
+                          <span className="text-foreground/80">{f.name}</span>
+                        </li>
+                      ))}
+                  </ul>
                 </Card>
               );
             })}
           </div>
 
-          {/* Comparison table */}
+          {/* Comparison table — limits + capabilities grouped by category */}
           <Card className="p-0 overflow-hidden">
             <div className="p-5 pb-3">
               <h3 className="font-heading font-semibold text-sm">Side-by-Side Comparison</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Capabilities are cumulative — every plan includes everything from the plan below.
+              </p>
             </div>
             <Table>
               <TableHeader>
@@ -1067,6 +1190,12 @@ export default function SubscriptionManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {/* Limits section */}
+                <TableRow className="bg-muted/40">
+                  <TableCell colSpan={1 + comparisonPlans.length} className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5">
+                    Limits
+                  </TableCell>
+                </TableRow>
                 {[
                   { label: "Outlets", key: "outlets" },
                   { label: "Staff seats", key: "staff" },
@@ -1083,27 +1212,43 @@ export default function SubscriptionManagement() {
                     ))}
                   </TableRow>
                 ))}
-                {[
-                  { label: "API Access", key: "api" },
-                  { label: "White Label", key: "whiteLabel" },
-                ].map((row) => (
-                  <TableRow key={row.label}>
-                    <TableCell className="text-sm font-medium">{row.label}</TableCell>
-                    {comparisonPlans.map((p) => (
-                      <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
-                        {(p as any)[row.key] ? (
-                          <Check className="h-4 w-4 text-success" />
-                        ) : (
-                          <X className="h-4 w-4 text-muted-foreground/50" />
-                        )}
+
+                {/* Capability sections — grouped by feature category */}
+                {Array.from(new Set(featureCatalog.map((f) => f.category))).map((category) => (
+                  <Fragment key={category}>
+                    <TableRow className="bg-muted/40">
+                      <TableCell colSpan={1 + comparisonPlans.length} className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5">
+                        {category}
                       </TableCell>
-                    ))}
-                  </TableRow>
+                    </TableRow>
+                    {featureCatalog
+                      .filter((f) => f.category === category)
+                      .map((f) => (
+                        <TableRow key={f.name}>
+                          <TableCell className="text-sm font-medium">
+                            {f.name}
+                            {f.addon && (
+                              <Badge variant="outline" className="ml-2 text-[9px] h-4 px-1">Add-on</Badge>
+                            )}
+                          </TableCell>
+                          {comparisonPlans.map((p) => (
+                            <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
+                              {planFeatures[p.name].includes(f.name) ? (
+                                <Check className="h-4 w-4 text-success" />
+                              ) : (
+                                <X className="h-4 w-4 text-muted-foreground/40" />
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                  </Fragment>
                 ))}
               </TableBody>
             </Table>
           </Card>
         </TabsContent>
+
 
         {/* =========================== ACTIVITY =========================== */}
         <TabsContent value="activity" className="space-y-4">
