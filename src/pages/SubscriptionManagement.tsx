@@ -608,7 +608,7 @@ export default function SubscriptionManagement() {
             <FileText className="h-4 w-4" />
             Billing Portal
           </Button>
-          <Button size="sm">
+          <Button size="sm" disabled={!nextUpgrade} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>
             <TrendingUp className="h-4 w-4" />
             Upgrade
           </Button>
