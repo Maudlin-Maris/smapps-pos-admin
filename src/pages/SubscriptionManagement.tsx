@@ -1,151 +1,804 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Check, CreditCard, Calendar, Zap, Shield, Users } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Check,
+  X,
+  CreditCard,
+  Calendar,
+  Zap,
+  Shield,
+  Users,
+  Store,
+  Package,
+  HardDrive,
+  Receipt,
+  Monitor,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Ban,
+  Plus,
+  Download,
+  ArrowUpRight,
+  ArrowDownRight,
+  RefreshCw,
+  XCircle,
+  Sparkles,
+  TrendingUp,
+  FileText,
+  Truck,
+  ChefHat,
+  MessageSquare,
+  Code2,
+  Heart,
+  Activity,
+  AlertCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const currentPlan = {
-  name: "Business Pro",
-  price: "₦79/mo",
+/* -------------------------------------------------------------------------- */
+/*                                   Data                                     */
+/* -------------------------------------------------------------------------- */
+
+const subscription = {
+  plan: "Business Pro",
+  status: "active" as "active" | "trial" | "grace" | "past_due" | "suspended",
   renewalDate: "March 15, 2026",
+  billingCycle: "Monthly",
+  monthlyCost: "₦79,000",
+  autoRenew: true,
   daysLeft: 18,
-  features: ["Unlimited outlets", "Advanced analytics", "Priority support", "API access", "Custom reports"],
-  usage: { outlets: { used: 4, max: 999 }, transactions: { used: 12450, max: 999999 }, staff: { used: 20, max: 100 } },
 };
 
-const plans = [
+const usage = [
+  { key: "outlets", label: "Outlets", icon: Store, used: 4, limit: 10, unit: "" },
+  { key: "staff", label: "Staff", icon: Users, used: 32, limit: 50, unit: "" },
+  { key: "cashiers", label: "Cashiers", icon: Receipt, used: 18, limit: 25, unit: "" },
+  { key: "registers", label: "Registers", icon: Monitor, used: 9, limit: 15, unit: "" },
+  { key: "transactions", label: "Transactions", icon: Activity, used: 42300, limit: 50000, unit: "/mo" },
+  { key: "storage", label: "Storage", icon: HardDrive, used: 84, limit: 100, unit: " GB" },
+];
+
+const enabledFeatures = [
+  { name: "Inventory Management", desc: "Stock tracking, WAC valuation" },
+  { name: "Stock Transfers", desc: "Inter-outlet transfers" },
+  { name: "Loyalty Program", desc: "Points, tiers, rewards" },
+  { name: "Advanced Reports", desc: "P&L, COGS, contribution" },
+  { name: "Multi-Outlet", desc: "Centralised admin" },
+  { name: "Staff Roles & PINs", desc: "Granular permissions" },
+];
+
+const disabledFeatures = [
+  { name: "API Access", desc: "REST endpoints & webhooks" },
+  { name: "White Label", desc: "Custom branding & domain" },
+  { name: "Multi-Business Groups", desc: "Parent-child org structure" },
+];
+
+const addons = [
+  { key: "loyalty", name: "Loyalty Engine", icon: Heart, price: "₦12,000/mo", active: true, desc: "Tier rules & redemption" },
+  { key: "delivery", name: "Delivery", icon: Truck, price: "₦18,000/mo", active: true, desc: "Rider dispatch & tracking" },
+  { key: "kds", name: "Kitchen Display", icon: ChefHat, price: "₦9,000/mo", active: true, desc: "Real-time kitchen tickets" },
+  { key: "whatsapp", name: "WhatsApp Receipts", icon: MessageSquare, price: "₦6,000/mo", active: false, desc: "Auto-send to customers" },
+  { key: "api", name: "API Access", icon: Code2, price: "₦25,000/mo", active: false, desc: "Developer endpoints" },
+];
+
+const paymentMethods = [
+  { id: "pm_1", brand: "Visa", last4: "4242", exp: "08/27", default: true },
+  { id: "pm_2", brand: "Mastercard", last4: "8801", exp: "12/26", default: false },
+];
+
+const upcomingInvoice = {
+  number: "INV-2026-003",
+  date: "March 15, 2026",
+  amount: "₦118,000",
+  items: [
+    { label: "Business Pro — Monthly", amount: "₦79,000" },
+    { label: "Loyalty Engine add-on", amount: "₦12,000" },
+    { label: "Delivery add-on", amount: "₦18,000" },
+    { label: "Kitchen Display add-on", amount: "₦9,000" },
+  ],
+};
+
+const invoiceHistory = [
+  { id: "INV-2026-002", date: "Feb 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2026-001", date: "Jan 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2025-012", date: "Dec 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2025-011", date: "Nov 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
+  { id: "INV-2025-010", date: "Oct 15, 2025", amount: "₦79,000", status: "Paid", method: "Visa •••• 4242" },
+];
+
+const comparisonPlans = [
   {
     name: "Starter",
-    price: "₦29/mo",
-    features: ["1 outlet", "Basic analytics", "Email support", "500 transactions/mo"],
-    popular: false,
+    price: "₦29,000",
+    tier: 0,
+    outlets: 1,
+    staff: 10,
+    transactions: "5,000",
+    reports: "Basic",
+    support: "Email",
+    api: false,
+    whiteLabel: false,
   },
   {
     name: "Business Pro",
-    price: "₦79/mo",
-    features: ["Unlimited outlets", "Advanced analytics", "Priority support", "API access", "Custom reports"],
-    popular: true,
+    price: "₦79,000",
+    tier: 1,
+    outlets: 10,
+    staff: 50,
+    transactions: "50,000",
+    reports: "Advanced",
+    support: "Priority",
+    api: false,
+    whiteLabel: false,
+    current: true,
   },
   {
     name: "Enterprise",
-    price: "₦199/mo",
-    features: ["Everything in Pro", "Dedicated manager", "SLA guarantee", "White-label", "Custom integrations"],
-    popular: false,
+    price: "₦199,000",
+    tier: 2,
+    outlets: "Unlimited",
+    staff: "Unlimited",
+    transactions: "Unlimited",
+    reports: "Custom",
+    support: "Dedicated CSM",
+    api: true,
+    whiteLabel: true,
   },
 ];
 
-const paymentHistory = [
-  { date: "Feb 15, 2026", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
-  { date: "Jan 15, 2026", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
-  { date: "Dec 15, 2025", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
-  { date: "Nov 15, 2025", amount: "₦79.00", status: "Paid", method: "Visa •••• 4242" },
+const auditLog = [
+  { date: "Feb 15, 2026", type: "renewal", title: "Subscription renewed", desc: "Business Pro — ₦118,000 charged to Visa •••• 4242" },
+  { date: "Feb 02, 2026", type: "addon", title: "Add-on activated", desc: "Kitchen Display add-on added (₦9,000/mo)" },
+  { date: "Jan 18, 2026", type: "upgrade", title: "Plan upgraded", desc: "Starter → Business Pro" },
+  { date: "Dec 22, 2025", type: "failed", title: "Payment failed", desc: "Visa •••• 1212 declined — retried successfully" },
+  { date: "Dec 15, 2025", type: "renewal", title: "Subscription renewed", desc: "Starter — ₦29,000 charged" },
+  { date: "Nov 30, 2025", type: "downgrade", title: "Plan downgraded", desc: "Business Pro → Starter (cost optimisation)" },
+  { date: "Oct 15, 2025", type: "renewal", title: "Subscription renewed", desc: "Business Pro — ₦79,000 charged" },
 ];
 
+/* -------------------------------------------------------------------------- */
+/*                                  Helpers                                   */
+/* -------------------------------------------------------------------------- */
+
+function pct(used: number, limit: number) {
+  return Math.min(100, Math.round((used / limit) * 100));
+}
+
+function usageTone(p: number): { bar: string; tone: "ok" | "warn" | "crit" } {
+  if (p >= 95) return { bar: "bg-destructive", tone: "crit" };
+  if (p >= 80) return { bar: "bg-warning", tone: "warn" };
+  return { bar: "bg-success", tone: "ok" };
+}
+
+const healthMap: Record<
+  typeof subscription.status,
+  { label: string; icon: LucideIcon; cls: string; dot: string; msg: string }
+> = {
+  active: {
+    label: "Active",
+    icon: CheckCircle2,
+    cls: "bg-success/10 text-success border-success/20",
+    dot: "bg-success",
+    msg: "All systems operational. Next renewal in 18 days.",
+  },
+  trial: {
+    label: "Trial",
+    icon: Sparkles,
+    cls: "bg-info/10 text-info border-info/20",
+    dot: "bg-info",
+    msg: "Trial ends in 7 days. Add a payment method to continue.",
+  },
+  grace: {
+    label: "Grace Period",
+    icon: Clock,
+    cls: "bg-warning/10 text-warning border-warning/20",
+    dot: "bg-warning",
+    msg: "Payment failed. Resolve within 5 days to avoid suspension.",
+  },
+  past_due: {
+    label: "Past Due",
+    icon: AlertTriangle,
+    cls: "bg-warning/10 text-warning border-warning/20",
+    dot: "bg-warning",
+    msg: "Invoice overdue. Update payment method now.",
+  },
+  suspended: {
+    label: "Suspended",
+    icon: Ban,
+    cls: "bg-destructive/10 text-destructive border-destructive/20",
+    dot: "bg-destructive",
+    msg: "Service suspended. Reactivate to restore access.",
+  },
+};
+
+const auditIconMap: Record<string, { icon: LucideIcon; cls: string }> = {
+  renewal: { icon: RefreshCw, cls: "text-success bg-success/10" },
+  upgrade: { icon: ArrowUpRight, cls: "text-info bg-info/10" },
+  downgrade: { icon: ArrowDownRight, cls: "text-muted-foreground bg-muted" },
+  failed: { icon: XCircle, cls: "text-destructive bg-destructive/10" },
+  addon: { icon: Plus, cls: "text-accent bg-accent/10" },
+  suspension: { icon: Ban, cls: "text-destructive bg-destructive/10" },
+};
+
+/* -------------------------------------------------------------------------- */
+/*                                 Component                                  */
+/* -------------------------------------------------------------------------- */
+
 export default function SubscriptionManagement() {
+  const [autoRenew, setAutoRenew] = useState(subscription.autoRenew);
+  const [activeAddons, setActiveAddons] = useState(
+    Object.fromEntries(addons.map((a) => [a.key, a.active])),
+  );
+  const health = healthMap[subscription.status];
+  const HealthIcon = health.icon;
+
+  const warnings = usage.filter((u) => pct(u.used, u.limit) >= 80);
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
-      <div>
-        <h1 className="text-2xl font-heading font-bold tracking-tight">Subscription</h1>
-        <p className="text-sm text-muted-foreground mt-1">Manage your plan and billing</p>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">Subscription</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your plan, usage, add-ons and billing
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm">
+            <FileText className="h-4 w-4" />
+            Billing Portal
+          </Button>
+          <Button size="sm">
+            <TrendingUp className="h-4 w-4" />
+            Upgrade
+          </Button>
+        </div>
       </div>
 
-      {/* Current Plan */}
-      <Card className="p-5 border-primary/20 bg-primary/[0.02]">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-primary" />
-              <h3 className="font-heading font-bold text-lg">{currentPlan.name}</h3>
-              <Badge className="text-xs">Active</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Renews on {currentPlan.renewalDate} · {currentPlan.daysLeft} days left
+      {/* Health banner */}
+      {warnings.length > 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3">
+          <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+          <div className="text-sm flex-1">
+            <p className="font-medium text-foreground">
+              {warnings.length} resource{warnings.length > 1 ? "s are" : " is"} above 80% utilisation
+            </p>
+            <p className="text-muted-foreground text-xs mt-0.5">
+              {warnings.map((w) => w.label).join(", ")} — consider upgrading to avoid overage.
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-heading font-bold">{currentPlan.price}</p>
-          </div>
+          <Button size="sm" variant="outline">Review</Button>
         </div>
+      )}
 
-        <div className="grid grid-cols-3 gap-4 mt-5 pt-4 border-t border-border">
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Outlets</p>
-            <p className="text-sm font-semibold">{currentPlan.usage.outlets.used} used</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Transactions</p>
-            <p className="text-sm font-semibold">{currentPlan.usage.transactions.used.toLocaleString()}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Staff</p>
-            <p className="text-sm font-semibold">{currentPlan.usage.staff.used} / {currentPlan.usage.staff.max}</p>
-            <Progress value={(currentPlan.usage.staff.used / currentPlan.usage.staff.max) * 100} className="h-1.5 mt-1" />
-          </div>
-        </div>
-      </Card>
-
-      {/* Plans */}
-      <div>
-        <h3 className="font-heading font-semibold mb-4">Available Plans</h3>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {plans.map((plan) => (
-            <Card
-              key={plan.name}
-              className={cn(
-                "p-5 relative",
-                plan.popular && "border-primary shadow-md"
-              )}
-            >
-              {plan.popular && (
-                <Badge className="absolute -top-2.5 left-4 text-xs">Current Plan</Badge>
-              )}
-              <h4 className="font-heading font-bold">{plan.name}</h4>
-              <p className="text-2xl font-heading font-bold mt-2">{plan.price}</p>
-              <ul className="mt-4 space-y-2">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-3.5 w-3.5 text-success shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                variant={plan.popular ? "default" : "outline"}
-                size="sm"
-                className="w-full mt-5"
-                disabled={plan.popular}
-              >
-                {plan.popular ? "Current" : "Upgrade"}
-              </Button>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Payment History */}
-      <Card className="p-5">
-        <h3 className="font-heading font-semibold mb-4">Payment History</h3>
-        <div className="space-y-3">
-          {paymentHistory.map((payment, i) => (
-            <div key={i} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">{payment.amount}</p>
-                  <p className="text-xs text-muted-foreground">{payment.method}</p>
+      {/* Top: Current Plan + Health */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Current Plan */}
+        <Card className="lg:col-span-2 p-5 border-primary/20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-accent/[0.04] pointer-events-none" />
+          <div className="relative">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                    <Zap className="h-4.5 w-4.5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-heading font-bold text-lg leading-none">{subscription.plan}</h3>
+                      <Badge className={cn("text-[10px] uppercase tracking-wide border", health.cls)}>
+                        {health.label}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Plan ID · sub_8K2J9F · since Oct 2025
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="text-right">
-                <Badge variant="secondary" className="text-xs bg-success/10 text-success">
-                  {payment.status}
-                </Badge>
-                <p className="text-xs text-muted-foreground mt-0.5">{payment.date}</p>
+                <p className="text-3xl font-heading font-bold tracking-tight">{subscription.monthlyCost}</p>
+                <p className="text-xs text-muted-foreground">per month · {subscription.billingCycle.toLowerCase()}</p>
               </div>
             </div>
-          ))}
-        </div>
-      </Card>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-4 border-t border-border">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Renewal</p>
+                <p className="text-sm font-semibold mt-1 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  {subscription.renewalDate}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Cycle</p>
+                <p className="text-sm font-semibold mt-1">{subscription.billingCycle}</p>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Days Left</p>
+                <p className="text-sm font-semibold mt-1">{subscription.daysLeft} days</p>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Auto-Renew</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Switch checked={autoRenew} onCheckedChange={setAutoRenew} />
+                  <span className="text-sm font-semibold">{autoRenew ? "On" : "Off"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mt-5">
+              <Button size="sm" variant="outline">Change Plan</Button>
+              <Button size="sm" variant="ghost">Update Payment</Button>
+              <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">Cancel</Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Health Widget */}
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-heading font-semibold text-sm flex items-center gap-2">
+              <Shield className="h-4 w-4 text-muted-foreground" />
+              Subscription Health
+            </h3>
+            <span className={cn("h-2 w-2 rounded-full", health.dot)} />
+          </div>
+
+          <div className={cn("flex items-center gap-3 p-3 rounded-lg border", health.cls)}>
+            <HealthIcon className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold">{health.label}</p>
+              <p className="text-xs opacity-80">{health.msg}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-1.5">
+            {(Object.keys(healthMap) as Array<keyof typeof healthMap>).map((k) => {
+              const h = healthMap[k];
+              const Icon = h.icon;
+              const isCurrent = k === subscription.status;
+              return (
+                <div
+                  key={k}
+                  className={cn(
+                    "flex items-center justify-between text-xs px-2 py-1.5 rounded-md",
+                    isCurrent ? "bg-muted font-medium" : "text-muted-foreground",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5" />
+                    {h.label}
+                  </span>
+                  {isCurrent && <Badge variant="outline" className="text-[10px] h-4 px-1.5">Current</Badge>}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="usage" className="space-y-4">
+        <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-muted/50">
+          <TabsTrigger value="usage">Usage</TabsTrigger>
+          <TabsTrigger value="features">Features</TabsTrigger>
+          <TabsTrigger value="addons">Add-ons</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
+          <TabsTrigger value="plans">Plans</TabsTrigger>
+          <TabsTrigger value="activity">Activity</TabsTrigger>
+        </TabsList>
+
+        {/* ============================ USAGE ============================ */}
+        <TabsContent value="usage" className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {usage.map((u) => {
+              const p = pct(u.used, u.limit);
+              const tone = usageTone(p);
+              const Icon = u.icon;
+              return (
+                <Card key={u.key} className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">{u.label}</p>
+                        <p className="text-sm font-semibold">
+                          {u.used.toLocaleString()}
+                          <span className="text-muted-foreground font-normal">
+                            {" "}/ {u.limit.toLocaleString()}{u.unit}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] h-5 px-1.5",
+                        tone.tone === "ok" && "border-success/30 text-success",
+                        tone.tone === "warn" && "border-warning/30 text-warning",
+                        tone.tone === "crit" && "border-destructive/30 text-destructive",
+                      )}
+                    >
+                      {p}%
+                    </Badge>
+                  </div>
+                  <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={cn("h-full transition-all", tone.bar)}
+                      style={{ width: `${p}%` }}
+                    />
+                  </div>
+                  {tone.tone !== "ok" && (
+                    <p className={cn(
+                      "text-[11px] mt-2 flex items-center gap-1",
+                      tone.tone === "warn" ? "text-warning" : "text-destructive",
+                    )}>
+                      <AlertTriangle className="h-3 w-3" />
+                      {tone.tone === "crit" ? "Limit nearly reached" : "Approaching limit"}
+                    </p>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        {/* =========================== FEATURES =========================== */}
+        <TabsContent value="features" className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-heading font-semibold text-sm flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  Enabled Features
+                </h3>
+                <Badge variant="outline" className="text-[10px]">{enabledFeatures.length} active</Badge>
+              </div>
+              <div className="space-y-2">
+                {enabledFeatures.map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2.5 rounded-md hover:bg-muted/50 transition-colors">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 shrink-0">
+                      <Check className="h-3.5 w-3.5 text-success" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{f.name}</p>
+                      <p className="text-xs text-muted-foreground">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-heading font-semibold text-sm flex items-center gap-2">
+                  <X className="h-4 w-4 text-muted-foreground" />
+                  Not Available on this Plan
+                </h3>
+                <Badge variant="outline" className="text-[10px]">{disabledFeatures.length} locked</Badge>
+              </div>
+              <div className="space-y-2">
+                {disabledFeatures.map((f) => (
+                  <div key={f.name} className="flex items-start gap-3 p-2.5 rounded-md border border-dashed border-border">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted shrink-0">
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-muted-foreground">{f.name}</p>
+                      <p className="text-xs text-muted-foreground/80">{f.desc}</p>
+                    </div>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs">
+                      Unlock
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ============================ ADDONS ============================ */}
+        <TabsContent value="addons" className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {addons.map((a) => {
+              const Icon = a.icon;
+              const isActive = activeAddons[a.key];
+              return (
+                <Card
+                  key={a.key}
+                  className={cn(
+                    "p-4 transition-all",
+                    isActive && "border-primary/30 bg-primary/[0.02]",
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-lg",
+                        isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                      )}>
+                        <Icon className="h-4.5 w-4.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{a.name}</p>
+                        <p className="text-xs text-muted-foreground">{a.price}</p>
+                      </div>
+                    </div>
+                    {isActive && (
+                      <Badge className="text-[10px] h-5 bg-success/10 text-success border-success/20 border" variant="outline">
+                        Active
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">{a.desc}</p>
+                  <Button
+                    size="sm"
+                    variant={isActive ? "outline" : "default"}
+                    className="w-full mt-3"
+                    onClick={() =>
+                      setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
+                    }
+                  >
+                    {isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
+                  </Button>
+                </Card>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        {/* ============================ BILLING ============================ */}
+        <TabsContent value="billing" className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-3">
+            {/* Payment Methods */}
+            <Card className="p-5 lg:col-span-1">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-heading font-semibold text-sm">Payment Methods</h3>
+                <Button size="sm" variant="ghost" className="h-7 text-xs">
+                  <Plus className="h-3.5 w-3.5" /> Add
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {paymentMethods.map((pm) => (
+                  <div
+                    key={pm.id}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-lg border",
+                      pm.default ? "border-primary/30 bg-primary/[0.02]" : "border-border",
+                    )}
+                  >
+                    <div className="flex h-8 w-12 items-center justify-center rounded bg-muted">
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{pm.brand} •••• {pm.last4}</p>
+                      <p className="text-[11px] text-muted-foreground">Exp {pm.exp}</p>
+                    </div>
+                    {pm.default && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">Default</Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Upcoming Invoice */}
+            <Card className="p-5 lg:col-span-2">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-heading font-semibold text-sm">Upcoming Invoice</h3>
+                <Badge variant="outline" className="text-[10px]">
+                  Due {upcomingInvoice.date}
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                {upcomingInvoice.items.map((i) => (
+                  <div key={i.label} className="flex justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
+                    <span className="text-muted-foreground">{i.label}</span>
+                    <span className="font-medium">{i.amount}</span>
+                  </div>
+                ))}
+              </div>
+              <Separator className="my-3" />
+              <div className="flex justify-between items-baseline">
+                <span className="text-sm font-medium">Total</span>
+                <span className="text-xl font-heading font-bold">{upcomingInvoice.amount}</span>
+              </div>
+            </Card>
+          </div>
+
+          {/* Invoice History */}
+          <Card className="p-0 overflow-hidden">
+            <div className="p-5 pb-3 flex items-center justify-between">
+              <h3 className="font-heading font-semibold text-sm">Invoice History</h3>
+              <Button size="sm" variant="ghost" className="h-7 text-xs">
+                <Download className="h-3.5 w-3.5" /> Export all
+              </Button>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Method</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">PDF</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoiceHistory.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell className="font-mono text-xs">{inv.id}</TableCell>
+                    <TableCell className="text-sm">{inv.date}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{inv.method}</TableCell>
+                    <TableCell className="text-sm font-medium">{inv.amount}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px] border-success/30 text-success">
+                        {inv.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* ============================ PLANS ============================ */}
+        <TabsContent value="plans" className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-3">
+            {comparisonPlans.map((p) => {
+              const current = p.current;
+              const isUpgrade = !current && p.tier > 1;
+              return (
+                <Card
+                  key={p.name}
+                  className={cn(
+                    "p-5 relative",
+                    current && "border-primary shadow-md ring-1 ring-primary/20",
+                  )}
+                >
+                  {current && (
+                    <Badge className="absolute -top-2.5 left-4 text-[10px]">Current Plan</Badge>
+                  )}
+                  <h4 className="font-heading font-bold">{p.name}</h4>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <p className="text-2xl font-heading font-bold">{p.price}</p>
+                    <span className="text-xs text-muted-foreground">/mo</span>
+                  </div>
+                  <Button
+                    variant={current ? "outline" : isUpgrade ? "default" : "outline"}
+                    size="sm"
+                    className="w-full mt-4"
+                    disabled={current}
+                  >
+                    {current ? "Current" : isUpgrade ? (<><ArrowUpRight className="h-3.5 w-3.5" /> Upgrade</>) : (<><ArrowDownRight className="h-3.5 w-3.5" /> Downgrade</>)}
+                  </Button>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Comparison table */}
+          <Card className="p-0 overflow-hidden">
+            <div className="p-5 pb-3">
+              <h3 className="font-heading font-semibold text-sm">Side-by-Side Comparison</h3>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Feature</TableHead>
+                  {comparisonPlans.map((p) => (
+                    <TableHead key={p.name} className={cn(p.current && "text-primary")}>
+                      {p.name}
+                      {p.current && <span className="ml-1 text-[10px]">(Current)</span>}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[
+                  { label: "Outlets", key: "outlets" },
+                  { label: "Staff seats", key: "staff" },
+                  { label: "Transactions / mo", key: "transactions" },
+                  { label: "Reports", key: "reports" },
+                  { label: "Support", key: "support" },
+                ].map((row) => (
+                  <TableRow key={row.label}>
+                    <TableCell className="text-sm font-medium">{row.label}</TableCell>
+                    {comparisonPlans.map((p) => (
+                      <TableCell key={p.name} className={cn("text-sm", p.current && "bg-primary/[0.03]")}>
+                        {String((p as any)[row.key])}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+                {[
+                  { label: "API Access", key: "api" },
+                  { label: "White Label", key: "whiteLabel" },
+                ].map((row) => (
+                  <TableRow key={row.label}>
+                    <TableCell className="text-sm font-medium">{row.label}</TableCell>
+                    {comparisonPlans.map((p) => (
+                      <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
+                        {(p as any)[row.key] ? (
+                          <Check className="h-4 w-4 text-success" />
+                        ) : (
+                          <X className="h-4 w-4 text-muted-foreground/50" />
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* =========================== ACTIVITY =========================== */}
+        <TabsContent value="activity" className="space-y-4">
+          <Card className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading font-semibold text-sm">Audit Timeline</h3>
+              <Button size="sm" variant="ghost" className="h-7 text-xs">
+                <Download className="h-3.5 w-3.5" /> Export log
+              </Button>
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border" />
+              <div className="space-y-4">
+                {auditLog.map((e, i) => {
+                  const meta = auditIconMap[e.type] ?? auditIconMap.renewal;
+                  const Icon = meta.icon;
+                  return (
+                    <div key={i} className="flex gap-3 relative">
+                      <div className={cn(
+                        "flex h-8 w-8 items-center justify-center rounded-full shrink-0 relative z-10 border-2 border-background",
+                        meta.cls,
+                      )}>
+                        <Icon className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0 pb-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="text-sm font-medium">{e.title}</p>
+                          <span className="text-[11px] text-muted-foreground shrink-0">{e.date}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{e.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
