@@ -627,7 +627,7 @@ export default function SubscriptionManagement() {
               {warnings.map((w) => w.label).join(", ")} — consider upgrading to avoid overage.
             </p>
           </div>
-          <Button size="sm" variant="outline">Review</Button>
+          <Button size="sm" variant="outline" disabled={!nextUpgrade} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Review</Button>
         </div>
       )}
 
