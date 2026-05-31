@@ -1252,10 +1252,13 @@ export default function SubscriptionManagement() {
                       .map((f) => (
                         <TableRow key={f.name}>
                           <TableCell className="text-sm font-medium">
-                            {f.name}
-                            {f.addon && (
-                              <Badge variant="outline" className="ml-2 text-[9px] h-4 px-1">Add-on</Badge>
-                            )}
+                            <span className="inline-flex items-center gap-1.5">
+                              {f.name}
+                              <FeatureInfo title={f.name} description={f.desc} />
+                              {f.addon && (
+                                <Badge variant="outline" className="ml-1 text-[9px] h-4 px-1">Add-on</Badge>
+                              )}
+                            </span>
                           </TableCell>
                           {comparisonPlans.map((p) => (
                             <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
