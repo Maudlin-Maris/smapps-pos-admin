@@ -1185,7 +1185,8 @@ export default function SubscriptionManagement() {
                       .map((f) => (
                         <li key={f.name} className="flex items-start gap-1.5">
                           <Check className="h-3 w-3 text-success mt-0.5 shrink-0" />
-                          <span className="text-foreground/80">{f.name}</span>
+                          <span className="text-foreground/80 flex-1">{f.name}</span>
+                          <FeatureInfo title={f.name} description={f.desc} />
                         </li>
                       ))}
                   </ul>
