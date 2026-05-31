@@ -1017,7 +1017,8 @@ export default function SubscriptionManagement() {
           <div className="grid gap-4 lg:grid-cols-3">
             {comparisonPlans.map((p) => {
               const current = p.current;
-              const isUpgrade = !current && p.tier > 1;
+              const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
+              const isUpgrade = !current && p.tier > currentTier;
               return (
                 <Card
                   key={p.name}
@@ -1039,6 +1040,7 @@ export default function SubscriptionManagement() {
                     size="sm"
                     className="w-full mt-4"
                     disabled={current}
+                    onClick={() => !current && openPlanChange(p.name)}
                   >
                     {current ? "Current" : isUpgrade ? (<><ArrowUpRight className="h-3.5 w-3.5" /> Upgrade</>) : (<><ArrowDownRight className="h-3.5 w-3.5" /> Downgrade</>)}
                   </Button>
