@@ -973,7 +973,10 @@ export default function SubscriptionManagement() {
                       <X className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground">{f.name}</p>
+                      <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                        {f.name}
+                        <FeatureInfo title={f.name} description={f.desc} />
+                      </p>
                       <p className="text-xs text-muted-foreground/80">{f.desc}</p>
                     </div>
                     <Button size="sm" variant="ghost" className="h-7 text-xs">
