@@ -248,22 +248,22 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Orders</TableHead>
                   <TableHead className="text-right text-xs">Revenue</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dailyOpen && buildDailyBreakdown(dailyOpen.qty, dailyOpen.revenue).map((d) => (
+                {dailyOpen && buildDailyBreakdown(dailyOpen.orders, dailyOpen.revenue).map((d) => (
                   <TableRow key={d.date}>
                     <TableCell className="text-xs">{d.displayDate}</TableCell>
-                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{d.orders}</TableCell>
                     <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
                   </TableRow>
                 ))}
                 {dailyOpen && (
                   <TableRow className="bg-muted/50 font-semibold">
                     <TableCell className="text-xs">Total</TableCell>
-                    <TableCell className="text-right text-xs">{dailyOpen.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{dailyOpen.orders}</TableCell>
                     <TableCell className="text-right text-xs">{formatCurrency(dailyOpen.revenue)}</TableCell>
                   </TableRow>
                 )}
