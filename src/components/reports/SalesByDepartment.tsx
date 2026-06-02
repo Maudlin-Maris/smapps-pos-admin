@@ -113,8 +113,8 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                     <p className="text-sm sm:text-base font-semibold">{formatCurrency(topDepartment.revenue)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Qty Sold</p>
-                    <p className="text-sm sm:text-base font-semibold">{topDepartment.qty}</p>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Orders</p>
+                    <p className="text-sm sm:text-base font-semibold">{topDepartment.orders}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Share</p>
