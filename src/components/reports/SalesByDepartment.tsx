@@ -199,7 +199,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                 <TableRow>
                   <TableHead className="text-xs">Department</TableHead>
                   <TableHead className="text-xs">Outlet</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Orders</TableHead>
                   <TableHead className="text-right text-xs">Revenue</TableHead>
                   <TableHead className="text-right text-xs">%</TableHead>
                   <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
@@ -211,7 +211,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                     <TableRow key={`${d.outletName}-${d.department}`}>
                       <TableCell className="font-medium text-xs sm:text-sm">{d.department}</TableCell>
                       <TableCell className="text-muted-foreground text-xs sm:text-sm">{d.outletName}</TableCell>
-                      <TableCell className="text-right text-xs sm:text-sm">{d.qty}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{d.orders}</TableCell>
                       <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(d.revenue)}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{d.pct}%</TableCell>
                       <TableCell className="text-right">
@@ -219,7 +219,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-xs"
-                          onClick={() => setDailyOpen({ department: `${d.department} (${d.outletName})`, qty: d.qty, revenue: d.revenue })}
+                          onClick={() => setDailyOpen({ department: `${d.department} (${d.outletName})`, orders: d.orders, revenue: d.revenue })}
                         >
                           <CalendarRange className="h-3.5 w-3.5" />
                         </Button>
