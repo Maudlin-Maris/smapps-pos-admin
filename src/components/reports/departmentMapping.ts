@@ -42,8 +42,13 @@ export interface DepartmentSalesRow {
   outletId: string;
   outletName: string;
   qty: number;
+  orders: number;
   revenue: number;
 }
+
+// Approximate average items-per-order basket size used to derive order counts
+// from item-level sample data (no per-order linkage exists in mock data).
+const AVG_BASKET_SIZE = 1.6;
 
 /** Aggregate item sales into departments across the selected outlets. */
 export function aggregateItemsByDepartment(selectedOutlets: string[]): DepartmentSalesRow[] {
@@ -57,11 +62,13 @@ export function aggregateItemsByDepartment(selectedOutlets: string[]): Departmen
       const dept = mapping[item.category] || item.category;
       const key = `${outletId}::${dept}`;
       if (!map[key]) {
-        map[key] = { department: dept, outletId, outletName, qty: 0, revenue: 0 };
+        map[key] = { department: dept, outletId, outletName, qty: 0, orders: 0, revenue: 0 };
       }
       map[key].qty += item.qty;
       map[key].revenue += item.revenue;
     });
   });
-  return Object.values(map).sort((a, b) => b.revenue - a.revenue);
+  return Object.values(map)
+    .map((r) => ({ ...r, orders: Math.max(1, Math.round(r.qty / AVG_BASKET_SIZE)) }))
+    .sort((a, b) => b.revenue - a.revenue);
 }
