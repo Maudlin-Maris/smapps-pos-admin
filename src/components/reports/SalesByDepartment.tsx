@@ -39,7 +39,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
       .sort((a, b) => b.revenue - a.revenue);
   }, [selectedOutlets]);
 
-  const totalQty = salesByDepartment.reduce((s, c) => s + c.qty, 0);
+  const totalOrders = salesByDepartment.reduce((s, c) => s + c.orders, 0);
   const totalRevenue = salesByDepartment.reduce((s, c) => s + c.revenue, 0);
 
   const topDepartment = salesByDepartment[0];
@@ -47,7 +47,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
 
   const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
 
-  const buildDailyBreakdown = (qty: number, revenue: number) => {
+  const buildDailyBreakdown = (orders: number, revenue: number) => {
     const { perDay, total, dates } = dailyShare;
     if (total === 0 || dates.length === 0) return [];
     return dates.map((date) => {
@@ -55,7 +55,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
       return {
         date,
         displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" }),
-        qty: Math.round(qty * share),
+        orders: Math.max(0, Math.round(orders * share)),
         revenue: Math.round(revenue * share),
       };
     });
@@ -72,8 +72,8 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
           <p className="text-lg sm:text-2xl font-bold">{salesByDepartment.length}</p>
         </Card>
         <Card className="p-3 sm:p-4">
-          <p className="text-xs text-muted-foreground">Total Qty Sold</p>
-          <p className="text-lg sm:text-2xl font-bold">{totalQty}</p>
+          <p className="text-xs text-muted-foreground">Total Orders</p>
+          <p className="text-lg sm:text-2xl font-bold">{totalOrders}</p>
         </Card>
         <Card className="p-3 sm:p-4 col-span-2 md:col-span-1">
           <p className="text-xs text-muted-foreground">Total Revenue</p>
