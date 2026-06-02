@@ -160,7 +160,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                       <span className="text-[11px] text-muted-foreground truncate">· {d.outletName}</span>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-muted-foreground">{d.qty} qty</span>
+                      <span className="text-muted-foreground">{d.orders} orders</span>
                       <span className="font-semibold">{formatCurrency(d.revenue)}</span>
                     </div>
                   </div>
