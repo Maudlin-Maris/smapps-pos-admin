@@ -20,7 +20,7 @@ interface Props {
 }
 
 export default function SalesByDepartment({ sales, selectedOutlets, dateRange, cashierFilter }: Props) {
-  const [dailyOpen, setDailyOpen] = useState<{ department: string; qty: number; revenue: number } | null>(null);
+  const [dailyOpen, setDailyOpen] = useState<{ department: string; orders: number; revenue: number } | null>(null);
 
   const filteredSales = useMemo(
     () => filterSales(sales, selectedOutlets, dateRange, cashierFilter),
@@ -39,7 +39,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
       .sort((a, b) => b.revenue - a.revenue);
   }, [selectedOutlets]);
 
-  const totalQty = salesByDepartment.reduce((s, c) => s + c.qty, 0);
+  const totalOrders = salesByDepartment.reduce((s, c) => s + c.orders, 0);
   const totalRevenue = salesByDepartment.reduce((s, c) => s + c.revenue, 0);
 
   const topDepartment = salesByDepartment[0];
@@ -47,7 +47,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
 
   const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
 
-  const buildDailyBreakdown = (qty: number, revenue: number) => {
+  const buildDailyBreakdown = (orders: number, revenue: number) => {
     const { perDay, total, dates } = dailyShare;
     if (total === 0 || dates.length === 0) return [];
     return dates.map((date) => {
@@ -55,7 +55,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
       return {
         date,
         displayDate: new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" }),
-        qty: Math.round(qty * share),
+        orders: Math.max(0, Math.round(orders * share)),
         revenue: Math.round(revenue * share),
       };
     });
@@ -72,8 +72,8 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
           <p className="text-lg sm:text-2xl font-bold">{salesByDepartment.length}</p>
         </Card>
         <Card className="p-3 sm:p-4">
-          <p className="text-xs text-muted-foreground">Total Qty Sold</p>
-          <p className="text-lg sm:text-2xl font-bold">{totalQty}</p>
+          <p className="text-xs text-muted-foreground">Total Orders</p>
+          <p className="text-lg sm:text-2xl font-bold">{totalOrders}</p>
         </Card>
         <Card className="p-3 sm:p-4 col-span-2 md:col-span-1">
           <p className="text-xs text-muted-foreground">Total Revenue</p>
@@ -113,8 +113,8 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                     <p className="text-sm sm:text-base font-semibold">{formatCurrency(topDepartment.revenue)}</p>
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Qty Sold</p>
-                    <p className="text-sm sm:text-base font-semibold">{topDepartment.qty}</p>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Orders</p>
+                    <p className="text-sm sm:text-base font-semibold">{topDepartment.orders}</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Share</p>
@@ -160,7 +160,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                       <span className="text-[11px] text-muted-foreground truncate">· {d.outletName}</span>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-muted-foreground">{d.qty} qty</span>
+                      <span className="text-muted-foreground">{d.orders} orders</span>
                       <span className="font-semibold">{formatCurrency(d.revenue)}</span>
                     </div>
                   </div>
@@ -199,7 +199,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                 <TableRow>
                   <TableHead className="text-xs">Department</TableHead>
                   <TableHead className="text-xs">Outlet</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Orders</TableHead>
                   <TableHead className="text-right text-xs">Revenue</TableHead>
                   <TableHead className="text-right text-xs">%</TableHead>
                   <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
@@ -211,7 +211,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                     <TableRow key={`${d.outletName}-${d.department}`}>
                       <TableCell className="font-medium text-xs sm:text-sm">{d.department}</TableCell>
                       <TableCell className="text-muted-foreground text-xs sm:text-sm">{d.outletName}</TableCell>
-                      <TableCell className="text-right text-xs sm:text-sm">{d.qty}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{d.orders}</TableCell>
                       <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(d.revenue)}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{d.pct}%</TableCell>
                       <TableCell className="text-right">
@@ -219,7 +219,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-xs"
-                          onClick={() => setDailyOpen({ department: `${d.department} (${d.outletName})`, qty: d.qty, revenue: d.revenue })}
+                          onClick={() => setDailyOpen({ department: `${d.department} (${d.outletName})`, orders: d.orders, revenue: d.revenue })}
                         >
                           <CalendarRange className="h-3.5 w-3.5" />
                         </Button>
@@ -248,22 +248,22 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Orders</TableHead>
                   <TableHead className="text-right text-xs">Revenue</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dailyOpen && buildDailyBreakdown(dailyOpen.qty, dailyOpen.revenue).map((d) => (
+                {dailyOpen && buildDailyBreakdown(dailyOpen.orders, dailyOpen.revenue).map((d) => (
                   <TableRow key={d.date}>
                     <TableCell className="text-xs">{d.displayDate}</TableCell>
-                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{d.orders}</TableCell>
                     <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
                   </TableRow>
                 ))}
                 {dailyOpen && (
                   <TableRow className="bg-muted/50 font-semibold">
                     <TableCell className="text-xs">Total</TableCell>
-                    <TableCell className="text-right text-xs">{dailyOpen.qty}</TableCell>
+                    <TableCell className="text-right text-xs">{dailyOpen.orders}</TableCell>
                     <TableCell className="text-right text-xs">{formatCurrency(dailyOpen.revenue)}</TableCell>
                   </TableRow>
                 )}
