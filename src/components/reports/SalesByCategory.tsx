@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
-import { CalendarRange } from "lucide-react";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { CalendarRange, Crown, TrendingUp, Trophy } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { aggregateItems, dailySalesShareFor, filterSales, formatCurrency } from "./salesData";
@@ -16,8 +17,6 @@ interface Props {
   dateRange: { from: Date; to: Date };
   cashierFilter?: string;
 }
-
-const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
 export default function SalesByCategory({ sales, selectedOutlets, dateRange, cashierFilter }: Props) {
   const [dailyOpen, setDailyOpen] = useState<{ category: string; qty: number; revenue: number } | null>(null);
@@ -42,12 +41,16 @@ export default function SalesByCategory({ sales, selectedOutlets, dateRange, cas
         category,
         ...data,
         pct: totalRev > 0 ? ((data.revenue / totalRev) * 100).toFixed(1) : "0",
+        pctNum: totalRev > 0 ? (data.revenue / totalRev) * 100 : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue);
   }, [allItems]);
 
   const totalQty = salesByCategory.reduce((s, c) => s + c.qty, 0);
   const totalRevenue = salesByCategory.reduce((s, c) => s + c.revenue, 0);
+
+  const topCategory = salesByCategory[0];
+  const topCategories = salesByCategory.slice(0, 5);
 
   const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
 
@@ -64,12 +67,6 @@ export default function SalesByCategory({ sales, selectedOutlets, dateRange, cas
       };
     });
   };
-
-  const chartData = salesByCategory.map((c, idx) => ({
-    name: c.category,
-    value: c.revenue,
-    color: COLORS[idx % COLORS.length],
-  }));
 
   const catPag = usePagination(salesByCategory, 10);
 
@@ -92,85 +89,155 @@ export default function SalesByCategory({ sales, selectedOutlets, dateRange, cas
       </div>
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <Card>
+        {/* Top Selling Category (highlight) */}
+        <Card className="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background">
           <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Revenue Distribution</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary/10 p-1.5 text-primary">
+                <Crown className="h-4 w-4" />
+              </div>
+              <CardTitle className="text-sm sm:text-base">Top Selling Category</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" paddingAngle={2}>
-                    {chartData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ fontSize: "12px" }} />
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
-                </PieChart>
-              </ResponsiveContainer>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            {topCategory ? (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xl sm:text-2xl font-bold truncate">{topCategory.category}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Leader by revenue this period</p>
+                  </div>
+                  <Badge variant="secondary" className="gap-1 shrink-0">
+                    <Trophy className="h-3 w-3" /> #1
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Revenue</p>
+                    <p className="text-sm sm:text-base font-semibold">{formatCurrency(topCategory.revenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Qty Sold</p>
+                    <p className="text-sm sm:text-base font-semibold">{topCategory.qty}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Share</p>
+                    <p className="text-sm sm:text-base font-semibold">{topCategory.pct}%</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Progress value={topCategory.pctNum} className="h-2" />
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    {topCategory.pct}% of total category revenue
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">No data</div>
+              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">
+                No data
+              </div>
             )}
           </CardContent>
         </Card>
 
+        {/* Top Selling Categories */}
         <Card>
           <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Sales by Category</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
-            <PaginationControls
-              page={catPag.page}
-              totalPages={catPag.totalPages}
-              perPage={catPag.perPage}
-              totalItems={catPag.totalItems}
-              pageSizeOptions={catPag.pageSizeOptions}
-              onPageChange={catPag.setPage}
-              onPerPageChange={catPag.setPerPage}
-            />
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs">Category</TableHead>
-                    <TableHead className="text-right text-xs">Qty</TableHead>
-                    <TableHead className="text-right text-xs">Revenue</TableHead>
-                    <TableHead className="text-right text-xs">%</TableHead>
-                    <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {catPag.paginatedItems.length > 0 ? (
-                    catPag.paginatedItems.map((cat) => (
-                      <TableRow key={cat.category}>
-                        <TableCell className="font-medium text-xs sm:text-sm">{cat.category}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{cat.qty}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(cat.revenue)}</TableCell>
-                        <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{cat.pct}%</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => setDailyOpen({ category: cat.category, qty: cat.qty, revenue: cat.revenue })}
-                          >
-                            <CalendarRange className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No category data</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary/10 p-1.5 text-primary">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <CardTitle className="text-sm sm:text-base">Top Selling Categories</CardTitle>
             </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-3">
+            {topCategories.length > 0 ? (
+              topCategories.map((cat, idx) => (
+                <div key={cat.category} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-semibold shrink-0">
+                        {idx + 1}
+                      </span>
+                      <span className="font-medium truncate">{cat.category}</span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-muted-foreground">{cat.qty} qty</span>
+                      <span className="font-semibold">{formatCurrency(cat.revenue)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Progress value={cat.pctNum} className="h-1.5 flex-1" />
+                    <span className="text-[11px] text-muted-foreground w-10 text-right">{cat.pct}%</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">
+                No data
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <CardTitle className="text-sm sm:text-base">Sales by Category</CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
+          <PaginationControls
+            page={catPag.page}
+            totalPages={catPag.totalPages}
+            perPage={catPag.perPage}
+            totalItems={catPag.totalItems}
+            pageSizeOptions={catPag.pageSizeOptions}
+            onPageChange={catPag.setPage}
+            onPerPageChange={catPag.setPerPage}
+          />
+          <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">Category</TableHead>
+                  <TableHead className="text-right text-xs">Qty</TableHead>
+                  <TableHead className="text-right text-xs">Revenue</TableHead>
+                  <TableHead className="text-right text-xs">%</TableHead>
+                  <TableHead className="text-right text-xs w-[80px]">Daily</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {catPag.paginatedItems.length > 0 ? (
+                  catPag.paginatedItems.map((cat) => (
+                    <TableRow key={cat.category}>
+                      <TableCell className="font-medium text-xs sm:text-sm">{cat.category}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{cat.qty}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(cat.revenue)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground text-xs sm:text-sm">{cat.pct}%</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setDailyOpen({ category: cat.category, qty: cat.qty, revenue: cat.revenue })}
+                        >
+                          <CalendarRange className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground text-xs">No category data</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={!!dailyOpen} onOpenChange={(o) => !o && setDailyOpen(null)}>
         <DialogContent className="max-w-md">
