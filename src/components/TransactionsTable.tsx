@@ -16,11 +16,35 @@ export interface PaymentSplit {
   amount: string;
 }
 
+export interface OrderItemExtra {
+  name: string;
+  qty?: number;
+  price: string;
+}
+
 export interface OrderItem {
   name: string;
   qty: number;
   unitPrice: string;
   total: string;
+  variantName?: string;
+  extras?: OrderItemExtra[];
+  notes?: string;
+}
+
+export interface OrderFee {
+  name: string;
+  amount: string;
+}
+
+export interface LoyaltyInfo {
+  customerName: string;
+  tier?: string;
+  rewardName?: string;
+  discountValue?: string;
+  pointsUsed?: number;
+  pointsEarned?: number;
+  pointsBalance?: number;
 }
 
 export interface Transaction {
@@ -34,6 +58,21 @@ export interface Transaction {
   payments: PaymentSplit[];
   orderStatus: "Completed" | "Processing" | "Cancelled" | "On Hold";
   items?: OrderItem[];
+  // Extended receipt-style details
+  customerName?: string;
+  orderType?: string; // dine_in, takeaway, delivery, pickup
+  tableLabel?: string;
+  notes?: string;
+  subtotal?: string;
+  discount?: string;
+  discountName?: string;
+  tip?: string;
+  fees?: OrderFee[];
+  paidAmount?: string;
+  changeDue?: string;
+  balanceDue?: string;
+  loyalty?: LoyaltyInfo;
+  outletAddress?: string;
 }
 
 interface TransactionsTableProps {
