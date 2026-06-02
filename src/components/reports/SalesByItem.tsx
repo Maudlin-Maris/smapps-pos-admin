@@ -289,33 +289,13 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
             <DialogTitle className="text-base">{dailyOpen?.name}</DialogTitle>
             <DialogDescription className="text-xs">Daily sales breakdown for the selected period</DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-right text-xs">Qty</TableHead>
-                  <TableHead className="text-right text-xs">Revenue</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dailyOpen && buildDailyBreakdown(dailyOpen.qty, dailyOpen.revenue).map((d) => (
-                  <TableRow key={d.date}>
-                    <TableCell className="text-xs">{d.displayDate}</TableCell>
-                    <TableCell className="text-right text-xs">{d.qty}</TableCell>
-                    <TableCell className="text-right text-xs font-semibold">{formatCurrency(d.revenue)}</TableCell>
-                  </TableRow>
-                ))}
-                {dailyOpen && (
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell className="text-xs">Total</TableCell>
-                    <TableCell className="text-right text-xs">{dailyOpen.qty}</TableCell>
-                    <TableCell className="text-right text-xs">{formatCurrency(dailyOpen.revenue)}</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          {dailyOpen && (
+            <DailyBreakdownTable
+              rows={buildDailyBreakdown(dailyOpen.qty, dailyOpen.revenue)}
+              totalQty={dailyOpen.qty}
+              totalRevenue={dailyOpen.revenue}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
