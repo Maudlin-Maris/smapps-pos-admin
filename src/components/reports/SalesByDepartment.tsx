@@ -20,7 +20,7 @@ interface Props {
 }
 
 export default function SalesByDepartment({ sales, selectedOutlets, dateRange, cashierFilter }: Props) {
-  const [dailyOpen, setDailyOpen] = useState<{ department: string; qty: number; revenue: number } | null>(null);
+  const [dailyOpen, setDailyOpen] = useState<{ department: string; orders: number; revenue: number } | null>(null);
 
   const filteredSales = useMemo(
     () => filterSales(sales, selectedOutlets, dateRange, cashierFilter),
