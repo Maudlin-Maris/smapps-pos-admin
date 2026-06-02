@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -48,6 +43,13 @@ import {
   ShoppingBag,
   Trash2,
   Pencil,
+  User,
+  MapPin,
+  Receipt,
+  Sparkles,
+  Award,
+  Utensils,
+  StickyNote,
 } from "lucide-react";
 import type { Transaction } from "@/components/TransactionsTable";
 
@@ -76,6 +78,11 @@ interface TransactionDetailDialogProps {
   onUpdate: (updated: Transaction) => void;
 }
 
+function formatOrderType(t?: string) {
+  if (!t) return null;
+  return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function TransactionDetailDialog({
   transaction,
   open,
@@ -97,6 +104,8 @@ export default function TransactionDetailDialog({
   const OrderIcon = oStatus.icon;
 
   const canVoid = transaction.orderStatus !== "Cancelled" && transaction.paymentStatus !== "Refunded";
+  const hasItems = transaction.items && transaction.items.length > 0;
+  const orderTypeLabel = formatOrderType(transaction.orderType);
 
   const handleVoid = () => {
     if (voidCode !== VOID_CODE) {
@@ -150,23 +159,33 @@ export default function TransactionDetailDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[520px] p-0 gap-0 overflow-hidden">
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          className="!w-full sm:!max-w-md lg:!max-w-lg p-0 flex flex-col overflow-hidden [&>button]:z-20"
+        >
           {/* Header */}
-          <DialogHeader className="p-4 sm:p-5 pb-0">
-            <div className="flex items-start justify-between">
-              <div>
-                <DialogTitle className="text-base sm:text-lg font-heading flex items-center gap-2">
-                  {transaction.orderId}
-                  <button onClick={handleCopyId} className="text-muted-foreground hover:text-foreground transition-colors">
+          <div className="px-4 sm:px-5 pt-5 pb-3 border-b border-border bg-card">
+            <div className="flex items-start justify-between gap-3 pr-8">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <h2 className="text-base sm:text-lg font-heading font-semibold truncate">
+                    {transaction.orderId}
+                  </h2>
+                  <button
+                    onClick={handleCopyId}
+                    className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                    title="Copy Order ID"
+                  >
                     <Copy className="h-3.5 w-3.5" />
                   </button>
-                </DialogTitle>
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5">{transaction.date}</p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-8 w-8">
+                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -180,7 +199,10 @@ export default function TransactionDetailDialog({
                   {canVoid && (
                     <>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setVoidConfirmOpen(true)} className="text-destructive focus:text-destructive">
+                      <DropdownMenuItem
+                        onClick={() => setVoidConfirmOpen(true)}
+                        className="text-destructive focus:text-destructive"
+                      >
                         <Ban className="h-4 w-4 mr-2" /> Void Order
                       </DropdownMenuItem>
                     </>
@@ -188,11 +210,8 @@ export default function TransactionDetailDialog({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </DialogHeader>
 
-          <div className="p-4 sm:p-5 space-y-4">
-            {/* Status badges */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap mt-3">
               <Badge variant="outline" className={`gap-1.5 ${pStatus.class}`}>
                 <PaymentIcon className="h-3 w-3" />
                 {transaction.paymentStatus}
@@ -201,38 +220,159 @@ export default function TransactionDetailDialog({
                 <OrderIcon className="h-3 w-3" />
                 {transaction.orderStatus}
               </Badge>
+              {orderTypeLabel && (
+                <Badge variant="secondary" className="gap-1.5">
+                  <Utensils className="h-3 w-3" />
+                  {orderTypeLabel}
+                </Badge>
+              )}
+              {transaction.tableLabel && (
+                <Badge variant="secondary">{transaction.tableLabel}</Badge>
+              )}
             </div>
+          </div>
 
-            <Separator />
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-5">
+            {/* Outlet & Cashier */}
+            <section>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" /> Outlet
+              </p>
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5">
+                <p className="font-medium text-sm">{transaction.location}</p>
+                {transaction.outletAddress && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{transaction.outletAddress}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cashier: <span className="text-foreground font-medium">{transaction.cashier}</span>
+                </p>
+              </div>
+            </section>
 
-            {/* Detail rows */}
-            <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground">Customer</p>
-                <p className="font-medium">{transaction.customerPhone}</p>
+            {/* Customer */}
+            <section>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" /> Customer
+              </p>
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1">
+                {transaction.customerName ? (
+                  <p className="font-medium text-sm">{transaction.customerName}</p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Walk-in customer</p>
+                )}
+                <p className="text-xs text-muted-foreground">{transaction.customerPhone || "No phone provided"}</p>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Amount</p>
-                <p className="font-semibold text-base">{transaction.amount}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Cashier</p>
-                <p className="font-medium">{transaction.cashier}</p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Location</p>
-                <p className="font-medium">{transaction.location}</p>
-              </div>
-            </div>
+            </section>
 
-            <Separator />
+            {/* Order Notes */}
+            {transaction.notes && (
+              <section>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <StickyNote className="h-3.5 w-3.5" /> Order Notes
+                </p>
+                <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-foreground">
+                  {transaction.notes}
+                </div>
+              </section>
+            )}
+
+            {/* Items */}
+            {hasItems && (
+              <section>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <ShoppingBag className="h-3.5 w-3.5" /> Items ({transaction.items!.length})
+                </p>
+                <div className="rounded-md border border-border overflow-hidden divide-y divide-border">
+                  {transaction.items!.map((item, i) => (
+                    <div key={i} className="p-3 bg-card">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">
+                            <span className="text-muted-foreground mr-1">{item.qty}×</span>
+                            {item.name}
+                          </p>
+                          {item.variantName && (
+                            <p className="text-xs text-muted-foreground mt-0.5">{item.variantName}</p>
+                          )}
+                          {item.notes && (
+                            <p className="text-xs text-muted-foreground italic mt-0.5">Note: {item.notes}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-semibold">{item.total}</p>
+                          <p className="text-[11px] text-muted-foreground">{item.unitPrice} ea</p>
+                        </div>
+                      </div>
+                      {item.extras && item.extras.length > 0 && (
+                        <div className="mt-2 pl-3 border-l-2 border-border space-y-0.5">
+                          {item.extras.map((e, j) => (
+                            <div key={j} className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">
+                                + {(e.qty ?? 1) > 1 ? `${e.qty}× ` : ""}{e.name}
+                              </span>
+                              <span className="text-muted-foreground">{e.price}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Totals breakdown */}
+            <section>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                Order Total
+              </p>
+              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1.5 text-sm">
+                {transaction.subtotal && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">{transaction.subtotal}</span>
+                  </div>
+                )}
+                {transaction.discount && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">
+                      Discount{transaction.discountName ? ` (${transaction.discountName})` : ""}
+                    </span>
+                    <span className="font-medium text-success">−{transaction.discount}</span>
+                  </div>
+                )}
+                {transaction.fees?.map((fee, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-muted-foreground">{fee.name}</span>
+                    <span className="font-medium">{fee.amount}</span>
+                  </div>
+                ))}
+                {transaction.tip && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Tip</span>
+                    <span className="font-medium">{transaction.tip}</span>
+                  </div>
+                )}
+                <Separator className="my-1" />
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">Total</span>
+                  <span className="font-bold text-base">{transaction.amount}</span>
+                </div>
+              </div>
+            </section>
 
             {/* Payment breakdown */}
-            <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Payment Breakdown</p>
+            <section>
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <CreditCard className="h-3.5 w-3.5" /> Payment Breakdown
+              </p>
               <div className="space-y-1.5">
                 {transaction.payments.map((p, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm bg-muted/40 rounded-md px-3 py-2">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between text-sm bg-muted/40 rounded-md px-3 py-2"
+                  >
                     {editingPaymentIndex === i ? (
                       <div className="flex items-center gap-2 flex-1">
                         <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod}>
@@ -245,10 +385,20 @@ export default function TransactionDetailDialog({
                             ))}
                           </SelectContent>
                         </Select>
-                        <Button size="sm" className="h-7 text-xs px-2" onClick={() => handleUpdatePaymentMethod(i)} disabled={!newPaymentMethod}>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                          onClick={() => handleUpdatePaymentMethod(i)}
+                          disabled={!newPaymentMethod}
+                        >
                           Save
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => { setEditingPaymentIndex(null); setNewPaymentMethod(""); }}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                          onClick={() => { setEditingPaymentIndex(null); setNewPaymentMethod(""); }}
+                        >
                           Cancel
                         </Button>
                       </div>
@@ -278,63 +428,113 @@ export default function TransactionDetailDialog({
                     )}
                   </div>
                 ))}
+                {(transaction.paidAmount || transaction.changeDue || transaction.balanceDue) && (
+                  <div className="mt-2 pt-2 border-t border-border space-y-1 text-sm">
+                    {transaction.paidAmount && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Amount Paid</span>
+                        <span className="font-medium">{transaction.paidAmount}</span>
+                      </div>
+                    )}
+                    {transaction.changeDue && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Change Due</span>
+                        <span className="font-semibold text-success">{transaction.changeDue}</span>
+                      </div>
+                    )}
+                    {transaction.balanceDue && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Balance Due</span>
+                        <span className="font-semibold text-warning">{transaction.balanceDue}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
+            </section>
 
-            {/* Order Items */}
-            {transaction.items && transaction.items.length > 0 && (
-              <>
-                <Separator />
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                    <ShoppingBag className="h-3.5 w-3.5" /> Order Items
-                  </p>
-                  <div className="rounded-md border border-border overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-muted/50 text-muted-foreground">
-                          <th className="text-left py-1.5 px-3 font-medium">Item</th>
-                          <th className="text-center py-1.5 px-2 font-medium">Qty</th>
-                          <th className="text-right py-1.5 px-2 font-medium">Price</th>
-                          <th className="text-right py-1.5 px-3 font-medium">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {transaction.items.map((item, i) => (
-                          <tr key={i} className="border-t border-border/50">
-                            <td className="py-1.5 px-3 font-medium">{item.name}</td>
-                            <td className="py-1.5 px-2 text-center text-muted-foreground">{item.qty}</td>
-                            <td className="py-1.5 px-2 text-right text-muted-foreground">{item.unitPrice}</td>
-                            <td className="py-1.5 px-3 text-right font-medium">{item.total}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t border-border bg-muted/30">
-                          <td colSpan={3} className="py-1.5 px-3 font-semibold text-right">Total</td>
-                          <td className="py-1.5 px-3 text-right font-semibold">{transaction.amount}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
+            {/* Loyalty */}
+            {transaction.loyalty && (
+              <section>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> Loyalty
+                </p>
+                <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Award className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-medium">{transaction.loyalty.customerName}</p>
+                    </div>
+                    {transaction.loyalty.tier && (
+                      <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                        {transaction.loyalty.tier}
+                      </Badge>
+                    )}
+                  </div>
+                  {transaction.loyalty.rewardName && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Reward Redeemed</span>
+                      <span className="font-medium">
+                        {transaction.loyalty.rewardName}
+                        {transaction.loyalty.discountValue && ` (−${transaction.loyalty.discountValue})`}
+                      </span>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    {transaction.loyalty.pointsUsed !== undefined && (
+                      <div className="text-center bg-background rounded-md p-2">
+                        <p className="text-[10px] text-muted-foreground uppercase">Used</p>
+                        <p className="text-sm font-semibold">{transaction.loyalty.pointsUsed}</p>
+                      </div>
+                    )}
+                    {transaction.loyalty.pointsEarned !== undefined && (
+                      <div className="text-center bg-background rounded-md p-2">
+                        <p className="text-[10px] text-muted-foreground uppercase">Earned</p>
+                        <p className="text-sm font-semibold text-success">+{transaction.loyalty.pointsEarned}</p>
+                      </div>
+                    )}
+                    {transaction.loyalty.pointsBalance !== undefined && (
+                      <div className="text-center bg-background rounded-md p-2">
+                        <p className="text-[10px] text-muted-foreground uppercase">Balance</p>
+                        <p className="text-sm font-semibold">{transaction.loyalty.pointsBalance}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </>
+              </section>
             )}
-
-            {/* Quick actions footer */}
-            <div className="flex items-center gap-2 pt-2">
-              {canVoid && (
-                <Button variant="destructive" size="sm" className="gap-1.5 text-xs flex-1" onClick={() => setVoidConfirmOpen(true)}>
-                  <Ban className="h-3.5 w-3.5" /> Void Order
-                </Button>
-              )}
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Footer actions */}
+          <div className="border-t border-border px-4 sm:px-5 py-3 bg-card flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handlePrint}>
+              <Printer className="h-3.5 w-3.5" /> Print
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handleResend}>
+              <Send className="h-3.5 w-3.5" /> Resend
+            </Button>
+            {canVoid && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-1.5 text-xs flex-1"
+                onClick={() => setVoidConfirmOpen(true)}
+              >
+                <Ban className="h-3.5 w-3.5" /> Void
+              </Button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Void confirmation with code */}
-      <AlertDialog open={voidConfirmOpen} onOpenChange={(open) => { setVoidConfirmOpen(open); if (!open) { setVoidCode(""); setVoidCodeError(""); } }}>
+      <AlertDialog
+        open={voidConfirmOpen}
+        onOpenChange={(open) => {
+          setVoidConfirmOpen(open);
+          if (!open) { setVoidCode(""); setVoidCodeError(""); }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Void Order {transaction.orderId}?</AlertDialogTitle>
@@ -368,13 +568,26 @@ export default function TransactionDetailDialog({
       </AlertDialog>
 
       {/* Remove payment method confirmation */}
-      <AlertDialog open={removePaymentIndex !== null} onOpenChange={(open) => { if (!open) setRemovePaymentIndex(null); }}>
+      <AlertDialog
+        open={removePaymentIndex !== null}
+        onOpenChange={(open) => { if (!open) setRemovePaymentIndex(null); }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
             <AlertDialogDescription>
               {removePaymentIndex !== null && transaction.payments[removePaymentIndex] ? (
-                <>This will remove the <span className="font-medium text-foreground">{transaction.payments[removePaymentIndex].method}</span> payment of <span className="font-medium text-foreground">{transaction.payments[removePaymentIndex].amount}</span> from this order. This action cannot be undone.</>
+                <>
+                  This will remove the{" "}
+                  <span className="font-medium text-foreground">
+                    {transaction.payments[removePaymentIndex].method}
+                  </span>{" "}
+                  payment of{" "}
+                  <span className="font-medium text-foreground">
+                    {transaction.payments[removePaymentIndex].amount}
+                  </span>{" "}
+                  from this order. This action cannot be undone.
+                </>
               ) : (
                 <>This action cannot be undone.</>
               )}
