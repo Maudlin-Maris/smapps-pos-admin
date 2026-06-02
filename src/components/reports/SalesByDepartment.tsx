@@ -2,10 +2,11 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
-import { CalendarRange } from "lucide-react";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { CalendarRange, Crown, TrendingUp, Trophy } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { dailySalesShareFor, filterSales, formatCurrency } from "./salesData";
@@ -17,15 +18,6 @@ interface Props {
   dateRange: { from: Date; to: Date };
   cashierFilter?: string;
 }
-
-const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--accent))",
-];
 
 export default function SalesByDepartment({ sales, selectedOutlets, dateRange, cashierFilter }: Props) {
   const [dailyOpen, setDailyOpen] = useState<{ department: string; qty: number; revenue: number } | null>(null);
@@ -42,12 +34,16 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
       .map((r) => ({
         ...r,
         pct: totalRev > 0 ? ((r.revenue / totalRev) * 100).toFixed(1) : "0",
+        pctNum: totalRev > 0 ? (r.revenue / totalRev) * 100 : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue);
   }, [selectedOutlets]);
 
   const totalQty = salesByDepartment.reduce((s, c) => s + c.qty, 0);
   const totalRevenue = salesByDepartment.reduce((s, c) => s + c.revenue, 0);
+
+  const topDepartment = salesByDepartment[0];
+  const topDepartments = salesByDepartment.slice(0, 5);
 
   const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
 
@@ -64,17 +60,6 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
       };
     });
   };
-
-  const chartData = salesByDepartment.map((c, idx) => ({
-    name: c.department,
-    value: c.revenue,
-    color: COLORS[idx % COLORS.length],
-  }));
-
-  const barData = salesByDepartment.slice(0, 8).map((c) => ({
-    department: c.department,
-    revenue: c.revenue,
-  }));
 
   const deptPag = usePagination(salesByDepartment, 10);
 
@@ -97,46 +82,98 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
       </div>
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        <Card>
+        {/* Top Selling Department (highlight) */}
+        <Card className="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/5 via-background to-background">
           <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Revenue Distribution</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary/10 p-1.5 text-primary">
+                <Crown className="h-4 w-4" />
+              </div>
+              <CardTitle className="text-sm sm:text-base">Top Selling Department</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={90} dataKey="value" paddingAngle={2}>
-                    {chartData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ fontSize: "12px" }} />
-                  <Legend iconSize={8} wrapperStyle={{ fontSize: "11px" }} />
-                </PieChart>
-              </ResponsiveContainer>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            {topDepartment ? (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xl sm:text-2xl font-bold truncate">{topDepartment.department}</p>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {topDepartment.outletName} · Leader by revenue this period
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="gap-1 shrink-0">
+                    <Trophy className="h-3 w-3" /> #1
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Revenue</p>
+                    <p className="text-sm sm:text-base font-semibold">{formatCurrency(topDepartment.revenue)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Qty Sold</p>
+                    <p className="text-sm sm:text-base font-semibold">{topDepartment.qty}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Share</p>
+                    <p className="text-sm sm:text-base font-semibold">{topDepartment.pct}%</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Progress value={topDepartment.pctNum} className="h-2" />
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    {topDepartment.pct}% of total department revenue
+                  </p>
+                </div>
+              </div>
             ) : (
-              <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">No data</div>
+              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">
+                No data
+              </div>
             )}
           </CardContent>
         </Card>
 
+        {/* Top Departments by Revenue */}
         <Card>
           <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
-            <CardTitle className="text-sm sm:text-base">Top Departments by Revenue</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="rounded-md bg-primary/10 p-1.5 text-primary">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <CardTitle className="text-sm sm:text-base">Top Departments by Revenue</CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-            {barData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={barData} layout="vertical" margin={{ left: 10, right: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis type="number" tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
-                  <YAxis type="category" dataKey="department" width={110} className="text-xs" />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ fontSize: "12px" }} />
-                  <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-3">
+            {topDepartments.length > 0 ? (
+              topDepartments.map((d, idx) => (
+                <div key={`${d.outletId}-${d.department}`} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2 text-xs sm:text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[10px] font-semibold shrink-0">
+                        {idx + 1}
+                      </span>
+                      <span className="font-medium truncate">{d.department}</span>
+                      <span className="text-[11px] text-muted-foreground truncate">· {d.outletName}</span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-muted-foreground">{d.qty} qty</span>
+                      <span className="font-semibold">{formatCurrency(d.revenue)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Progress value={d.pctNum} className="h-1.5 flex-1" />
+                    <span className="text-[11px] text-muted-foreground w-10 text-right">{d.pct}%</span>
+                  </div>
+                </div>
+              ))
             ) : (
-              <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">No data</div>
+              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">
+                No data
+              </div>
             )}
           </CardContent>
         </Card>
