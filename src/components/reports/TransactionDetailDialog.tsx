@@ -43,6 +43,8 @@ import {
   ShoppingBag,
   Trash2,
   Pencil,
+  Plus,
+  Mail,
   User,
   MapPin,
   Receipt,
@@ -94,9 +96,16 @@ export default function TransactionDetailDialog({
   const [voidCode, setVoidCode] = useState("");
   const [voidCodeError, setVoidCodeError] = useState("");
   const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
-  const [newPaymentMethod, setNewPaymentMethod] = useState("");
+  const [editMethod, setEditMethod] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [addingPayment, setAddingPayment] = useState(false);
+  const [newMethod, setNewMethod] = useState("");
+  const [newAmount, setNewAmount] = useState("");
   const [removePaymentIndex, setRemovePaymentIndex] = useState<number | null>(null);
   const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
+  const [sendEmailAddress, setSendEmailAddress] = useState("");
+  const [sendEmailError, setSendEmailError] = useState("");
 
   if (!transaction) return null;
 
@@ -125,14 +134,62 @@ export default function TransactionDetailDialog({
     toast.success(`Order ${transaction.orderId} has been voided`);
   };
 
-  const handleUpdatePaymentMethod = (index: number) => {
-    if (!newPaymentMethod) return;
-    const updatedPayments = [...transaction.payments];
-    updatedPayments[index] = { ...updatedPayments[index], method: newPaymentMethod };
-    onUpdate({ ...transaction, payments: updatedPayments });
+  const formatAmount = (raw: string) => {
+    const cleaned = raw.replace(/[^0-9.]/g, "");
+    if (!cleaned) return "";
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return "";
+    return "₦" + num.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const startEdit = (index: number) => {
+    const p = transaction.payments[index];
+    setEditingPaymentIndex(index);
+    setEditMethod(p.method);
+    setEditAmount(p.amount.replace(/[^0-9.]/g, ""));
+    setAddingPayment(false);
+  };
+
+  const cancelEdit = () => {
     setEditingPaymentIndex(null);
-    setNewPaymentMethod("");
-    toast.success("Payment method updated");
+    setEditMethod("");
+    setEditAmount("");
+  };
+
+  const handleSaveEdit = (index: number) => {
+    if (!editMethod || !editAmount) return;
+    const formatted = formatAmount(editAmount);
+    if (!formatted) return;
+    const updatedPayments = [...transaction.payments];
+    updatedPayments[index] = { method: editMethod, amount: formatted };
+    onUpdate({ ...transaction, payments: updatedPayments });
+    cancelEdit();
+    toast.success("Payment updated");
+  };
+
+  const startAdd = () => {
+    setAddingPayment(true);
+    setNewMethod("");
+    setNewAmount("");
+    setEditingPaymentIndex(null);
+  };
+
+  const cancelAdd = () => {
+    setAddingPayment(false);
+    setNewMethod("");
+    setNewAmount("");
+  };
+
+  const handleAddPayment = () => {
+    if (!newMethod || !newAmount) return;
+    const formatted = formatAmount(newAmount);
+    if (!formatted) return;
+    onUpdate({
+      ...transaction,
+      payments: [...transaction.payments, { method: newMethod, amount: formatted }],
+    });
+    cancelAdd();
+    toast.success("Payment added");
   };
 
   const requestRemovePayment = (index: number) => {
@@ -157,7 +214,22 @@ export default function TransactionDetailDialog({
   };
 
   const handlePrint = () => setReceiptPreviewOpen(true);
-  const handleResend = () => toast.info("Receipt sent to customer");
+
+  const openSendEmail = () => {
+    setSendEmailAddress("");
+    setSendEmailError("");
+    setSendEmailOpen(true);
+  };
+
+  const handleSendEmail = () => {
+    const email = sendEmailAddress.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setSendEmailError("Please enter a valid email address");
+      return;
+    }
+    setSendEmailOpen(false);
+    toast.success(`Bill sent to ${email}`);
+  };
 
   return (
     <>
@@ -195,8 +267,8 @@ export default function TransactionDetailDialog({
                   <DropdownMenuItem onClick={handlePrint}>
                     <Printer className="h-4 w-4 mr-2" /> Print Receipt
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleResend}>
-                    <Send className="h-4 w-4 mr-2" /> Resend Receipt
+                  <DropdownMenuItem onClick={openSendEmail}>
+                    <Mail className="h-4 w-4 mr-2" /> Email Bill
                   </DropdownMenuItem>
                   {canVoid && (
                     <>
@@ -373,46 +445,57 @@ export default function TransactionDetailDialog({
                 {transaction.payments.map((p, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between text-sm bg-muted/40 rounded-md px-3 py-2"
+                    className="text-sm bg-muted/40 rounded-md px-3 py-2"
                   >
                     {editingPaymentIndex === i ? (
-                      <div className="flex items-center gap-2 flex-1">
-                        <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod}>
-                          <SelectTrigger className="h-7 text-xs flex-1">
-                            <SelectValue placeholder="Select method" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {paymentMethods.map((m) => (
-                              <SelectItem key={m} value={m}>{m}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="sm"
-                          className="h-7 text-xs px-2"
-                          onClick={() => handleUpdatePaymentMethod(i)}
-                          disabled={!newPaymentMethod}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs px-2"
-                          onClick={() => { setEditingPaymentIndex(null); setNewPaymentMethod(""); }}
-                        >
-                          Cancel
-                        </Button>
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Select value={editMethod} onValueChange={setEditMethod}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {paymentMethods.map((m) => (
+                                <SelectItem key={m} value={m}>{m}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Input
+                            inputMode="decimal"
+                            placeholder="Amount"
+                            value={editAmount}
+                            onChange={(e) => setEditAmount(e.target.value)}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs px-2"
+                            onClick={cancelEdit}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs px-2"
+                            onClick={() => handleSaveEdit(i)}
+                            disabled={!editMethod || !editAmount}
+                          >
+                            Save
+                          </Button>
+                        </div>
                       </div>
                     ) : (
-                      <>
+                      <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">{p.method}</span>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{p.amount}</span>
                           <button
-                            onClick={() => { setEditingPaymentIndex(i); setNewPaymentMethod(p.method); }}
+                            onClick={() => startEdit(i)}
                             className="text-muted-foreground hover:text-foreground transition-colors"
-                            title="Change payment method"
+                            title="Edit payment"
                           >
                             <Pencil className="h-3 w-3" />
                           </button>
@@ -420,16 +503,63 @@ export default function TransactionDetailDialog({
                             <button
                               onClick={() => requestRemovePayment(i)}
                               className="text-muted-foreground hover:text-destructive transition-colors"
-                              title="Remove payment method"
+                              title="Remove payment"
                             >
                               <Trash2 className="h-3 w-3" />
                             </button>
                           )}
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 ))}
+
+                {addingPayment ? (
+                  <div className="text-sm bg-muted/40 rounded-md px-3 py-2 space-y-2 border border-dashed border-border">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select value={newMethod} onValueChange={setNewMethod}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {paymentMethods.map((m) => (
+                            <SelectItem key={m} value={m}>{m}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        inputMode="decimal"
+                        placeholder="Amount"
+                        value={newAmount}
+                        onChange={(e) => setNewAmount(e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={cancelAdd}>
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs px-2"
+                        onClick={handleAddPayment}
+                        disabled={!newMethod || !newAmount}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-8 text-xs gap-1.5 border-dashed"
+                    onClick={startAdd}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add payment
+                  </Button>
+                )}
+
                 {(transaction.paidAmount || transaction.changeDue || transaction.balanceDue) && (
                   <div className="mt-2 pt-2 border-t border-border space-y-1 text-sm">
                     {transaction.paidAmount && (
@@ -454,6 +584,7 @@ export default function TransactionDetailDialog({
                 )}
               </div>
             </section>
+
 
             {/* Loyalty */}
             {transaction.loyalty && (
@@ -512,8 +643,8 @@ export default function TransactionDetailDialog({
             <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handleResend}>
-              <Send className="h-3.5 w-3.5" /> Resend
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={openSendEmail}>
+              <Mail className="h-3.5 w-3.5" /> Email
             </Button>
             {canVoid && (
               <Button
@@ -607,11 +738,52 @@ export default function TransactionDetailDialog({
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Email bill dialog */}
+      <AlertDialog
+        open={sendEmailOpen}
+        onOpenChange={(open) => {
+          setSendEmailOpen(open);
+          if (!open) { setSendEmailAddress(""); setSendEmailError(""); }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Email bill for {transaction.orderId}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter the email address where the bill should be sent. A copy of the receipt with full order details will be delivered to this address.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2 space-y-2">
+            <Input
+              type="email"
+              placeholder="customer@example.com"
+              value={sendEmailAddress}
+              onChange={(e) => { setSendEmailAddress(e.target.value); setSendEmailError(""); }}
+              className={sendEmailError ? "border-destructive" : ""}
+              autoFocus
+            />
+            {sendEmailError && (
+              <p className="text-xs text-destructive">{sendEmailError}</p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleSendEmail(); }}
+              disabled={!sendEmailAddress.trim()}
+            >
+              <Send className="h-4 w-4 mr-2" /> Send Bill
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <TransactionReceiptPreview
         transaction={transaction}
         open={receiptPreviewOpen}
         onOpenChange={setReceiptPreviewOpen}
       />
     </>
+
   );
 }
