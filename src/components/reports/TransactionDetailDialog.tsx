@@ -738,11 +738,52 @@ export default function TransactionDetailDialog({
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Email bill dialog */}
+      <AlertDialog
+        open={sendEmailOpen}
+        onOpenChange={(open) => {
+          setSendEmailOpen(open);
+          if (!open) { setSendEmailAddress(""); setSendEmailError(""); }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Email bill for {transaction.orderId}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter the email address where the bill should be sent. A copy of the receipt with full order details will be delivered to this address.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2 space-y-2">
+            <Input
+              type="email"
+              placeholder="customer@example.com"
+              value={sendEmailAddress}
+              onChange={(e) => { setSendEmailAddress(e.target.value); setSendEmailError(""); }}
+              className={sendEmailError ? "border-destructive" : ""}
+              autoFocus
+            />
+            {sendEmailError && (
+              <p className="text-xs text-destructive">{sendEmailError}</p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleSendEmail(); }}
+              disabled={!sendEmailAddress.trim()}
+            >
+              <Send className="h-4 w-4 mr-2" /> Send Bill
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <TransactionReceiptPreview
         transaction={transaction}
         open={receiptPreviewOpen}
         onOpenChange={setReceiptPreviewOpen}
       />
     </>
+
   );
 }
