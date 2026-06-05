@@ -43,6 +43,8 @@ import {
   ShoppingBag,
   Trash2,
   Pencil,
+  Plus,
+  Mail,
   User,
   MapPin,
   Receipt,
