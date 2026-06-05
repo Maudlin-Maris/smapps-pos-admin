@@ -203,6 +203,17 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
                 </SelectContent>
               </Select>
             )}
+            <Select value={selectedPaymentMethod} onValueChange={handlePaymentMethodChange}>
+              <SelectTrigger className="h-8 w-[150px] sm:w-[170px] text-xs sm:text-sm">
+                <SelectValue placeholder="All Payment Methods" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment Methods</SelectItem>
+                {availablePaymentMethods.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
               <span>Rows</span>
               <Select value={rowsPerPage} onValueChange={handleRowsChange}>
