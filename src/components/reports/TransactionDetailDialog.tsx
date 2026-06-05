@@ -96,9 +96,16 @@ export default function TransactionDetailDialog({
   const [voidCode, setVoidCode] = useState("");
   const [voidCodeError, setVoidCodeError] = useState("");
   const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
-  const [newPaymentMethod, setNewPaymentMethod] = useState("");
+  const [editMethod, setEditMethod] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [addingPayment, setAddingPayment] = useState(false);
+  const [newMethod, setNewMethod] = useState("");
+  const [newAmount, setNewAmount] = useState("");
   const [removePaymentIndex, setRemovePaymentIndex] = useState<number | null>(null);
   const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
+  const [sendEmailAddress, setSendEmailAddress] = useState("");
+  const [sendEmailError, setSendEmailError] = useState("");
 
   if (!transaction) return null;
 
@@ -127,14 +134,62 @@ export default function TransactionDetailDialog({
     toast.success(`Order ${transaction.orderId} has been voided`);
   };
 
-  const handleUpdatePaymentMethod = (index: number) => {
-    if (!newPaymentMethod) return;
-    const updatedPayments = [...transaction.payments];
-    updatedPayments[index] = { ...updatedPayments[index], method: newPaymentMethod };
-    onUpdate({ ...transaction, payments: updatedPayments });
+  const formatAmount = (raw: string) => {
+    const cleaned = raw.replace(/[^0-9.]/g, "");
+    if (!cleaned) return "";
+    const num = parseFloat(cleaned);
+    if (isNaN(num)) return "";
+    return "₦" + num.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const startEdit = (index: number) => {
+    const p = transaction.payments[index];
+    setEditingPaymentIndex(index);
+    setEditMethod(p.method);
+    setEditAmount(p.amount.replace(/[^0-9.]/g, ""));
+    setAddingPayment(false);
+  };
+
+  const cancelEdit = () => {
     setEditingPaymentIndex(null);
-    setNewPaymentMethod("");
-    toast.success("Payment method updated");
+    setEditMethod("");
+    setEditAmount("");
+  };
+
+  const handleSaveEdit = (index: number) => {
+    if (!editMethod || !editAmount) return;
+    const formatted = formatAmount(editAmount);
+    if (!formatted) return;
+    const updatedPayments = [...transaction.payments];
+    updatedPayments[index] = { method: editMethod, amount: formatted };
+    onUpdate({ ...transaction, payments: updatedPayments });
+    cancelEdit();
+    toast.success("Payment updated");
+  };
+
+  const startAdd = () => {
+    setAddingPayment(true);
+    setNewMethod("");
+    setNewAmount("");
+    setEditingPaymentIndex(null);
+  };
+
+  const cancelAdd = () => {
+    setAddingPayment(false);
+    setNewMethod("");
+    setNewAmount("");
+  };
+
+  const handleAddPayment = () => {
+    if (!newMethod || !newAmount) return;
+    const formatted = formatAmount(newAmount);
+    if (!formatted) return;
+    onUpdate({
+      ...transaction,
+      payments: [...transaction.payments, { method: newMethod, amount: formatted }],
+    });
+    cancelAdd();
+    toast.success("Payment added");
   };
 
   const requestRemovePayment = (index: number) => {
@@ -159,7 +214,22 @@ export default function TransactionDetailDialog({
   };
 
   const handlePrint = () => setReceiptPreviewOpen(true);
-  const handleResend = () => toast.info("Receipt sent to customer");
+
+  const openSendEmail = () => {
+    setSendEmailAddress("");
+    setSendEmailError("");
+    setSendEmailOpen(true);
+  };
+
+  const handleSendEmail = () => {
+    const email = sendEmailAddress.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setSendEmailError("Please enter a valid email address");
+      return;
+    }
+    setSendEmailOpen(false);
+    toast.success(`Bill sent to ${email}`);
+  };
 
   return (
     <>
