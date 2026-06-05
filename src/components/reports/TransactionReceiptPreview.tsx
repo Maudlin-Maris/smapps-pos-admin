@@ -1,8 +1,8 @@
-import { useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Printer, X } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 import type { Transaction } from "@/components/TransactionsTable";
 
 interface Props {
@@ -17,247 +17,227 @@ function formatOrderType(t?: string) {
 }
 
 export default function TransactionReceiptPreview({ transaction, open, onOpenChange }: Props) {
-  const receiptRef = useRef<HTMLDivElement>(null);
-
   if (!transaction) return null;
 
-  const handlePrint = () => {
-    const el = receiptRef.current;
-    if (!el) return;
-    const printWindow = window.open("", "_blank", "width=320,height=600");
-    if (!printWindow) {
-      toast.error("Please allow popups to print");
-      return;
-    }
-    const css = `
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 80mm; background: #fff; color: #000; }
-      body {
-        font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        padding: 6px 8px;
-        font-size: 12px;
-        line-height: 1.35;
-      }
-      .center { text-align: center; }
-      .right { text-align: right; }
-      .bold { font-weight: 700; }
-      .muted { color: #444; }
-      .row { display: flex; justify-content: space-between; gap: 8px; }
-      .sep { border-top: 1px dashed #000; margin: 6px 0; }
-      .double { border-top: 2px solid #000; margin: 6px 0; }
-      .item-name { font-weight: 600; }
-      .indent { padding-left: 10px; }
-      .small { font-size: 11px; }
-      .xsmall { font-size: 10px; }
-      .mt { margin-top: 4px; }
-      h1 { font-size: 14px; font-weight: 700; }
-      @media print {
-        @page { margin: 0; size: 80mm auto; }
-        html, body { width: 80mm; margin: 0; }
-      }
-    `;
-    printWindow.document.write(
-      `<!DOCTYPE html><html><head><title>Receipt ${transaction.orderId}</title><meta charset="utf-8"><style>${css}</style></head><body>${el.innerHTML}</body></html>`
-    );
-    printWindow.document.close();
-    const doPrint = () => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-      } finally {
-        setTimeout(() => printWindow.close(), 100);
-      }
-    };
-    if (printWindow.document.readyState === "complete") setTimeout(doPrint, 200);
-    else printWindow.addEventListener("load", () => setTimeout(doPrint, 200));
-  };
-
   const orderTypeLabel = formatOrderType(transaction.orderType);
+
+  const handleDownload = () => {
+    try {
+      const width = 80; // mm
+      const margin = 5;
+      const innerWidth = width - margin * 2;
+      const lineH = 3.6;
+
+      // First pass: collect lines to compute height
+      const doc = new jsPDF({ unit: "mm", format: [width, 1000] });
+      doc.setFont("courier", "normal");
+      doc.setFontSize(9);
+
+      let y = margin;
+
+      const writeRow = (left: string, right: string, opts: { bold?: boolean; size?: number } = {}) => {
+        const size = opts.size ?? 9;
+        doc.setFontSize(size);
+        doc.setFont("courier", opts.bold ? "bold" : "normal");
+        const rightW = doc.getTextWidth(right);
+        const leftMax = innerWidth - rightW - 2;
+        const leftLines = doc.splitTextToSize(left, leftMax);
+        leftLines.forEach((ln: string, i: number) => {
+          doc.text(ln, margin, y);
+          if (i === 0) doc.text(right, margin + innerWidth, y, { align: "right" });
+          y += lineH;
+        });
+      };
+
+      const writeLine = (text: string, opts: { bold?: boolean; size?: number; align?: "left" | "center" | "right"; indent?: number } = {}) => {
+        const size = opts.size ?? 9;
+        doc.setFontSize(size);
+        doc.setFont("courier", opts.bold ? "bold" : "normal");
+        const indent = opts.indent ?? 0;
+        const lines = doc.splitTextToSize(text, innerWidth - indent);
+        lines.forEach((ln: string) => {
+          if (opts.align === "center") {
+            doc.text(ln, margin + innerWidth / 2, y, { align: "center" });
+          } else if (opts.align === "right") {
+            doc.text(ln, margin + innerWidth, y, { align: "right" });
+          } else {
+            doc.text(ln, margin + indent, y);
+          }
+          y += lineH;
+        });
+      };
+
+      const sep = (dashed = true) => {
+        y += 0.8;
+        doc.setLineDashPattern(dashed ? [0.6, 0.6] : [], 0);
+        doc.setLineWidth(dashed ? 0.2 : 0.4);
+        doc.line(margin, y, margin + innerWidth, y);
+        y += 2.2;
+      };
+
+      // Header
+      writeLine(transaction.location, { bold: true, size: 11, align: "center" });
+      if (transaction.outletAddress) writeLine(transaction.outletAddress, { size: 8, align: "center" });
+      sep();
+
+      // Meta
+      writeRow("Order", transaction.orderId, { bold: true, size: 8 });
+      writeRow("Date", transaction.date, { size: 8 });
+      writeRow("Cashier", transaction.cashier, { size: 8 });
+      if (orderTypeLabel) writeRow("Type", `${orderTypeLabel}${transaction.tableLabel ? ` · ${transaction.tableLabel}` : ""}`, { size: 8 });
+      if (transaction.customerName || transaction.customerPhone) {
+        writeRow("Customer", transaction.customerName || transaction.customerPhone || "", { size: 8 });
+      }
+      sep();
+
+      // Items
+      if (transaction.items?.length) {
+        transaction.items.forEach((it) => {
+          writeRow(`${it.qty}x ${it.name}`, it.total, { bold: true });
+          if (it.variantName) writeLine(it.variantName, { size: 8, indent: 4 });
+          it.extras?.forEach((e) => {
+            writeRow(`+ ${(e.qty ?? 1) > 1 ? `${e.qty}x ` : ""}${e.name}`, e.price, { size: 8 });
+          });
+          if (it.notes) writeLine(`Note: ${it.notes}`, { size: 8, indent: 4 });
+          writeLine(`@ ${it.unitPrice}`, { size: 8, indent: 4 });
+        });
+        sep();
+      }
+
+      // Totals
+      if (transaction.subtotal) writeRow("Subtotal", transaction.subtotal, { size: 8 });
+      if (transaction.discount) {
+        writeRow(`Discount${transaction.discountName ? ` (${transaction.discountName})` : ""}`, `-${transaction.discount}`, { size: 8 });
+      }
+      transaction.fees?.forEach((fee) => writeRow(fee.name, fee.amount, { size: 8 }));
+      if (transaction.tip) writeRow("Tip", transaction.tip, { size: 8 });
+      sep(false);
+      writeRow("TOTAL", transaction.amount, { bold: true, size: 10 });
+      sep();
+
+      // Payments
+      writeLine("Payment", { bold: true, size: 9 });
+      transaction.payments.forEach((p) => writeRow(p.method, p.amount, { size: 8 }));
+      if (transaction.paidAmount) writeRow("Paid", transaction.paidAmount, { size: 8 });
+      if (transaction.changeDue) writeRow("Change", transaction.changeDue, { bold: true, size: 8 });
+      if (transaction.balanceDue) writeRow("Balance Due", transaction.balanceDue, { bold: true, size: 8 });
+
+      // Loyalty
+      if (transaction.loyalty) {
+        sep();
+        writeLine(`Loyalty - ${transaction.loyalty.customerName}`, { bold: true, size: 9 });
+        if (transaction.loyalty.tier) writeRow("Tier", transaction.loyalty.tier, { size: 8 });
+        if (transaction.loyalty.rewardName) writeRow("Reward", transaction.loyalty.rewardName, { size: 8 });
+        if (transaction.loyalty.pointsUsed !== undefined) writeRow("Points Used", String(transaction.loyalty.pointsUsed), { size: 8 });
+        if (transaction.loyalty.pointsEarned !== undefined) writeRow("Points Earned", `+${transaction.loyalty.pointsEarned}`, { size: 8 });
+        if (transaction.loyalty.pointsBalance !== undefined) writeRow("Balance", String(transaction.loyalty.pointsBalance), { size: 8 });
+      }
+
+      if (transaction.notes) {
+        sep();
+        writeLine(`Note: ${transaction.notes}`, { size: 8 });
+      }
+
+      sep();
+      writeLine("Thank you for your patronage!", { size: 8, align: "center" });
+      y += 4;
+
+      // Re-create with exact height
+      const finalHeight = Math.max(y + margin, 60);
+      const finalDoc = new jsPDF({ unit: "mm", format: [width, finalHeight] });
+      // Re-render onto final doc by copying pages: easiest re-run with new doc
+      // For simplicity, just save the oversized doc cropped via setPage settings is not trivial;
+      // Use the original doc but set its first page size.
+      doc.internal.pageSize.height = finalHeight;
+      (doc.internal.pageSize as any).setHeight?.(finalHeight);
+
+      doc.save(`Receipt-${transaction.orderId}.pdf`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate PDF");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-4 py-3 border-b border-border">
-          <DialogTitle className="text-base">Receipt Preview — {transaction.orderId}</DialogTitle>
+          <DialogTitle className="text-base">Bill Preview — {transaction.orderId}</DialogTitle>
         </DialogHeader>
 
         <div className="bg-muted/40 px-4 py-4 max-h-[65vh] overflow-y-auto">
           <div className="mx-auto bg-white text-black shadow-sm rounded-sm" style={{ width: "302px" }}>
-            <div
-              ref={receiptRef}
-              className="font-mono text-[12px] leading-[1.35] p-3"
-              style={{ fontFamily: "'Courier New', monospace" }}
-            >
-              {/* Header */}
-              <div className="center">
-                <h1>{transaction.location}</h1>
-                {transaction.outletAddress && (
-                  <div className="xsmall muted">{transaction.outletAddress}</div>
-                )}
+            <div className="font-mono text-[12px] leading-[1.35] p-3" style={{ fontFamily: "'Courier New', monospace" }}>
+              <div className="text-center">
+                <div className="font-bold text-sm">{transaction.location}</div>
+                {transaction.outletAddress && <div className="text-[10px] text-neutral-600">{transaction.outletAddress}</div>}
               </div>
-              <div className="sep" />
+              <div className="border-t border-dashed border-black my-2" />
 
-              {/* Meta */}
-              <div className="row small">
-                <span>Order</span>
-                <span className="bold">{transaction.orderId}</span>
-              </div>
-              <div className="row small">
-                <span>Date</span>
-                <span>{transaction.date}</span>
-              </div>
-              <div className="row small">
-                <span>Cashier</span>
-                <span>{transaction.cashier}</span>
-              </div>
+              <div className="flex justify-between text-[11px]"><span>Order</span><span className="font-bold">{transaction.orderId}</span></div>
+              <div className="flex justify-between text-[11px]"><span>Date</span><span>{transaction.date}</span></div>
+              <div className="flex justify-between text-[11px]"><span>Cashier</span><span>{transaction.cashier}</span></div>
               {orderTypeLabel && (
-                <div className="row small">
-                  <span>Type</span>
-                  <span>{orderTypeLabel}{transaction.tableLabel ? ` · ${transaction.tableLabel}` : ""}</span>
-                </div>
+                <div className="flex justify-between text-[11px]"><span>Type</span><span>{orderTypeLabel}{transaction.tableLabel ? ` · ${transaction.tableLabel}` : ""}</span></div>
               )}
               {(transaction.customerName || transaction.customerPhone) && (
-                <div className="row small">
-                  <span>Customer</span>
-                  <span>{transaction.customerName || transaction.customerPhone}</span>
-                </div>
+                <div className="flex justify-between text-[11px]"><span>Customer</span><span>{transaction.customerName || transaction.customerPhone}</span></div>
               )}
 
-              <div className="sep" />
+              <div className="border-t border-dashed border-black my-2" />
 
-              {/* Items */}
-              {transaction.items && transaction.items.length > 0 ? (
-                <>
-                  {transaction.items.map((it, i) => (
-                    <div key={i} className="mt">
-                      <div className="row">
-                        <span className="item-name">{it.qty}× {it.name}</span>
-                        <span className="bold">{it.total}</span>
-                      </div>
-                      {it.variantName && (
-                        <div className="indent xsmall muted">{it.variantName}</div>
-                      )}
-                      {it.extras?.map((e, j) => (
-                        <div key={j} className="indent xsmall row">
-                          <span>+ {(e.qty ?? 1) > 1 ? `${e.qty}× ` : ""}{e.name}</span>
-                          <span>{e.price}</span>
-                        </div>
-                      ))}
-                      {it.notes && (
-                        <div className="indent xsmall muted">Note: {it.notes}</div>
-                      )}
-                      <div className="indent xsmall muted">@ {it.unitPrice}</div>
-                    </div>
+              {transaction.items?.map((it, i) => (
+                <div key={i} className="mt-1">
+                  <div className="flex justify-between"><span className="font-semibold">{it.qty}× {it.name}</span><span className="font-bold">{it.total}</span></div>
+                  {it.variantName && <div className="pl-2.5 text-[10px] text-neutral-600">{it.variantName}</div>}
+                  {it.extras?.map((e, j) => (
+                    <div key={j} className="pl-2.5 text-[10px] flex justify-between"><span>+ {(e.qty ?? 1) > 1 ? `${e.qty}× ` : ""}{e.name}</span><span>{e.price}</span></div>
                   ))}
-                  <div className="sep" />
-                </>
-              ) : null}
+                  {it.notes && <div className="pl-2.5 text-[10px] text-neutral-600">Note: {it.notes}</div>}
+                  <div className="pl-2.5 text-[10px] text-neutral-600">@ {it.unitPrice}</div>
+                </div>
+              ))}
+              {transaction.items?.length ? <div className="border-t border-dashed border-black my-2" /> : null}
 
-              {/* Totals */}
-              {transaction.subtotal && (
-                <div className="row small">
-                  <span>Subtotal</span>
-                  <span>{transaction.subtotal}</span>
-                </div>
-              )}
-              {transaction.discount && (
-                <div className="row small">
-                  <span>Discount{transaction.discountName ? ` (${transaction.discountName})` : ""}</span>
-                  <span>−{transaction.discount}</span>
-                </div>
-              )}
+              {transaction.subtotal && <div className="flex justify-between text-[11px]"><span>Subtotal</span><span>{transaction.subtotal}</span></div>}
+              {transaction.discount && <div className="flex justify-between text-[11px]"><span>Discount{transaction.discountName ? ` (${transaction.discountName})` : ""}</span><span>−{transaction.discount}</span></div>}
               {transaction.fees?.map((fee, i) => (
-                <div key={i} className="row small">
-                  <span>{fee.name}</span>
-                  <span>{fee.amount}</span>
-                </div>
+                <div key={i} className="flex justify-between text-[11px]"><span>{fee.name}</span><span>{fee.amount}</span></div>
               ))}
-              {transaction.tip && (
-                <div className="row small">
-                  <span>Tip</span>
-                  <span>{transaction.tip}</span>
-                </div>
-              )}
-              <div className="double" />
-              <div className="row bold">
-                <span>TOTAL</span>
-                <span>{transaction.amount}</span>
-              </div>
-              <div className="sep" />
+              {transaction.tip && <div className="flex justify-between text-[11px]"><span>Tip</span><span>{transaction.tip}</span></div>}
+              <div className="border-t-2 border-black my-1.5" />
+              <div className="flex justify-between font-bold"><span>TOTAL</span><span>{transaction.amount}</span></div>
+              <div className="border-t border-dashed border-black my-2" />
 
-              {/* Payments */}
-              <div className="small bold">Payment</div>
+              <div className="text-[11px] font-bold">Payment</div>
               {transaction.payments.map((p, i) => (
-                <div key={i} className="row small">
-                  <span>{p.method}</span>
-                  <span>{p.amount}</span>
-                </div>
+                <div key={i} className="flex justify-between text-[11px]"><span>{p.method}</span><span>{p.amount}</span></div>
               ))}
-              {transaction.paidAmount && (
-                <div className="row small">
-                  <span>Paid</span>
-                  <span>{transaction.paidAmount}</span>
-                </div>
-              )}
-              {transaction.changeDue && (
-                <div className="row small bold">
-                  <span>Change</span>
-                  <span>{transaction.changeDue}</span>
-                </div>
-              )}
-              {transaction.balanceDue && (
-                <div className="row small bold">
-                  <span>Balance Due</span>
-                  <span>{transaction.balanceDue}</span>
-                </div>
-              )}
+              {transaction.paidAmount && <div className="flex justify-between text-[11px]"><span>Paid</span><span>{transaction.paidAmount}</span></div>}
+              {transaction.changeDue && <div className="flex justify-between text-[11px] font-bold"><span>Change</span><span>{transaction.changeDue}</span></div>}
+              {transaction.balanceDue && <div className="flex justify-between text-[11px] font-bold"><span>Balance Due</span><span>{transaction.balanceDue}</span></div>}
 
               {transaction.loyalty && (
                 <>
-                  <div className="sep" />
-                  <div className="small bold">Loyalty — {transaction.loyalty.customerName}</div>
-                  {transaction.loyalty.tier && (
-                    <div className="row xsmall">
-                      <span>Tier</span>
-                      <span>{transaction.loyalty.tier}</span>
-                    </div>
-                  )}
-                  {transaction.loyalty.rewardName && (
-                    <div className="row xsmall">
-                      <span>Reward</span>
-                      <span>{transaction.loyalty.rewardName}</span>
-                    </div>
-                  )}
-                  {transaction.loyalty.pointsUsed !== undefined && (
-                    <div className="row xsmall">
-                      <span>Points Used</span>
-                      <span>{transaction.loyalty.pointsUsed}</span>
-                    </div>
-                  )}
-                  {transaction.loyalty.pointsEarned !== undefined && (
-                    <div className="row xsmall">
-                      <span>Points Earned</span>
-                      <span>+{transaction.loyalty.pointsEarned}</span>
-                    </div>
-                  )}
-                  {transaction.loyalty.pointsBalance !== undefined && (
-                    <div className="row xsmall">
-                      <span>Balance</span>
-                      <span>{transaction.loyalty.pointsBalance}</span>
-                    </div>
-                  )}
+                  <div className="border-t border-dashed border-black my-2" />
+                  <div className="text-[11px] font-bold">Loyalty — {transaction.loyalty.customerName}</div>
+                  {transaction.loyalty.tier && <div className="flex justify-between text-[10px]"><span>Tier</span><span>{transaction.loyalty.tier}</span></div>}
+                  {transaction.loyalty.rewardName && <div className="flex justify-between text-[10px]"><span>Reward</span><span>{transaction.loyalty.rewardName}</span></div>}
+                  {transaction.loyalty.pointsUsed !== undefined && <div className="flex justify-between text-[10px]"><span>Points Used</span><span>{transaction.loyalty.pointsUsed}</span></div>}
+                  {transaction.loyalty.pointsEarned !== undefined && <div className="flex justify-between text-[10px]"><span>Points Earned</span><span>+{transaction.loyalty.pointsEarned}</span></div>}
+                  {transaction.loyalty.pointsBalance !== undefined && <div className="flex justify-between text-[10px]"><span>Balance</span><span>{transaction.loyalty.pointsBalance}</span></div>}
                 </>
               )}
 
               {transaction.notes && (
                 <>
-                  <div className="sep" />
-                  <div className="xsmall"><span className="bold">Note: </span>{transaction.notes}</div>
+                  <div className="border-t border-dashed border-black my-2" />
+                  <div className="text-[10px]"><span className="font-bold">Note: </span>{transaction.notes}</div>
                 </>
               )}
 
-              <div className="sep" />
-              <div className="center xsmall muted">Thank you for your patronage!</div>
+              <div className="border-t border-dashed border-black my-2" />
+              <div className="text-center text-[10px] text-neutral-600">Thank you for your patronage!</div>
             </div>
           </div>
         </div>
@@ -266,8 +246,8 @@ export default function TransactionReceiptPreview({ transaction, open, onOpenCha
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => onOpenChange(false)}>
             <X className="h-3.5 w-3.5" /> Close
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={handlePrint}>
-            <Printer className="h-3.5 w-3.5" /> Print
+          <Button size="sm" className="gap-1.5" onClick={handleDownload}>
+            <Download className="h-3.5 w-3.5" /> Download PDF
           </Button>
         </DialogFooter>
       </DialogContent>
