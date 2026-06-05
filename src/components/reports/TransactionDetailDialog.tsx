@@ -96,6 +96,7 @@ export default function TransactionDetailDialog({
   const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
   const [removePaymentIndex, setRemovePaymentIndex] = useState<number | null>(null);
+  const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
 
   if (!transaction) return null;
 
