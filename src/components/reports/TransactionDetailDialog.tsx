@@ -52,6 +52,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import type { Transaction } from "@/components/TransactionsTable";
+import TransactionReceiptPreview from "./TransactionReceiptPreview";
 
 const VOID_CODE = "1234"; // In production, this would be validated server-side
 
@@ -95,6 +96,7 @@ export default function TransactionDetailDialog({
   const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
   const [removePaymentIndex, setRemovePaymentIndex] = useState<number | null>(null);
+  const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
 
   if (!transaction) return null;
 
@@ -154,7 +156,7 @@ export default function TransactionDetailDialog({
     toast.success("Order ID copied");
   };
 
-  const handlePrint = () => toast.info("Receipt printing initiated…");
+  const handlePrint = () => setReceiptPreviewOpen(true);
   const handleResend = () => toast.info("Receipt sent to customer");
 
   return (
@@ -604,6 +606,12 @@ export default function TransactionDetailDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TransactionReceiptPreview
+        transaction={transaction}
+        open={receiptPreviewOpen}
+        onOpenChange={setReceiptPreviewOpen}
+      />
     </>
   );
 }
