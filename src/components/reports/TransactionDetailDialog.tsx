@@ -643,8 +643,8 @@ export default function TransactionDetailDialog({
             <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handlePrint}>
               <Printer className="h-3.5 w-3.5" /> Print
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handleResend}>
-              <Send className="h-3.5 w-3.5" /> Resend
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={openSendEmail}>
+              <Mail className="h-3.5 w-3.5" /> Email
             </Button>
             {canVoid && (
               <Button
