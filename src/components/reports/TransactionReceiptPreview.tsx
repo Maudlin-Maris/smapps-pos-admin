@@ -28,135 +28,120 @@ export default function TransactionReceiptPreview({ transaction, open, onOpenCha
       const innerWidth = width - margin * 2;
       const lineH = 3.6;
 
-      // First pass: collect lines to compute height
-      const doc = new jsPDF({ unit: "mm", format: [width, 1000] });
-      doc.setFont("courier", "normal");
-      doc.setFontSize(9);
+      const render = (doc: jsPDF) => {
+        doc.setFont("courier", "normal");
+        let y = margin;
 
-      let y = margin;
-
-      const writeRow = (left: string, right: string, opts: { bold?: boolean; size?: number } = {}) => {
-        const size = opts.size ?? 9;
-        doc.setFontSize(size);
-        doc.setFont("courier", opts.bold ? "bold" : "normal");
-        const rightW = doc.getTextWidth(right);
-        const leftMax = innerWidth - rightW - 2;
-        const leftLines = doc.splitTextToSize(left, leftMax);
-        leftLines.forEach((ln: string, i: number) => {
-          doc.text(ln, margin, y);
-          if (i === 0) doc.text(right, margin + innerWidth, y, { align: "right" });
-          y += lineH;
-        });
-      };
-
-      const writeLine = (text: string, opts: { bold?: boolean; size?: number; align?: "left" | "center" | "right"; indent?: number } = {}) => {
-        const size = opts.size ?? 9;
-        doc.setFontSize(size);
-        doc.setFont("courier", opts.bold ? "bold" : "normal");
-        const indent = opts.indent ?? 0;
-        const lines = doc.splitTextToSize(text, innerWidth - indent);
-        lines.forEach((ln: string) => {
-          if (opts.align === "center") {
-            doc.text(ln, margin + innerWidth / 2, y, { align: "center" });
-          } else if (opts.align === "right") {
-            doc.text(ln, margin + innerWidth, y, { align: "right" });
-          } else {
-            doc.text(ln, margin + indent, y);
-          }
-          y += lineH;
-        });
-      };
-
-      const sep = (dashed = true) => {
-        y += 0.8;
-        doc.setLineDashPattern(dashed ? [0.6, 0.6] : [], 0);
-        doc.setLineWidth(dashed ? 0.2 : 0.4);
-        doc.line(margin, y, margin + innerWidth, y);
-        y += 2.2;
-      };
-
-      // Header
-      writeLine(transaction.location, { bold: true, size: 11, align: "center" });
-      if (transaction.outletAddress) writeLine(transaction.outletAddress, { size: 8, align: "center" });
-      sep();
-
-      // Meta
-      writeRow("Order", transaction.orderId, { bold: true, size: 8 });
-      writeRow("Date", transaction.date, { size: 8 });
-      writeRow("Cashier", transaction.cashier, { size: 8 });
-      if (orderTypeLabel) writeRow("Type", `${orderTypeLabel}${transaction.tableLabel ? ` · ${transaction.tableLabel}` : ""}`, { size: 8 });
-      if (transaction.customerName || transaction.customerPhone) {
-        writeRow("Customer", transaction.customerName || transaction.customerPhone || "", { size: 8 });
-      }
-      sep();
-
-      // Items
-      if (transaction.items?.length) {
-        transaction.items.forEach((it) => {
-          writeRow(`${it.qty}x ${it.name}`, it.total, { bold: true });
-          if (it.variantName) writeLine(it.variantName, { size: 8, indent: 4 });
-          it.extras?.forEach((e) => {
-            writeRow(`+ ${(e.qty ?? 1) > 1 ? `${e.qty}x ` : ""}${e.name}`, e.price, { size: 8 });
+        const writeRow = (left: string, right: string, opts: { bold?: boolean; size?: number } = {}) => {
+          const size = opts.size ?? 9;
+          doc.setFontSize(size);
+          doc.setFont("courier", opts.bold ? "bold" : "normal");
+          const rightW = doc.getTextWidth(right);
+          const leftMax = innerWidth - rightW - 2;
+          const leftLines = doc.splitTextToSize(left, leftMax);
+          leftLines.forEach((ln: string, i: number) => {
+            doc.text(ln, margin, y);
+            if (i === 0) doc.text(right, margin + innerWidth, y, { align: "right" });
+            y += lineH;
           });
-          if (it.notes) writeLine(`Note: ${it.notes}`, { size: 8, indent: 4 });
-          writeLine(`@ ${it.unitPrice}`, { size: 8, indent: 4 });
-        });
+        };
+
+        const writeLine = (text: string, opts: { bold?: boolean; size?: number; align?: "left" | "center" | "right"; indent?: number } = {}) => {
+          const size = opts.size ?? 9;
+          doc.setFontSize(size);
+          doc.setFont("courier", opts.bold ? "bold" : "normal");
+          const indent = opts.indent ?? 0;
+          const lines = doc.splitTextToSize(text, innerWidth - indent);
+          lines.forEach((ln: string) => {
+            if (opts.align === "center") doc.text(ln, margin + innerWidth / 2, y, { align: "center" });
+            else if (opts.align === "right") doc.text(ln, margin + innerWidth, y, { align: "right" });
+            else doc.text(ln, margin + indent, y);
+            y += lineH;
+          });
+        };
+
+        const sep = (dashed = true) => {
+          y += 0.8;
+          doc.setLineDashPattern(dashed ? [0.6, 0.6] : [], 0);
+          doc.setLineWidth(dashed ? 0.2 : 0.4);
+          doc.line(margin, y, margin + innerWidth, y);
+          y += 2.2;
+        };
+
+        writeLine(transaction.location, { bold: true, size: 11, align: "center" });
+        if (transaction.outletAddress) writeLine(transaction.outletAddress, { size: 8, align: "center" });
         sep();
-      }
 
-      // Totals
-      if (transaction.subtotal) writeRow("Subtotal", transaction.subtotal, { size: 8 });
-      if (transaction.discount) {
-        writeRow(`Discount${transaction.discountName ? ` (${transaction.discountName})` : ""}`, `-${transaction.discount}`, { size: 8 });
-      }
-      transaction.fees?.forEach((fee) => writeRow(fee.name, fee.amount, { size: 8 }));
-      if (transaction.tip) writeRow("Tip", transaction.tip, { size: 8 });
-      sep(false);
-      writeRow("TOTAL", transaction.amount, { bold: true, size: 10 });
-      sep();
-
-      // Payments
-      writeLine("Payment", { bold: true, size: 9 });
-      transaction.payments.forEach((p) => writeRow(p.method, p.amount, { size: 8 }));
-      if (transaction.paidAmount) writeRow("Paid", transaction.paidAmount, { size: 8 });
-      if (transaction.changeDue) writeRow("Change", transaction.changeDue, { bold: true, size: 8 });
-      if (transaction.balanceDue) writeRow("Balance Due", transaction.balanceDue, { bold: true, size: 8 });
-
-      // Loyalty
-      if (transaction.loyalty) {
+        writeRow("Order", transaction.orderId, { bold: true, size: 8 });
+        writeRow("Date", transaction.date, { size: 8 });
+        writeRow("Cashier", transaction.cashier, { size: 8 });
+        if (orderTypeLabel) writeRow("Type", `${orderTypeLabel}${transaction.tableLabel ? ` · ${transaction.tableLabel}` : ""}`, { size: 8 });
+        if (transaction.customerName || transaction.customerPhone) {
+          writeRow("Customer", transaction.customerName || transaction.customerPhone || "", { size: 8 });
+        }
         sep();
-        writeLine(`Loyalty - ${transaction.loyalty.customerName}`, { bold: true, size: 9 });
-        if (transaction.loyalty.tier) writeRow("Tier", transaction.loyalty.tier, { size: 8 });
-        if (transaction.loyalty.rewardName) writeRow("Reward", transaction.loyalty.rewardName, { size: 8 });
-        if (transaction.loyalty.pointsUsed !== undefined) writeRow("Points Used", String(transaction.loyalty.pointsUsed), { size: 8 });
-        if (transaction.loyalty.pointsEarned !== undefined) writeRow("Points Earned", `+${transaction.loyalty.pointsEarned}`, { size: 8 });
-        if (transaction.loyalty.pointsBalance !== undefined) writeRow("Balance", String(transaction.loyalty.pointsBalance), { size: 8 });
-      }
 
-      if (transaction.notes) {
+        if (transaction.items?.length) {
+          transaction.items.forEach((it) => {
+            writeRow(`${it.qty}x ${it.name}`, it.total, { bold: true });
+            if (it.variantName) writeLine(it.variantName, { size: 8, indent: 4 });
+            it.extras?.forEach((e) => {
+              writeRow(`+ ${(e.qty ?? 1) > 1 ? `${e.qty}x ` : ""}${e.name}`, e.price, { size: 8 });
+            });
+            if (it.notes) writeLine(`Note: ${it.notes}`, { size: 8, indent: 4 });
+            writeLine(`@ ${it.unitPrice}`, { size: 8, indent: 4 });
+          });
+          sep();
+        }
+
+        if (transaction.subtotal) writeRow("Subtotal", transaction.subtotal, { size: 8 });
+        if (transaction.discount) writeRow(`Discount${transaction.discountName ? ` (${transaction.discountName})` : ""}`, `-${transaction.discount}`, { size: 8 });
+        transaction.fees?.forEach((fee) => writeRow(fee.name, fee.amount, { size: 8 }));
+        if (transaction.tip) writeRow("Tip", transaction.tip, { size: 8 });
+        sep(false);
+        writeRow("TOTAL", transaction.amount, { bold: true, size: 10 });
         sep();
-        writeLine(`Note: ${transaction.notes}`, { size: 8 });
-      }
 
-      sep();
-      writeLine("Thank you for your patronage!", { size: 8, align: "center" });
-      y += 4;
+        writeLine("Payment", { bold: true, size: 9 });
+        transaction.payments.forEach((p) => writeRow(p.method, p.amount, { size: 8 }));
+        if (transaction.paidAmount) writeRow("Paid", transaction.paidAmount, { size: 8 });
+        if (transaction.changeDue) writeRow("Change", transaction.changeDue, { bold: true, size: 8 });
+        if (transaction.balanceDue) writeRow("Balance Due", transaction.balanceDue, { bold: true, size: 8 });
 
-      // Re-create with exact height
-      const finalHeight = Math.max(y + margin, 60);
-      const finalDoc = new jsPDF({ unit: "mm", format: [width, finalHeight] });
-      // Re-render onto final doc by copying pages: easiest re-run with new doc
-      // For simplicity, just save the oversized doc cropped via setPage settings is not trivial;
-      // Use the original doc but set its first page size.
-      doc.internal.pageSize.height = finalHeight;
-      (doc.internal.pageSize as any).setHeight?.(finalHeight);
+        if (transaction.loyalty) {
+          sep();
+          writeLine(`Loyalty - ${transaction.loyalty.customerName}`, { bold: true, size: 9 });
+          if (transaction.loyalty.tier) writeRow("Tier", transaction.loyalty.tier, { size: 8 });
+          if (transaction.loyalty.rewardName) writeRow("Reward", transaction.loyalty.rewardName, { size: 8 });
+          if (transaction.loyalty.pointsUsed !== undefined) writeRow("Points Used", String(transaction.loyalty.pointsUsed), { size: 8 });
+          if (transaction.loyalty.pointsEarned !== undefined) writeRow("Points Earned", `+${transaction.loyalty.pointsEarned}`, { size: 8 });
+          if (transaction.loyalty.pointsBalance !== undefined) writeRow("Balance", String(transaction.loyalty.pointsBalance), { size: 8 });
+        }
 
+        if (transaction.notes) {
+          sep();
+          writeLine(`Note: ${transaction.notes}`, { size: 8 });
+        }
+
+        sep();
+        writeLine("Thank you for your patronage!", { size: 8, align: "center" });
+        return y + margin;
+      };
+
+      // Measure pass on a tall scratch doc
+      const measureDoc = new jsPDF({ unit: "mm", format: [width, 1000] });
+      const totalHeight = Math.max(render(measureDoc), 60);
+
+      // Real doc sized to content
+      const doc = new jsPDF({ unit: "mm", format: [width, totalHeight] });
+      render(doc);
       doc.save(`Receipt-${transaction.orderId}.pdf`);
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate PDF");
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
