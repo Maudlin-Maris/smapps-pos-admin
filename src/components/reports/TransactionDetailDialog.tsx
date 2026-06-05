@@ -623,3 +623,53 @@ export default function TransactionDetailDialog({
     </>
   );
 }
+
+const modTypeStyles: Record<OrderItemModification["type"], string> = {
+  added: "bg-success/10 text-success border-success/20",
+  variant: "bg-info/10 text-info border-info/20",
+  extra: "bg-primary/10 text-primary border-primary/20",
+  removed: "bg-destructive/10 text-destructive border-destructive/20",
+  note: "bg-warning/10 text-warning border-warning/20",
+  qty: "bg-muted text-muted-foreground border-border",
+  price: "bg-accent/30 text-foreground border-border",
+};
+
+function ItemModificationLog({ mods }: { mods: OrderItemModification[] }) {
+  const [open, setOpen] = useState(false);
+  const visible = open ? mods : mods.slice(0, 2);
+  return (
+    <div className="mt-3 pt-2 border-t border-dashed border-border">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+          <History className="h-3 w-3" /> Modification History ({mods.length})
+        </p>
+        {mods.length > 2 && (
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="text-[11px] text-primary hover:underline"
+          >
+            {open ? "Show less" : `Show all ${mods.length}`}
+          </button>
+        )}
+      </div>
+      <ul className="space-y-1.5">
+        {visible.map((m, k) => (
+          <li key={k} className="flex items-start gap-2 text-xs">
+            <Badge variant="outline" className={`shrink-0 capitalize px-1.5 py-0 h-4 text-[10px] ${modTypeStyles[m.type]}`}>
+              {m.type}
+            </Badge>
+            <div className="min-w-0 flex-1">
+              <p className="text-foreground leading-tight">{m.description}</p>
+              {m.reason && (
+                <p className="text-[11px] text-muted-foreground italic mt-0.5">Reason: {m.reason}</p>
+              )}
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {m.at} · {m.by}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
