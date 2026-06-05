@@ -80,6 +80,7 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
   const [internalCashier, setInternalCashier] = useState("all");
   const isCashierControlled = cashierFilter !== undefined;
   const selectedCashier = isCashierControlled ? (cashierFilter as string) : internalCashier;
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
@@ -99,10 +100,17 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
     return [...new Set(outletFiltered.map((t) => t.cashier))].sort();
   }, [outletFiltered]);
 
+  const availablePaymentMethods = useMemo(() => {
+    return [...new Set(outletFiltered.flatMap((t) => t.payments.map((p) => p.method)))].sort();
+  }, [outletFiltered]);
+
   const filtered = useMemo(() => {
     let result = outletFiltered;
     if (selectedCashier !== "all") {
       result = result.filter((t) => t.cashier === selectedCashier);
+    }
+    if (selectedPaymentMethod !== "all") {
+      result = result.filter((t) => t.payments.some((p) => p.method === selectedPaymentMethod));
     }
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -118,7 +126,7 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
       );
     }
     return result;
-  }, [outletFiltered, selectedCashier, search]);
+  }, [outletFiltered, selectedCashier, selectedPaymentMethod, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, totalPages);
@@ -128,6 +136,7 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
   const handleSearchChange = (val: string) => { setSearch(val); setPage(1); };
   const handleRowsChange = (val: string) => { setRowsPerPage(val); setPage(1); };
   const handleCashierChange = (val: string) => { setInternalCashier(val); setPage(1); };
+  const handlePaymentMethodChange = (val: string) => { setSelectedPaymentMethod(val); setPage(1); };
 
   const handleExportCSV = useCallback(() => {
     if (filtered.length === 0) { toast.error("No data to export"); return; }
@@ -194,6 +203,17 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
                 </SelectContent>
               </Select>
             )}
+            <Select value={selectedPaymentMethod} onValueChange={handlePaymentMethodChange}>
+              <SelectTrigger className="h-8 w-[150px] sm:w-[170px] text-xs sm:text-sm">
+                <SelectValue placeholder="All Payment Methods" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payment Methods</SelectItem>
+                {availablePaymentMethods.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
               <span>Rows</span>
               <Select value={rowsPerPage} onValueChange={handleRowsChange}>
