@@ -156,7 +156,7 @@ export default function TransactionDetailDialog({
     toast.success("Order ID copied");
   };
 
-  const handlePrint = () => toast.info("Receipt printing initiated…");
+  const handlePrint = () => setReceiptPreviewOpen(true);
   const handleResend = () => toast.info("Receipt sent to customer");
 
   return (
