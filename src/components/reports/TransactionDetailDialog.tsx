@@ -294,7 +294,12 @@ export default function TransactionDetailDialog({
                             {item.name}
                           </p>
                           {item.variantName && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{item.variantName}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              <span className="font-medium text-foreground/80">Variant:</span> {item.variantName}
+                              {item.variantReason && (
+                                <span className="italic"> — {item.variantReason}</span>
+                              )}
+                            </p>
                           )}
                           {item.notes && (
                             <p className="text-xs text-muted-foreground italic mt-0.5">Note: {item.notes}</p>
@@ -306,16 +311,26 @@ export default function TransactionDetailDialog({
                         </div>
                       </div>
                       {item.extras && item.extras.length > 0 && (
-                        <div className="mt-2 pl-3 border-l-2 border-border space-y-0.5">
+                        <div className="mt-2 pl-3 border-l-2 border-border space-y-1">
                           {item.extras.map((e, j) => (
-                            <div key={j} className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">
-                                + {(e.qty ?? 1) > 1 ? `${e.qty}× ` : ""}{e.name}
-                              </span>
-                              <span className="text-muted-foreground">{e.price}</span>
+                            <div key={j} className="text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                  + {(e.qty ?? 1) > 1 ? `${e.qty}× ` : ""}{e.name}
+                                </span>
+                                <span className="text-muted-foreground">{e.price}</span>
+                              </div>
+                              {e.reason && (
+                                <p className="text-[11px] text-muted-foreground/80 italic pl-3">
+                                  ↳ {e.reason}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
+                      )}
+                      {item.modifications && item.modifications.length > 0 && (
+                        <ItemModificationLog mods={item.modifications} />
                       )}
                     </div>
                   ))}
