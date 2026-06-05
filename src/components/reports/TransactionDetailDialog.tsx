@@ -265,7 +265,7 @@ export default function TransactionDetailDialog({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handlePrint}>
-                    <Printer className="h-4 w-4 mr-2" /> Print Receipt
+                    <Printer className="h-4 w-4 mr-2" /> Generate Bill (PDF)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={openSendEmail}>
                     <Mail className="h-4 w-4 mr-2" /> Email Bill
@@ -641,7 +641,7 @@ export default function TransactionDetailDialog({
           {/* Footer actions */}
           <div className="border-t border-border px-4 sm:px-5 py-3 bg-card flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handlePrint}>
-              <Printer className="h-3.5 w-3.5" /> Print
+              <Printer className="h-3.5 w-3.5" /> Generate Bill
             </Button>
             <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={openSendEmail}>
               <Mail className="h-3.5 w-3.5" /> Email
