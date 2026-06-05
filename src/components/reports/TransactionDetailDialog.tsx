@@ -50,8 +50,9 @@ import {
   Award,
   Utensils,
   StickyNote,
+  History,
 } from "lucide-react";
-import type { Transaction } from "@/components/TransactionsTable";
+import type { Transaction, OrderItemModification } from "@/components/TransactionsTable";
 
 const VOID_CODE = "1234"; // In production, this would be validated server-side
 
