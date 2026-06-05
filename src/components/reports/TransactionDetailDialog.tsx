@@ -52,6 +52,7 @@ import {
   StickyNote,
 } from "lucide-react";
 import type { Transaction } from "@/components/TransactionsTable";
+import TransactionReceiptPreview from "./TransactionReceiptPreview";
 
 const VOID_CODE = "1234"; // In production, this would be validated server-side
 
