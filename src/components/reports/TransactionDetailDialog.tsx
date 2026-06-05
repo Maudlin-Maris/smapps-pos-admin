@@ -265,7 +265,7 @@ export default function TransactionDetailDialog({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handlePrint}>
-                    <Printer className="h-4 w-4 mr-2" /> Print Receipt
+                    <Printer className="h-4 w-4 mr-2" /> Generate Bill (PDF)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={openSendEmail}>
                     <Mail className="h-4 w-4 mr-2" /> Email Bill
