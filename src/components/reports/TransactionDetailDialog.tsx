@@ -267,8 +267,8 @@ export default function TransactionDetailDialog({
                   <DropdownMenuItem onClick={handlePrint}>
                     <Printer className="h-4 w-4 mr-2" /> Print Receipt
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleResend}>
-                    <Send className="h-4 w-4 mr-2" /> Resend Receipt
+                  <DropdownMenuItem onClick={openSendEmail}>
+                    <Mail className="h-4 w-4 mr-2" /> Email Bill
                   </DropdownMenuItem>
                   {canVoid && (
                     <>
