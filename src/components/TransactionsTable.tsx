@@ -20,6 +20,21 @@ export interface OrderItemExtra {
   name: string;
   qty?: number;
   price: string;
+  /** Why this extra was added (e.g. customer request, allergy swap). */
+  reason?: string;
+}
+
+export interface OrderItemModification {
+  /** ISO timestamp or formatted time the change was made. */
+  at: string;
+  /** Cashier or staff member who made the change. */
+  by: string;
+  /** Type of modification for filtering / badge styling. */
+  type: "added" | "variant" | "extra" | "removed" | "note" | "qty" | "price";
+  /** Short human-readable description, e.g. "Added Extra Cheese ×2". */
+  description: string;
+  /** Optional reason captured at the time of the change. */
+  reason?: string;
 }
 
 export interface OrderItem {
@@ -28,8 +43,12 @@ export interface OrderItem {
   unitPrice: string;
   total: string;
   variantName?: string;
+  /** Reason a non-default variant was chosen. */
+  variantReason?: string;
   extras?: OrderItemExtra[];
   notes?: string;
+  /** Chronological log of changes made to this line item. */
+  modifications?: OrderItemModification[];
 }
 
 export interface OrderFee {
