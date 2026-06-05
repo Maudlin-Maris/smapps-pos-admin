@@ -606,6 +606,12 @@ export default function TransactionDetailDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TransactionReceiptPreview
+        transaction={transaction}
+        open={receiptPreviewOpen}
+        onOpenChange={setReceiptPreviewOpen}
+      />
     </>
   );
 }
