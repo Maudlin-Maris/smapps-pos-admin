@@ -136,6 +136,7 @@ export default function ProcessPayoutDialog({
         reference: reference.trim() || undefined,
         notes: notes.trim() || undefined,
         actor,
+        tipIds,
       });
       if (!payout || payout.amount <= 0) {
         toast({
