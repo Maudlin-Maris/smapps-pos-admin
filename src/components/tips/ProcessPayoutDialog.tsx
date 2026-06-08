@@ -41,6 +41,10 @@ interface Props {
   businessEmail: string;
   actor: string;
   onConfirmed: () => void;
+  /** Optional: restrict allocation to specific tip entries. */
+  tipIds?: string[];
+  /** Optional: customise the dialog title/description for single-tip flows. */
+  contextLabel?: string;
 }
 
 type Step = "amount" | "otp";
