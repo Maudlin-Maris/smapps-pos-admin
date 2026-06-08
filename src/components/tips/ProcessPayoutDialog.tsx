@@ -169,8 +169,9 @@ export default function ProcessPayoutDialog({
             {step === "amount" ? (
               <>
                 Confirm the amount you've paid <strong>{staffName}</strong> at{" "}
-                <strong>{outletName}</strong>. Outstanding:{" "}
-                {formatNaira(outstandingAmount)}.
+                <strong>{outletName}</strong>
+                {contextLabel ? <> for <strong>{contextLabel}</strong></> : null}.{" "}
+                Outstanding: {formatNaira(outstandingAmount)}.
               </>
             ) : (
               <>Enter the 6-digit code we sent for authorisation.</>
