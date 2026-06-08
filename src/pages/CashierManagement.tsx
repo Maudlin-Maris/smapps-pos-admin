@@ -342,12 +342,19 @@ export default function CashierManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-col gap-1.5">
                         {cashier.data.assignments.map((a) => (
-                          <Badge key={a.outletId} variant="outline" className="text-[10px] px-2 py-0.5 font-normal gap-1">
-                            <Store className="h-2.5 w-2.5 text-accent" />
-                            {a.outletName}
-                          </Badge>
+                          <div key={a.outletId} className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-normal gap-1">
+                              <Store className="h-2.5 w-2.5 text-accent" />
+                              {a.outletName}
+                            </Badge>
+                            {a.departments?.map((d) => (
+                              <Badge key={d.id} variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
+                                {d.name}
+                              </Badge>
+                            ))}
+                          </div>
                         ))}
                       </div>
                     </TableCell>
