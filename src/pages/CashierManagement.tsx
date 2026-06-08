@@ -54,8 +54,8 @@ const initialCashiers: CashierRecord[] = [
       firstName: "Adebayo", lastName: "Ogunleye",
       email: "adebayo@example.com", phone: "+234 801 234 5678",
       assignments: [
-        { outletId: "outlet-1", outletName: "Downtown Flagship" },
-        { outletId: "outlet-2", outletName: "Mall Branch" },
+        { outletId: "outlet-1", outletName: "Downtown Flagship", departments: [{ id: "dept-1", name: "Kitchen" }, { id: "dept-2", name: "Bar" }] },
+        { outletId: "outlet-2", outletName: "Mall Branch", departments: [{ id: "dept-5", name: "Sales Floor" }] },
       ],
     },
   },
@@ -64,7 +64,7 @@ const initialCashiers: CashierRecord[] = [
     data: {
       firstName: "Chioma", lastName: "Nwosu",
       email: "chioma@example.com", phone: "+234 802 345 6789",
-      assignments: [{ outletId: "outlet-1", outletName: "Downtown Flagship" }],
+      assignments: [{ outletId: "outlet-1", outletName: "Downtown Flagship", departments: [{ id: "dept-3", name: "Front of House" }] }],
     },
   },
   {
@@ -73,8 +73,8 @@ const initialCashiers: CashierRecord[] = [
       firstName: "Emeka", lastName: "Eze",
       email: "emeka@example.com", phone: "+234 803 456 7890",
       assignments: [
-        { outletId: "outlet-3", outletName: "Airport Kiosk" },
-        { outletId: "outlet-4", outletName: "Suburban Store" },
+        { outletId: "outlet-3", outletName: "Airport Kiosk", departments: [{ id: "dept-9", name: "Counter" }] },
+        { outletId: "outlet-4", outletName: "Suburban Store", departments: [{ id: "dept-11", name: "Dispensary" }] },
       ],
     },
   },
@@ -342,12 +342,19 @@ export default function CashierManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-col gap-1.5">
                         {cashier.data.assignments.map((a) => (
-                          <Badge key={a.outletId} variant="outline" className="text-[10px] px-2 py-0.5 font-normal gap-1">
-                            <Store className="h-2.5 w-2.5 text-accent" />
-                            {a.outletName}
-                          </Badge>
+                          <div key={a.outletId} className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-normal gap-1">
+                              <Store className="h-2.5 w-2.5 text-accent" />
+                              {a.outletName}
+                            </Badge>
+                            {a.departments?.map((d) => (
+                              <Badge key={d.id} variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">
+                                {d.name}
+                              </Badge>
+                            ))}
+                          </div>
                         ))}
                       </div>
                     </TableCell>

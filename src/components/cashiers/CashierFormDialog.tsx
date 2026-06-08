@@ -1,23 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { UserPlus, Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { UserPlus, Pencil, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { initialDepartments } from "@/data/departments";
 
 const availableOutlets = [
-  { id: "outlet-1", name: "Downtown Flagship" },
-  { id: "outlet-2", name: "Mall Branch" },
-  { id: "outlet-3", name: "Airport Kiosk" },
-  { id: "outlet-4", name: "Suburban Store" },
+  { id: "outlet-1", name: "Downtown Flagship", outletNumericId: 1 },
+  { id: "outlet-2", name: "Mall Branch", outletNumericId: 2 },
+  { id: "outlet-3", name: "Airport Kiosk", outletNumericId: 3 },
+  { id: "outlet-4", name: "Suburban Store", outletNumericId: 4 },
 ];
+
+/** Map of outlet string id -> available departments for that outlet */
+const departmentsByOutlet: Record<string, { id: string; name: string }[]> = availableOutlets.reduce(
+  (acc, o) => {
+    acc[o.id] = initialDepartments
+      .filter((d) => d.outletId === o.outletNumericId)
+      .map((d) => ({ id: d.id, name: d.name }));
+    return acc;
+  },
+  {} as Record<string, { id: string; name: string }[]>
+);
 
 export interface OutletAssignment {
   outletId: string;
   outletName: string;
+  departments: { id: string; name: string }[];
 }
 
 export interface CashierFormData {
@@ -42,33 +56,69 @@ interface CashierFormDialogProps {
 
 export default function CashierFormDialog({ open, onOpenChange, mode, initialData, onSubmit }: CashierFormDialogProps) {
   const [form, setForm] = useState<CashierFormData>(emptyForm);
-  const [selectedOutlets, setSelectedOutlets] = useState<string[]>([]);
+  // Map of outletId -> selected department ids
+  const [outletDeptMap, setOutletDeptMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     if (open) {
       const data = initialData || emptyForm;
       setForm(data);
-      setSelectedOutlets(data.assignments.map((a) => a.outletId));
+      const map: Record<string, string[]> = {};
+      data.assignments.forEach((a) => {
+        map[a.outletId] = (a.departments ?? []).map((d) => d.id);
+      });
+      setOutletDeptMap(map);
     }
   }, [open, initialData]);
 
   const update = (key: keyof CashierFormData, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  const selectedOutlets = useMemo(() => Object.keys(outletDeptMap), [outletDeptMap]);
+
   const toggleOutlet = (outletId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedOutlets((prev) => [...prev, outletId]);
-    } else {
-      setSelectedOutlets((prev) => prev.filter((id) => id !== outletId));
-    }
+    setOutletDeptMap((prev) => {
+      const next = { ...prev };
+      if (checked) {
+        // Pre-select all departments by default for convenience
+        next[outletId] = (departmentsByOutlet[outletId] ?? []).map((d) => d.id);
+      } else {
+        delete next[outletId];
+      }
+      return next;
+    });
+  };
+
+  const toggleDepartment = (outletId: string, deptId: string, checked: boolean) => {
+    setOutletDeptMap((prev) => {
+      const current = prev[outletId] ?? [];
+      const next = checked
+        ? Array.from(new Set([...current, deptId]))
+        : current.filter((id) => id !== deptId);
+      return { ...prev, [outletId]: next };
+    });
   };
 
   const handleSubmit = () => {
     if (!form.firstName.trim() || !form.lastName.trim()) { toast.error("First and last name are required"); return; }
     if (selectedOutlets.length === 0) { toast.error("Assign at least one outlet"); return; }
-    const assignments: OutletAssignment[] = selectedOutlets.map((outletId) => ({
-      outletId,
-      outletName: availableOutlets.find((o) => o.id === outletId)?.name || "",
-    }));
+
+    const assignments: OutletAssignment[] = [];
+    for (const outletId of selectedOutlets) {
+      const outlet = availableOutlets.find((o) => o.id === outletId);
+      if (!outlet) continue;
+      const depts = departmentsByOutlet[outletId] ?? [];
+      const selectedDeptIds = outletDeptMap[outletId] ?? [];
+      if (depts.length > 0 && selectedDeptIds.length === 0) {
+        toast.error(`Assign at least one department for ${outlet.name}`);
+        return;
+      }
+      assignments.push({
+        outletId,
+        outletName: outlet.name,
+        departments: depts.filter((d) => selectedDeptIds.includes(d.id)),
+      });
+    }
+
     onSubmit({ ...form, assignments });
     onOpenChange(false);
   };
@@ -113,17 +163,60 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
           <Separator />
 
           <div className="space-y-4">
-            <h3 className="text-sm font-heading font-semibold text-foreground">Outlet Assignment</h3>
-            <p className="text-xs text-muted-foreground">Select one or more outlets this cashier can access.</p>
+            <div>
+              <h3 className="text-sm font-heading font-semibold text-foreground">Outlet & Department Assignment</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Select outlets this cashier can access, then choose which departments at each outlet they handle.
+              </p>
+            </div>
             <div className="space-y-3">
               {availableOutlets.map((outlet) => {
                 const isChecked = selectedOutlets.includes(outlet.id);
+                const depts = departmentsByOutlet[outlet.id] ?? [];
+                const selectedDeptIds = outletDeptMap[outlet.id] ?? [];
                 return (
                   <div key={outlet.id} className={`rounded-lg border p-3 transition-colors ${isChecked ? "border-accent bg-accent/5" : "border-border"}`}>
                     <div className="flex items-center gap-3">
                       <Checkbox id={`outlet-${outlet.id}`} checked={isChecked} onCheckedChange={(checked) => toggleOutlet(outlet.id, checked === true)} />
                       <Label htmlFor={`outlet-${outlet.id}`} className="text-sm font-medium cursor-pointer flex-1">{outlet.name}</Label>
+                      {isChecked && depts.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px] h-5">
+                          {selectedDeptIds.length}/{depts.length} depts
+                        </Badge>
+                      )}
                     </div>
+
+                    {isChecked && (
+                      <div className="mt-3 pl-7">
+                        {depts.length === 0 ? (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
+                            <Building2 className="h-3 w-3" />
+                            No departments configured for this outlet
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            {depts.map((dept) => {
+                              const deptChecked = selectedDeptIds.includes(dept.id);
+                              return (
+                                <div key={dept.id} className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`dept-${outlet.id}-${dept.id}`}
+                                    checked={deptChecked}
+                                    onCheckedChange={(c) => toggleDepartment(outlet.id, dept.id, c === true)}
+                                  />
+                                  <Label
+                                    htmlFor={`dept-${outlet.id}-${dept.id}`}
+                                    className="text-xs cursor-pointer font-normal"
+                                  >
+                                    {dept.name}
+                                  </Label>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
