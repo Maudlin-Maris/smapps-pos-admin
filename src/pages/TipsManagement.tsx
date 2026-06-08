@@ -48,6 +48,8 @@ export default function TipsManagement() {
     outletId: string;
     outletName: string;
     outstanding: number;
+    tipIds?: string[];
+    contextLabel?: string;
   } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -254,27 +256,79 @@ export default function TipsManagement() {
               <TableHead className="text-right">Order amount</TableHead>
               <TableHead className="text-right">Amount paid</TableHead>
               <TableHead className="text-right">Tip</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ordersPg.paginatedItems.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell>{new Date(t.earnedAt).toLocaleDateString()}</TableCell>
-                <TableCell className="font-mono text-xs">{t.orderId || "—"}</TableCell>
-                <TableCell>{t.staffName}</TableCell>
-                <TableCell>{t.outletName}</TableCell>
-                <TableCell className="text-right">
-                  {t.orderAmount ? formatNaira(t.orderAmount) : "—"}
-                </TableCell>
-                <TableCell className="text-right">
-                  {t.orderPaidAmount != null ? formatNaira(t.orderPaidAmount) : "—"}
-                </TableCell>
-                <TableCell className="text-right font-medium">{formatNaira(t.amount)}</TableCell>
-              </TableRow>
-            ))}
+            {ordersPg.paginatedItems.map((t) => {
+              const outstanding = Math.max(0, t.amount - t.paidAmount);
+              const isPaid = t.status === "paid";
+              const isPartial = t.status === "partially_paid";
+              return (
+                <TableRow key={t.id}>
+                  <TableCell>{new Date(t.earnedAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="font-mono text-xs">{t.orderId || "—"}</TableCell>
+                  <TableCell>{t.staffName}</TableCell>
+                  <TableCell>{t.outletName}</TableCell>
+                  <TableCell className="text-right">
+                    {t.orderAmount ? formatNaira(t.orderAmount) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {t.orderPaidAmount != null ? formatNaira(t.orderPaidAmount) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatNaira(t.amount)}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={isPaid ? "default" : isPartial ? "secondary" : "outline"}
+                      className={
+                        isPaid
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                          : isPartial
+                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                            : ""
+                      }
+                    >
+                      {isPaid
+                        ? "Paid"
+                        : isPartial
+                          ? `Partial · ${formatNaira(outstanding)} left`
+                          : "Unpaid"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {isPaid ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!hasPermission("tips.payout.process")}
+                        onClick={() =>
+                          setPayoutCtx({
+                            staffId: t.staffId,
+                            staffName: t.staffName,
+                            outletId: t.outletId,
+                            outletName: t.outletName,
+                            outstanding,
+                            tipIds: [t.id],
+                            contextLabel: t.orderId
+                              ? `order ${t.orderId}`
+                              : "this tip",
+                          })
+                        }
+                      >
+                        <BadgeDollarSign className="h-4 w-4" />
+                        Mark as paid
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
             {orderRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No orders with tips for the selected filters.
                 </TableCell>
               </TableRow>
@@ -344,6 +398,8 @@ export default function TipsManagement() {
           outstandingAmount={payoutCtx.outstanding}
           businessEmail={user?.email || "business@smapps.com"}
           actor={user?.display_name || user?.email || "system"}
+          tipIds={payoutCtx.tipIds}
+          contextLabel={payoutCtx.contextLabel}
           onConfirmed={() => setRefreshKey((k) => k + 1)}
         />
       )}

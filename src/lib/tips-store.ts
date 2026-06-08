@@ -246,6 +246,8 @@ export interface CreatePayoutInput {
   reference?: string;
   notes?: string;
   actor: string;
+  /** Restrict allocation to specific tip entries (e.g. paying a single order's tip). */
+  tipIds?: string[];
 }
 
 /** Compute unpaid tips for a staff member within the period & outlet. */
@@ -269,12 +271,16 @@ export function getUnpaidTipsForStaff(
 }
 
 export function createPayout(input: CreatePayoutInput): TipPayout {
-  const eligible = getUnpaidTipsForStaff(
+  let eligible = getUnpaidTipsForStaff(
     input.staffId,
     input.outletId,
     input.periodStart,
     input.periodEnd
   );
+  if (input.tipIds && input.tipIds.length) {
+    const set = new Set(input.tipIds);
+    eligible = eligible.filter((t) => set.has(t.id));
+  }
   const totalAvailable = eligible.reduce((s, t) => s + (t.amount - t.paidAmount), 0);
   const requested = Math.min(input.amount, totalAvailable);
 

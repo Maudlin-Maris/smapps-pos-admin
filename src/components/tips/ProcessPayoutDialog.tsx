@@ -41,6 +41,10 @@ interface Props {
   businessEmail: string;
   actor: string;
   onConfirmed: () => void;
+  /** Optional: restrict allocation to specific tip entries. */
+  tipIds?: string[];
+  /** Optional: customise the dialog title/description for single-tip flows. */
+  contextLabel?: string;
 }
 
 type Step = "amount" | "otp";
@@ -63,6 +67,8 @@ export default function ProcessPayoutDialog({
   businessEmail,
   actor,
   onConfirmed,
+  tipIds,
+  contextLabel,
 }: Props) {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>("amount");
@@ -130,6 +136,7 @@ export default function ProcessPayoutDialog({
         reference: reference.trim() || undefined,
         notes: notes.trim() || undefined,
         actor,
+        tipIds,
       });
       if (!payout || payout.amount <= 0) {
         toast({
@@ -162,8 +169,9 @@ export default function ProcessPayoutDialog({
             {step === "amount" ? (
               <>
                 Confirm the amount you've paid <strong>{staffName}</strong> at{" "}
-                <strong>{outletName}</strong>. Outstanding:{" "}
-                {formatNaira(outstandingAmount)}.
+                <strong>{outletName}</strong>
+                {contextLabel ? <> for <strong>{contextLabel}</strong></> : null}.{" "}
+                Outstanding: {formatNaira(outstandingAmount)}.
               </>
             ) : (
               <>Enter the 6-digit code we sent for authorisation.</>
