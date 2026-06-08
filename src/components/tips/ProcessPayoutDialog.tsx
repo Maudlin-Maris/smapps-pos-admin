@@ -67,6 +67,8 @@ export default function ProcessPayoutDialog({
   businessEmail,
   actor,
   onConfirmed,
+  tipIds,
+  contextLabel,
 }: Props) {
   const { toast } = useToast();
   const [step, setStep] = useState<Step>("amount");
