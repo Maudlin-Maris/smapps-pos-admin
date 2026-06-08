@@ -48,6 +48,8 @@ export default function TipsManagement() {
     outletId: string;
     outletName: string;
     outstanding: number;
+    tipIds?: string[];
+    contextLabel?: string;
   } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
