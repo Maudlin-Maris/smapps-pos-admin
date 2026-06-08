@@ -1,12 +1,18 @@
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { LoginResponse, User } from "@/lib/types/login-response";
 import {
-  loadRoles,
-  Role,
-  PermissionId,
-  SYSTEM_ROLES,
-} from "@/lib/rbac";
-import { services, isOk } from "@/services";
-import { setAuthToken, clearAuthToken } from "@/services/http";
+  useChangePassword,
+  useLogin,
+  useResetPassword,
+  useUpdateProfile,
+} from "@/services/api/auth";
+import { api } from "@/services/api/base";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 // ===== MOCK AUTH (no backend) =====
 // Replace with real auth wiring later.
@@ -82,8 +88,8 @@ function migrateUser(u: any): MockUser {
       (u.role === "admin"
         ? "role_admin"
         : u.role === "manager"
-        ? "role_manager"
-        : "role_cashier"),
+          ? "role_manager"
+          : "role_cashier"),
     outlet_ids: Array.isArray(u.outlet_ids) ? u.outlet_ids : [],
     status: u.status ?? "active",
     created_at: u.created_at ?? new Date().toISOString(),
@@ -119,110 +125,158 @@ export function generatePassword(length = 12): string {
 
 export type SafeUser = Omit<MockUser, "password">;
 
-interface AuthContextValue {
-  user: SafeUser | null;
+export interface AuthContextType {
+  user: User | null;
   loading: boolean;
-  permissions: PermissionId[];
+  isLoggedIn: boolean;
+  permissions: string[];
   roleName: string;
-  hasPermission: (perm: PermissionId | PermissionId[]) => boolean;
+  hasPermission: (perm: string | string[]) => boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signOut: () => void;
-  resetPassword: (email: string) => Promise<{ error?: string; newPassword?: string }>;
-  updateProfile: (patch: Partial<Pick<MockUser, "display_name" | "phone" | "avatar_url">>) => void;
-  changePassword: (current: string, next: string) => { error?: string };
-  // bump to force consumers to re-read users/roles after admin edits
+  logout: () => void;
+  resetPassword: (
+    email: string,
+  ) => Promise<{ error?: string; newPassword?: string }>;
+  updateProfile: (profile: Partial<User>) => Promise<void>;
+  changePassword: (
+    current: string,
+    next: string,
+  ) => Promise<{ error?: string }>;
   rolesVersion: number;
   bumpRolesVersion: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SafeUser | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [rolesVersion, setRolesVersion] = useState(0);
 
+  const isLoggedIn = !!user;
+
+  const loginMutation = useLogin();
+  const resetPasswordMutation = useResetPassword();
+  const changePasswordMutation = useChangePassword();
+  const updateProfileMutation = useUpdateProfile(user?.id);
+
+  const loginSuccess = (data: LoginResponse) => {
+    const userData: Omit<LoginResponse, "success" | "message" | "tokenType"> = {
+      token: data.token,
+      user: data.user,
+    };
+    localStorage.setItem("jhakie_user", JSON.stringify(userData));
+    setUser(data.user);
+    api.defaults.headers.Authorization = `Bearer ${data.token}`;
+  };
+
+  const persistUser = (updatedUser: User) => {
+    const stored = localStorage.getItem("jhakie_user");
+    if (stored) {
+      try {
+        const userData: Omit<LoginResponse, "success"> = JSON.parse(stored);
+        userData.user = updatedUser;
+        localStorage.setItem("jhakie_user", JSON.stringify(userData));
+      } catch (error) {
+        console.error("Failed to parse/update stored user data:", error);
+      }
+    }
+    setUser(updatedUser);
+  };
+
   useEffect(() => {
-    loadUsers();
-    loadRoles();
-    const sessionId = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
-    if (sessionId) {
-      const found = loadUsers().find((u) => u.id === sessionId);
-      if (found && found.status === "active") {
-        const { password, ...safe } = found;
-        setUser(safe);
+    const stored = localStorage.getItem("jhakie_user");
+    if (stored) {
+      try {
+        const userData: Omit<LoginResponse, "success"> = JSON.parse(stored);
+        if (userData && userData.user && userData.token) {
+          setUser(userData.user);
+          // Set Authorization header if user has token
+          api.defaults.headers.Authorization = `Bearer ${userData.token}`;
+        }
+      } catch (error) {
+        console.error("Failed to parse stored user data:", error);
+        localStorage.removeItem("jhakie_user");
       }
     }
     setLoading(false);
   }, []);
 
-  const { permissions, roleName } = useMemo(() => {
-    if (!user) return { permissions: [] as PermissionId[], roleName: "" };
-    const roles = loadRoles();
-    const role: Role | undefined =
-      roles.find((r) => r.id === user.role_id) ||
-      SYSTEM_ROLES.find((r) => r.id === user.role_id);
-    return { permissions: role?.permissions ?? [], roleName: role?.name ?? user.role };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, rolesVersion]);
+  const permissions = user?.permissions ?? [];
+  const roleName = user?.role?.name ?? "";
 
-  const hasPermission = (perm: PermissionId | PermissionId[]) => {
+  const hasPermission = (perm: string | string[]) => {
     if (!user) return false;
     const list = Array.isArray(perm) ? perm : [perm];
     return list.every((p) => permissions.includes(p));
   };
 
   const signIn = async (email: string, password: string) => {
-    const result = await services.auth.login(email, password);
-    if (!isOk(result)) {
-      return { error: result.error };
+    try {
+      const response = await loginMutation.trigger({ email, password });
+      if (response && response.user && response.token) {
+        loginSuccess(response);
+        return {};
+      }
+      return { error: "Invalid email or password" };
+    } catch (e: any) {
+      return {
+        error: e.response?.data?.message || e.message || "Failed to sign in",
+      };
     }
-    const { user: loggedIn, token } = result.data;
-    setUser(loggedIn);
-    setAuthToken(token);
-    localStorage.setItem(SESSION_KEY, loggedIn.id);
-    return {};
   };
 
   const signOut = () => {
+    localStorage.removeItem("jhakie_user");
     setUser(null);
-    clearAuthToken();
-    localStorage.removeItem(SESSION_KEY);
-    sessionStorage.removeItem(SESSION_KEY);
+    delete api.defaults.headers.Authorization;
   };
+
+  const logout = signOut;
 
   const resetPassword = async (email: string) => {
-    const result = await services.auth.resetPassword(email);
-    if (!isOk(result)) {
-      return { error: result.error };
-    }
-    return { newPassword: result.data.newPassword };
-  };
-
-  const updateProfile: AuthContextValue["updateProfile"] = async (patch) => {
-    if (!user) return;
-    const result = await services.auth.updateProfile(user.id, patch);
-    if (isOk(result)) {
-      setUser(result.data);
-    }
-  };
-
-  const changePassword: AuthContextValue["changePassword"] = (current, next) => {
-    if (!user) return { error: "Not signed in" };
-    // Fire-and-forget async call, return sync result for compat
-    services.auth.changePassword(user.id, current, next).then((result) => {
-      if (!isOk(result)) {
-        console.warn("[auth] changePassword failed:", result.error);
+    try {
+      const response = await resetPasswordMutation.trigger({ email });
+      if (response) {
+        return { newPassword: response.newPassword };
       }
-    });
-    // For backward compat with sync callers, do local check too
-    const users = loadUsers();
-    const idx = users.findIndex((u) => u.id === user.id);
-    if (idx === -1) return { error: "User not found" };
-    if (users[idx].password !== current) return { error: "Current password is incorrect" };
-    users[idx] = { ...users[idx], password: next };
-    saveUsers(users);
-    return {};
+      return { error: "Failed to reset password" };
+    } catch (e: any) {
+      return {
+        error:
+          e.response?.data?.message || e.message || "Failed to reset password",
+      };
+    }
+  };
+
+  const updateProfile = async (profile: Partial<User>) => {
+    if (!user) return;
+    try {
+      const response = await updateProfileMutation.trigger(profile);
+      if (response) {
+        persistUser(response);
+      }
+    } catch (e: any) {
+      console.error("Failed to update profile:", e);
+    }
+  };
+
+  const changePassword = async (current: string, next: string) => {
+    if (!user) return { error: "Not signed in" };
+    try {
+      await changePasswordMutation.trigger({
+        userId: user.id,
+        currentPassword: current,
+        newPassword: next,
+      });
+      return {};
+    } catch (e: any) {
+      return {
+        error:
+          e.response?.data?.message || e.message || "Failed to change password",
+      };
+    }
   };
 
   const bumpRolesVersion = () => setRolesVersion((v) => v + 1);
@@ -232,11 +286,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         loading,
+        isLoggedIn,
         permissions,
         roleName,
         hasPermission,
         signIn,
         signOut,
+        logout,
         resetPassword,
         updateProfile,
         changePassword,
@@ -247,10 +303,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
-}
+};

@@ -49,7 +49,7 @@ export default function Profile() {
     }
     setSavingPassword(true);
     await new Promise((r) => setTimeout(r, 300));
-    const { error } = changePassword(currentPassword, newPassword);
+    const { error } = await changePassword(currentPassword, newPassword);
     setSavingPassword(false);
     if (error) {
       toast({ title: error, variant: "destructive" });
@@ -87,9 +87,9 @@ export default function Profile() {
                 <span className="truncate">{user?.email}</span>
               </CardDescription>
             </div>
-            {user?.role && (
+            {user?.role?.name && (
               <Badge variant="secondary" className="capitalize shrink-0">
-                {user.role}
+                {user.role.name}
               </Badge>
             )}
           </div>

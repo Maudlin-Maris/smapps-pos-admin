@@ -1,68 +1,84 @@
 /**
- * Real API Auth Service
- * Calls backend endpoints. Falls back to mock if API unavailable.
+ * Real API Auth Service Hooks
+ * Provides SWR mutations for authentication operations.
  */
 
-import { apiRequest } from "../http";
-import { ok, err, type ServiceResult } from "../types";
-import type { AuthLoginResponse, AuthResetResponse, AuthService } from "../mock/auth.types";
-import type { MockUser, SafeUser } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { LoginResponse, User } from "@/lib/types/login-response";
+import { useApiMutation } from "./api-hooks";
+import { API_ENDPOINTS } from "./endpoints";
 
-export const realAuthService: AuthService = {
-  async login(email: string, password: string): Promise<ServiceResult<AuthLoginResponse>> {
-    try {
-      const data = await apiRequest<AuthLoginResponse>("/api/auth/login", {
-        method: "POST",
-        body: { email, password },
-        skipAuth: true,
-      });
-      return ok(data);
-    } catch (error: any) {
-      return err(error?.message || "Login failed");
-    }
-  },
+export const useLogin = () => {
+  const { toast } = useToast();
+  return useApiMutation<{ email: string; password: string }, LoginResponse>(
+    API_ENDPOINTS.LOGIN,
+    "POST",
+    undefined,
+    {
+      throwOnError: false,
+      onError(err) {
+        toast({
+          title: "Failed to login",
+          description: err.response?.data.message ?? "Please try again later",
+        });
+      },
+    },
+  );
+};
 
-  async resetPassword(email: string): Promise<ServiceResult<AuthResetResponse>> {
-    try {
-      const data = await apiRequest<AuthResetResponse>("/api/auth/reset-password", {
-        method: "POST",
-        body: { email },
-        skipAuth: true,
-      });
-      return ok(data);
-    } catch (error: any) {
-      return err(error?.message || "Password reset failed");
-    }
-  },
+export const useResetPassword = () => {
+  const { toast } = useToast();
+  return useApiMutation<{ email: string }, { message: string; newPassword?: string }>(
+    "/api/auth/reset-password",
+    "POST",
+    undefined,
+    {
+      throwOnError: false,
+      onError(err) {
+        toast({
+          title: "Failed to reset password",
+          description: err.response?.data?.message ?? "Please try again later",
+          variant: "destructive",
+        });
+      },
+    },
+  );
+};
 
-  async changePassword(
-    userId: string,
-    currentPassword: string,
-    newPassword: string
-  ): Promise<ServiceResult<void>> {
-    try {
-      await apiRequest<void>("/api/auth/change-password", {
-        method: "POST",
-        body: { userId, currentPassword, newPassword },
-      });
-      return ok(undefined);
-    } catch (error: any) {
-      return err(error?.message || "Password change failed");
-    }
-  },
+export const useChangePassword = () => {
+  const { toast } = useToast();
+  return useApiMutation<{ userId: string; currentPassword: string; newPassword: string }, void>(
+    "/api/auth/change-password",
+    "POST",
+    undefined,
+    {
+      throwOnError: false,
+      onError(err) {
+        toast({
+          title: "Failed to change password",
+          description: err.response?.data?.message ?? "Please try again later",
+          variant: "destructive",
+        });
+      },
+    },
+  );
+};
 
-  async updateProfile(
-    userId: string,
-    patch: Partial<Pick<MockUser, "display_name" | "phone" | "avatar_url">>
-  ): Promise<ServiceResult<SafeUser>> {
-    try {
-      const data = await apiRequest<SafeUser>(`/api/users/${userId}/profile`, {
-        method: "PATCH",
-        body: patch,
-      });
-      return ok(data);
-    } catch (error: any) {
-      return err(error?.message || "Profile update failed");
-    }
-  },
+export const useUpdateProfile = (userId: string | undefined) => {
+  const { toast } = useToast();
+  return useApiMutation<Partial<User>, User>(
+    userId ? `/api/users/${userId}/profile` : null,
+    "PATCH",
+    undefined,
+    {
+      throwOnError: false,
+      onError(err) {
+        toast({
+          title: "Failed to update profile",
+          description: err.response?.data?.message ?? "Please try again later",
+          variant: "destructive",
+        });
+      },
+    },
+  );
 };

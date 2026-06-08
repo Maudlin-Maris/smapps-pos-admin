@@ -14,8 +14,6 @@
 import { useMockForDomain, type ServiceDomain } from "./config";
 import type { ServiceResult } from "./types";
 
-// Mock implementations
-import { mockAuthService } from "./mock/auth";
 import { mockCashiersService } from "./mock/cashiers";
 import { mockOutletsService } from "./mock/outlets";
 import { mockOrdersService } from "./mock/orders";
@@ -23,7 +21,6 @@ import { mockTerminalsService } from "./mock/terminals";
 import { mockInventoryService } from "./mock/inventory";
 
 // Real API implementations
-import { realAuthService } from "./api/auth";
 import { realCashiersService } from "./api/cashiers";
 import { realOutletsService } from "./api/outlets";
 import { realOrdersService } from "./api/orders";
@@ -31,7 +28,6 @@ import { realTerminalsService } from "./api/terminals";
 import { realInventoryService } from "./api/inventory";
 
 // Type imports
-import type { AuthService } from "./mock/auth.types";
 import type { CashiersService } from "./mock/cashiers.types";
 import type { OutletsService } from "./mock/outlets.types";
 import type { OrdersService } from "./mock/orders.types";
@@ -96,7 +92,6 @@ function withFallback<T extends object>(
 }
 
 export interface Services {
-  auth: AuthService;
   cashiers: CashiersService;
   outlets: OutletsService;
   orders: OrdersService;
@@ -105,7 +100,6 @@ export interface Services {
 }
 
 export const services: Services = {
-  auth: withFallback("auth", realAuthService, mockAuthService),
   cashiers: withFallback("cashiers", realCashiersService, mockCashiersService),
   outlets: withFallback("outlets", realOutletsService, mockOutletsService),
   orders: withFallback("orders", realOrdersService, mockOrdersService),
