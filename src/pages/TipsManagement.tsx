@@ -398,6 +398,8 @@ export default function TipsManagement() {
           outstandingAmount={payoutCtx.outstanding}
           businessEmail={user?.email || "business@smapps.com"}
           actor={user?.display_name || user?.email || "system"}
+          tipIds={payoutCtx.tipIds}
+          contextLabel={payoutCtx.contextLabel}
           onConfirmed={() => setRefreshKey((k) => k + 1)}
         />
       )}
