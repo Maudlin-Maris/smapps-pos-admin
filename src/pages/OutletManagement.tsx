@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent, Tag, Wallet, QrCode } from "lucide-react";
+import { Plus, MapPin, Phone, Pencil, Power, Banknote, Store, LayoutGrid, Percent, Tag, Wallet, QrCode, Loader2 } from "lucide-react";
 import OutletFormDialog, { type OutletFormData } from "@/components/outlets/OutletFormDialog";
 import DepartmentManagerDialog from "@/components/outlets/DepartmentManagerDialog";
 import FeeManagerDialog from "@/components/outlets/FeeManagerDialog";
@@ -16,44 +16,39 @@ import {
 import { initialDepartments, type Department } from "@/data/departments";
 import { type FeeFormData } from "@/components/fees/FeeFormDialog";
 import { toast } from "sonner";
-
-interface OutletData {
-  id: number;
-  name: string;
-  address: string;
-  phone: string;
-  currency: string;
-  businessType: string;
-  status: "open" | "closed";
-  staff: number;
-  formData?: Partial<OutletFormData>;
-}
-
 import { getBusinessType } from "@/data/businessTypes";
 
-const initialOutlets: OutletData[] = [
-  { id: 1, name: "Downtown Flagship", address: "123 Main Street, Downtown", phone: "+1 (555) 123-4567", currency: "NGN", businessType: "restaurant", status: "open", staff: 8 },
-  { id: 2, name: "Mall Branch", address: "456 Shopping Center Blvd, Level 2", phone: "+1 (555) 234-5678", currency: "NGN", businessType: "retail", status: "open", staff: 5 },
-  { id: 3, name: "Airport Kiosk", address: "Terminal 3, Gate B12", phone: "+1 (555) 345-6789", currency: "USD", businessType: "restaurant", status: "open", staff: 3 },
-  { id: 4, name: "Suburban Store", address: "789 Oak Avenue, Westside", phone: "+1 (555) 456-7890", currency: "GBP", businessType: "pharmacy", status: "closed", staff: 4 },
-];
+import {
+  useGetOutlets,
+  useCreateOutlet,
+  useUpdateOutlet,
+  useUpdateOutletStatus,
+} from "@/services/api/outlets";
+import type { CreateOutletPayload } from "@/lib/types/create-outlet-payload";
+import type { UpdateOutletPayload } from "@/lib/types/update-outlet-payload";
+import type { Outlet } from "@/lib/types/outlet";
 
 export default function OutletManagement() {
-  const [outlets, setOutlets] = useState<OutletData[]>(initialOutlets);
+  const { data: outlets = [], isLoading, mutate } = useGetOutlets();
+  const { trigger: triggerCreate, isMutating: isCreating } = useCreateOutlet();
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
-  const [editingOutlet, setEditingOutlet] = useState<OutletData | null>(null);
+  const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
   const [departments, setDepartments] = useState<Department[]>(initialDepartments);
-  const [deptDialogOutlet, setDeptDialogOutlet] = useState<OutletData | null>(null);
+  const [deptDialogOutlet, setDeptDialogOutlet] = useState<Outlet | null>(null);
   const [fees, setFees] = useState<FeeFormData[]>([
     { id: 1, outletId: "1", name: "VAT", serviceOption: "all", isFixed: false, chargeToCustomers: true, value: "7.5", orderPeg: "", minimumFee: "", maximumFee: "" },
     { id: 2, outletId: "1", name: "Service Charge", serviceOption: "dine_in", isFixed: true, chargeToCustomers: true, value: "", orderPeg: "2000", minimumFee: "500", maximumFee: "1000" },
   ]);
-  const [feeDialogOutlet, setFeeDialogOutlet] = useState<OutletData | null>(null);
-  const [discountTipOutlet, setDiscountTipOutlet] = useState<OutletData | null>(null);
-  const [paymentMethodOutlet, setPaymentMethodOutlet] = useState<OutletData | null>(null);
-  const [statusToggleOutlet, setStatusToggleOutlet] = useState<OutletData | null>(null);
-  const [locationOutlet, setLocationOutlet] = useState<OutletData | null>(null);
+  const [feeDialogOutlet, setFeeDialogOutlet] = useState<Outlet | null>(null);
+  const [discountTipOutlet, setDiscountTipOutlet] = useState<Outlet | null>(null);
+  const [paymentMethodOutlet, setPaymentMethodOutlet] = useState<Outlet | null>(null);
+  const [statusToggleOutlet, setStatusToggleOutlet] = useState<Outlet | null>(null);
+  const [locationOutlet, setLocationOutlet] = useState<Outlet | null>(null);
+
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateOutlet(editingOutlet?.id);
+  const { trigger: triggerStatusUpdate, isMutating: isUpdatingStatus } = useUpdateOutletStatus(statusToggleOutlet?.id);
 
   const handleAdd = () => {
     setDialogMode("add");
@@ -61,54 +56,90 @@ export default function OutletManagement() {
     setDialogOpen(true);
   };
 
-  const handleEdit = (outlet: OutletData) => {
+  const handleEdit = (outlet: Outlet) => {
     setDialogMode("edit");
     setEditingOutlet(outlet);
     setDialogOpen(true);
   };
 
-  const handleToggleStatus = (outlet: OutletData) => {
+  const handleToggleStatus = (outlet: Outlet) => {
     setStatusToggleOutlet(outlet);
   };
 
-  const confirmToggleStatus = () => {
+  const confirmToggleStatus = async () => {
     if (!statusToggleOutlet) return;
-    const id = statusToggleOutlet.id;
-    setOutlets((prev) =>
-      prev.map((o) => {
-        if (o.id !== id) return o;
-        const newStatus = o.status === "open" ? "closed" : "open";
-        toast.success(`${o.name} is now ${newStatus}`);
-        return { ...o, status: newStatus };
-      })
-    );
-    setStatusToggleOutlet(null);
+    const newStatus = statusToggleOutlet.status === "open" ? "closed" : "open";
+    try {
+      await triggerStatusUpdate({ status: newStatus });
+      toast.success(`${statusToggleOutlet.name} is now ${newStatus}`);
+      mutate();
+    } catch (err) {
+      // Toast message shown by default inside the SWR mutation onError hook
+    } finally {
+      setStatusToggleOutlet(null);
+    }
   };
 
-  const handleSubmit = (data: OutletFormData) => {
+  const handleSubmit = async (data: OutletFormData) => {
     if (dialogMode === "add") {
-      const newOutlet: OutletData = {
-        id: Date.now(),
+      const payload: CreateOutletPayload = {
         name: data.name,
-        address: data.outletAddress || data.locationAddress,
-        phone: data.phone,
-        currency: data.currency || "NGN",
         businessType: data.businessType || "restaurant",
+        address: data.outletAddress || data.locationAddress || "",
+        phone: data.phone,
+        email: data.email || "",
+        currency: data.currency || "NGN",
         status: "closed",
-        staff: 0,
-        formData: data,
+        orderSettings: {
+          allowPaymentBeforeConfirmation: data.payBeforeOrder,
+          allowPaymentAfterConfirmation: data.payAfterOrder,
+          disableMobileOrdering: data.disableMobileOrder,
+          restrictOrderMerging: data.restrictMerging,
+          restrictOrderSettlement: data.restrictSettlement,
+        },
+        payoutInfo: {
+          bank: data.bank,
+          accountNumber: data.accountNumber,
+          accountName: data.accountName,
+          otpEmail: data.otpEmail,
+        },
       };
-      setOutlets((prev) => [...prev, newOutlet]);
-      toast.success(`Outlet "${data.name}" created successfully`);
+      try {
+        await triggerCreate(payload);
+        toast.success(`Outlet "${data.name}" created successfully`);
+        mutate();
+        setDialogOpen(false);
+      } catch (err) {
+        // Handled
+      }
     } else if (editingOutlet) {
-      setOutlets((prev) =>
-        prev.map((o) =>
-          o.id === editingOutlet.id
-            ? { ...o, name: data.name, address: data.outletAddress || data.locationAddress || o.address, phone: data.phone || o.phone, currency: data.currency || o.currency, businessType: data.businessType || o.businessType, formData: data }
-            : o
-        )
-      );
-      toast.success(`Outlet "${data.name}" updated successfully`);
+      const payload: UpdateOutletPayload = {
+        name: data.name,
+        phone: data.phone,
+        email: data.email,
+        status: editingOutlet.status,
+        orderSettings: {
+          allowPaymentBeforeConfirmation: data.payBeforeOrder,
+          allowPaymentAfterConfirmation: data.payAfterOrder,
+          disableMobileOrdering: data.disableMobileOrder,
+          restrictOrderMerging: data.restrictMerging,
+          restrictOrderSettlement: data.restrictSettlement,
+        },
+        payoutInfo: {
+          bank: data.bank,
+          accountNumber: data.accountNumber,
+          accountName: data.accountName,
+          otpEmail: data.otpEmail,
+        },
+      };
+      try {
+        await triggerUpdate(payload);
+        toast.success(`Outlet "${data.name}" updated successfully`);
+        mutate();
+        setDialogOpen(false);
+      } catch (err) {
+        // Handled
+      }
     }
   };
 
@@ -117,16 +148,28 @@ export default function OutletManagement() {
     return {
       name: editingOutlet.name,
       outletAddress: editingOutlet.address,
+      locationAddress: editingOutlet.address,
       phone: editingOutlet.phone,
-      ...editingOutlet.formData,
+      email: editingOutlet.email,
+      currency: editingOutlet.currency,
+      businessType: editingOutlet.businessType,
+      payBeforeOrder: editingOutlet.orderSettings?.allowPaymentBeforeConfirmation || false,
+      payAfterOrder: editingOutlet.orderSettings?.allowPaymentAfterConfirmation || false,
+      disableMobileOrder: editingOutlet.orderSettings?.disableMobileOrdering || false,
+      restrictMerging: editingOutlet.orderSettings?.restrictOrderMerging || false,
+      restrictSettlement: editingOutlet.orderSettings?.restrictOrderSettlement || false,
+      bank: editingOutlet.payoutInfo?.bank || "",
+      accountNumber: editingOutlet.payoutInfo?.accountNumber || "",
+      accountName: editingOutlet.payoutInfo?.accountName || "",
+      otpEmail: editingOutlet.payoutInfo?.otpEmail || "",
     };
   };
 
-  const getDeptCount = (outletId: number) =>
-    departments.filter((d) => d.outletId === outletId).length;
+  const getDeptCount = (outletId: number | string) =>
+    departments.filter((d) => String(d.outletId) === String(outletId)).length;
 
-  const getFeeCount = (outletId: number) =>
-    fees.filter((f) => f.outletId === String(outletId)).length;
+  const getFeeCount = (outletId: number | string) =>
+    fees.filter((f) => String(f.outletId) === String(outletId)).length;
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -140,128 +183,161 @@ export default function OutletManagement() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {outlets.map((outlet) => (
-          <Card key={outlet.id} className="p-5 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h3 className="font-heading font-semibold">{outlet.name}</h3>
-                <Badge
-                  variant="secondary"
-                  className={`mt-1 text-xs capitalize ${
-                    outlet.status === "open"
-                      ? "bg-success/10 text-success"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {outlet.status}
-                </Badge>
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i} className="p-5 space-y-4 animate-pulse">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2 flex-1">
+                  <div className="h-5 bg-muted rounded w-1/2" />
+                  <div className="h-4 bg-muted rounded w-1/4" />
+                </div>
+                <div className="h-8 bg-muted rounded w-8" />
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title={outlet.status === "open" ? "Close outlet" : "Open outlet"}
-                  onClick={() => handleToggleStatus(outlet)}
-                >
-                  <Power className={`h-4 w-4 ${outlet.status === "open" ? "text-success" : "text-muted-foreground"}`} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  title="Edit outlet"
-                  onClick={() => handleEdit(outlet)}
-                >
-                  <Pencil className="h-4 w-4 text-muted-foreground" />
-                </Button>
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded w-3/4" />
+                <div className="h-4 bg-muted rounded w-1/2" />
+                <div className="h-4 bg-muted rounded w-1/3" />
               </div>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{outlet.address}</span>
+              <div className="pt-3 border-t border-border flex items-center justify-between">
+                <div className="flex gap-2">
+                  <div className="h-8 bg-muted rounded w-24" />
+                  <div className="h-8 bg-muted rounded w-24" />
+                </div>
+                <div className="h-6 bg-muted rounded w-12" />
               </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Phone className="h-3.5 w-3.5 shrink-0" />
-                <span>{outlet.phone}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Banknote className="h-3.5 w-3.5 shrink-0" />
-                <span>{outlet.currency}</span>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Store className="h-3.5 w-3.5 shrink-0" />
-                <span>{getBusinessType(outlet.businessType).label}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setDeptDialogOutlet(outlet)}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Departments
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                    {getDeptCount(outlet.id)}
+            </Card>
+          ))}
+        </div>
+      ) : outlets.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-dashed rounded-lg">
+          <Store className="h-10 w-10 text-muted-foreground/40 mb-3" />
+          <p className="text-sm text-muted-foreground">No outlets found. Add one to get started.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {outlets.map((outlet) => (
+            <Card key={outlet.id} className="p-5 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h3 className="font-heading font-semibold">{outlet.name}</h3>
+                  <Badge
+                    variant="secondary"
+                    className={`mt-1 text-xs capitalize ${
+                      outlet.status === "open"
+                        ? "bg-success/10 text-success"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {outlet.status}
                   </Badge>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setFeeDialogOutlet(outlet)}
-                >
-                  <Percent className="h-3.5 w-3.5" />
-                  Fees & Taxes
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                    {getFeeCount(outlet.id)}
-                  </Badge>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setDiscountTipOutlet(outlet)}
-                >
-                  <Tag className="h-3.5 w-3.5" />
-                  Discounts & Tips
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setPaymentMethodOutlet(outlet)}
-                >
-                  <Wallet className="h-3.5 w-3.5" />
-                  Payment Methods
-                </Button>
-                {outlet.businessType === "restaurant" && (
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title={outlet.status === "open" ? "Close outlet" : "Open outlet"}
+                    onClick={() => handleToggleStatus(outlet)}
+                  >
+                    <Power className={`h-4 w-4 ${outlet.status === "open" ? "text-success" : "text-muted-foreground"}`} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title="Edit outlet"
+                    onClick={() => handleEdit(outlet)}
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{outlet.address}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5 shrink-0" />
+                  <span>{outlet.phone}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Banknote className="h-3.5 w-3.5 shrink-0" />
+                  <span>{outlet.currency}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Store className="h-3.5 w-3.5 shrink-0" />
+                  <span>{getBusinessType(outlet.businessType).label}</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
-                    onClick={() => setLocationOutlet(outlet)}
+                    onClick={() => setDeptDialogOutlet(outlet)}
                   >
-                    <QrCode className="h-3.5 w-3.5" />
-                    Locations & QR
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    Departments
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                      {outlet.departmentCount ?? getDeptCount(outlet.id)}
+                    </Badge>
                   </Button>
-                )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setFeeDialogOutlet(outlet)}
+                  >
+                    <Percent className="h-3.5 w-3.5" />
+                    Fees & Taxes
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
+                      {outlet.feesCount ?? getFeeCount(outlet.id)}
+                    </Badge>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setDiscountTipOutlet(outlet)}
+                  >
+                    <Tag className="h-3.5 w-3.5" />
+                    Discounts & Tips
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
+                    onClick={() => setPaymentMethodOutlet(outlet)}
+                  >
+                    <Wallet className="h-3.5 w-3.5" />
+                    Payment Methods
+                  </Button>
+                  {outlet.businessType === "restaurant" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => setLocationOutlet(outlet)}
+                    >
+                      <QrCode className="h-3.5 w-3.5" />
+                      Locations & QR
+                    </Button>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Staff</p>
+                  <p className="text-lg font-heading font-bold">{outlet.staffCount ?? 0}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Staff</p>
-                <p className="text-lg font-heading font-bold">{outlet.staff}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <OutletFormDialog
         open={dialogOpen}
@@ -269,6 +345,7 @@ export default function OutletManagement() {
         mode={dialogMode}
         initialData={getInitialData()}
         onSubmit={handleSubmit}
+        isSubmitting={isCreating || isUpdating}
       />
 
       {deptDialogOutlet && (
@@ -334,8 +411,9 @@ export default function OutletManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmToggleStatus}>
+            <AlertDialogCancel disabled={isUpdatingStatus}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmToggleStatus} disabled={isUpdatingStatus}>
+              {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {statusToggleOutlet?.status === "open" ? "Close Outlet" : "Open Outlet"}
             </AlertDialogAction>
           </AlertDialogFooter>

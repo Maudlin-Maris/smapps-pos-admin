@@ -29,8 +29,8 @@ import { format } from "date-fns";
 import type { InventoryItem, ItemBatch } from "./InventoryItemForm";
 import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
-import { outlets } from "@/data/outlets";
-import { getBusinessType, type BusinessTypeId } from "@/data/businessTypes";
+import { useGetOutlets } from "@/services/api/outlets";
+import { type BusinessTypeId } from "@/data/businessTypes";
 
 export type AdjustmentType = "add" | "remove" | "damaged" | "returned";
 
@@ -76,7 +76,7 @@ const RETAIL_BUSINESS_TYPES: BusinessTypeId[] = [
   "electronics", "hair_seller", "retail",
 ];
 
-function isRetailType(outletId: string): boolean {
+function isRetailType(outletId: string, outlets: any[]): boolean {
   const outlet = outlets.find(o => o.id === outletId);
   if (!outlet) return false;
   return RETAIL_BUSINESS_TYPES.includes(outlet.businessType);
@@ -115,6 +115,7 @@ interface AdjustDialogProps {
 }
 
 export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentSellPrice, outletName }: AdjustDialogProps) {
+  const { data: outlets = [] } = useGetOutlets();
   const [type, setType] = useState<AdjustmentType>("add");
   const [quantity, setQuantity] = useState(0);
   const [reason, setReason] = useState("");
@@ -130,7 +131,7 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
   const [sellPrice, setSellPrice] = useState<number>(0);
   const [syncToCatalog, setSyncToCatalog] = useState<boolean>(true);
 
-  const showRetailPricing = item ? isRetailType(item.outletId) : false;
+  const showRetailPricing = item ? isRetailType(item.outletId, outlets) : false;
 
   // Check if this item's outlet is batch-tracked
   const selectedOutlet = item ? outlets.find(o => o.id === item.outletId) : null;

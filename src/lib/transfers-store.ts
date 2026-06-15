@@ -17,9 +17,9 @@ import {
 
 const KEY_TRANSFERS = "smapps_transfers_v2";
 const KEY_MOVEMENTS = "smapps_inventory_movements_v1";
-const KEY_OVERLAY   = "smapps_inventory_stock_overlay_v1";
-const KEY_COST      = "smapps_inventory_cost_overlay_v1";
-const KEY_COUNTER   = "smapps_transfers_counter_v1";
+const KEY_OVERLAY = "smapps_inventory_stock_overlay_v1";
+const KEY_COST = "smapps_inventory_cost_overlay_v1";
+const KEY_COUNTER = "smapps_transfers_counter_v1";
 
 // ── Utilities ──
 function read<T>(key: string, fallback: T): T {
@@ -133,21 +133,16 @@ export function getReservedQty(outletId: string, itemId: string): number {
   return reserved;
 }
 
-// ── Locations (outlets + virtual warehouses) ──
-export const VIRTUAL_WAREHOUSES: TransferLocation[] = [
-  { id: "wh-central", name: "Central Warehouse", kind: "warehouse" },
-  { id: "wh-regional-north", name: "Regional WH — North", kind: "warehouse" },
-];
 
-export function listLocations(): TransferLocation[] {
+export function listLocations(customOutlets?: any[]): TransferLocation[] {
+  const source = customOutlets || outlets;
   return [
-    ...outlets.map((o) => ({ id: o.id, name: o.name, kind: "outlet" as const })),
-    ...VIRTUAL_WAREHOUSES,
+    ...source.map((o) => ({ id: o.id, name: o.name, kind: "outlet" as const })),
   ];
 }
 
-export function findLocation(id: string): TransferLocation | undefined {
-  return listLocations().find((l) => l.id === id);
+export function findLocation(id: string, customOutlets?: any[]): TransferLocation | undefined {
+  return listLocations(customOutlets).find((l) => l.id === id);
 }
 
 // ── Transfers CRUD ──
@@ -209,8 +204,8 @@ export function approveTransfer(id: string, lineApprovals: Record<string, number
     const approved = Math.max(0, Math.min(lineApprovals[it.id] ?? it.requestedQty, it.requestedQty));
     // Validate against currently-transferable qty at source (live)
     const live = getEffectiveStock(t.source.id, it.inventoryItemId)
-               - getReservedQty(t.source.id, it.inventoryItemId)
-               + (it.approvedQty); // exclude self
+      - getReservedQty(t.source.id, it.inventoryItemId)
+      + (it.approvedQty); // exclude self
     it.approvedQty = Math.max(0, Math.min(approved, Math.max(0, live)));
 
     // Recalculate destination WAC using chosen incoming cost
@@ -303,15 +298,15 @@ export function receiveTransfer(
   for (const it of t.items) {
     const r = receipts[it.id] ?? { received: 0, damaged: 0 };
     const recvDelta = Math.max(0, Math.min(r.received, it.dispatchedQty - it.receivedQty));
-    const dmgDelta  = Math.max(0, Math.min(r.damaged,  it.dispatchedQty - it.receivedQty - recvDelta));
+    const dmgDelta = Math.max(0, Math.min(r.damaged, it.dispatchedQty - it.receivedQty - recvDelta));
 
     if (recvDelta > 0) {
       // Recompute destination WAC against actual received qty using the chosen incoming cost
       const incomingCost = typeof it.incomingUnitCost === "number"
         ? it.incomingUnitCost
         : (it.valuationStrategy === "custom" && typeof it.customUnitCost === "number"
-            ? it.customUnitCost
-            : it.unitCost);
+          ? it.customUnitCost
+          : it.unitCost);
       const destQty = getEffectiveStock(t.destination.id, it.inventoryItemId);
       const destWac = getEffectiveCost(t.destination.id, it.inventoryItemId);
       const totalQty = destQty + recvDelta;
@@ -355,7 +350,7 @@ function buildMovement(
   notes?: string
 ): InventoryMovement {
   const before = getEffectiveStock(locationId, it.inventoryItemId) - signedQty;
-  const after  = before + signedQty;
+  const after = before + signedQty;
   return {
     id: crypto.randomUUID(),
     ts: new Date().toISOString(),

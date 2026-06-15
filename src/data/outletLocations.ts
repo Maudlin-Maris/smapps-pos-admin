@@ -1,6 +1,6 @@
 export interface OutletLocation {
   id: string;
-  outletId: number;
+  outletId: number | string;
   name: string;
   description?: string;
   createdAt: string;
@@ -28,7 +28,7 @@ export function saveOutletLocations(list: OutletLocation[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
-export function buildLocationMenuUrl(outletId: number, locationId: string): string {
+export function buildLocationMenuUrl(outletId: number | string, locationId: string): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   return `${origin}/menu/${outletId}/${locationId}`;
 }

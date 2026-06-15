@@ -28,7 +28,8 @@ import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageChec
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/currency";
 import type { MenuItem } from "./MenuItemForm";
-import type { Outlet } from "@/data/outlets";
+import type { Outlet } from "@/lib/types/outlet";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
 
 interface MenuListProps {
   items: MenuItem[];
@@ -58,7 +59,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (document.activeElement && document.activeElement !== inputRef.current &&
-        (document.activeElement as HTMLElement).tagName === "INPUT") return;
+      (document.activeElement as HTMLElement).tagName === "INPUT") return;
     if (e.key === "Enter" && bufferRef.current.length >= 4) {
       setSearch(bufferRef.current);
       bufferRef.current = "";
@@ -93,10 +94,10 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
           (decodedText: string) => {
             setSearch(decodedText);
             toast.success("Barcode scanned!");
-            scanner.stop().catch(() => {});
+            scanner.stop().catch(() => { });
             setCameraOpen(false);
           },
-          () => {}
+          () => { }
         );
       } catch {
         toast.error("Camera access denied or not available");
@@ -106,12 +107,12 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
     const timer = setTimeout(initScanner, 300);
     return () => {
       clearTimeout(timer);
-      if (scanner) scanner.stop().catch(() => {});
+      if (scanner) scanner.stop().catch(() => { });
     };
   }, [cameraOpen]);
 
   const stopCamera = () => {
-    if (html5QrCodeRef.current) html5QrCodeRef.current.stop().catch(() => {});
+    if (html5QrCodeRef.current) html5QrCodeRef.current.stop().catch(() => { });
     setCameraOpen(false);
   };
 
@@ -446,31 +447,14 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
           </Table>
         </div>
 
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border text-sm">
-          <span className="text-muted-foreground text-xs">
-            {filtered.length > 0 ? `${startIdx + 1}–${Math.min(startIdx + rowsPerPage, filtered.length)} of ${filtered.length}` : "0 items"}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-              let page: number;
-              if (totalPages <= 5) page = i + 1;
-              else if (safePage <= 3) page = i + 1;
-              else if (safePage >= totalPages - 2) page = totalPages - 4 + i;
-              else page = safePage - 2 + i;
-              return (
-                <Button key={page} variant={safePage === page ? "default" : "outline"} size="icon" className="h-8 w-8" onClick={() => setCurrentPage(page)}>
-                  {page}
-                </Button>
-              );
-            })}
-            <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <ResuablePagination
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={setRowsPerPage}
+        />
       </Card>
 
       {/* Camera Scanner Dialog */}

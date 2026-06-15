@@ -4,6 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  useCreateInventoryCategory,
+  useUpdateInventoryCategory,
+  useDeleteInventoryCategory,
+} from "@/services/api/inventory/category";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -37,14 +42,18 @@ const defaultCategories: InventoryCategory[] = [
 
 interface Props {
   categories: InventoryCategory[];
-  setCategories: React.Dispatch<React.SetStateAction<InventoryCategory[]>>;
+  onMutate: () => void;
 }
 
-export default function InventoryCategoryManager({ categories, setCategories }: Props) {
+export default function InventoryCategoryManager({ categories, onMutate }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryCategory | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
   const [search, setSearch] = useState("");
+
+  const createCategoryMutation = useCreateInventoryCategory();
+  const updateCategoryMutation = useUpdateInventoryCategory();
+  const deleteCategoryMutation = useDeleteInventoryCategory();
 
   const openNew = () => {
     setEditing(null);
@@ -58,29 +67,44 @@ export default function InventoryCategoryManager({ categories, setCategories }: 
     setOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) {
       toast.error("Category name is required");
       return;
     }
-    if (editing) {
-      setCategories((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, ...form } : c))
-      );
-      toast.success("Category updated");
-    } else {
-      setCategories((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), name: form.name, description: form.description, itemCount: 0 },
-      ]);
-      toast.success("Category added");
+    try {
+      if (editing) {
+        await updateCategoryMutation.trigger({
+          id: editing.id,
+          payload: {
+            name: form.name,
+            description: form.description,
+          }
+        });
+        toast.success("Category updated");
+      } else {
+        await createCategoryMutation.trigger({
+          name: form.name,
+          description: form.description,
+          sortOrder: 0,
+        });
+        toast.success("Category added");
+      }
+      onMutate();
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to save category");
     }
-    setOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
-    toast.success("Category deleted");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCategoryMutation.trigger(id);
+      toast.success("Category deleted");
+      onMutate();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to delete category");
+    }
   };
 
   const filtered = categories.filter((c) =>
@@ -119,10 +143,10 @@ export default function InventoryCategoryManager({ categories, setCategories }: 
               <Badge variant="secondary" className="text-xs shrink-0">{cat.itemCount} items</Badge>
             </div>
             <div className="flex gap-1 mt-3 justify-end">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cat)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cat)} disabled={deleteCategoryMutation.isMutating}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(cat.id)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(cat.id)} disabled={deleteCategoryMutation.isMutating}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -152,7 +176,9 @@ export default function InventoryCategoryManager({ categories, setCategories }: 
           </div>
           <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editing ? "Update" : "Add"}</Button>
+            <Button onClick={handleSave} disabled={createCategoryMutation.isMutating || updateCategoryMutation.isMutating}>
+              {createCategoryMutation.isMutating || updateCategoryMutation.isMutating ? "Saving..." : editing ? "Update" : "Add"}
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

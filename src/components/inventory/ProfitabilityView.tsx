@@ -10,7 +10,7 @@ import { computeProfitability } from "@/lib/profitability";
 import type { CompositeItem } from "./CompositeItemForm";
 import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
 
@@ -50,6 +50,7 @@ export default function ProfitabilityView({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const { data: outlets = [] } = useGetOutlets();
 
   const isAll = selectedOutletId === "all";
   const visibleOutlets = isAll ? outlets : outlets.filter((o) => o.id === selectedOutletId);

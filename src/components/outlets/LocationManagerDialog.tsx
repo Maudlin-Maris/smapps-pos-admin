@@ -30,7 +30,7 @@ import {
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  outletId: number;
+  outletId: number | string;
   outletName: string;
 }
 
@@ -52,7 +52,7 @@ export default function LocationManagerDialog({ open, onOpenChange, outletId, ou
   }, [open]);
 
   const locations = useMemo(
-    () => all.filter((l) => l.outletId === outletId),
+    () => all.filter((l) => String(l.outletId) === String(outletId)),
     [all, outletId]
   );
 

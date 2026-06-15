@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Building2, Wallet, Pencil } from "lucide-react";
+import { Upload, Building2, Wallet, Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { businessTypeList } from "@/data/businessTypes";
 
@@ -53,9 +53,10 @@ interface OutletFormDialogProps {
   mode: "add" | "edit";
   initialData?: Partial<OutletFormData>;
   onSubmit: (data: OutletFormData) => void;
+  isSubmitting?: boolean;
 }
 
-export default function OutletFormDialog({ open, onOpenChange, mode, initialData, onSubmit }: OutletFormDialogProps) {
+export default function OutletFormDialog({ open, onOpenChange, mode, initialData, onSubmit, isSubmitting = false }: OutletFormDialogProps) {
   const [form, setForm] = useState<OutletFormData>(emptyForm);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
@@ -82,7 +83,6 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
       return;
     }
     onSubmit(form);
-    onOpenChange(false);
   };
 
   const update = (key: string, value: string | boolean) =>
@@ -248,8 +248,11 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit}>{isEdit ? "Save Changes" : "Create Outlet"}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEdit ? "Save Changes" : "Create Outlet"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

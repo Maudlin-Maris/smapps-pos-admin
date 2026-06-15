@@ -10,19 +10,63 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Package, Trash2, Pencil, Gift, Tag, ArrowRightLeft, ChevronDown, ChevronRight, X } from "lucide-react";
+import { Plus, Search, Package, Trash2, Pencil, Gift, Tag, ArrowRightLeft, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { outlets } from "@/data/outlets";
 import { posProducts, type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
-import { promoBundles as initialBundles, type PromoBundle, type BundleItem, type BundlePricingType, type SwapOption } from "@/data/promoBundles";
+import { type PromoBundle, type BundleItem, type BundlePricingType } from "@/data/promoBundles";
+
+import { useGetOutlets } from "@/services/api/outlets";
+import {
+  useGetPromoBundles,
+  useCreatePromoBundle,
+  useDeletePromoBundle,
+  useUpdateBundleStatus,
+  useUpdatePromoBundle,
+} from "@/services/api/catalog/promo-bundle";
+import type { ApiPromoBundle } from "@/lib/types/promo-bundle";
+import type { Outlet } from "@/lib/types/outlet";
 
 export default function PromoBundleManagement() {
-  const [bundles, setBundles] = useState<PromoBundle[]>(initialBundles);
   const [selectedOutlet, setSelectedOutlet] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [editingBundle, setEditingBundle] = useState<PromoBundle | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  const { data: outletsData, isLoading: isOutletsLoading } = useGetOutlets();
+  const outlets = outletsData || [];
+
+  const { data: listData, isLoading: isBundlesLoading, mutate } = useGetPromoBundles(
+    selectedOutlet !== "all" ? { outletId: selectedOutlet } : undefined
+  );
+
+  const { trigger: triggerCreate, isMutating: isCreatingBundle } = useCreatePromoBundle();
+  const { trigger: triggerUpdate, isMutating: isUpdatingBundle } = useUpdatePromoBundle(editingBundle?.id);
+
+  const mapApiBundleToLocal = (apiBundle: ApiPromoBundle): PromoBundle => {
+    return {
+      id: apiBundle.id,
+      name: apiBundle.name,
+      description: apiBundle.description || "",
+      outletId: apiBundle.outletId,
+      items: apiBundle.items.map((i) => ({
+        productId: i.catalogItemId,
+        productName: i.name || "Item",
+        quantity: i.quantity,
+        swappable: false,
+        swapOptions: [],
+      })),
+      pricingType: "fixed",
+      pricingValue: apiBundle.price,
+      originalPrice: apiBundle.price,
+      bundlePrice: apiBundle.price,
+      status: apiBundle.status,
+    };
+  };
+
+  const bundles = useMemo(() => {
+    return (listData?.data || []).map(mapApiBundleToLocal);
+  }, [listData]);
 
   const filtered = useMemo(() => {
     return bundles.filter(b => {
@@ -32,29 +76,37 @@ export default function PromoBundleManagement() {
     });
   }, [bundles, selectedOutlet, search]);
 
-  const handleSave = (bundle: PromoBundle) => {
-    setBundles(prev => {
-      const idx = prev.findIndex(b => b.id === bundle.id);
-      if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx] = bundle;
-        return updated;
+  const handleSave = async (bundle: PromoBundle) => {
+    const isEdit = editingBundle && !editingBundle.id.startsWith("bundle-");
+    const payload = {
+      outletId: bundle.outletId,
+      name: bundle.name,
+      description: bundle.description,
+      price: bundle.bundlePrice,
+      status: bundle.status,
+      items: bundle.items.map((item) => ({
+        catalogItemId: item.productId,
+        quantity: item.quantity,
+      })),
+    };
+
+    try {
+      if (isEdit && editingBundle) {
+        await triggerUpdate(payload);
+        toast.success(`Bundle "${bundle.name}" updated`);
+      } else {
+        await triggerCreate(payload);
+        toast.success(`Bundle "${bundle.name}" created`);
       }
-      return [...prev, bundle];
-    });
-    setEditingBundle(null);
-    setIsCreating(false);
-    toast.success(`Bundle "${bundle.name}" saved`);
+      mutate();
+      setEditingBundle(null);
+      setIsCreating(false);
+    } catch (e) {
+      // toast shown by onError in the hook
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setBundles(prev => prev.filter(b => b.id !== id));
-    toast.success("Bundle deleted");
-  };
-
-  const handleToggleStatus = (id: string) => {
-    setBundles(prev => prev.map(b => b.id === id ? { ...b, status: b.status === "active" ? "inactive" : "active" } : b));
-  };
+  const isLoading = isBundlesLoading || isOutletsLoading;
 
   return (
     <div className="space-y-6">
@@ -68,7 +120,7 @@ export default function PromoBundleManagement() {
             Create product bundles and sell them at a discounted package price
           </p>
         </div>
-        <Button onClick={() => { setIsCreating(true); setEditingBundle(null); }}>
+        <Button onClick={() => { setIsCreating(true); setEditingBundle(null); }} disabled={isLoading}>
           <Plus className="w-4 h-4 mr-1" /> Create Bundle
         </Button>
       </div>
@@ -76,9 +128,9 @@ export default function PromoBundleManagement() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bundles..." className="pl-10" />
+          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bundles..." className="pl-10" disabled={isLoading} />
         </div>
-        <Select value={selectedOutlet} onValueChange={setSelectedOutlet}>
+        <Select value={selectedOutlet} onValueChange={setSelectedOutlet} disabled={isLoading}>
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All Outlets" />
           </SelectTrigger>
@@ -89,7 +141,12 @@ export default function PromoBundleManagement() {
         </Select>
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-dashed rounded-lg">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
+          <p className="text-sm text-muted-foreground">Loading promo bundles...</p>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Package className="w-12 h-12 mb-3 opacity-30" />
           <p className="font-medium">No bundles found</p>
@@ -97,79 +154,22 @@ export default function PromoBundleManagement() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(bundle => {
-            const outlet = outlets.find(o => o.id === bundle.outletId);
-            const savings = bundle.originalPrice - bundle.bundlePrice;
-            const savingsPercent = bundle.originalPrice > 0 ? Math.round((savings / bundle.originalPrice) * 100) : 0;
-            const swappableCount = bundle.items.filter(i => i.swappable && i.swapOptions && i.swapOptions.length > 0).length;
-            return (
-              <Card key={bundle.id} className="relative overflow-hidden">
-                {bundle.status === "inactive" && (
-                  <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center">
-                    <Badge variant="secondary" className="text-sm">Inactive</Badge>
-                  </div>
-                )}
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{bundle.name}</h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">{outlet?.name}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingBundle(bundle)}>
-                        <Pencil className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(bundle.id)}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-muted-foreground mb-3">{bundle.description}</p>
-
-                  <div className="space-y-1.5 mb-3">
-                    {bundle.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
-                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">{item.quantity}</span>
-                        <span className="text-foreground">{item.productName}</span>
-                        {item.variantName && <span className="text-muted-foreground text-xs">({item.variantName})</span>}
-                        {item.swappable && item.swapOptions && item.swapOptions.length > 0 && (
-                          <ArrowRightLeft className="w-3 h-3 text-primary/60" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-
-                  {swappableCount > 0 && (
-                    <p className="text-[11px] text-primary/70 mb-3">
-                      <ArrowRightLeft className="w-3 h-3 inline mr-1" />
-                      {swappableCount} swappable slot{swappableCount > 1 ? "s" : ""}
-                    </p>
-                  )}
-
-                  <div className="flex items-end justify-between pt-3 border-t border-border">
-                    <div>
-                      <p className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</p>
-                      <p className="text-lg font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
-                        <Tag className="w-3 h-3 mr-1" />
-                        Save {savingsPercent}%
-                      </Badge>
-                      <Switch checked={bundle.status === "active"} onCheckedChange={() => handleToggleStatus(bundle.id)} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {filtered.map(bundle => (
+            <PromoBundleCard
+              key={bundle.id}
+              bundle={bundle}
+              outlets={outlets}
+              onEdit={setEditingBundle}
+              onRefresh={mutate}
+            />
+          ))}
         </div>
       )}
 
       <BundleFormDialog
         open={isCreating || !!editingBundle}
         bundle={editingBundle}
+        isSaving={isCreatingBundle || isUpdatingBundle}
         onClose={() => { setIsCreating(false); setEditingBundle(null); }}
         onSave={handleSave}
       />
@@ -177,15 +177,124 @@ export default function PromoBundleManagement() {
   );
 }
 
+// ─── Promo Bundle Card Subcomponent ──────────────────────────
+interface PromoBundleCardProps {
+  bundle: PromoBundle;
+  outlets: Outlet[];
+  onEdit: (bundle: PromoBundle) => void;
+  onRefresh: () => void;
+}
+
+function PromoBundleCard({ bundle, outlets, onEdit, onRefresh }: PromoBundleCardProps) {
+  const { trigger: triggerDelete, isMutating: isDeleting } = useDeletePromoBundle(bundle.id);
+  const { trigger: triggerUpdateStatus, isMutating: isUpdatingStatus } = useUpdateBundleStatus(bundle.id);
+
+  const outlet = outlets.find(o => o.id === bundle.outletId);
+  const savings = bundle.originalPrice - bundle.bundlePrice;
+  const savingsPercent = bundle.originalPrice > 0 ? Math.round((savings / bundle.originalPrice) * 100) : 0;
+  const swappableCount = bundle.items.filter(i => i.swappable && i.swapOptions && i.swapOptions.length > 0).length;
+
+  const handleDelete = async () => {
+    try {
+      await triggerDelete(undefined);
+      toast.success("Bundle deleted");
+      onRefresh();
+    } catch (e) {
+      // Handled
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    const nextStatus = bundle.status === "active" ? "inactive" : "active";
+    try {
+      await triggerUpdateStatus({ status: nextStatus });
+      toast.success(`Bundle status updated to ${nextStatus}`);
+      onRefresh();
+    } catch (e) {
+      // Handled
+    }
+  };
+
+  const isCardMutating = isDeleting || isUpdatingStatus;
+
+  return (
+    <Card className="relative overflow-hidden">
+      {isCardMutating && (
+        <div className="absolute inset-0 bg-background/60 z-20 flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
+      {bundle.status === "inactive" && (
+        <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center">
+          <Badge variant="secondary" className="text-sm">Inactive</Badge>
+        </div>
+      )}
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="font-semibold text-foreground">{bundle.name}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{outlet?.name}</p>
+          </div>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(bundle)} disabled={isCardMutating}>
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete} disabled={isCardMutating}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        <p className="text-sm text-muted-foreground mb-3">{bundle.description}</p>
+
+        <div className="space-y-1.5 mb-3">
+          {bundle.items.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-2 text-sm">
+              <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">{item.quantity}</span>
+              <span className="text-foreground">{item.productName}</span>
+              {item.variantName && <span className="text-muted-foreground text-xs">({item.variantName})</span>}
+              {item.swappable && item.swapOptions && item.swapOptions.length > 0 && (
+                <ArrowRightLeft className="w-3 h-3 text-primary/60" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {swappableCount > 0 && (
+          <p className="text-[11px] text-primary/70 mb-3">
+            <ArrowRightLeft className="w-3 h-3 inline mr-1" />
+            {swappableCount} swappable slot{swappableCount > 1 ? "s" : ""}
+          </p>
+        )}
+
+        <div className="flex items-end justify-between pt-3 border-t border-border">
+          <div>
+            <p className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</p>
+            <p className="text-lg font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+              <Tag className="w-3 h-3 mr-1" />
+              Save {savingsPercent}%
+            </Badge>
+            <Switch checked={bundle.status === "active"} onCheckedChange={handleToggleStatus} disabled={isCardMutating} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Bundle Form Dialog ────────────────────────────────────
 interface BundleFormDialogProps {
   open: boolean;
   bundle: PromoBundle | null;
+  isSaving: boolean;
   onClose: () => void;
   onSave: (bundle: PromoBundle) => void;
 }
 
-function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogProps) {
+function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFormDialogProps) {
   const isEdit = !!bundle;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -196,6 +305,9 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
   const [productSearch, setProductSearch] = useState("");
   const [expandedSwapIdx, setExpandedSwapIdx] = useState<number | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
+
+  const { data: outletsData } = useGetOutlets();
+  const outlets = outletsData || [];
 
   // Reset form when dialog opens
   const handleOpenChange = (isOpen: boolean) => {
@@ -358,7 +470,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
   };
 
   return (
-    <Sheet open={open} onOpenChange={handleOpenChange}>
+    <Sheet open={open} onOpenChange={(o) => !isSaving && handleOpenChange(o)}>
       <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
         <SheetHeader className="flex-shrink-0 p-4 sm:p-6 pb-0">
           <SheetTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</SheetTitle>
@@ -371,11 +483,11 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Bundle Name *</Label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Burger Combo Meal" />
+                <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Burger Combo Meal" disabled={isSaving} />
               </div>
               <div className="space-y-2">
                 <Label>Outlet *</Label>
-                <Select value={outletId} onValueChange={v => { setOutletId(v); setItems([]); }}>
+                <Select value={outletId} onValueChange={v => { setOutletId(v); setItems([]); }} disabled={isSaving}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {outlets.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
@@ -385,7 +497,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what's in this bundle..." rows={2} />
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what's in this bundle..." rows={2} disabled={isSaving} />
             </div>
 
             {/* Bundle Items with Modifier Groups */}
@@ -418,16 +530,16 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                             <p className="text-xs text-muted-foreground">{formatNaira(price)} each</p>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity - 1)}>
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity - 1)} disabled={isSaving}>
                               <span className="text-sm">−</span>
                             </Button>
                             <span className="text-sm font-semibold w-6 text-center">{item.quantity}</span>
-                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity + 1)}>
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity + 1)} disabled={isSaving}>
                               <span className="text-sm">+</span>
                             </Button>
                           </div>
                           <p className="text-sm font-semibold w-20 text-right">{formatNaira(price * item.quantity)}</p>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(idx)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(idx)} disabled={isSaving}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
@@ -440,6 +552,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                                 checked={!!item.swappable}
                                 onCheckedChange={() => toggleSwappable(idx)}
                                 className="scale-[0.85]"
+                                disabled={isSaving}
                               />
                               <span className="text-xs font-medium text-foreground">Allow swap</span>
                               {item.swappable && swapCount > 0 && (
@@ -457,6 +570,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                                   setExpandedSwapIdx(isExpanded ? null : idx);
                                   setSwapSearch("");
                                 }}
+                                disabled={isSaving}
                               >
                                 <ArrowRightLeft className="w-3 h-3" />
                                 {isExpanded ? "Close" : "Configure"}
@@ -481,6 +595,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                                         {opt.variantName && <span className="text-muted-foreground"> · {opt.variantName}</span>}
                                       </span>
                                       <button
+                                        disabled={isSaving}
                                         onClick={() => removeSwapOption(idx, optIdx)}
                                         className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-destructive/20 transition-colors"
                                       >
@@ -499,6 +614,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                                   onChange={e => setSwapSearch(e.target.value)}
                                   placeholder="Search products to add as swap option..."
                                   className="pl-8 h-8 text-sm"
+                                  disabled={isSaving}
                                 />
                               </div>
                               {swapSearch && swapCandidateProducts.length > 0 && (
@@ -511,7 +627,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                                           return (
                                             <button
                                               key={v.id}
-                                              disabled={alreadyAdded}
+                                              disabled={alreadyAdded || isSaving}
                                               className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
                                               onClick={() => addSwapOption(idx, product, v.id, v.name)}
                                             >
@@ -527,7 +643,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                                           const alreadyAdded = (item.swapOptions || []).some(o => o.productId === product.id && !o.variantId);
                                           return (
                                             <button
-                                              disabled={alreadyAdded}
+                                              disabled={alreadyAdded || isSaving}
                                               className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
                                               onClick={() => addSwapOption(idx, product)}
                                             >
@@ -562,7 +678,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                     onChange={e => setProductSearch(e.target.value)}
                     placeholder={outletId ? "Search products to add..." : "Select an outlet first"}
                     className="pl-10"
-                    disabled={!outletId}
+                    disabled={!outletId || isSaving}
                   />
                 </div>
                 {productSearch && availableProducts.length > 0 && (
@@ -575,6 +691,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                               key={v.id}
                               className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent text-left text-sm transition-colors"
                               onClick={() => addVariant(product, v.id, v.name)}
+                              disabled={isSaving}
                             >
                               <span className="text-foreground">{product.name} · <span className="text-muted-foreground">{v.name}</span></span>
                               <span className="text-muted-foreground">{formatNaira(v.price)}</span>
@@ -584,6 +701,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                           <button
                             className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent text-left text-sm transition-colors"
                             onClick={() => addProduct(product)}
+                            disabled={isSaving}
                           >
                             <span className="text-foreground">{product.name}</span>
                             <span className="text-muted-foreground">{formatNaira(product.price)}</span>
@@ -602,7 +720,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Pricing Method</Label>
-                  <Select value={pricingType} onValueChange={v => setPricingType(v as BundlePricingType)}>
+                  <Select value={pricingType} onValueChange={v => setPricingType(v as BundlePricingType)} disabled={isSaving}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fixed">Fixed Price</SelectItem>
@@ -619,6 +737,7 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
                     placeholder={pricingType === "fixed" ? "e.g. 7500" : "e.g. 15"}
                     min={0}
                     max={pricingType === "percentage_discount" ? 100 : undefined}
+                    disabled={isSaving}
                   />
                 </div>
               </div>
@@ -649,8 +768,8 @@ function BundleFormDialog({ open, bundle, onClose, onSave }: BundleFormDialogPro
         </div>
 
         <div className="flex-shrink-0 p-4 sm:p-6 pt-3 border-t border-border flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
-          <Button onClick={handleSave} className="w-full sm:w-auto">{isEdit ? "Update Bundle" : "Create Bundle"}</Button>
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto" disabled={isSaving}>Cancel</Button>
+          <Button onClick={handleSave} className="w-full sm:w-auto" isLoading={isSaving}>{isEdit ? "Update Bundle" : "Create Bundle"}</Button>
         </div>
       </SheetContent>
     </Sheet>

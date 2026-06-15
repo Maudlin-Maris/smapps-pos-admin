@@ -25,7 +25,7 @@ const serviceOptionLabels: Record<string, string> = {
 interface FeeManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  outletId: number;
+  outletId: number | string;
   outletName: string;
   businessType: string;
   fees: FeeFormData[];

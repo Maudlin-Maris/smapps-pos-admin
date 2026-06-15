@@ -42,7 +42,7 @@ import type { InventoryItem, ItemConversion } from "./InventoryItemForm";
 import { RETAIL_BUSINESS_TYPES, BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { InventoryCategory } from "./InventoryCategoryManager";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 
 interface Props {
   open: boolean;
@@ -313,7 +313,8 @@ function rowsToInventoryItems(
   rows: ParsedRow[],
   categories: InventoryCategory[],
   units: MeasuringUnit[],
-  outletId: string
+  outletId: string,
+  outlets: any[]
 ): InventoryItem[] {
   const items: InventoryItem[] = [];
   let current: InventoryItem | null = null;
@@ -420,6 +421,7 @@ export default function BulkImportInventoryDialog({
     selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : ""
   );
   const fileRef = useRef<HTMLInputElement>(null);
+  const { data: outlets = [] } = useGetOutlets();
 
   const headerRows = useMemo(() => parsedRows.filter((r) => !r.isContinuation), [parsedRows]);
   const totalConversions = useMemo(
@@ -436,8 +438,8 @@ export default function BulkImportInventoryDialog({
 
   const importableCount = useMemo(
     () =>
-      rowsToInventoryItems(parsedRows, categories, units, targetOutlet || "preview").length,
-    [parsedRows, categories, units, targetOutlet]
+      rowsToInventoryItems(parsedRows, categories, units, targetOutlet || "preview", outlets).length,
+    [parsedRows, categories, units, targetOutlet, outlets]
   );
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -494,7 +496,7 @@ export default function BulkImportInventoryDialog({
       toast.error("Select an outlet to assign these items to");
       return;
     }
-    const items = rowsToInventoryItems(parsedRows, categories, units, targetOutlet);
+    const items = rowsToInventoryItems(parsedRows, categories, units, targetOutlet, outlets);
     if (items.length === 0) {
       toast.error("No valid items to import. Fix the errors above first.");
       return;

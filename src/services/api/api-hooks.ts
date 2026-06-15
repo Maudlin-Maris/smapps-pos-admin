@@ -6,7 +6,7 @@ import useSWRMutation from "swr/mutation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-import { Pagination } from "@/lib/types/paginated-response";
+import { Meta } from "@/lib/types/paginated-response";
 import { createUrlWithParams } from "@/lib/utils";
 import type { FetcherResponse } from "swr/_internal";
 import type { SWRInfiniteConfiguration } from "swr/infinite";
@@ -98,7 +98,7 @@ export const useApiMutation = <TPayload = unknown, TResponse = unknown>(
   );
 };
 
-export const useApiInfinite = <TData extends { pagination: Pagination }>(
+export const useApiInfinite = <TData extends { pagination?: Meta; meta?: Meta }>(
   url: string | null,
   params?: Record<string, string | number | boolean | undefined>,
   pageLimit = DEFAULT_PAGE_SIZE,
@@ -110,10 +110,11 @@ export const useApiInfinite = <TData extends { pagination: Pagination }>(
   const { data, mutate, error, size, setSize, isLoading, isValidating } =
     useSWRInfinite<TData, APIError>(
       (pageIndex, previousPageData: TData | undefined) => {
+        const prevMeta = previousPageData?.pagination || previousPageData?.meta;
         if (
-          (previousPageData &&
-            previousPageData?.pagination?.current_page ===
-              previousPageData?.pagination?.last_page) ||
+          (prevMeta &&
+            prevMeta.current_page ===
+            prevMeta.last_page) ||
           !url
         )
           return null;
@@ -131,11 +132,14 @@ export const useApiInfinite = <TData extends { pagination: Pagination }>(
   const firstPage = data?.[0];
   const lastPage = data?.[data.length - 1];
 
-  const isDataFound = Boolean(firstPage && firstPage?.pagination?.total !== 0);
+  const firstMeta = firstPage?.pagination || firstPage?.meta;
+  const lastMeta = lastPage?.pagination || lastPage?.meta;
+
+  const isDataFound = Boolean(firstPage && firstMeta?.total !== 0);
 
   const reachedLastPage = Boolean(
     lastPage &&
-    lastPage?.pagination?.current_page === lastPage?.pagination?.last_page,
+    lastMeta?.current_page === lastMeta?.last_page,
   );
 
   const showFetchingSpinner =

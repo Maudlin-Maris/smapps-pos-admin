@@ -22,14 +22,14 @@ import { format } from "date-fns";
 import {
   ClipboardCheck, Search, RefreshCw, FileBarChart, AlertTriangle,
   CheckCircle2, Clock, Layers, History, ArrowDownUp, MapPin, HelpCircle,
-  Play, Trash2, SkipForward, X,
+  Play, Trash2, SkipForward, X, Loader2,
 } from "lucide-react";
 
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 import {
   type DailyInventorySnapshot,
   type InventoryReconciliation,
@@ -41,20 +41,19 @@ import {
   RECONCILIATION_STATUS_LABELS,
 } from "@/data/snapshotTypes";
 import {
-  approveReconciliation,
-  computeVarianceSummary,
-  createReconciliation,
-  deleteReconciliation,
-  generateSnapshotsForDay,
   isoDate,
   listMovementsForSnapshot,
-  listReconciliations,
-  querySnapshots,
-  rejectReconciliation,
-  saveReconciliationDraft,
-  seedSnapshotsIfEmpty,
-  submitReconciliation,
 } from "@/lib/inventory-snapshots-store";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
+import {
+  useGetReconciliations,
+  useCreateReconciliation,
+  useDraftReconciliation,
+  useSubmitReconciliation,
+  useApproveReconciliation,
+  useRejectReconciliation,
+  useDeleteReconciliation,
+} from "@/services/api/inventory/reconciliations";
 import { formatNaira } from "@/lib/currency";
 
 // Inline category list (mirrors InventoryCategoryManager seed)
@@ -78,9 +77,9 @@ const reconStatusColor: Record<ReconciliationStatus, string> = {
 };
 
 export default function InventoryHistory() {
+  const { data: outlets = [] } = useGetOutlets();
   const [tab, setTab] = useState<Tab>("history");
   const [tick, setTick] = useState(0);
-  const refresh = () => setTick((t) => t + 1);
 
   // Filters (shared)
   const today = isoDate(new Date());
@@ -91,6 +90,22 @@ export default function InventoryHistory() {
   const [fromDate, setFromDate] = useState(fourteenAgo);
   const [toDate, setToDate] = useState(today);
   const [varianceOnly, setVarianceOnly] = useState(false);
+
+  const { data: reconsResponse, isLoading: isReconsLoading, mutate: mutateRecons } = useGetReconciliations({
+    outletId: locationId === "all" ? undefined : locationId,
+  });
+
+  const { data: inventoryResponse, mutate: mutateInventory } = useGetInventoryItems({
+    outletId: locationId === "all" ? undefined : locationId,
+    categoryId: categoryId === "all" ? undefined : categoryId,
+    per_page: 1000,
+  });
+
+  const refresh = () => {
+    setTick((t) => t + 1);
+    mutateRecons();
+    mutateInventory();
+  };
 
   // Drill-down + counting modals
   const [drillSnap, setDrillSnap] = useState<DailyInventorySnapshot | null>(null);
@@ -103,7 +118,6 @@ export default function InventoryHistory() {
   const [confirmDelete, setConfirmDelete] = useState<InventoryReconciliation | null>(null);
 
   useEffect(() => {
-    seedSnapshotsIfEmpty(14);
     const onChange = () => refresh();
     window.addEventListener("snapshots:changed", onChange);
     window.addEventListener("transfers:changed", onChange);
@@ -118,35 +132,85 @@ export default function InventoryHistory() {
   }), [locationId, categoryId, search, fromDate, toDate, varianceOnly]);
 
   const snapshots = useMemo(() => {
-    void tick;
-    return querySnapshots(filter)
+    if (!inventoryResponse?.data) return [];
+    
+    const items = inventoryResponse.data;
+    const mapped = items.map((i) => ({
+      id: i.id,
+      date: today,
+      outletId: locationId === "all" ? (outlets[0]?.id || "outlet-1") : locationId,
+      inventoryItemId: i.id,
+      itemName: i.name,
+      sku: i.sku,
+      categoryId: i.categoryId || categoryId,
+      unit: "unit",
+      unitCost: i.costPrice,
+      openingQty: i.quantity,
+      receivedQty: 0,
+      soldQty: 0,
+      returnedQty: 0,
+      wastedQty: 0,
+      adjustedQty: 0,
+      transferredInQty: 0,
+      transferredOutQty: 0,
+      expectedClosingQty: i.quantity,
+      actualCountedQty: i.quantity,
+      varianceQty: 0,
+      varianceCost: 0,
+      generatedAt: new Date().toISOString(),
+      source: "AUTO" as const,
+    }));
+    
+    return mapped
+      .filter((s) => {
+        if (!search.trim()) return true;
+        const q = search.toLowerCase();
+        return s.itemName.toLowerCase().includes(q) || s.sku.toLowerCase().includes(q);
+      })
       .sort((a, b) => b.date.localeCompare(a.date) || a.itemName.localeCompare(b.itemName));
-  }, [filter, tick]);
+  }, [inventoryResponse, locationId, categoryId, search, today, outlets]);
 
   const reconciliations = useMemo(() => {
-    void tick;
-    return listReconciliations()
-      .filter((r) => locationId === "all" || r.outletId === locationId)
+    return (reconsResponse?.data || [])
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [locationId, tick]);
+  }, [reconsResponse]);
 
   const variance = useMemo(() => {
-    void tick;
-    return computeVarianceSummary(filter);
-  }, [filter, tick]);
+    const countedSnapshots = snapshots.filter((s) => s.varianceQty !== 0).length;
+    
+    const pendingReconciliations = reconciliations.filter(
+      (r) => r.status === "DRAFT" || r.status === "IN_REVIEW"
+    ).length;
+    
+    const totalVarianceCost = reconciliations.reduce((acc, r) => {
+      if (r.status === "APPROVED" || r.status === "POSTED") {
+        return acc + r.totals.varianceCost;
+      }
+      return acc;
+    }, 0);
+    
+    return {
+      countedSnapshots,
+      pendingReconciliations,
+      totalVarianceCost,
+    };
+  }, [snapshots, reconciliations]);
 
   const handleGenerateToday = () => {
-    generateSnapshotsForDay(today, locationId === "all" ? undefined : locationId);
-    toast.success("Snapshots regenerated for today");
+    mutateInventory();
+    toast.success("Inventory cache revalidated and updated");
   };
 
-  const handleDelete = (r: InventoryReconciliation) => {
+  const { trigger: triggerDeleteRecon, isMutating: isDeletingRecon } = useDeleteReconciliation();
+
+  const handleDelete = async (r: InventoryReconciliation) => {
     try {
-      deleteReconciliation(r.id);
+      await triggerDeleteRecon(r.id);
       toast.success(`Draft ${r.reference} deleted`);
       setConfirmDelete(null);
+      refresh();
     } catch (e: any) {
-      toast.error(e?.message ?? "Could not delete");
+      // Handled
     }
   };
 
@@ -252,12 +316,19 @@ export default function InventoryHistory() {
       )}
 
       {tab === "reconciliation" && (
-        <ReconciliationList
-          items={reconciliations}
-          onContinue={(r) => setCountSession({ mode: "continue", reconciliation: r })}
-          onReview={setReviewRecon}
-          onDelete={setConfirmDelete}
-        />
+        isReconsLoading ? (
+          <Card className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading stock counts...
+          </Card>
+        ) : (
+          <ReconciliationList
+            items={reconciliations}
+            onContinue={(r) => setCountSession({ mode: "continue", reconciliation: r })}
+            onReview={setReviewRecon}
+            onDelete={setConfirmDelete}
+          />
+        )
       )}
 
       {tab === "variance" && (
@@ -273,6 +344,7 @@ export default function InventoryHistory() {
       <ReconciliationReviewDialog
         recon={reviewRecon} onClose={() => setReviewRecon(null)}
         onContinue={(r) => { setReviewRecon(null); setCountSession({ mode: "continue", reconciliation: r }); }}
+        onChanged={refresh}
       />
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
@@ -704,6 +776,10 @@ function StockCountDialog({
   const open = !!session;
   const isContinue = session?.mode === "continue";
 
+  const { trigger: triggerCreateRecon, isMutating: isCreatingRecon } = useCreateReconciliation();
+  const { trigger: triggerDraftRecon, isMutating: isDraftingRecon } = useDraftReconciliation();
+  const { trigger: triggerSubmitRecon, isMutating: isSubmittingRecon } = useSubmitReconciliation();
+
   const [outletId, setOutletId] = useState<string>("");
   const [date, setDate] = useState<string>("");
   const [counts, setCounts] = useState<Record<string, LocalCount>>({});
@@ -711,6 +787,10 @@ function StockCountDialog({
   const [reconciliationId, setReconciliationId] = useState<string | null>(null);
   const [filter, setFilter] = useState<CountFilter>("all");
   const [search, setSearch] = useState("");
+
+  const { data: countInventoryRes } = useGetInventoryItems(
+    open && outletId ? { outletId, per_page: 1000 } : undefined
+  );
 
   // Initialize when opened
   useEffect(() => {
@@ -746,19 +826,62 @@ function StockCountDialog({
   const snapshots = useMemo(() => {
     if (!outletId || !date) return [] as DailyInventorySnapshot[];
     if (isContinue && session?.mode === "continue") {
-      // Build snapshot list matching the recon's lines
-      const r = session.reconciliation;
-      const all = querySnapshots({ locationId: outletId, fromDate: date, toDate: date });
-      const byId = new Map(all.map((s) => [s.id, s]));
-      return r.lines
-        .map((l) => byId.get(l.snapshotId))
-        .filter((s): s is DailyInventorySnapshot => !!s)
-        .sort((a, b) => a.itemName.localeCompare(b.itemName));
+      // Reconstruct snapshots directly from the reconciliation lines
+      return session.reconciliation.lines.map((l) => ({
+        id: l.snapshotId,
+        date: date,
+        outletId: outletId,
+        inventoryItemId: l.inventoryItemId,
+        itemName: l.itemName,
+        sku: l.sku,
+        categoryId: "",
+        unit: l.unit,
+        unitCost: l.unitCost,
+        openingQty: l.expectedQty,
+        receivedQty: 0,
+        soldQty: 0,
+        returnedQty: 0,
+        wastedQty: 0,
+        adjustedQty: 0,
+        transferredInQty: 0,
+        transferredOutQty: 0,
+        expectedClosingQty: l.expectedQty,
+        actualCountedQty: l.counted ? l.actualQty : null,
+        varianceQty: l.varianceQty,
+        varianceCost: l.varianceCost,
+        generatedAt: new Date().toISOString(),
+        source: "AUTO" as const,
+      })).sort((a, b) => a.itemName.localeCompare(b.itemName));
     }
-    let snaps = querySnapshots({ locationId: outletId, fromDate: date, toDate: date });
-    if (snaps.length === 0) snaps = generateSnapshotsForDay(date, outletId);
-    return snaps.sort((a, b) => a.itemName.localeCompare(b.itemName));
-  }, [outletId, date, isContinue, session]);
+    
+    // For new count sessions, build virtual snapshots from the live inventory list
+    if (!countInventoryRes?.data) return [] as DailyInventorySnapshot[];
+    return countInventoryRes.data.map((i) => ({
+      id: i.id, // snapshotId is mapped to inventory item id
+      date: date,
+      outletId: outletId,
+      inventoryItemId: i.id,
+      itemName: i.name,
+      sku: i.sku,
+      categoryId: i.categoryId || "",
+      unit: "unit",
+      unitCost: i.costPrice,
+      openingQty: i.quantity,
+      receivedQty: 0,
+      soldQty: 0,
+      returnedQty: 0,
+      wastedQty: 0,
+      adjustedQty: 0,
+      transferredInQty: 0,
+      transferredOutQty: 0,
+      expectedClosingQty: i.quantity,
+      actualCountedQty: null,
+      varianceQty: 0,
+      varianceCost: 0,
+      generatedAt: new Date().toISOString(),
+      source: "AUTO" as const,
+    })).sort((a, b) => a.itemName.localeCompare(b.itemName));
+  }, [outletId, date, isContinue, session, countInventoryRes]);
 
   const totals = useMemo(() => {
     let counted = 0, skipped = 0;
@@ -811,17 +934,19 @@ function StockCountDialog({
       };
     });
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     try {
       if (reconciliationId) {
-        const r = saveReconciliationDraft({
-          reconciliationId,
-          counts: collectCounts(),
-          notes,
+        const r = await triggerDraftRecon({
+          id: reconciliationId,
+          payload: {
+            counts: collectCounts(),
+            notes,
+          },
         });
         toast.success(`Draft ${r.reference} saved (${r.progress.counted}/${r.progress.total} counted)`);
       } else {
-        const r = createReconciliation({
+        const r = await triggerCreateRecon({
           outletId, date,
           counts: collectCounts(),
           notes,
@@ -831,26 +956,29 @@ function StockCountDialog({
       }
       onChanged();
     } catch (e: any) {
-      toast.error(e?.message ?? "Could not save draft");
+      // Handled
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (totals.counted === 0) { toast.error("Count at least one item before submitting"); return; }
     try {
       let id = reconciliationId;
       if (id) {
-        saveReconciliationDraft({ reconciliationId: id, counts: collectCounts(), notes });
+        await triggerDraftRecon({
+          id,
+          payload: { counts: collectCounts(), notes },
+        });
       } else {
-        const r = createReconciliation({ outletId, date, counts: collectCounts(), notes });
+        const r = await triggerCreateRecon({ outletId, date, counts: collectCounts(), notes });
         id = r.id;
       }
-      submitReconciliation(id!);
+      await triggerSubmitRecon(id!);
       toast.success("Count submitted for review");
       onOpenChange(false);
       onChanged();
     } catch (e: any) {
-      toast.error(e?.message ?? "Could not submit");
+      // Handled
     }
   };
 
@@ -1034,9 +1162,20 @@ function StockCountDialog({
         </div>
 
         <DialogFooter className="p-4 sm:p-6 pt-3 border-t gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          <Button variant="secondary" onClick={handleSaveDraft}>Save Draft</Button>
-          <Button onClick={handleSubmit} disabled={totals.counted === 0}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreatingRecon || isDraftingRecon || isSubmittingRecon}>Close</Button>
+          <Button
+            variant="secondary"
+            onClick={handleSaveDraft}
+            isLoading={isCreatingRecon || isDraftingRecon}
+            disabled={isSubmittingRecon}
+          >
+            Save Draft
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={totals.counted === 0 || isCreatingRecon || isDraftingRecon}
+            isLoading={isSubmittingRecon}
+          >
             Submit for Review
           </Button>
         </DialogFooter>
@@ -1046,19 +1185,46 @@ function StockCountDialog({
 }
 
 // ── Reconciliation review / approval dialog ──
-function ReconciliationReviewDialog({ recon, onClose, onContinue }:
+function ReconciliationReviewDialog({ recon, onClose, onContinue, onChanged }:
   {
     recon: InventoryReconciliation | null;
     onClose: () => void;
     onContinue: (r: InventoryReconciliation) => void;
+    onChanged?: () => void;
   }) {
   const [rejectReason, setRejectReason] = useState("");
+
+  const { trigger: triggerRejectRecon, isMutating: isRejectingRecon } = useRejectReconciliation();
+  const { trigger: triggerApproveRecon, isMutating: isApprovingRecon } = useApproveReconciliation();
 
   useEffect(() => { if (!recon) setRejectReason(""); }, [recon]);
 
   if (!recon) return null;
   const inReview = recon.status === "IN_REVIEW";
   const editable = recon.status === "DRAFT" || recon.status === "REJECTED";
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) { toast.error("Provide a reject reason"); return; }
+    try {
+      await triggerRejectRecon({ id: recon.id, reason: rejectReason.trim() });
+      toast.success("Count rejected — returned to drafter");
+      onClose();
+      onChanged?.();
+    } catch (e) {
+      // Handled
+    }
+  };
+
+  const handleApprove = async () => {
+    try {
+      await triggerApproveRecon(recon.id);
+      toast.success("Approved — adjustments posted to inventory");
+      onClose();
+      onChanged?.();
+    } catch (e) {
+      // Handled
+    }
+  };
 
   return (
     <Dialog open={!!recon} onOpenChange={(o) => !o && onClose()}>
@@ -1134,7 +1300,7 @@ function ReconciliationReviewDialog({ recon, onClose, onContinue }:
         )}
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose} disabled={isRejectingRecon || isApprovingRecon}>Close</Button>
           {editable && (
             <Button onClick={() => onContinue(recon)} className="gap-1">
               <Play className="h-3.5 w-3.5" /> Continue Count
@@ -1142,17 +1308,21 @@ function ReconciliationReviewDialog({ recon, onClose, onContinue }:
           )}
           {inReview && (
             <>
-              <Button variant="destructive" onClick={() => {
-                if (!rejectReason.trim()) { toast.error("Provide a reject reason"); return; }
-                rejectReconciliation(recon.id, rejectReason.trim());
-                toast.success("Count rejected — returned to drafter");
-                onClose();
-              }}>Reject Count</Button>
-              <Button onClick={() => {
-                approveReconciliation(recon.id);
-                toast.success("Approved — adjustments posted to inventory");
-                onClose();
-              }}>Approve &amp; Post</Button>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                isLoading={isRejectingRecon}
+                disabled={isApprovingRecon}
+              >
+                Reject Count
+              </Button>
+              <Button
+                onClick={handleApprove}
+                isLoading={isApprovingRecon}
+                disabled={isRejectingRecon}
+              >
+                Approve &amp; Post
+              </Button>
             </>
           )}
         </DialogFooter>

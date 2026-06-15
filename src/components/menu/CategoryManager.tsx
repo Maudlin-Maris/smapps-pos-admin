@@ -18,26 +18,24 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, FolderOpen, Tag } from "lucide-react";
+import { Plus, Edit, Trash2, FolderOpen, Tag, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCreateCategory, useUpdateCategory, useDeleteCategory } from "@/services/api/catalog/category";
 
-export interface Subcategory {
-  id: string;
-  name: string;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  subcategories: Subcategory[];
-}
+import type { Category, Subcategory } from "@/lib/types/category";
+export type { Category, Subcategory };
 
 interface CategoryManagerProps {
   categories: Category[];
-  onCategoriesChange: (categories: Category[]) => void;
+  onCategoriesChange?: (categories: Category[]) => void;
   selectedSubcategory: string | null;
   onSelectSubcategory: (sub: string | null) => void;
+  currentOutletId?: string;
+  onRefresh?: () => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoadingMore?: boolean;
 }
 
 export default function CategoryManager({
@@ -45,12 +43,21 @@ export default function CategoryManager({
   onCategoriesChange,
   selectedSubcategory,
   onSelectSubcategory,
+  currentOutletId,
+  onRefresh,
+  hasMore = false,
+  onLoadMore,
+  isLoadingMore = false,
 }: CategoryManagerProps) {
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [catName, setCatName] = useState("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const { trigger: triggerCreate, isMutating: isCreating } = useCreateCategory();
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateCategory(editingCategory?.id);
+  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteCategory(deleteTarget ?? undefined);
 
   // Category CRUD
   const openAddCategory = () => {
@@ -65,33 +72,52 @@ export default function CategoryManager({
     setCatDialogOpen(true);
   };
 
-  const saveCategory = () => {
+  const saveCategory = async () => {
     if (!catName.trim()) return;
-    if (editingCategory) {
-      // If the selected category was this one, update the selection to the new name
-      if (selectedSubcategory === editingCategory.name) {
-        onSelectSubcategory(catName.trim());
+    try {
+      if (editingCategory) {
+        if (selectedSubcategory === editingCategory.name) {
+          onSelectSubcategory(catName.trim());
+        }
+        await triggerUpdate({ name: catName.trim() });
+        toast.success("Category updated");
+        if (onCategoriesChange) {
+          onCategoriesChange(categories.map((c) => (c.id === editingCategory.id ? { ...c, name: catName.trim() } : c)));
+        }
+      } else {
+        await triggerCreate({
+          name: catName.trim(),
+          outletId: currentOutletId || "",
+          icon: "coffee",
+          sortOrder: categories.length + 1,
+        });
+        toast.success("Category created");
       }
-      onCategoriesChange(categories.map((c) => (c.id === editingCategory.id ? { ...c, name: catName.trim() } : c)));
-      toast.success("Category updated");
-    } else {
-      const newCat: Category = { id: crypto.randomUUID(), name: catName.trim(), subcategories: [] };
-      onCategoriesChange([...categories, newCat]);
-      toast.success("Category created");
+      onRefresh?.();
+      setCatDialogOpen(false);
+    } catch (e) {
+      // toast shown by onError in the hook
     }
-    setCatDialogOpen(false);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    const cat = categories.find((c) => c.id === deleteTarget);
-    if (cat && selectedSubcategory === cat.name) {
-      onSelectSubcategory(null);
+    try {
+      const cat = categories.find((c) => c.id === deleteTarget);
+      if (cat && selectedSubcategory === cat.name) {
+        onSelectSubcategory(null);
+      }
+      await triggerDelete(undefined);
+      toast.success("Category deleted");
+      if (onCategoriesChange) {
+        onCategoriesChange(categories.filter((c) => c.id !== deleteTarget));
+      }
+      onRefresh?.();
+      setDeleteConfirmOpen(false);
+      setDeleteTarget(null);
+    } catch (e) {
+      // toast shown by onError in the hook
     }
-    onCategoriesChange(categories.filter((c) => c.id !== deleteTarget));
-    toast.success("Category deleted");
-    setDeleteConfirmOpen(false);
-    setDeleteTarget(null);
   };
 
   return (
@@ -143,11 +169,23 @@ export default function CategoryManager({
               </div>
             </div>
           ))}
+
+          {hasMore && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground mt-2"
+              onClick={onLoadMore}
+              isLoading={isLoadingMore}
+            >
+              Load More Categories
+            </Button>
+          )}
         </div>
       </Card>
 
       {/* Category Sheet */}
-      <Sheet open={catDialogOpen} onOpenChange={setCatDialogOpen}>
+      <Sheet open={catDialogOpen} onOpenChange={(open) => !isCreating && !isUpdating && setCatDialogOpen(open)}>
         <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
           <SheetHeader className="px-6 pt-6 pb-4">
             <SheetTitle>{editingCategory ? "Edit Category" : "Add Category"}</SheetTitle>
@@ -161,18 +199,21 @@ export default function CategoryManager({
                 onChange={(e) => setCatName(e.target.value)}
                 placeholder="e.g. Food & Beverages"
                 onKeyDown={(e) => e.key === "Enter" && saveCategory()}
+                disabled={isCreating || isUpdating}
               />
             </div>
           </div>
           <SheetFooter className="px-6 py-4 border-t">
-            <Button variant="outline" onClick={() => setCatDialogOpen(false)}>Cancel</Button>
-            <Button onClick={saveCategory} disabled={!catName.trim()}>Save</Button>
+            <Button variant="outline" onClick={() => setCatDialogOpen(false)} disabled={isCreating || isUpdating}>Cancel</Button>
+            <Button onClick={saveCategory} disabled={!catName.trim()} isLoading={isCreating || isUpdating}>
+              Save
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
       {/* Delete Confirmation */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !isDeleting && setDeleteConfirmOpen(open)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
@@ -181,8 +222,10 @@ export default function CategoryManager({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete}>Delete</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} isLoading={isDeleting}>
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

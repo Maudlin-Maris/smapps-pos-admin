@@ -39,10 +39,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InventoryItem } from "./InventoryItemForm";
 import {
-  useSubstituteGroups,
-  type SubstituteGroup,
-  type SubstituteGroupItem,
-} from "@/data/substituteGroups";
+  useCreateSubstituteGroup,
+  useUpdateSubstituteGroup,
+  useDeleteSubstituteGroup,
+  useGetSubstituteGroups,
+} from "@/services/api/inventory/substitute-group";
+import type { SubstituteGroupResponse as SubstituteGroup, SubstituteGroupResponseItem as SubstituteGroupItem } from "@/lib/types/substitute-group-response";
 
 interface Props {
   inventoryItems: InventoryItem[];
@@ -56,7 +58,15 @@ interface Props {
  * Composite components reference these groups by id; resolver handles fallback.
  */
 export default function SubstituteGroupManager({ inventoryItems, selectedOutletId, readOnly }: Props) {
-  const [groups, setGroups] = useSubstituteGroups();
+  const { data: groupsRes, mutate: mutateGroups } = useGetSubstituteGroups({
+    outletId: selectedOutletId || undefined,
+  });
+  const groups = groupsRes?.data ?? [];
+
+  const createGroupMutation = useCreateSubstituteGroup();
+  const updateGroupMutation = useUpdateSubstituteGroup();
+  const deleteGroupMutation = useDeleteSubstituteGroup();
+
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SubstituteGroup | null>(null);
   const [name, setName] = useState("");
@@ -101,7 +111,7 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
     setItems(items.map((i) => (i.inventoryItemId === id ? { ...i, conversionRatio: value } : i)));
   };
 
-  const save = () => {
+  const save = async () => {
     if (!name.trim()) {
       toast.error("Group name is required");
       return;
@@ -110,31 +120,48 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
       toast.error("Add at least 2 items to a substitute group");
       return;
     }
-    if (editing) {
-      setGroups((prev) =>
-        prev.map((g) => (g.id === editing.id ? { ...g, name: name.trim(), items } : g))
-      );
-      toast.success("Substitute group updated");
-    } else {
-      setGroups((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
+    try {
+      const itemsPayload = items.map((it) => ({
+        inventoryItemId: it.inventoryItemId,
+        priority: it.priority,
+        conversionRatio: it.conversionRatio,
+      }));
+
+      if (editing) {
+        await updateGroupMutation.trigger({
+          id: editing.id,
+          payload: {
+            name: name.trim(),
+            outletId: selectedOutletId || editing.outletId || "",
+            items: itemsPayload,
+          },
+        });
+        toast.success("Substitute group updated");
+      } else {
+        await createGroupMutation.trigger({
           name: name.trim(),
           outletId: selectedOutletId || "",
-          items,
-        },
-      ]);
-      toast.success("Substitute group created");
+          items: itemsPayload,
+        });
+        toast.success("Substitute group created");
+      }
+      mutateGroups();
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to save substitute group");
     }
-    setOpen(false);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    setGroups((prev) => prev.filter((g) => g.id !== deleteTarget.id));
-    toast.success("Group deleted");
-    setDeleteTarget(null);
+    try {
+      await deleteGroupMutation.trigger(deleteTarget.id);
+      toast.success("Group deleted");
+      mutateGroups();
+      setDeleteTarget(null);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to delete substitute group");
+    }
   };
 
   const candidatePool = inventoryItems.filter(
@@ -351,7 +378,9 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={save}>{editing ? "Update" : "Create"}</Button>
+            <Button onClick={save} disabled={createGroupMutation.isMutating || updateGroupMutation.isMutating}>
+              {createGroupMutation.isMutating || updateGroupMutation.isMutating ? "Saving..." : editing ? "Update" : "Create"}
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

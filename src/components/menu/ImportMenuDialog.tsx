@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import * as XLSX from "@/lib/xlsx-compat";
 import type { MenuItem, MenuVariant, MenuItemType } from "./MenuItemForm";
 import { formatNaira } from "@/lib/currency";
 import {
@@ -31,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useImportCatalogPreview, downloadImportTemplate } from "@/services/api/catalog/item";
 
 interface ImportMenuDialogProps {
   open: boolean;
@@ -38,196 +38,7 @@ interface ImportMenuDialogProps {
   onImport: (items: MenuItem[]) => void;
 }
 
-interface ParsedRow {
-  name: string;
-  description: string;
-  category: string;
-  itemType: string;
-  pricingStrategy: string;
-  price: number;
-  costPrice: number;
-  sellingUnit: string;
-  quantity: number;
-  sku: string;
-  status: string;
-  variantName: string;
-  variantPrice: number;
-  variantSku: string;
-  variantStatus: string;
-  error?: string;
-}
-
-const EXPECTED_HEADERS = [
-  "Name", "Description", "Category", "Item Type", "Pricing Strategy",
-  "Price", "Cost Price", "Selling Unit", "Quantity",
-  "SKU", "Status", "Variant Name", "Variant Price", "Variant SKU", "Variant Status",
-];
-
-const SAMPLE_DATA = [
-  ["Cappuccino", "Rich espresso with steamed milk", "Food & Beverages", "simple", "base", 4500, 2000, "pcs", 150, "HD-001", "active", "", "", "", ""],
-  ["Iced Latte", "Chilled espresso with cold milk", "Food & Beverages", "simple", "variant", "", "", "pcs", 80, "CD-001", "active", "Regular", 5000, "CD-001-R", "active"],
-  ["Iced Latte", "", "", "", "", "", "", "", "", "", "", "Large", 6500, "CD-001-L", "active"],
-  ["Haircut", "Professional styling", "Services", "service", "base", 15000, "", "session", "", "SV-001", "active", "", "", "", ""],
-  ["Croissant", "Buttery French pastry", "Food & Beverages", "simple", "base", 3250, 1500, "pcs", 40, "PS-001", "active", "", "", "", ""],
-];
-
 const ITEMS_PER_PAGE = 10;
-
-async function downloadTemplate() {
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([EXPECTED_HEADERS, ...SAMPLE_DATA]);
-
-  ws["!cols"] = [
-    { wch: 18 }, { wch: 35 }, { wch: 18 }, { wch: 12 }, { wch: 16 },
-    { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 },
-    { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 14 }, { wch: 14 },
-  ];
-
-  XLSX.utils.book_append_sheet(wb, ws, "Catalog Items");
-  await XLSX.writeFile(wb, "catalog-import-template.xlsx");
-}
-
-async function parseFile(data: ArrayBuffer): Promise<{ rows: ParsedRow[]; errors: string[] }> {
-  const wb = await XLSX.read(data);
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const raw: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-  if (raw.length < 2) return { rows: [], errors: ["File is empty or has no data rows."] };
-
-  const headers = (raw[0] as string[]).map((h) => String(h).trim());
-  const missing = EXPECTED_HEADERS.filter((h) => !headers.includes(h));
-  if (missing.length > 0) {
-    return { rows: [], errors: [`Missing columns: ${missing.join(", ")}`] };
-  }
-
-  const colIdx = Object.fromEntries(EXPECTED_HEADERS.map((h) => [h, headers.indexOf(h)]));
-  const errors: string[] = [];
-  const rows: ParsedRow[] = [];
-
-  for (let i = 1; i < raw.length; i++) {
-    const r = raw[i] as unknown[];
-    if (!r || r.every((c) => c === undefined || c === null || c === "")) continue;
-
-    const name = String(r[colIdx["Name"]] ?? "").trim();
-    const variantName = String(r[colIdx["Variant Name"]] ?? "").trim();
-
-    if (!name && variantName) {
-      rows.push({
-        name: "", description: "", category: "", itemType: "", pricingStrategy: "",
-        price: 0, costPrice: 0, sellingUnit: "", quantity: 0, sku: "", status: "",
-        variantName,
-        variantPrice: Number(r[colIdx["Variant Price"]]) || 0,
-        variantSku: String(r[colIdx["Variant SKU"]] ?? "").trim(),
-        variantStatus: String(r[colIdx["Variant Status"]] ?? "active").trim(),
-      });
-      continue;
-    }
-
-    if (!name) {
-      errors.push(`Row ${i + 1}: Missing item name.`);
-      continue;
-    }
-
-    const price = Number(r[colIdx["Price"]]);
-    if (isNaN(price) && String(r[colIdx["Price"]] ?? "").trim() !== "") {
-      errors.push(`Row ${i + 1}: Invalid price for "${name}".`);
-    }
-
-    const itemType = String(r[colIdx["Item Type"]] ?? "simple").trim().toLowerCase();
-    if (itemType && !["simple", "composite", "service"].includes(itemType)) {
-      errors.push(`Row ${i + 1}: Invalid item type "${itemType}" for "${name}". Use simple, composite, or service.`);
-    }
-
-    const pricingStrategy = String(r[colIdx["Pricing Strategy"]] ?? "base").trim().toLowerCase();
-    if (pricingStrategy && !["base", "variant", "open"].includes(pricingStrategy)) {
-      errors.push(`Row ${i + 1}: Invalid pricing strategy "${pricingStrategy}" for "${name}". Use base, variant, or open.`);
-    }
-
-    rows.push({
-      name,
-      description: String(r[colIdx["Description"]] ?? "").trim(),
-      category: String(r[colIdx["Category"]] ?? "").trim(),
-      itemType: itemType || "simple",
-      pricingStrategy: pricingStrategy || "base",
-      price: isNaN(price) ? 0 : price,
-      costPrice: Number(r[colIdx["Cost Price"]]) || 0,
-      sellingUnit: String(r[colIdx["Selling Unit"]] ?? "").trim(),
-      quantity: Number(r[colIdx["Quantity"]]) || 0,
-      sku: String(r[colIdx["SKU"]] ?? "").trim(),
-      status: String(r[colIdx["Status"]] ?? "active").trim(),
-      variantName,
-      variantPrice: Number(r[colIdx["Variant Price"]]) || 0,
-      variantSku: String(r[colIdx["Variant SKU"]] ?? "").trim(),
-      variantStatus: String(r[colIdx["Variant Status"]] ?? "active").trim(),
-    });
-  }
-
-  return { rows, errors };
-}
-
-function rowsToMenuItems(rows: ParsedRow[]): MenuItem[] {
-  const items: MenuItem[] = [];
-  let current: MenuItem | null = null;
-
-  for (const row of rows) {
-    if (row.name) {
-      current = {
-        id: crypto.randomUUID(),
-        name: row.name,
-        description: row.description,
-        category: row.category,
-        subcategory: "",
-        price: row.price,
-        quantity: row.quantity,
-        sku: row.sku,
-        status: (row.status === "inactive" ? "inactive" : "active") as "active" | "inactive",
-        salePrice: null,
-        salePeriodStart: null,
-        salePeriodEnd: null,
-        images: [],
-        trackInventory: false,
-        variants: [],
-        extras: [],
-        itemType: (["simple", "composite", "service"].includes(row.itemType) ? row.itemType : "simple") as MenuItemType,
-        pricingStrategy: (["base", "variant", "open"].includes(row.pricingStrategy) ? row.pricingStrategy : "base") as "base" | "variant" | "open",
-        costPrice: row.costPrice || undefined,
-        sellingUnit: row.sellingUnit || undefined,
-      };
-
-      if (row.variantName) {
-        current.variants.push({
-          id: crypto.randomUUID(),
-          name: row.variantName,
-          price: row.variantPrice,
-          quantity: row.quantity,
-          sku: row.variantSku,
-          status: (row.variantStatus === "inactive" ? "inactive" : "active") as "active" | "inactive",
-          salePrice: null,
-          salePeriodStart: null,
-          salePeriodEnd: null,
-          trackInventory: false,
-        });
-      }
-
-      items.push(current);
-    } else if (row.variantName && current) {
-      current.variants.push({
-        id: crypto.randomUUID(),
-        name: row.variantName,
-        price: row.variantPrice,
-        quantity: 0,
-        sku: row.variantSku,
-        status: (row.variantStatus === "inactive" ? "inactive" : "active") as "active" | "inactive",
-        salePrice: null,
-        salePeriodStart: null,
-        salePeriodEnd: null,
-        trackInventory: false,
-      });
-    }
-  }
-
-  return items;
-}
 
 export default function ImportMenuDialog({ open, onOpenChange, onImport }: ImportMenuDialogProps) {
   const [parsedItems, setParsedItems] = useState<MenuItem[]>([]);
@@ -237,6 +48,8 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
+
+  const { trigger: triggerPreview, isMutating: isPreviewing } = useImportCatalogPreview();
 
   const totalPages = Math.max(1, Math.ceil(parsedItems.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
@@ -302,25 +115,45 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
     );
   };
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      const data = ev.target?.result as ArrayBuffer;
-      const { rows, errors } = await parseFile(data);
-      setParseErrors(errors);
-      const items = rowsToMenuItems(rows);
-      setParsedItems(items);
-      setPage(1);
-      if (items.length === 0 && errors.length === 0) {
-        setParseErrors(["No valid catalog items found in the file."]);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await triggerPreview(formData);
+      if (res) {
+        setParseErrors(res.errors || []);
+        const items = (res.items || []).map((item) => ({
+          ...item,
+          id: item.id || crypto.randomUUID(),
+          variants: (item.variants || []).map((v) => ({
+            ...v,
+            id: v.id || crypto.randomUUID(),
+          })),
+        })) as unknown as MenuItem[];
+        setParsedItems(items);
+        setPage(1);
+        if (items.length === 0 && (res.errors || []).length === 0) {
+          setParseErrors(["No valid catalog items found in the file."]);
+        }
       }
-    };
-    reader.readAsArrayBuffer(file);
+    } catch (err) {
+      // Handled
+    }
     e.target.value = "";
+  };
+
+  const downloadTemplate = async () => {
+    try {
+      await downloadImportTemplate();
+      toast.success("Template downloaded successfully");
+    } catch (err) {
+      toast.error("Failed to download template");
+    }
   };
 
   const removeItem = (id: string) => {
@@ -385,6 +218,7 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
               variant="outline"
               onClick={() => fileRef.current?.click()}
               className="gap-2"
+              isLoading={isPreviewing}
             >
               <Upload className="h-4 w-4" />
               {fileName || "Choose File"}

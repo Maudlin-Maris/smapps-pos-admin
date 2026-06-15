@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { usePagination } from "@/hooks/use-pagination";
-import PaginationControls from "./PaginationControls";
+import {
+  useCreateInventoryItem,
+  useUpdateInventoryItem,
+  useDeleteInventoryItem,
+  useGetInventoryItem,
+  getInventoryItemDetails,
+} from "@/services/api/inventory/item";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -26,7 +34,7 @@ import type { BusinessTypeId } from "@/data/businessTypes";
 import type { PricingMethod } from "./StockAdjustmentHistory";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 import { Label } from "@/components/ui/label";
 import BarcodeScanner from "./BarcodeScanner";
 import { cn } from "@/lib/utils";
@@ -78,7 +86,16 @@ export interface InventoryItem {
 
 interface Props {
   items: InventoryItem[];
-  setItems: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
+  totalItems: number;
+  page: number;
+  onPageChange: (page: number) => void;
+  perPage: number;
+  onPerPageChange: (perPage: number) => void;
+  search: string;
+  onSearchChange: (search: string) => void;
+  filterCategory: string;
+  onFilterCategoryChange: (category: string) => void;
+  isLoading: boolean;
   categories: InventoryCategory[];
   units: MeasuringUnit[];
   onAdjustStock?: (item: InventoryItem) => void;
@@ -96,6 +113,7 @@ interface Props {
       recipesUsing: { recipeId: string }[];
     }
   >;
+  onMutate: () => void;
 }
 
 type FormState = Omit<InventoryItem, "id" | "status">;
@@ -162,15 +180,64 @@ export function getBatchExpiryStats(batches?: ItemBatch[]) {
   return { expired, expiringSoon, valid, totalBatches: batches.length };
 }
 
-export default function InventoryItemForm({ items, setItems, categories, units, onAdjustStock, readOnly, selectedOutletId, filterLowStock, filterExpiryStatus, profitability }: Props) {
+export default function InventoryItemForm({
+  items,
+  totalItems,
+  page,
+  onPageChange,
+  perPage,
+  onPerPageChange,
+  search,
+  onSearchChange,
+  filterCategory,
+  onFilterCategoryChange,
+  isLoading,
+  categories,
+  units,
+  onAdjustStock,
+  readOnly,
+  selectedOutletId,
+  filterLowStock,
+  filterExpiryStatus,
+  profitability,
+  onMutate,
+}: Props) {
   const [open, setOpen] = useState(false);
+  const { data: outlets = [] } = useGetOutlets();
   const [editing, setEditing] = useState<InventoryItem | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(selectedOutletId));
-  const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState("all");
   const [filterExpiry, setFilterExpiry] = useState("all");
   const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
   const [syncToCatalog, setSyncToCatalog] = useState(true);
+
+  const createItemMutation = useCreateInventoryItem();
+  const updateItemMutation = useUpdateInventoryItem();
+  const deleteItemMutation = useDeleteInventoryItem();
+  const { data: itemDetail, isLoading: isDetailLoading } = useGetInventoryItem(editingId || undefined);
+
+  useEffect(() => {
+    if (itemDetail && editing && itemDetail.id === editing.id) {
+      setForm({
+        name: itemDetail.name || "",
+        description: "",
+        sku: itemDetail.sku || "",
+        categoryId: itemDetail.categoryId || "",
+        unitId: itemDetail.unit ? (units.find(u => u.name === itemDetail.unit || u.abbreviation === itemDetail.unit)?.id || "5") : "5",
+        stock: itemDetail.quantity || 0,
+        minStock: itemDetail.reorderLevel || 0,
+        costPrice: itemDetail.costPrice || 0,
+        sellPrice: itemDetail.sellPrice || 0,
+        pricingMethod: "markup",
+        pricingValue: 30,
+        conversions: editing.conversions || [],
+        outletId: itemDetail.outletId || "",
+        batchNumber: editing.batchNumber || "",
+        expiryDate: itemDetail.createdAt || "",
+        batches: editing.batches || [],
+      });
+    }
+  }, [itemDetail, editing, units]);
 
   const selectedOutlet = selectedOutletId && selectedOutletId !== "all" ? outlets.find(o => o.id === selectedOutletId) : null;
   const showBatchExpiry = selectedOutlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(selectedOutlet.businessType) : false;
@@ -197,6 +264,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
   const openNew = () => {
     setEditing(null);
+    setEditingId(null);
     const seed = selectedOutletId && selectedOutletId !== "all" ? selectedOutletId : "";
     setForm(emptyForm(seed));
     setSyncToCatalog(true);
@@ -205,6 +273,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
 
   const openEdit = (item: InventoryItem) => {
     setEditing(item);
+    setEditingId(item.id);
     setForm({
       name: item.name,
       description: item.description || "",
@@ -227,20 +296,45 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
     setOpen(true);
   };
 
-  const handleClone = (item: InventoryItem) => {
-    const cloned: InventoryItem = {
-      ...item,
-      id: crypto.randomUUID(),
-      name: `${item.name} (Copy)`,
-      sku: `${item.sku}-COPY`,
-      conversions: item.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
-      batches: item.batches?.map(b => ({ ...b, id: crypto.randomUUID() })),
-    };
-    setItems((prev) => [...prev, cloned]);
-    toast.success("Item cloned");
+  const handleClone = async (item: InventoryItem) => {
+    try {
+      const itemDetail = await getInventoryItemDetails(item.id);
+      const clonedUnitId = item.unitId || (itemDetail.unit ? (units.find(u => u.name === itemDetail.unit || u.abbreviation === itemDetail.unit)?.id || "5") : "5");
+      await createItemMutation.trigger({
+        outletId: itemDetail.outletId || selectedOutletId || "",
+        name: `${itemDetail.name} (Copy)`,
+        description: item.description || "",
+        sku: `${itemDetail.sku}-COPY`,
+        categoryId: itemDetail.categoryId || "",
+        unitId: clonedUnitId,
+        costPrice: itemDetail.costPrice || 0,
+        sellingPrice: itemDetail.sellPrice || 0,
+        stock: itemDetail.quantity || 0,
+        minStock: itemDetail.reorderLevel || 10,
+        pricingMethod: item.pricingMethod || "markup",
+        pricingValue: item.pricingValue || 0,
+        conversions: (item.conversions || []).map(c => ({
+          fromQuantity: c.fromQuantity,
+          toQuantity: c.toQuantity,
+          toUnitId: c.toUnitId,
+          sellable: c.sellable ?? true,
+          sellPrice: c.sellPrice ?? 0,
+        })),
+        batches: (item.batches || []).map(b => ({
+          batchNumber: b.batchNumber,
+          expiryDate: b.expiryDate ? new Date(b.expiryDate) : new Date(),
+          quantity: b.quantity,
+          costPrice: b.costPrice ?? itemDetail.costPrice ?? 0,
+        })),
+      });
+      toast.success("Item cloned");
+      onMutate();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to clone item");
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) {
       toast.error("Item name is required");
       return;
@@ -254,87 +348,63 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       toast.error("Select an outlet before registering items");
       return;
     }
-    if (form.conversions.length === 0) {
-      toast.error("At least one unit conversion is required");
-      return;
-    }
-    const hasIncompleteConversion = form.conversions.some(c => !c.toUnitId || c.fromQuantity <= 0 || c.toQuantity <= 0);
-    if (hasIncompleteConversion) {
-      toast.error("Please complete all conversion fields");
-      return;
-    }
 
-    const batchTracked = isOutletBatchTracked(targetOutletId);
-    const retail = isOutletRetail(targetOutletId);
-    const usesBatches = batchTracked && (form.batches?.length ?? 0) > 0;
-    const resolvedStock = usesBatches
-      ? (form.batches ?? []).reduce((sum, b) => sum + b.quantity, 0)
-      : form.stock;
-    const resolvedBatches = batchTracked
-      ? (form.batches ?? []).map((b) => ({ ...b, id: b.id || crypto.randomUUID() }))
-      : undefined;
-
-    const pricingFields = retail
-      ? {
-          sellPrice: form.sellPrice,
-          pricingMethod: form.pricingMethod,
-          pricingValue: form.pricingValue,
-        }
-      : {
-          sellPrice: undefined,
-          pricingMethod: undefined,
-          pricingValue: undefined,
-        };
-
-    if (editing) {
-      setItems((prev) =>
-        prev.map((i) =>
-          i.id === editing.id
-            ? {
-                ...i,
-                ...form,
-                ...pricingFields,
-                outletId: targetOutletId,
-                stock: resolvedStock,
-                minStock: form.minStock,
-                status: computeStatus(resolvedStock, form.minStock),
-                batches: resolvedBatches,
-              }
-            : i,
-        ),
-      );
-      if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
-        toast.success(`Item updated | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
-      } else {
+    try {
+      if (editing) {
+        await updateItemMutation.trigger({
+          id: editing.id,
+          payload: {
+            name: form.name,
+            minStock: Number(form.minStock),
+            sellingPrice: Number(form.sellPrice || 0),
+          }
+        });
         toast.success("Item updated");
-      }
-    } else {
-      const newItem: InventoryItem = {
-        id: crypto.randomUUID(),
-        ...form,
-        ...pricingFields,
-        outletId: targetOutletId,
-        stock: resolvedStock,
-        minStock: form.minStock,
-        status: computeStatus(resolvedStock, form.minStock),
-        conversions: form.conversions.map((c) => ({ ...c, id: crypto.randomUUID() })),
-        batches: resolvedBatches,
-      };
-      setItems((prev) => [...prev, newItem]);
-      if (retail && syncToCatalog && form.sellPrice && form.sellPrice > 0) {
-        toast.success(`Item registered | Sell price: ₦${form.sellPrice.toFixed(2)} | Catalog updated automatically`, { duration: 4000 });
-      } else if (!retail && syncToCatalog) {
-        toast.success("Item registered and added to catalog");
       } else {
-        toast.success("Item registered");
+        await createItemMutation.trigger({
+          outletId: targetOutletId,
+          name: form.name,
+          description: form.description || "",
+          sku: form.sku,
+          categoryId: form.categoryId,
+          unitId: form.unitId,
+          costPrice: Number(form.costPrice),
+          sellingPrice: Number(form.sellPrice || 0),
+          stock: Number(form.stock),
+          minStock: Number(form.minStock),
+          pricingMethod: form.pricingMethod || "markup",
+          pricingValue: Number(form.pricingValue || 0),
+          conversions: (form.conversions || []).map(c => ({
+            fromQuantity: Number(c.fromQuantity),
+            toQuantity: Number(c.toQuantity),
+            toUnitId: c.toUnitId,
+            sellable: c.sellable ?? true,
+            sellPrice: Number(c.sellPrice || 0),
+          })),
+          batches: (form.batches || []).map(b => ({
+            batchNumber: b.batchNumber,
+            expiryDate: b.expiryDate ? new Date(b.expiryDate) : new Date(),
+            quantity: Number(b.quantity),
+            costPrice: Number(b.costPrice ?? form.costPrice ?? 0),
+          })),
+        });
+        toast.success("Item registered successfully");
       }
+      onMutate();
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to save item");
     }
-    setOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    toast.success("Item deleted");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteItemMutation.trigger(id);
+      toast.success("Item deleted");
+      onMutate();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to delete item");
+    }
   };
 
   // Conversion helpers
@@ -384,18 +454,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
   const getUnit = (id: string) => units.find((u) => u.id === id);
   const getCategory = (id: string) => categories.find((c) => c.id === id);
 
-  const filtered = items
-    .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
-    .filter((i) => filterCategory === "all" || i.categoryId === filterCategory)
-    .filter((i) => !filterLowStock || i.status === "low" || i.status === "critical")
-    .filter((i) => {
-      if (!filterExpiryStatus) return true;
-      const stats = getBatchExpiryStats(i.batches);
-      if (filterExpiryStatus === "expired") return stats.expired > 0;
-      if (filterExpiryStatus === "expiring") return stats.expiringSoon > 0;
-      return true;
-    })
-    .filter((i) => {
+  const paginatedItems = useMemo(() => {
+    return items.filter((i) => {
       if (filterExpiry === "all") return true;
       const stats = getBatchExpiryStats(i.batches);
       if (filterExpiry === "expired") return stats.expired > 0;
@@ -403,8 +463,7 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
       if (filterExpiry === "valid") return stats.expired === 0 && stats.expiringSoon === 0;
       return true;
     });
-
-  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
+  }, [items, filterExpiry]);
 
   const batchStockTotal = (form.batches || []).reduce((sum, b) => sum + b.quantity, 0);
 
@@ -414,9 +473,9 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
         <div className="flex flex-col sm:flex-row gap-3 flex-1">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search items..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Search items..." value={search} onChange={(e) => onSearchChange(e.target.value)} className="pl-9" />
           </div>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <Select value={filterCategory} onValueChange={onFilterCategoryChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
@@ -448,14 +507,13 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
         )}
       </div>
 
-      <PaginationControls
-        page={page}
-        totalPages={totalPages}
-        perPage={perPage}
+      <ResuablePagination
+        currentPage={page}
+        totalPages={Math.ceil(totalItems / perPage) || 1}
+        onPageChange={onPageChange}
         totalItems={totalItems}
-        pageSizeOptions={pageSizeOptions}
-        onPageChange={setPage}
-        onPerPageChange={setPerPage}
+        rowsPerPage={perPage}
+        onRowsPerPageChange={onPerPageChange}
       />
 
       <div className="grid gap-3">
@@ -579,17 +637,17 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                   {!readOnly && (
                     <div className="flex gap-1 shrink-0">
                       {onAdjustStock && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={() => onAdjustStock(item)} title="Adjust Stock">
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={() => onAdjustStock(item)} title="Adjust Stock" disabled={deleteItemMutation.isMutating || createItemMutation.isMutating}>
                           <ArrowLeftRight className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)} disabled={deleteItemMutation.isMutating || createItemMutation.isMutating}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(item)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleClone(item)} disabled={deleteItemMutation.isMutating || createItemMutation.isMutating}>
                         <Copy className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)} disabled={deleteItemMutation.isMutating || createItemMutation.isMutating}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
@@ -610,8 +668,8 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
                       <div key={batch.id} className={cn(
                         "flex items-center justify-between px-3 py-2 rounded-md text-xs",
                         isExpired ? "bg-destructive/5 border border-destructive/20" :
-                        isExpiringSoon ? "bg-warning/5 border border-warning/20" :
-                        "bg-muted/50"
+                          isExpiringSoon ? "bg-warning/5 border border-warning/20" :
+                            "bg-muted/50"
                       )}>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3">
@@ -647,9 +705,22 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             </Card>
           );
         })}
-        {filtered.length === 0 && (
+        {isLoading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+                <Skeleton className="h-6 w-16" />
+              </div>
+            </Card>
+          ))
+        ) : paginatedItems.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">No inventory items found</p>
-        )}
+        ) : null}
       </div>
 
       {/* Registration / Edit Dialog */}
@@ -659,541 +730,552 @@ export default function InventoryItemForm({ items, setItems, categories, units, 
             <SheetTitle>{editing ? "Edit Inventory Item" : "Register Inventory Item"}</SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 pb-6">
-          <div className="grid gap-4">
-            {(() => {
-              const formOutlet = form.outletId ? outlets.find((o) => o.id === form.outletId) : null;
-              return (
+            <div className="grid gap-4">
+              {(() => {
+                const formOutlet = form.outletId ? outlets.find((o) => o.id === form.outletId) : null;
+                return (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5" /> Outlet *
+                    </Label>
+                    <Select
+                      value={form.outletId || undefined}
+                      onValueChange={(v) => setForm({ ...form, outletId: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an outlet">
+                          {formOutlet && (
+                            <div className="flex items-center gap-2">
+                              <span className="truncate">{formOutlet.name}</span>
+                              <Badge variant="outline" className="text-[10px] capitalize">
+                                {formOutlet.businessType.replace(/_/g, " ")}
+                              </Badge>
+                            </div>
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {outlets.map((o) => (
+                          <SelectItem key={o.id} value={o.id} className="group">
+                            <div className="flex items-center gap-2">
+                              <span>{o.name}</span>
+                              <Badge variant="outline" className="text-[10px] group-focus:text-white group-hover:text-white capitalize">
+                                {o.businessType.replace(/_/g, " ")}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {editing && form.outletId && form.outletId !== editing.outletId && (
+                      <p className="text-[11px] text-muted-foreground">
+                        This item will be moved to the selected outlet on save.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Item Name *</label>
+                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optional)</span></label>
+                <Textarea
+                  value={form.description || ""}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder="Add notes, supplier info, or details about this item"
+                  rows={2}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Barcode / SKU</label>
+                <BarcodeScanner value={form.sku} onChange={(val) => setForm({ ...form, sku: val })} placeholder="Scan barcode or enter SKU" />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <Store className="h-3.5 w-3.5" /> Outlet *
-                  </Label>
-                  <Select
-                    value={form.outletId || undefined}
-                    onValueChange={(v) => setForm({ ...form, outletId: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an outlet">
-                        {formOutlet && (
-                          <div className="flex items-center gap-2">
-                            <span className="truncate">{formOutlet.name}</span>
-                            <Badge variant="outline" className="text-[10px] capitalize">
-                              {formOutlet.businessType.replace(/_/g, " ")}
-                            </Badge>
-                          </div>
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
+                  <label className="text-sm font-medium">Category *</label>
+                  <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
-                      {outlets.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          <div className="flex items-center gap-2">
-                            <span>{o.name}</span>
-                            <Badge variant="outline" className="text-[10px] capitalize">
-                              {o.businessType.replace(/_/g, " ")}
-                            </Badge>
-                          </div>
-                        </SelectItem>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {editing && form.outletId && form.outletId !== editing.outletId && (
-                    <p className="text-[11px] text-muted-foreground">
-                      This item will be moved to the selected outlet on save.
-                    </p>
-                  )}
                 </div>
-              );
-            })()}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Item Name *</label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Coffee Beans" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Description <span className="text-muted-foreground font-normal">(optional)</span></label>
-              <Textarea
-                value={form.description || ""}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Add notes, supplier info, or details about this item"
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Barcode / SKU</label>
-              <BarcodeScanner value={form.sku} onChange={(val) => setForm({ ...form, sku: val })} placeholder="Scan barcode or enter SKU" />
-            </div>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category *</label>
-                <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Unit *</label>
+                  <Select value={form.unitId} onValueChange={(v) => setForm({ ...form, unitId: v })}>
+                    <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectContent>
+                      {units.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
               <div className="space-y-2">
-                <label className="text-sm font-medium">Unit *</label>
-                <Select value={form.unitId} onValueChange={(v) => setForm({ ...form, unitId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
-                  <SelectContent>
-                    {units.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  Cost per Base Unit
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Cost per Base Unit?">
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                      <p>Purchase cost for one <strong>base unit</strong> (the unit you selected above, e.g. one Pack). If you also sell smaller sub-units like sachets, the per-sachet cost is derived automatically from your unit conversions.</p>
+                    </PopoverContent>
+                  </Popover>
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.costPrice}
+                  onChange={(e) => {
+                    const cp = Number(e.target.value);
+                    const method = form.pricingMethod ?? "markup";
+                    const val = form.pricingValue ?? 0;
+                    const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val) * 100) / 100 : form.sellPrice;
+                    setForm({ ...form, costPrice: cp, sellPrice: newSell });
+                  }}
+                  placeholder="0.00"
+                />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-1.5">
-                Cost per Base Unit
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Cost per Base Unit?">
-                      <Info className="h-3.5 w-3.5" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
-                    <p>Purchase cost for one <strong>base unit</strong> (the unit you selected above, e.g. one Pack). If you also sell smaller sub-units like sachets, the per-sachet cost is derived automatically from your unit conversions.</p>
-                  </PopoverContent>
-                </Popover>
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.costPrice}
-                onChange={(e) => {
-                  const cp = Number(e.target.value);
-                  const method = form.pricingMethod ?? "markup";
-                  const val = form.pricingValue ?? 0;
-                  const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val) * 100) / 100 : form.sellPrice;
-                  setForm({ ...form, costPrice: cp, sellPrice: newSell });
-                }}
-                placeholder="0.00"
-              />
-            </div>
-
-            {/* Sell Price & Markup — retail businesses only */}
-            {isOutletRetail(form.outletId) && (() => {
-              const cost = form.costPrice || 0;
-              const sell = form.sellPrice || 0;
-              const profit = sell - cost;
-              const profitPositive = profit >= 0;
-              return (
-                <div className="space-y-3 border-t pt-4">
-                  <div className="flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-primary" />
-                    <label className="text-sm font-medium">Sell Price & Markup (per Base Unit)</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Sell Price & Markup?">
-                          <Info className="h-3.5 w-3.5" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
-                        <p>Set the retail sell price for one <strong>base unit</strong> (e.g. one Pack) using <strong>Markup %</strong>, <strong>Margin %</strong>, or a <strong>Fixed Price</strong>. To also sell smaller sub-units (e.g. per Sachet), set their prices in the <em>Selling Units</em> section below.</p>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
-                      <Select
-                        value={form.pricingMethod ?? "markup"}
-                        onValueChange={(v) => {
-                          const method = v as PricingMethod;
-                          const val = form.pricingValue ?? 0;
-                          const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
-                          setForm({ ...form, pricingMethod: method, sellPrice: newSell });
-                        }}
-                      >
-                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="markup">Markup %</SelectItem>
-                          <SelectItem value="margin">Margin %</SelectItem>
-                          <SelectItem value="fixed">Fixed Price</SelectItem>
-                        </SelectContent>
-                      </Select>
+              {/* Sell Price & Markup — retail businesses only */}
+              {isOutletRetail(form.outletId) && (() => {
+                const cost = form.costPrice || 0;
+                const sell = form.sellPrice || 0;
+                const profit = sell - cost;
+                const profitPositive = profit >= 0;
+                return (
+                  <div className="space-y-3 border-t pt-4">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <label className="text-sm font-medium">Sell Price & Markup (per Base Unit)</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Sell Price & Markup?">
+                            <Info className="h-3.5 w-3.5" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[280px] text-xs leading-relaxed whitespace-normal break-words">
+                          <p>Set the retail sell price for one <strong>base unit</strong> (e.g. one Pack) using <strong>Markup %</strong>, <strong>Margin %</strong>, or a <strong>Fixed Price</strong>. To also sell smaller sub-units (e.g. per Sachet), set their prices in the <em>Selling Units</em> section below.</p>
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                        {form.pricingMethod === "fixed" ? "Price" : "%"}
-                      </label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={form.pricingValue ?? 0}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          const method = form.pricingMethod ?? "markup";
-                          const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
-                          setForm({ ...form, pricingValue: val, sellPrice: newSell });
-                        }}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={form.sellPrice ?? 0}
-                        onChange={(e) => setForm({ ...form, sellPrice: Number(e.target.value) })}
-                        className="h-9"
-                      />
-                    </div>
-                  </div>
-                  {cost > 0 && sell > 0 && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <TrendingUp className={cn("h-3.5 w-3.5", profitPositive ? "text-success" : "text-destructive")} />
-                      <span className={cn("font-medium", profitPositive ? "text-success" : "text-destructive")}>
-                        ₦{profit.toFixed(2)}/unit profit
-                      </span>
-                      <span className="text-muted-foreground">
-                        ({cost > 0 ? ((profit / cost) * 100).toFixed(1) : "0"}% markup)
-                      </span>
-                    </div>
-                   )}
-                 </div>
-               );
-             })()}
-
-
-            {(() => {
-              const formShowBatchExpiry = isOutletBatchTracked(form.outletId);
-              return (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium flex items-center gap-1.5">
-                        {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Current Stock?">
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
-                            <p>The quantity of this item currently available at the selected outlet, expressed in its base unit (e.g., grams, ml, pieces). {formShowBatchExpiry ? "When batches are added, this is auto-calculated from the sum of all batch quantities." : ""}</p>
-                          </PopoverContent>
-                        </Popover>
-                      </label>
-                      {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
-                        <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                          {batchStockTotal}
-                        </div>
-                      ) : (
+                    <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                        <Select
+                          value={form.pricingMethod ?? "markup"}
+                          onValueChange={(v) => {
+                            const method = v as PricingMethod;
+                            const val = form.pricingValue ?? 0;
+                            const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
+                            setForm({ ...form, pricingMethod: method, sellPrice: newSell });
+                          }}
+                        >
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="markup">Markup %</SelectItem>
+                            <SelectItem value="margin">Margin %</SelectItem>
+                            <SelectItem value="fixed">Fixed Price</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                          {form.pricingMethod === "fixed" ? "Price" : "%"}
+                        </label>
                         <Input
                           type="number"
                           min={0}
-                          value={form.stock}
-                          onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                          step="0.01"
+                          value={form.pricingValue ?? 0}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            const method = form.pricingMethod ?? "markup";
+                            const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
+                            setForm({ ...form, pricingValue: val, sellPrice: newSell });
+                          }}
+                          className="h-9"
                         />
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium flex items-center gap-1.5">
-                        Min Stock
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Min Stock?">
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent side="bottom" align="end" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
-                            <p>The reorder threshold. When current stock falls to or below this level, the item is flagged as "Low Stock" so you know to restock before running out.</p>
-                          </PopoverContent>
-                        </Popover>
-                      </label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.minStock}
-                        onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-
-                  {formShowBatchExpiry && (
-              <div className="space-y-2 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-sm font-medium">Batches</label>
-                    <p className="text-xs text-muted-foreground">Track expiry per shipment.</p>
-                  </div>
-                  <Button type="button" variant="outline" size="sm" onClick={addBatch} className="h-7 text-xs">
-                    <Plus className="h-3 w-3 mr-1" /> Add Batch
-                  </Button>
-                </div>
-                {(form.batches?.length ?? 0) === 0 && (
-                  <p className="text-[11px] text-muted-foreground text-center py-2 border border-dashed rounded-md">
-                    No batches added yet.
-                  </p>
-                )}
-                {(form.batches ?? []).map((batch, idx) => (
-                  <div key={batch.id} className="grid grid-cols-[1fr_1fr_70px_28px] gap-1.5 items-end">
-                    <div className="space-y-0.5">
-                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Batch #</label>
-                      <Input
-                        value={batch.batchNumber}
-                        onChange={(e) => updateBatch(idx, { batchNumber: e.target.value })}
-                        placeholder="BT-001"
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-0.5">
-                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Expiry</label>
-                      <Input
-                        type="date"
-                        value={batch.expiryDate}
-                        onChange={(e) => updateBatch(idx, { expiryDate: e.target.value })}
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                    <div className="space-y-0.5">
-                      <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Qty</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={batch.quantity}
-                        onChange={(e) => updateBatch(idx, { quantity: Number(e.target.value) })}
-                        className="h-7 text-xs"
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-destructive"
-                      onClick={() => removeBatch(idx)}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-                </>
-              );
-            })()}
-
-
-            {(() => {
-              const retail = isOutletRetail(form.outletId);
-              const baseUnit = getUnit(form.unitId);
-              const baseSell = form.sellPrice ?? 0;
-              return (
-                <div className="space-y-3 border-t pt-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <label className="text-sm font-medium flex items-center gap-1.5">
-                        Selling Units & Conversions
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What are Selling Units?">
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[300px] text-xs leading-relaxed whitespace-normal break-words">
-                            <p className="mb-2">Define how your base unit breaks down into smaller sub-units, and which of those sub-units can be sold individually at the POS.</p>
-                            <p className="text-muted-foreground"><strong>Example:</strong> Paracetamol — base unit is <em>Pack</em>, with stock of 10 packs. Add a conversion <em>1 Pack = 6 Sachets</em>, mark <em>Sellable</em>, and set a per-sachet price. Cashiers can then sell either by Pack or by Sachet, and stock deducts proportionally.</p>
-                          </PopoverContent>
-                        </Popover>
-                      </label>
-                      <p className="text-xs text-muted-foreground">Add sub-units (e.g. Sachet, Tablet) and optionally enable per-unit retail sale.</p>
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={addConversion} className="h-7 text-xs shrink-0">
-                      <Plus className="h-3 w-3 mr-1" /> Add
-                    </Button>
-                  </div>
-
-                  {/* Base unit summary row */}
-                  {baseUnit && (
-                    <div className="flex items-center justify-between p-2.5 rounded-md bg-primary/5 border border-primary/15 text-xs">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary">Base</Badge>
-                        <span className="font-medium truncate">1 {baseUnit.name} ({baseUnit.abbreviation})</span>
                       </div>
-                      {retail && baseSell > 0 && (
-                        <span className="text-muted-foreground shrink-0">₦{baseSell.toFixed(2)} / {baseUnit.abbreviation}</span>
-                      )}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={form.sellPrice ?? 0}
+                          onChange={(e) => setForm({ ...form, sellPrice: Number(e.target.value) })}
+                          className="h-9"
+                        />
+                      </div>
                     </div>
-                  )}
+                    {cost > 0 && sell > 0 && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <TrendingUp className={cn("h-3.5 w-3.5", profitPositive ? "text-success" : "text-destructive")} />
+                        <span className={cn("font-medium", profitPositive ? "text-success" : "text-destructive")}>
+                          ₦{profit.toFixed(2)}/unit profit
+                        </span>
+                        <span className="text-muted-foreground">
+                          ({cost > 0 ? ((profit / cost) * 100).toFixed(1) : "0"}% markup)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
-                  {form.conversions.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
-                      No sub-units added yet
-                    </p>
-                  )}
 
-                  {form.conversions.map((conv, idx) => {
-                    const itemUnit = getUnit(form.unitId);
-                    const toUnit = getUnit(conv.toUnitId);
-                    const sellable = conv.sellable ?? true;
-                    // Suggested per-sub-unit price = base sell / (toQty per fromQty)
-                    const ratio = conv.fromQuantity > 0 && conv.toQuantity > 0
-                      ? conv.toQuantity / conv.fromQuantity
-                      : 0;
-                    const suggested = ratio > 0 && baseSell > 0
-                      ? Math.round((baseSell / ratio) * 100) / 100
-                      : 0;
-                    return (
-                      <Card key={conv.id} className="p-3 space-y-2">
+              {(() => {
+                const formShowBatchExpiry = isOutletBatchTracked(form.outletId);
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1.5">
+                          {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? "Total Stock (from batches)" : "Current Stock"}
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Current Stock?">
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
+                              <p>The quantity of this item currently available at the selected outlet, expressed in its base unit (e.g., grams, ml, pieces). {formShowBatchExpiry ? "When batches are added, this is auto-calculated from the sum of all batch quantities." : ""}</p>
+                            </PopoverContent>
+                          </Popover>
+                        </label>
+                        {formShowBatchExpiry && (form.batches?.length ?? 0) > 0 ? (
+                          <div className="h-10 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                            {batchStockTotal}
+                          </div>
+                        ) : (
+                          <Input
+                            type="number"
+                            min={0}
+                            value={form.stock}
+                            onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1.5">
+                          Min Stock
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What is Min Stock?">
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent side="bottom" align="end" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
+                              <p>The reorder threshold. When current stock falls to or below this level, the item is flagged as "Low Stock" so you know to restock before running out.</p>
+                            </PopoverContent>
+                          </Popover>
+                        </label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.minStock}
+                          onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+
+                    {formShowBatchExpiry && (
+                      <div className="space-y-2 border-t pt-4">
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-medium text-muted-foreground">Sub-unit {idx + 1}</p>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeConversion(idx)}>
-                            <X className="h-3.5 w-3.5" />
+                          <div>
+                            <label className="text-sm font-medium">Batches</label>
+                            <p className="text-xs text-muted-foreground">Track expiry per shipment.</p>
+                          </div>
+                          <Button type="button" variant="outline" size="sm" onClick={addBatch} className="h-7 text-xs">
+                            <Plus className="h-3 w-3 mr-1" /> Add Batch
                           </Button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0.01"
-                              value={conv.fromQuantity}
-                              onChange={(e) => updateConversion(idx, { fromQuantity: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
-                            <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
-                              {itemUnit ? itemUnit.abbreviation : "—"}
-                            </div>
-                          </div>
-                          <span className="text-sm font-medium text-muted-foreground pt-4">=</span>
-                          <div className="flex-1 space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0.01"
-                              value={conv.toQuantity}
-                              onChange={(e) => updateConversion(idx, { toQuantity: Number(e.target.value) })}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
-                            <Select value={conv.toUnitId} onValueChange={(v) => updateConversion(idx, { toUnitId: v })}>
-                              <SelectTrigger className="h-8 text-sm">
-                                <SelectValue placeholder="Select unit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {units.filter(u => u.id !== form.unitId).map((u) => (
-                                  <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        {itemUnit && toUnit && (
-                          <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
-                            {conv.fromQuantity} {itemUnit.abbreviation} = {conv.toQuantity} {toUnit.abbreviation}
+                        {(form.batches?.length ?? 0) === 0 && (
+                          <p className="text-[11px] text-muted-foreground text-center py-2 border border-dashed rounded-md">
+                            No batches added yet.
                           </p>
                         )}
-
-                        {retail && (
-                          <div className="rounded-md border border-dashed p-2.5 space-y-2 bg-accent/5">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="space-y-0.5 min-w-0">
-                                <Label htmlFor={`sellable-${conv.id}`} className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
-                                  Sellable at POS
-                                  <Popover>
-                                    <PopoverTrigger asChild>
-                                      <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What does Sellable mean?">
-                                        <Info className="h-3 w-3" />
-                                      </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
-                                      <p>When enabled, cashiers can ring up this item by the sub-unit{toUnit ? ` (e.g. per ${toUnit.name})` : ""}. Stock is automatically deducted from the base unit using the conversion above.</p>
-                                    </PopoverContent>
-                                  </Popover>
-                                </Label>
-                                <p className="text-[11px] text-muted-foreground">
-                                  {toUnit ? `Allow selling individual ${toUnit.name.toLowerCase()}s at the POS` : "Allow selling this sub-unit individually at the POS"}
-                                </p>
-                              </div>
-                              <Switch
-                                id={`sellable-${conv.id}`}
-                                checked={sellable}
-                                onCheckedChange={(checked) => updateConversion(idx, { sellable: checked })}
+                        {(form.batches ?? []).map((batch, idx) => (
+                          <div key={batch.id} className="grid grid-cols-[1fr_1fr_70px_28px] gap-1.5 items-end">
+                            <div className="space-y-0.5">
+                              <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Batch #</label>
+                              <Input
+                                value={batch.batchNumber}
+                                onChange={(e) => updateBatch(idx, { batchNumber: e.target.value })}
+                                placeholder="BT-001"
+                                className="h-7 text-xs"
                               />
                             </div>
-                            {sellable && (
-                              <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
-                                <div className="space-y-1">
-                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                                    Sell Price per {toUnit ? toUnit.abbreviation : "sub-unit"} (₦)
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    step="0.01"
-                                    value={conv.sellPrice ?? 0}
-                                    onChange={(e) => updateConversion(idx, { sellPrice: Number(e.target.value) })}
-                                    className="h-8 text-sm"
-                                    placeholder="0.00"
-                                  />
-                                </div>
-                                {suggested > 0 && (conv.sellPrice ?? 0) !== suggested && (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-8 text-[11px]"
-                                    onClick={() => updateConversion(idx, { sellPrice: suggested })}
-                                  >
-                                    Use ₦{suggested.toFixed(2)}
-                                  </Button>
-                                )}
-                              </div>
-                            )}
+                            <div className="space-y-0.5">
+                              <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Expiry</label>
+                              <Input
+                                type="date"
+                                value={batch.expiryDate}
+                                onChange={(e) => updateBatch(idx, { expiryDate: e.target.value })}
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-0.5">
+                              <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Qty</label>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={batch.quantity}
+                                onChange={(e) => updateBatch(idx, { quantity: Number(e.target.value) })}
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive"
+                              onClick={() => removeBatch(idx)}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
                           </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+
+              {(() => {
+                const retail = isOutletRetail(form.outletId);
+                const baseUnit = getUnit(form.unitId);
+                const baseSell = form.sellPrice ?? 0;
+                return (
+                  <div className="space-y-3 border-t pt-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <label className="text-sm font-medium flex items-center gap-1.5">
+                          Selling Units & Conversions
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What are Selling Units?">
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[300px] text-xs leading-relaxed whitespace-normal break-words">
+                              <p className="mb-2">Define how your base unit breaks down into smaller sub-units, and which of those sub-units can be sold individually at the POS.</p>
+                              <p className="text-muted-foreground"><strong>Example:</strong> Paracetamol — base unit is <em>Pack</em>, with stock of 10 packs. Add a conversion <em>1 Pack = 6 Sachets</em>, mark <em>Sellable</em>, and set a per-sachet price. Cashiers can then sell either by Pack or by Sachet, and stock deducts proportionally.</p>
+                            </PopoverContent>
+                          </Popover>
+                        </label>
+                        <p className="text-xs text-muted-foreground">Add sub-units (e.g. Sachet, Tablet) and optionally enable per-unit retail sale.</p>
+                      </div>
+                      <Button type="button" variant="outline" size="sm" onClick={addConversion} className="h-7 text-xs shrink-0">
+                        <Plus className="h-3 w-3 mr-1" /> Add
+                      </Button>
+                    </div>
+
+                    {/* Base unit summary row */}
+                    {baseUnit && (
+                      <div className="flex items-center justify-between p-2.5 rounded-md bg-primary/5 border border-primary/15 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary">Base</Badge>
+                          <span className="font-medium truncate">1 {baseUnit.name} ({baseUnit.abbreviation})</span>
+                        </div>
+                        {retail && baseSell > 0 && (
+                          <span className="text-muted-foreground shrink-0">₦{baseSell.toFixed(2)} / {baseUnit.abbreviation}</span>
                         )}
-                      </Card>
-                    );
-                  })}
+                      </div>
+                    )}
+
+                    {form.conversions.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
+                        No sub-units added yet
+                      </p>
+                    )}
+
+                    {form.conversions.map((conv, idx) => {
+                      const itemUnit = getUnit(form.unitId);
+                      const toUnit = getUnit(conv.toUnitId);
+                      const sellable = conv.sellable ?? true;
+                      // Suggested per-sub-unit price = base sell / (toQty per fromQty)
+                      const ratio = conv.fromQuantity > 0 && conv.toQuantity > 0
+                        ? conv.toQuantity / conv.fromQuantity
+                        : 0;
+                      const suggested = ratio > 0 && baseSell > 0
+                        ? Math.round((baseSell / ratio) * 100) / 100
+                        : 0;
+                      return (
+                        <Card key={conv.id} className="p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium text-muted-foreground">Sub-unit {idx + 1}</p>
+                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeConversion(idx)}>
+                              <X className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 space-y-1">
+                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={conv.fromQuantity}
+                                onChange={(e) => updateConversion(idx, { fromQuantity: Number(e.target.value) })}
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
+                              <div className="h-8 flex items-center px-3 rounded-md border bg-muted text-sm font-medium">
+                                {itemUnit ? itemUnit.abbreviation : "—"}
+                              </div>
+                            </div>
+                            <span className="text-sm font-medium text-muted-foreground pt-4">=</span>
+                            <div className="flex-1 space-y-1">
+                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                value={conv.toQuantity}
+                                onChange={(e) => updateConversion(idx, { toQuantity: Number(e.target.value) })}
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Unit</label>
+                              <Select value={conv.toUnitId} onValueChange={(v) => updateConversion(idx, { toUnitId: v })}>
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="Select unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {units.filter(u => u.id !== form.unitId).map((u) => (
+                                    <SelectItem key={u.id} value={u.id}>{u.name} ({u.abbreviation})</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          {itemUnit && toUnit && (
+                            <p className="text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+                              {conv.fromQuantity} {itemUnit.abbreviation} = {conv.toQuantity} {toUnit.abbreviation}
+                            </p>
+                          )}
+
+                          {retail && (
+                            <div className="rounded-md border border-dashed p-2.5 space-y-2 bg-accent/5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="space-y-0.5 min-w-0">
+                                  <Label htmlFor={`sellable-${conv.id}`} className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
+                                    Sellable at POS
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="What does Sellable mean?">
+                                          <Info className="h-3 w-3" />
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent side="bottom" align="start" collisionPadding={12} className="w-[260px] text-xs leading-relaxed whitespace-normal break-words">
+                                        <p>When enabled, cashiers can ring up this item by the sub-unit{toUnit ? ` (e.g. per ${toUnit.name})` : ""}. Stock is automatically deducted from the base unit using the conversion above.</p>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </Label>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    {toUnit ? `Allow selling individual ${toUnit.name.toLowerCase()}s at the POS` : "Allow selling this sub-unit individually at the POS"}
+                                  </p>
+                                </div>
+                                <Switch
+                                  id={`sellable-${conv.id}`}
+                                  checked={sellable}
+                                  onCheckedChange={(checked) => updateConversion(idx, { sellable: checked })}
+                                />
+                              </div>
+                              {sellable && (
+                                <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                      Sell Price per {toUnit ? toUnit.abbreviation : "sub-unit"} (₦)
+                                    </label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      step="0.01"
+                                      value={conv.sellPrice ?? 0}
+                                      onChange={(e) => updateConversion(idx, { sellPrice: Number(e.target.value) })}
+                                      className="h-8 text-sm"
+                                      placeholder="0.00"
+                                    />
+                                  </div>
+                                  {suggested > 0 && (conv.sellPrice ?? 0) !== suggested && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 text-[11px]"
+                                      onClick={() => updateConversion(idx, { sellPrice: suggested })}
+                                    >
+                                      Use ₦{suggested.toFixed(2)}
+                                    </Button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+              {!editing && !isOutletRetail(form.outletId) && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="register-add-to-catalog" className="text-sm font-medium cursor-pointer">
+                      Also add to catalog
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Create a matching catalog item linked to this inventory record
+                    </p>
+                  </div>
+                  <Switch id="register-add-to-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
                 </div>
-              );
-            })()}
-            {!editing && !isOutletRetail(form.outletId) && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
-                <div className="space-y-0.5">
-                  <Label htmlFor="register-add-to-catalog" className="text-sm font-medium cursor-pointer">
-                    Also add to catalog
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Create a matching catalog item linked to this inventory record
-                  </p>
+              )}
+              {isOutletRetail(form.outletId) && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
+                      Also add to catalog
+                    </Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Create a matching catalog item linked to this inventory record
+                    </p>
+                  </div>
+                  <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
                 </div>
-                <Switch id="register-add-to-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
-              </div>
-            )}
-            {isOutletRetail(form.outletId) && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/5 border border-accent/20">
-                <div className="space-y-0.5">
-                  <Label htmlFor="register-sync-catalog" className="text-sm font-medium cursor-pointer">
-                    Also add to catalog
-                  </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Create a matching catalog item linked to this inventory record
-                  </p>
-                </div>
-                <Switch id="register-sync-catalog" checked={syncToCatalog} onCheckedChange={setSyncToCatalog} />
-              </div>
-            )}
-          </div>
+              )}
+            </div>
           </div>
           <SheetFooter className="px-6 py-4 border-t">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editing ? "Update" : "Register"}</Button>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={createItemMutation.isMutating || updateItemMutation.isMutating}>Cancel</Button>
+            <Button onClick={handleSave} disabled={createItemMutation.isMutating || updateItemMutation.isMutating}>
+              {createItemMutation.isMutating || updateItemMutation.isMutating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : editing ? (
+                "Update"
+              ) : (
+                "Register"
+              )}
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

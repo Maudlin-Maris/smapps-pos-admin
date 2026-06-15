@@ -37,16 +37,26 @@ const defaultUnits: MeasuringUnit[] = [
   { id: "16", name: "Strip", abbreviation: "strip" },
 ];
 
+import {
+  useCreateMeasuringUnit,
+  useUpdateMeasuringUnit,
+  useDeleteMeasuringUnit,
+} from "@/services/api/inventory/unit";
+
 interface Props {
   units: MeasuringUnit[];
-  setUnits: React.Dispatch<React.SetStateAction<MeasuringUnit[]>>;
+  onMutate: () => void;
 }
 
-export default function MeasuringUnitManager({ units, setUnits }: Props) {
+export default function MeasuringUnitManager({ units, onMutate }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MeasuringUnit | null>(null);
   const [form, setForm] = useState({ name: "", abbreviation: "" });
   const [search, setSearch] = useState("");
+
+  const createUnitMutation = useCreateMeasuringUnit();
+  const updateUnitMutation = useUpdateMeasuringUnit();
+  const deleteUnitMutation = useDeleteMeasuringUnit();
 
   const openNew = () => {
     setEditing(null);
@@ -60,24 +70,43 @@ export default function MeasuringUnitManager({ units, setUnits }: Props) {
     setOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim() || !form.abbreviation.trim()) {
       toast.error("Name and abbreviation are required");
       return;
     }
-    if (editing) {
-      setUnits((prev) => prev.map((u) => (u.id === editing.id ? { ...u, ...form } : u)));
-      toast.success("Unit updated");
-    } else {
-      setUnits((prev) => [...prev, { id: crypto.randomUUID(), ...form }]);
-      toast.success("Unit added");
+    try {
+      if (editing) {
+        await updateUnitMutation.trigger({
+          id: editing.id,
+          payload: {
+            name: form.name,
+            abbreviation: form.abbreviation,
+          },
+        });
+        toast.success("Unit updated");
+      } else {
+        await createUnitMutation.trigger({
+          name: form.name,
+          abbreviation: form.abbreviation,
+        });
+        toast.success("Unit added");
+      }
+      onMutate();
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to save unit");
     }
-    setOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setUnits((prev) => prev.filter((u) => u.id !== id));
-    toast.success("Unit deleted");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteUnitMutation.trigger(id);
+      toast.success("Unit deleted");
+      onMutate();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to delete unit");
+    }
   };
 
   const filtered = units.filter((u) =>
@@ -108,10 +137,10 @@ export default function MeasuringUnitManager({ units, setUnits }: Props) {
               </div>
             </div>
             <div className="flex gap-1 shrink-0">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(unit)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(unit)} disabled={deleteUnitMutation.isMutating}>
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(unit.id)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(unit.id)} disabled={deleteUnitMutation.isMutating}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -141,7 +170,9 @@ export default function MeasuringUnitManager({ units, setUnits }: Props) {
           </div>
           <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editing ? "Update" : "Add"}</Button>
+            <Button onClick={handleSave} disabled={createUnitMutation.isMutating || updateUnitMutation.isMutating}>
+              {createUnitMutation.isMutating || updateUnitMutation.isMutating ? "Saving..." : editing ? "Update" : "Add"}
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Layers, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Layers, ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,14 +34,22 @@ import { useToast } from "@/hooks/use-toast";
 import { formatNaira } from "@/lib/currency";
 import { defaultInventoryItems } from "@/data/inventoryItems";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+
 import {
-  loadModifierGroups,
-  saveModifierGroups,
-  generateModifierGroupId,
-  generateModifierId,
-  type ModifierGroup,
-  type Modifier,
-} from "@/data/modifierGroups";
+  useGetModifierGroups,
+  useCreateModifierGroup,
+  useUpdateModifierGroup,
+  useDeleteModifierGroup,
+} from "@/services/api/catalog/modifier-group";
+import type { ApiModifierGroup } from "@/lib/types/modifier-group";
+
+interface DraftModifier {
+  id?: string;
+  name: string;
+  price: number;
+  linkedInventoryItemId?: string;
+}
 
 interface DraftGroup {
   id?: string;
@@ -49,7 +57,7 @@ interface DraftGroup {
   description: string;
   minSelect: number;
   maxSelect: number;
-  modifiers: Modifier[];
+  modifiers: DraftModifier[];
 }
 
 const emptyDraft: DraftGroup = {
@@ -62,8 +70,8 @@ const emptyDraft: DraftGroup = {
 
 export default function ModifierGroups() {
   const { toast } = useToast();
-  const [groups, setGroups] = useState<ModifierGroup[]>([]);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -71,34 +79,44 @@ export default function ModifierGroups() {
   const [draft, setDraft] = useState<DraftGroup>(emptyDraft);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+
   useEffect(() => {
-    setGroups(loadModifierGroups());
     setInventory(defaultInventoryItems);
   }, []);
 
-  const persist = (next: ModifierGroup[]) => {
-    setGroups(next);
-    saveModifierGroups(next);
-  };
+  const { data: listData, isLoading, mutate } = useGetModifierGroups({
+    page: currentPage,
+    per_page: perPage,
+    search: search || undefined,
+  });
 
-  const filtered = groups.filter((g) =>
-    g.name.toLowerCase().includes(search.toLowerCase()) ||
-    g.modifiers.some((m) => m.name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const groups = listData?.data || [];
+  const totalPages = listData?.meta?.last_page || 1;
+  const totalItems = listData?.meta?.total || 0;
+
+  const { trigger: triggerCreate, isMutating: isCreating } = useCreateModifierGroup();
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateModifierGroup(draft.id);
+  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteModifierGroup(deleteId ?? undefined);
 
   const openCreate = () => {
     setDraft(emptyDraft);
     setEditorOpen(true);
   };
 
-  const openEdit = (group: ModifierGroup) => {
+  const openEdit = (group: ApiModifierGroup) => {
     setDraft({
       id: group.id,
       name: group.name,
       description: group.description ?? "",
       minSelect: group.minSelect,
       maxSelect: group.maxSelect,
-      modifiers: group.modifiers.map((m) => ({ ...m })),
+      modifiers: group.modifiers.map((m) => ({
+        id: m.id,
+        name: m.name,
+        price: m.price,
+        linkedInventoryItemId: m.linkedInventoryItemId,
+      })),
     });
     setEditorOpen(true);
   };
@@ -108,12 +126,12 @@ export default function ModifierGroups() {
       ...d,
       modifiers: [
         ...d.modifiers,
-        { id: generateModifierId(), name: "", price: 0 },
+        { id: crypto.randomUUID(), name: "", price: 0 },
       ],
     }));
   };
 
-  const updateModifier = (idx: number, patch: Partial<Modifier>) => {
+  const updateModifier = (idx: number, patch: Partial<DraftModifier>) => {
     setDraft((d) => ({
       ...d,
       modifiers: d.modifiers.map((m, i) => (i === idx ? { ...m, ...patch } : m)),
@@ -127,7 +145,7 @@ export default function ModifierGroups() {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!draft.name.trim()) {
       toast({ title: "Name required", variant: "destructive" });
       return;
@@ -145,32 +163,44 @@ export default function ModifierGroups() {
       return;
     }
 
-    const saved: ModifierGroup = {
-      id: draft.id ?? generateModifierGroupId(),
+    const payload = {
       name: draft.name.trim(),
       description: draft.description.trim() || undefined,
       minSelect: Number(draft.minSelect) || 0,
       maxSelect: Number(draft.maxSelect) || 0,
-      modifiers: draft.modifiers.map((m) => ({
-        ...m,
+      modifiers: draft.modifiers.map((m, idx) => ({
         name: m.name.trim(),
         price: Number(m.price) || 0,
+        sortOrder: idx,
+        linkedInventoryItemId: m.linkedInventoryItemId || undefined,
       })),
     };
 
-    const next = draft.id
-      ? groups.map((g) => (g.id === draft.id ? saved : g))
-      : [...groups, saved];
-    persist(next);
-    setEditorOpen(false);
-    toast({ title: draft.id ? "Modifier group updated" : "Modifier group created" });
+    try {
+      if (draft.id) {
+        await triggerUpdate(payload);
+        toast({ title: "Modifier group updated" });
+      } else {
+        await triggerCreate(payload);
+        toast({ title: "Modifier group created" });
+      }
+      mutate();
+      setEditorOpen(false);
+    } catch (e) {
+      // Handled
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
-    persist(groups.filter((g) => g.id !== deleteId));
-    setDeleteId(null);
-    toast({ title: "Modifier group deleted" });
+    try {
+      await triggerDelete(undefined);
+      mutate();
+      setDeleteId(null);
+      toast({ title: "Modifier group deleted" });
+    } catch (e) {
+      // Handled
+    }
   };
 
   return (
@@ -193,11 +223,19 @@ export default function ModifierGroups() {
           placeholder="Search groups or modifiers"
           className="pl-9"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-dashed rounded-lg">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
+          <p className="text-sm text-muted-foreground">Loading modifier groups...</p>
+        </div>
+      ) : groups.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-2 p-12 text-center">
           <Layers className="h-10 w-10 text-muted-foreground" />
           <p className="font-medium">No modifier groups yet</p>
@@ -206,75 +244,85 @@ export default function ModifierGroups() {
           </p>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((group) => {
-            const isOpen = openId === group.id;
-            return (
-              <Card key={group.id} className="overflow-hidden">
-                <Collapsible open={isOpen} onOpenChange={(o) => setOpenId(o ? group.id : null)}>
-                  <div className="flex items-center justify-between gap-3 p-4">
-                    <CollapsibleTrigger asChild>
-                      <button className="flex flex-1 items-center gap-3 text-left">
-                        <ChevronDown
-                          className={`h-4 w-4 text-muted-foreground transition-transform ${
-                            isOpen ? "rotate-180" : ""
-                          }`}
-                        />
-                        <div>
-                          <div className="font-semibold">{group.name}</div>
-                          {group.description && (
-                            <div className="text-xs text-muted-foreground">{group.description}</div>
-                          )}
-                        </div>
-                      </button>
-                    </CollapsibleTrigger>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{group.modifiers.length} modifiers</Badge>
-                      <Badge variant="outline">
-                        {group.minSelect}–{group.maxSelect || "∞"}
-                      </Badge>
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(group)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => setDeleteId(group.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <CollapsibleContent>
-                    <Separator />
-                    <div className="divide-y">
-                      {group.modifiers.map((m) => {
-                        const linked = inventory.find((i) => i.id === m.linkedInventoryItemId);
-                        return (
-                          <div
-                            key={m.id}
-                            className="flex items-center justify-between px-4 py-2 text-sm"
-                          >
-                            <div>
-                              <div className="font-medium">{m.name}</div>
-                              {linked && (
-                                <div className="text-xs text-muted-foreground">
-                                  Linked: {linked.name}
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-muted-foreground">
-                              {m.price > 0 ? `+${formatNaira(m.price)}` : "Free"}
-                            </div>
+        <div className="space-y-4">
+          <div className="space-y-3">
+            {groups.map((group) => {
+              const isOpen = openId === group.id;
+              return (
+                <Card key={group.id} className="overflow-hidden">
+                  <Collapsible open={isOpen} onOpenChange={(o) => setOpenId(o ? group.id : null)}>
+                    <div className="flex items-center justify-between gap-3 p-4">
+                      <CollapsibleTrigger asChild>
+                        <button className="flex flex-1 items-center gap-3 text-left">
+                          <ChevronDown
+                            className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""
+                              }`}
+                          />
+                          <div>
+                            <div className="font-semibold">{group.name}</div>
+                            {group.description && (
+                              <div className="text-xs text-muted-foreground">{group.description}</div>
+                            )}
                           </div>
-                        );
-                      })}
+                        </button>
+                      </CollapsibleTrigger>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{group.modifiers.length} modifiers</Badge>
+                        <Badge variant="outline">
+                          {group.minSelect}–{group.maxSelect || "∞"}
+                        </Badge>
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(group)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setDeleteId(group.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            );
-          })}
+                    <CollapsibleContent>
+                      <Separator />
+                      <div className="divide-y">
+                        {group.modifiers.map((m) => {
+                          const linked = inventory.find((i) => i.id === m.linkedInventoryItemId);
+                          return (
+                            <div
+                              key={m.id}
+                              className="flex items-center justify-between px-4 py-2 text-sm"
+                            >
+                              <div>
+                                <div className="font-medium">{m.name}</div>
+                                {linked && (
+                                  <div className="text-xs text-muted-foreground">
+                                    Linked: {linked.name}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {m.price > 0 ? `+${formatNaira(m.price)}` : "Free"}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              );
+            })}
+          </div>
+
+          <ResuablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={totalItems}
+            rowsPerPage={perPage}
+            onRowsPerPageChange={setPerPage}
+          />
         </div>
       )}
 
@@ -344,7 +392,7 @@ export default function ModifierGroups() {
                 </p>
               )}
               {draft.modifiers.map((m, idx) => (
-                <Card key={m.id} className="space-y-2 p-3">
+                <Card key={m.id || idx} className="space-y-2 p-3">
                   <div className="grid grid-cols-12 gap-2">
                     <Input
                       className="col-span-5"
@@ -396,17 +444,17 @@ export default function ModifierGroups() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditorOpen(false)}>
+            <Button variant="outline" onClick={() => setEditorOpen(false)} disabled={isCreating || isUpdating}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} isLoading={isCreating || isUpdating}>
               {draft.id ? "Save Changes" : "Create Group"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !isDeleting && !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete modifier group?</AlertDialogTitle>
@@ -416,8 +464,10 @@ export default function ModifierGroups() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDelete} isLoading={isDeleting}>
+              Delete
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

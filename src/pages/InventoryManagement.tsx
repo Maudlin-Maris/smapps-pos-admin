@@ -5,6 +5,8 @@ import { AlertTriangle, Eye, Clock, Truck, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
+import { useGetInventoryItems, useAdjustInventoryItem, useCreateInventoryItem } from "@/services/api/inventory/item";
+import { useGetInventoryCategories } from "@/services/api/inventory/category";
 import {
   Select,
   SelectContent,
@@ -12,7 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
+import { useGetMeasuringUnits } from "@/services/api/inventory/unit";
+import { useGetComposites } from "@/services/api/inventory/composite";
 import { type MenuItem } from "@/components/menu/MenuItemForm";
 import InventoryCategoryManager, {
   defaultCategories,
@@ -112,17 +116,49 @@ const sampleMenuItems: MenuItemOption[] = [
 
 export default function InventoryManagement() {
   const [tab, setTab] = useState<Tab>("stock");
-  const [categories, setCategories] = useState<InventoryCategory[]>(defaultCategories);
-  const [units, setUnits] = useState<MeasuringUnit[]>(defaultUnits);
-  const [items, setItems] = useState<InventoryItem[]>(defaultItems);
-  const [composites, setComposites] = useCompositesStore(defaultComposites);
+  
+  // Search, filter, and page states for server-side operations in the stock items list tab
+  const [stockPage, setStockPage] = useState(1);
+  const [stockPerPage, setStockPerPage] = useState(15);
+  const [stockSearch, setStockSearch] = useState("");
+  const [stockCategory, setStockCategory] = useState("all");
+  
+  const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
+
+  const { data: outletsRes } = useGetOutlets();
+  const outlets = useMemo(() => outletsRes || [], [outletsRes]);
+
+  const { data: unitsRes, mutate: mutateUnits } = useGetMeasuringUnits({ page: 1, per_page: 100 });
+  const units = useMemo(() => unitsRes?.data || defaultUnits, [unitsRes]);
+
+  const { data: compositesRes, mutate: mutateComposites } = useGetComposites({
+    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+    page: 1,
+    per_page: 100,
+  });
+
+  const composites = useMemo<CompositeItem[]>(() => {
+    if (!compositesRes?.data) return [];
+    return compositesRes.data.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: "",
+      components: c.components.map((comp) => ({
+        inventoryItemId: comp.inventoryItemId,
+        quantity: comp.quantity,
+        role: comp.role,
+      })),
+      outletId: c.outletId,
+      sellPrice: c.sellPrice,
+    }));
+  }, [compositesRes]);
+  
   const { adjustments: storedAdjustments, addAdjustment } = useStockAdjustments();
   const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [bulkReceiveOpen, setBulkReceiveOpen] = useState(false);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
-  const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [showLowStock, setShowLowStock] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
   const [showExpiringSoon, setShowExpiringSoon] = useState(false);
@@ -131,10 +167,83 @@ export default function InventoryManagement() {
 
   const isAllOutlets = selectedOutletId === "all";
 
-  const outletItems = useMemo(
-    () => isAllOutlets ? items : items.filter((i) => i.outletId === selectedOutletId),
-    [items, selectedOutletId, isAllOutlets]
-  );
+  // Category SWR hook
+  const { data: categoriesResponse, mutate: mutateCategories } = useGetInventoryCategories({
+    page: 1,
+    per_page: 100,
+  });
+
+  // Fetch only the paginated items for the stock table
+  const { data: itemsResponse, isLoading: isItemsLoading, mutate: mutateItems } = useGetInventoryItems({
+    page: stockPage,
+    per_page: stockPerPage,
+    search: stockSearch.trim() || undefined,
+    categoryId: stockCategory === "all" ? undefined : stockCategory,
+    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+  });
+
+  // Fetch all items (up to 1000) for tabs that require global calculations (profitability, composite, substitutes, adjustments)
+  const { data: allItemsResponse, mutate: mutateAllItems } = useGetInventoryItems({
+    per_page: 20,
+    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+  });
+
+  const createItemMutation = useCreateInventoryItem();
+  const adjustMutation = useAdjustInventoryItem();
+
+  const mapApiItemToInventoryItem = (apiItem: any): InventoryItem => {
+    const mockItem = defaultItems.find(x => x.id === apiItem.id || x.sku === apiItem.sku);
+    const stock = apiItem.quantity ?? apiItem.stock ?? mockItem?.stock ?? 0;
+    const minStock = apiItem.minStock ?? apiItem.reorderLevel ?? mockItem?.minStock ?? 0;
+
+    return {
+      id: apiItem.id,
+      name: apiItem.name || mockItem?.name || "",
+      description: apiItem.description ?? mockItem?.description ?? "",
+      sku: apiItem.sku || mockItem?.sku || "",
+      categoryId: apiItem.categoryId ?? mockItem?.categoryId ?? "1",
+      unitId: apiItem.unitId ?? mockItem?.unitId ?? "5", // pcs fallback
+      stock: stock,
+      minStock: minStock,
+      costPrice: apiItem.costPrice ?? mockItem?.costPrice ?? 0,
+      sellPrice: apiItem.sellPrice ?? mockItem?.sellPrice ?? 0,
+      pricingMethod: apiItem.pricingMethod ?? mockItem?.pricingMethod ?? "markup",
+      pricingValue: apiItem.pricingValue ?? mockItem?.pricingValue ?? 30,
+      status: computeStatus(stock, minStock),
+      conversions: apiItem.conversions ?? mockItem?.conversions ?? [
+        { id: crypto.randomUUID(), fromQuantity: 1, toQuantity: 1, toUnitId: apiItem.unitId ?? mockItem?.unitId ?? "5", sellable: true, sellPrice: apiItem.sellPrice ?? mockItem?.sellPrice ?? 0 }
+      ],
+      outletId: apiItem.outletId ?? mockItem?.outletId ?? selectedOutletId,
+      batchNumber: apiItem.batchNumber ?? mockItem?.batchNumber ?? "",
+      expiryDate: apiItem.expiryDate ?? mockItem?.expiryDate ?? "",
+      batches: apiItem.batches ?? mockItem?.batches ?? [],
+    };
+  };
+
+  const items = useMemo<InventoryItem[]>(() => {
+    if (!itemsResponse?.data) return [];
+    return itemsResponse.data.map(mapApiItemToInventoryItem);
+  }, [itemsResponse]);
+
+  const allItems = useMemo<InventoryItem[]>(() => {
+    if (!allItemsResponse?.data) return [];
+    return allItemsResponse.data.map(mapApiItemToInventoryItem);
+  }, [allItemsResponse]);
+
+  const outletItems = allItems;
+
+  const categories = useMemo<InventoryCategory[]>(() => {
+    if (!categoriesResponse?.data) return [];
+    return categoriesResponse.data.map(cat => {
+      const count = allItems.filter(item => item.categoryId === cat.id).length;
+      return {
+        id: cat.id,
+        name: cat.name,
+        description: cat.description || "",
+        itemCount: count,
+      };
+    });
+  }, [categoriesResponse, allItems]);
 
   const outletComposites = useMemo(
     () => isAllOutlets ? composites : composites.filter((c) => c.outletId === selectedOutletId),
@@ -174,142 +283,112 @@ export default function InventoryManagement() {
     return { expiredItemCount: expiredCount, expiringSoonItemCount: soonCount };
   }, [outletItems]);
 
-  const handleAdjustStock = (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string, pricing?: import("@/components/inventory/StockAdjustmentHistory").StockReceivePricing) => {
-    const item = items.find((i) => i.id === itemId);
+  const handleAdjustStock = async (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string, pricing?: import("@/components/inventory/StockAdjustmentHistory").StockReceivePricing) => {
+    const item = allItems.find((i) => i.id === itemId);
     if (!item) return;
 
     const previousStock = item.stock;
-    let newStock: number;
-    let newAverageCost = item.costPrice;
-    let updatedBatches = item.batches ? [...item.batches.map(b => ({ ...b }))] : undefined;
-    
-    if (type === "add" || type === "returned") {
-      newStock = previousStock + quantity;
-      
-      // Calculate Weighted Average Cost (WAC)
-      if (batchCostPrice !== undefined && batchCostPrice > 0 && newStock > 0) {
-        const currentTotalValue = previousStock * item.costPrice;
-        const newBatchValue = quantity * batchCostPrice;
-        newAverageCost = (currentTotalValue + newBatchValue) / newStock;
-      }
-
-      // For returns, try to add back to existing batch with matching batchNumber
-      if (type === "returned" && batchNumber && updatedBatches) {
-        const existingBatch = updatedBatches.find(b => b.batchNumber === batchNumber);
-        if (existingBatch) {
-          existingBatch.quantity += quantity;
-        } else {
-          updatedBatches.push({
-            id: crypto.randomUUID(),
-            batchNumber,
-            expiryDate: expiryDate || "",
-            quantity,
-            initialQuantity: quantity,
-            costPrice: batchCostPrice,
-            createdAt: new Date().toISOString(),
-          });
-        }
-      } else if (type === "add" && batchNumber && updatedBatches) {
-        updatedBatches.push({
-          id: crypto.randomUUID(),
-          batchNumber,
-          expiryDate: expiryDate || "",
-          quantity,
-          initialQuantity: quantity,
-          costPrice: batchCostPrice,
-          createdAt: new Date().toISOString(),
-        });
-      } else if (batchNumber && !updatedBatches) {
-        updatedBatches = [{
-          id: crypto.randomUUID(),
-          batchNumber,
-          expiryDate: expiryDate || "",
-          quantity,
-          initialQuantity: quantity,
-          costPrice: batchCostPrice,
-          createdAt: new Date().toISOString(),
-        }];
-      }
-    } else {
-      newStock = Math.max(0, previousStock - quantity);
-
-      // For removals, reduce from batches using FEFO (First Expiry, First Out)
-      if (updatedBatches && updatedBatches.length > 0) {
-        updatedBatches.sort((a, b) => {
-          if (!a.expiryDate) return 1;
-          if (!b.expiryDate) return -1;
-          return new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
-        });
-        let remaining = quantity;
-        for (const batch of updatedBatches) {
-          if (remaining <= 0) break;
-          const deduct = Math.min(batch.quantity, remaining);
-          batch.quantity -= deduct;
-          remaining -= deduct;
-        }
-        updatedBatches = updatedBatches.filter(b => b.quantity > 0);
-      }
-    }
-
-    const quantityChange = quantity;
-    
     const recordedCostPrice = (type === "add" || type === "returned") && batchCostPrice ? batchCostPrice : item.costPrice;
-    const costTotal = quantityChange * recordedCostPrice;
+    const costTotal = quantity * recordedCostPrice;
 
-    const adjustment: StockAdjustment = {
-      id: crypto.randomUUID(),
-      inventoryItemId: itemId,
-      type,
-      quantityChange,
-      previousStock,
-      newStock,
-      reason,
-      timestamp: new Date(),
-      outletId: item.outletId,
-      costPrice: recordedCostPrice,
-      costTotal,
-      batchNumber,
-      expiryDate,
-      sellPrice: pricing?.sellPrice,
-      pricingMethod: pricing?.method,
-      pricingValue: pricing?.value,
-      syncToCatalog: pricing?.syncToCatalog,
-    };
+    try {
+      await adjustMutation.trigger({
+        id: itemId,
+        payload: {
+          type: type === "add" || type === "returned" ? "add" : "remove",
+          quantity,
+          reason,
+          costPrice: recordedCostPrice,
+          notes: batchNumber ? `Batch: ${batchNumber}` : undefined,
+        }
+      });
 
-    setAdjustments((prev) => [adjustment, ...prev]);
+      const newStock = type === "add" || type === "returned" ? previousStock + quantity : Math.max(0, previousStock - quantity);
 
-    // Also persist to localStorage for COGS reporting
-    const storedAdj: StoredAdjustment = {
-      ...adjustment,
-      timestamp: adjustment.timestamp.toISOString(),
-    };
-    addAdjustment(storedAdj);
+      const adjustment: StockAdjustment = {
+        id: crypto.randomUUID(),
+        inventoryItemId: itemId,
+        type,
+        quantityChange: quantity,
+        previousStock,
+        newStock,
+        reason,
+        timestamp: new Date(),
+        outletId: item.outletId,
+        costPrice: recordedCostPrice,
+        costTotal,
+        batchNumber,
+        expiryDate,
+        sellPrice: pricing?.sellPrice,
+        pricingMethod: pricing?.method,
+        pricingValue: pricing?.value,
+        syncToCatalog: pricing?.syncToCatalog,
+      };
 
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === itemId
-          ? { 
-              ...i, 
-              stock: newStock, 
-              costPrice: newAverageCost,
-              status: computeStatus(newStock, i.minStock),
-              batches: updatedBatches,
-            }
-          : i
-      )
-    );
+      setAdjustments((prev) => [adjustment, ...prev]);
 
-    // Handle catalog sync for retail business types
-    if (pricing?.syncToCatalog && type === "add") {
-      toast.success(
-        `Stock received: ${previousStock} → ${newStock} | Sell price: ₦${pricing.sellPrice.toFixed(2)} | Catalog updated automatically`,
-        { duration: 5000 }
-      );
-    } else {
-      const costChangeMsg = newAverageCost !== item.costPrice 
-        ? ` | Avg cost updated: ₦${item.costPrice.toFixed(2)} → ₦${newAverageCost.toFixed(2)}`
-        : "";
-      toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: ₦${costTotal.toFixed(2)})${costChangeMsg}`);
+      // Also persist to localStorage for COGS reporting
+      const storedAdj: StoredAdjustment = {
+        ...adjustment,
+        timestamp: adjustment.timestamp.toISOString(),
+      };
+      addAdjustment(storedAdj);
+
+      await mutateItems();
+      await mutateAllItems();
+      await mutateCategories();
+      await mutateComposites();
+
+      // Handle catalog sync for retail business types
+      if (pricing?.syncToCatalog && type === "add") {
+        toast.success(
+          `Stock received: ${previousStock} → ${newStock} | Sell price: ₦${pricing.sellPrice.toFixed(2)} | Catalog updated automatically`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: ₦${costTotal.toFixed(2)})`);
+      }
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to adjust stock");
+    }
+  };
+
+  const handleImport = async (newItems: InventoryItem[]) => {
+    try {
+      for (const item of newItems) {
+        await createItemMutation.trigger({
+          outletId: item.outletId || (selectedOutletId === "all" ? "" : selectedOutletId),
+          name: item.name,
+          description: item.description || "",
+          sku: item.sku,
+          categoryId: item.categoryId,
+          unitId: item.unitId,
+          costPrice: item.costPrice,
+          sellingPrice: item.sellPrice || 0,
+          stock: item.stock,
+          minStock: item.minStock,
+          pricingMethod: item.pricingMethod || "markup",
+          pricingValue: item.pricingValue || 0,
+          conversions: (item.conversions || []).map(c => ({
+            fromQuantity: c.fromQuantity,
+            toQuantity: c.toQuantity,
+            toUnitId: c.toUnitId,
+            sellable: c.sellable ?? true,
+            sellPrice: c.sellPrice ?? 0,
+          })),
+          batches: (item.batches || []).map(b => ({
+            batchNumber: b.batchNumber,
+            expiryDate: b.expiryDate ? new Date(b.expiryDate) : new Date(),
+            quantity: b.quantity,
+            costPrice: b.costPrice ?? item.costPrice ?? 0,
+          })),
+        });
+      }
+      await mutateItems();
+      await mutateAllItems();
+      toast.success(`Successfully imported ${newItems.length} items`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to import items");
     }
   };
 
@@ -477,8 +556,18 @@ export default function InventoryManagement() {
 
       {tab === "stock" && (
         <InventoryItemForm
-          items={outletItems}
-          setItems={setItems}
+          items={items}
+          totalItems={itemsResponse?.meta?.total ?? 0}
+          page={stockPage}
+          onPageChange={setStockPage}
+          perPage={stockPerPage}
+          onPerPageChange={setStockPerPage}
+          search={stockSearch}
+          onSearchChange={setStockSearch}
+          filterCategory={stockCategory}
+          onFilterCategoryChange={setStockCategory}
+          isLoading={isItemsLoading}
+          onMutate={() => { mutateItems(); mutateAllItems(); }}
           categories={categories}
           units={units}
           onAdjustStock={isAllOutlets ? undefined : openAdjust}
@@ -503,15 +592,15 @@ export default function InventoryManagement() {
         <StockAdjustmentHistory adjustments={outletAdjustments} inventoryItems={outletItems} units={units} />
       )}
       {tab === "categories" && (
-        <InventoryCategoryManager categories={categories} setCategories={setCategories} />
+        <InventoryCategoryManager categories={categories} onMutate={mutateCategories} />
       )}
       {tab === "units" && (
-        <MeasuringUnitManager units={units} setUnits={setUnits} />
+        <MeasuringUnitManager units={units} onMutate={mutateUnits} />
       )}
       {tab === "composite" && (
         <CompositeItemForm
           composites={outletComposites}
-          setComposites={setComposites}
+          onMutate={mutateComposites}
           inventoryItems={outletItems}
           units={units}
           menuItems={sampleMenuItems}
@@ -538,7 +627,7 @@ export default function InventoryManagement() {
       <BulkReceiveStockDialog
         open={bulkReceiveOpen}
         onOpenChange={setBulkReceiveOpen}
-        items={items}
+        items={allItems}
         units={units}
         outletId={selectedOutletId}
         onReceive={handleAdjustStock}
@@ -550,8 +639,8 @@ export default function InventoryManagement() {
         categories={categories}
         units={units}
         selectedOutletId={selectedOutletId}
-        existingItems={items}
-        onImport={(newItems) => setItems((prev) => [...prev, ...newItems])}
+        existingItems={allItems}
+        onImport={handleImport}
       />
     </div>
   );

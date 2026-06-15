@@ -32,9 +32,15 @@ import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatNaira } from "@/lib/currency";
-import { useSubstituteGroups } from "@/data/substituteGroups";
+import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
 import ComponentSubstituteEditor from "./ComponentSubstituteEditor";
 import { getProducibleWithSubstitutes, type ComponentSubstituteConfig } from "@/lib/composite-substitution";
+
+import {
+  useCreateComposite,
+  useUpdateComposite,
+  useDeleteComposite,
+} from "@/services/api/inventory/composite";
 
 export type ComponentRole = "primary" | "secondary";
 export type CompositePricingMethod = "markup" | "margin" | "fixed";
@@ -81,7 +87,7 @@ function calcCompositeSellPrice(totalCost: number, method: CompositePricingMetho
 
 interface Props {
   composites: CompositeItem[];
-  setComposites: React.Dispatch<React.SetStateAction<CompositeItem[]>>;
+  onMutate: () => void;
   inventoryItems: InventoryItem[];
   units: MeasuringUnit[];
   menuItems: { id: string; name: string; variants: { id: string; name: string }[] }[];
@@ -101,16 +107,21 @@ const emptyForm = () => ({
   pricingValue: 30 as number,
 });
 
-export default function CompositeItemForm({ composites, setComposites, inventoryItems, units, menuItems, readOnly, selectedOutletId }: Props) {
+export default function CompositeItemForm({ composites, onMutate, inventoryItems, units, menuItems, readOnly, selectedOutletId }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [search, setSearch] = useState("");
-  const [allGroups] = useSubstituteGroups();
+  const { data: subGroupsRes } = useGetSubstituteGroups({ page: 1, per_page: 100 });
+  const allGroups = subGroupsRes?.data ?? [];
   const groups = useMemo(
     () => allGroups.filter((g) => !selectedOutletId || g.outletId === selectedOutletId),
     [allGroups, selectedOutletId]
   );
+
+  const createCompositeMutation = useCreateComposite();
+  const updateCompositeMutation = useUpdateComposite();
+  const deleteCompositeMutation = useDeleteComposite();
 
   const openNew = () => {
     setEditing(null);
@@ -143,9 +154,9 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
   const updateComponent = (index: number, field: keyof CompositeComponent, value: string | number) => {
     setForm((f) => {
-      const updated = [...f.components];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...f, components: updated };
+      const arr = [...f.components];
+      arr[index] = { ...arr[index], [field]: value };
+      return { ...f, components: arr };
     });
   };
 
@@ -156,7 +167,7 @@ export default function CompositeItemForm({ composites, setComposites, inventory
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) {
       toast.error("Composite item name is required");
       return;
@@ -173,31 +184,59 @@ export default function CompositeItemForm({ composites, setComposites, inventory
 
     const sellPriceNum =
       form.sellPrice === "" || form.sellPrice === null
-        ? undefined
+        ? 0
         : Number(form.sellPrice);
-    const overheadNum =
-      form.overheadPerUnit === "" || form.overheadPerUnit === null
-        ? undefined
-        : Number(form.overheadPerUnit);
 
-    if (editing) {
-      setComposites((prev) =>
-        prev.map((c) => (c.id === editing.id ? { ...c, name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, sellPrice: sellPriceNum, overheadPerUnit: overheadNum, pricingMethod: form.pricingMethod, pricingValue: form.pricingValue } : c))
-      );
-      toast.success("Composite item updated");
-    } else {
-      setComposites((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), name: form.name, menuItemId: form.menuItemId || undefined, menuVariantId: form.menuVariantId || undefined, description: form.description, components: validComponents, outletId: selectedOutletId || "", sellPrice: sellPriceNum, overheadPerUnit: overheadNum, pricingMethod: form.pricingMethod, pricingValue: form.pricingValue },
-      ]);
-      toast.success("Composite item created");
+    const generatedSku = form.menuItemId
+      ? `RECIPE-${form.menuItemId}`
+      : `RECIPE-${form.name.toUpperCase().replace(/\s+/g, "-")}`;
+
+    const componentsPayload = validComponents.map((c) => ({
+      inventoryItemId: c.inventoryItemId,
+      quantity: c.quantity,
+      role: c.role as "primary" | "secondary",
+    }));
+
+    try {
+      if (editing) {
+        await updateCompositeMutation.trigger({
+          id: editing.id,
+          payload: {
+            name: form.name,
+            sku: generatedSku,
+            sellPrice: sellPriceNum,
+            description: form.description,
+            components: componentsPayload,
+            outletId: selectedOutletId || "",
+          },
+        });
+        toast.success("Composite item updated");
+      } else {
+        await createCompositeMutation.trigger({
+          name: form.name,
+          sku: generatedSku,
+          sellPrice: sellPriceNum,
+          description: form.description,
+          components: componentsPayload,
+          outletId: selectedOutletId || "",
+        });
+        toast.success("Composite item created");
+      }
+      onMutate();
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to save composite item");
     }
-    setOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    setComposites((prev) => prev.filter((c) => c.id !== id));
-    toast.success("Composite item deleted");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCompositeMutation.trigger(id);
+      toast.success("Composite item deleted");
+      onMutate();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || "Failed to delete composite item");
+    }
   };
 
   const getItemName = (id: string) => inventoryItems.find((i) => i.id === id)?.name || "Unknown";
@@ -346,10 +385,10 @@ export default function CompositeItemForm({ composites, setComposites, inventory
               </div>
               {!readOnly && (
                 <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(item)} disabled={deleteCompositeMutation.isMutating}>
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)} disabled={deleteCompositeMutation.isMutating}>
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -711,7 +750,9 @@ export default function CompositeItemForm({ composites, setComposites, inventory
           </div>
           <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editing ? "Update" : "Create"}</Button>
+            <Button onClick={handleSave} disabled={createCompositeMutation.isMutating || updateCompositeMutation.isMutating}>
+              {createCompositeMutation.isMutating || updateCompositeMutation.isMutating ? "Saving..." : editing ? "Update" : "Create"}
+            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>

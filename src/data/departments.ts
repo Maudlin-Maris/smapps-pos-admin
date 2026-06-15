@@ -3,7 +3,7 @@ import type { MenuItem } from "@/components/menu/MenuItemForm";
 export interface Department {
   id: string;
   name: string;
-  outletId: number;
+  outletId: number | string;
   assignedCategories: string[];
   assignedSubcategories: string[];
 }

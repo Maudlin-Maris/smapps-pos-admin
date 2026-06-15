@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp, Pencil, Check as CheckIcon } from "lucide-react";
+import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp, Pencil, Check as CheckIcon, Loader2 } from "lucide-react";
 import type { PricingMethod } from "@/components/inventory/StockAdjustmentHistory";
 
 function calcMenuSellPrice(costPrice: number, method: PricingMethod, value: number): number {
@@ -41,7 +41,7 @@ import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 import { getFeatures, type BusinessTypeId } from "@/data/businessTypes";
 import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, PopoverTrigger as OutletPopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import type { Outlet } from "@/data/outlets";
+import type { Outlet } from "@/lib/types/outlet";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -143,7 +143,7 @@ export interface MenuItem {
   modifierGroupIds?: string[];
   /** Pricing strategy: "base" single price (default), "variant" priced per
    *  variant, "open" entered by cashier at checkout. */
-   pricingStrategy?: "base" | "variant" | "open";
+  pricingStrategy?: "base" | "variant" | "open";
   /** Unit used when selling this item (e.g. "pcs", "kg", "hour"). Drives
    *  POS display and reporting. Service items typically use time-based units. */
   sellingUnit?: string;
@@ -162,6 +162,7 @@ interface MenuItemFormProps {
   onOpenChange: (open: boolean) => void;
   categories: Category[];
   item?: MenuItem | null;
+  isSaving: boolean;
   onSave: (item: MenuItem, targetOutletIds: string[]) => void;
   mode?: "add" | "edit" | "clone";
   businessType?: BusinessTypeId;
@@ -299,7 +300,7 @@ function FormGroup({
 }
 
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, isSaving, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
   const [allSubGroups] = useSubstituteGroups();
   const subGroups = allSubGroups.filter(
@@ -615,9 +616,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const autoSku = generateSku();
     const finalVariants = hasVariants
       ? variants.map((v, i) => ({
-          ...v,
-          sku: v.sku || `${autoSku}-V${i + 1}`,
-        }))
+        ...v,
+        sku: v.sku || `${autoSku}-V${i + 1}`,
+      }))
       : variants;
     const suppressSale = isService || isOpenPrice || isVariantPriced || hasVariants;
     onSave({
@@ -679,8 +680,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const formDescription = mode === "clone"
     ? "You're creating a new item based on an existing one. Review and adjust the details before saving."
     : mode === "edit"
-    ? "Update the details of this catalog item."
-    : "Fill in the details to create a new catalog item.";
+      ? "Update the details of this catalog item."
+      : "Fill in the details to create a new catalog item.";
   const submitLabel = mode === "clone" ? "Create Clone" : mode === "edit" ? "Update Item" : "Add Item";
 
   return (
@@ -692,998 +693,998 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-6 pb-6">
 
-        <div className="space-y-6">
-          {/* DETAILS — outlet, item type, name, category, unit, description.
+          <div className="space-y-6">
+            {/* DETAILS — outlet, item type, name, category, unit, description.
               Merged into one block to reduce vertical noise. */}
-          <FormGroup title="Details">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
-                <Select
-                  value={selectedOutletIds[0] ?? ""}
-                  onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
-                >
-                  <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select outlet" /></SelectTrigger>
-                  <SelectContent>
-                    {outlets.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Item Type *</Label>
-                 <div className="mt-1 grid grid-cols-3 gap-1.5">
-                  {([
-                    { key: "simple", label: "Simple", desc: "Single stocked product", Icon: Package },
-                    { key: "composite", label: "Composite", desc: "Made from ingredients", Icon: ChefHat },
-                    { key: "service", label: "Service", desc: "Time-based, no stock", Icon: Sparkles },
-                  ] as const).map(({ key, label, desc, Icon }) => {
-                    const active = itemType === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => handleTypeChange(key)}
-                        className={cn(
-                          "flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[3.25rem] rounded-md border text-xs transition-colors text-center",
-                          active
-                            ? "border-primary bg-primary/5 text-primary font-medium"
-                            : "border-border text-muted-foreground hover:bg-muted/40"
-                        )}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <Icon className="h-3.5 w-3.5" />
-                          <span>{label}</span>
-                        </div>
-                        <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{desc}</span>
-                      </button>
-                    );
-                  })}
+            <FormGroup title="Details">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
+                  <Select
+                    value={selectedOutletIds[0] ?? ""}
+                    onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
+                  >
+                    <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select outlet" /></SelectTrigger>
+                    <SelectContent>
+                      {outlets.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Item Type *</Label>
+                  <div className="mt-1 grid grid-cols-3 gap-1.5">
+                    {([
+                      { key: "simple", label: "Simple", desc: "Single stocked product", Icon: Package },
+                      { key: "composite", label: "Composite", desc: "Made from ingredients", Icon: ChefHat },
+                      { key: "service", label: "Service", desc: "Time-based, no stock", Icon: Sparkles },
+                    ] as const).map(({ key, label, desc, Icon }) => {
+                      const active = itemType === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => handleTypeChange(key)}
+                          className={cn(
+                            "flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[3.25rem] rounded-md border text-xs transition-colors text-center",
+                            active
+                              ? "border-primary bg-primary/5 text-primary font-medium"
+                              : "border-border text-muted-foreground hover:bg-muted/40"
+                          )}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <Icon className="h-3.5 w-3.5" />
+                            <span>{label}</span>
+                          </div>
+                          <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div>
-              <Label htmlFor="item-name" className="text-xs">Item Name *</Label>
-              <Input id="item-name" className="mt-1 h-9" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs flex items-center gap-1.5">
-                  Category *
-                  {itemType === "simple" && linkedInventoryItemId && (
-                    <Lock className="h-3 w-3 text-muted-foreground" />
-                  )}
-                </Label>
-                <Select
-                  value={selectedCatId}
-                  onValueChange={(v) => setSelectedCatId(v)}
-                  disabled={itemType === "simple" && !!linkedInventoryItemId}
-                >
-                  <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select category" /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="item-name" className="text-xs">Item Name *</Label>
+                <Input id="item-name" className="mt-1 h-9" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
               </div>
-              <div>
-                <Label className="text-xs flex items-center gap-1.5">
-                  Selling Unit
-                  {itemType === "simple" && linkedInventoryItemId && (
-                    <Lock className="h-3 w-3 text-muted-foreground" />
-                  )}
-                </Label>
-                <Select
-                  value={sellingUnit}
-                  onValueChange={setSellingUnit}
-                  disabled={itemType === "simple" && !!linkedInventoryItemId}
-                >
-                  <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
-                  <SelectContent>
-                    {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
-                      <SelectItem key={u.abbreviation} value={u.abbreviation}>
-                        {u.name} ({u.abbreviation})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="item-desc" className="text-xs">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
-            </div>
-
-            {variants.length === 0 && (
-              <div className="flex items-center gap-3 pt-1">
-                <Switch checked={isActive} onCheckedChange={setIsActive} />
-                <Label className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</Label>
-              </div>
-            )}
-          </FormGroup>
-
-          {/* INVENTORY — Simple items only. Combines link, stock/barcode, and
-              the "Also add to Inventory" toggle into one compact group. */}
-          {itemType === "simple" && (() => {
-            const linked = linkedInventoryItemId
-              ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
-              : null;
-            const isLinked = !!linked;
-            return (
-              <FormGroup
-                title="Inventory"
-                hint={isLinked ? "Linked — synced from inventory" : undefined}
-              >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Link to existing inventory item <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between font-normal h-9 text-sm mt-1"
-                      >
-                        {linkedInventoryItemId
-                          ? (() => {
+                  <Label className="text-xs flex items-center gap-1.5">
+                    Category *
+                    {itemType === "simple" && linkedInventoryItemId && (
+                      <Lock className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </Label>
+                  <Select
+                    value={selectedCatId}
+                    onValueChange={(v) => setSelectedCatId(v)}
+                    disabled={itemType === "simple" && !!linkedInventoryItemId}
+                  >
+                    <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs flex items-center gap-1.5">
+                    Selling Unit
+                    {itemType === "simple" && linkedInventoryItemId && (
+                      <Lock className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </Label>
+                  <Select
+                    value={sellingUnit}
+                    onValueChange={setSellingUnit}
+                    disabled={itemType === "simple" && !!linkedInventoryItemId}
+                  >
+                    <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectContent>
+                      {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
+                        <SelectItem key={u.abbreviation} value={u.abbreviation}>
+                          {u.name} ({u.abbreviation})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="item-desc" className="text-xs">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
+              </div>
+
+              {variants.length === 0 && (
+                <div className="flex items-center gap-3 pt-1">
+                  <Switch checked={isActive} onCheckedChange={setIsActive} />
+                  <Label className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</Label>
+                </div>
+              )}
+            </FormGroup>
+
+            {/* INVENTORY — Simple items only. Combines link, stock/barcode, and
+              the "Also add to Inventory" toggle into one compact group. */}
+            {itemType === "simple" && (() => {
+              const linked = linkedInventoryItemId
+                ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
+                : null;
+              const isLinked = !!linked;
+              return (
+                <FormGroup
+                  title="Inventory"
+                  hint={isLinked ? "Linked — synced from inventory" : undefined}
+                >
+                  <div>
+                    <Label className="text-xs">Link to existing inventory item <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal h-9 text-sm mt-1"
+                        >
+                          {linkedInventoryItemId
+                            ? (() => {
                               const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
                               return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
                             })()
-                          : <span className="text-muted-foreground">Search inventory...</span>}
-                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command>
-                        <CommandInput placeholder="Search by name or SKU..." className="h-9" />
-                        <CommandList>
-                          <CommandEmpty>No inventory items found.</CommandEmpty>
-                          <CommandGroup>
-                            {linkedInventoryItemId && (
-                              <CommandItem
-                                value="__clear__"
-                                onSelect={() => { setLinkedInventoryItemId(""); setLinkPickerOpen(false); }}
-                              >
-                                <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                                <span className="text-muted-foreground">Clear link</span>
-                              </CommandItem>
-                            )}
-                            {availableInventory.map((inv) => (
-                              <CommandItem
-                                key={inv.id}
-                                value={`${inv.name} ${inv.sku}`}
-                                onSelect={() => { handleLinkInventory(inv.id); setLinkPickerOpen(false); }}
-                              >
-                                <Check className={cn("h-3.5 w-3.5 mr-2", linkedInventoryItemId === inv.id ? "opacity-100" : "opacity-0")} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-sm truncate">{inv.name}</div>
-                                  <div className="text-[11px] text-muted-foreground truncate">{inv.sku} · stock {inv.stock}</div>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs flex items-center gap-1.5">
-                      Barcode / SKU
-                      {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                    </Label>
-                    {isLinked ? (
-                      <Input className="mt-1 h-9 text-sm bg-muted/50" value={sku} readOnly disabled />
-                    ) : (
-                      <div className="mt-1">
-                        <BarcodeScanner value={sku} onChange={setSku} placeholder="Scan or enter barcode" />
-                      </div>
-                    )}
+                            : <span className="text-muted-foreground">Search inventory...</span>}
+                          <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search by name or SKU..." className="h-9" />
+                          <CommandList>
+                            <CommandEmpty>No inventory items found.</CommandEmpty>
+                            <CommandGroup>
+                              {linkedInventoryItemId && (
+                                <CommandItem
+                                  value="__clear__"
+                                  onSelect={() => { setLinkedInventoryItemId(""); setLinkPickerOpen(false); }}
+                                >
+                                  <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                                  <span className="text-muted-foreground">Clear link</span>
+                                </CommandItem>
+                              )}
+                              {availableInventory.map((inv) => (
+                                <CommandItem
+                                  key={inv.id}
+                                  value={`${inv.name} ${inv.sku}`}
+                                  onSelect={() => { handleLinkInventory(inv.id); setLinkPickerOpen(false); }}
+                                >
+                                  <Check className={cn("h-3.5 w-3.5 mr-2", linkedInventoryItemId === inv.id ? "opacity-100" : "opacity-0")} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-sm truncate">{inv.name}</div>
+                                    <div className="text-[11px] text-muted-foreground truncate">{inv.sku} · stock {inv.stock}</div>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                  <div>
-                    <Label className="text-xs flex items-center gap-1.5">
-                      Quantity in stock
-                      {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                    </Label>
-                    <Input
-                      className={cn("mt-1 h-9 text-sm", isLinked && "bg-muted/50")}
-                      type="number"
-                      min="0"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      placeholder="0"
-                      readOnly={isLinked}
-                      disabled={isLinked}
-                    />
-                  </div>
-                </div>
 
-                {!isLinked && (
-                  <div className="flex items-start gap-3 rounded-md bg-muted/40 px-3 py-2">
-                    <Switch
-                      id="add-to-inventory"
-                      checked={addToInventory}
-                      onCheckedChange={setAddToInventory}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <Label htmlFor="add-to-inventory" className="text-xs cursor-pointer">
-                        Also add this item to Inventory
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs flex items-center gap-1.5">
+                        Barcode / SKU
+                        {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
                       </Label>
-                      <p className="text-[11px] text-muted-foreground leading-snug">
-                        Creates a matching inventory record so stock deducts automatically when sold.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </FormGroup>
-            );
-          })()}
-
-          {/* COMPOSITION — Composite items only (shown before Pricing) */}
-          {itemType === "composite" && (() => {
-            // Per-component unit options: base unit + every conversion target.
-            const getCompUnitOptions = (itemId: string) => {
-              const item = inventoryItems.find((i) => i.id === itemId);
-              if (!item) return [] as { id: string; label: string; baseUnitsPer: number }[];
-              const baseUnit = defaultMeasuringUnits.find((u) => u.id === item.unitId);
-              const opts: { id: string; label: string; baseUnitsPer: number }[] = [
-                {
-                  id: item.unitId,
-                  label: baseUnit ? `${baseUnit.name} (${baseUnit.abbreviation})` : "Base unit",
-                  baseUnitsPer: 1,
-                },
-              ];
-              (item.conversions || []).forEach((c) => {
-                if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0) return;
-                const u = defaultMeasuringUnits.find((x) => x.id === c.toUnitId);
-                opts.push({
-                  id: c.toUnitId,
-                  label: u ? `${u.name} (${u.abbreviation})` : c.toUnitId,
-                  baseUnitsPer: c.fromQuantity / c.toQuantity,
-                });
-              });
-              return opts;
-            };
-            const getCompUnitCost = (g: MenuIngredient) => {
-              const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
-              if (!item) return 0;
-              const baseCost = item.costPrice ?? 0;
-              if (!g.unitId || g.unitId === item.unitId) return baseCost;
-              const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
-              return baseCost * (opt?.baseUnitsPer ?? 1);
-            };
-            const getCompBaseConsumed = (g: MenuIngredient) => {
-              const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
-              if (!item) return 0;
-              let baseUnitsPer = 1;
-              if (g.unitId && g.unitId !== item.unitId) {
-                const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
-                baseUnitsPer = opt?.baseUnitsPer ?? 1;
-              }
-              return (g.quantity || 0) * baseUnitsPer;
-            };
-            const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
-            const totalMaterialCost = validIngredients.reduce(
-              (s, g) => s + getCompUnitCost(g) * (g.quantity || 0),
-              0
-            );
-            let sellableQty = Infinity;
-            let limitingId: string | undefined;
-            for (const g of validIngredients) {
-              const consumed = getCompBaseConsumed(g);
-              if (consumed <= 0) continue;
-              const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
-              const stock = item?.stock ?? 0;
-              const possible = Math.floor(stock / consumed);
-              if (possible < sellableQty) { sellableQty = possible; limitingId = g.inventoryItemId; }
-            }
-            const hasComponents = sellableQty !== Infinity;
-            const producible = hasComponents ? sellableQty : 0;
-            const limitingName = limitingId ? inventoryItems.find((i) => i.id === limitingId)?.name : "";
-
-            return (
-              <FormGroup>
-                <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Composition
-                    </h3>
-                    <TooltipProvider delayDuration={150}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <Info className="h-3.5 w-3.5" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
-                          Composition lists the inventory items (ingredients/raw materials) used to make this item. Each sale automatically deducts the configured quantity from stock, calculates the material cost, and shows how many units you can still produce from current stock.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground">Inventory consumed per sale</span>
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1, role: "primary" }])}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
-                  </Button>
-                </div>
-
-                {ingredients.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
-                    No ingredients yet. Add inventory items that make up this dish.
-                  </p>
-                )}
-
-                <div className="space-y-2">
-                  {ingredients.map((g, idx) => {
-                    const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                    const unitOptions = g.inventoryItemId ? getCompUnitOptions(g.inventoryItemId) : [];
-                    const activeUnitId = g.unitId || inv?.unitId || "";
-                    const unitCost = getCompUnitCost(g);
-                    const lineCost = unitCost * (g.quantity || 0);
-                    return (
-                      <div key={idx} className="space-y-2 p-2.5 border rounded-md">
-                        <div className="flex items-center gap-2">
-                          <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
-                            <PopoverTrigger asChild>
-                              <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm flex-1">
-                                {inv ? (
-                                  <span className="truncate">{inv.name}</span>
-                                ) : (
-                                  <span className="text-muted-foreground">Select inventory item...</span>
-                                )}
-                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                              <Command>
-                                <CommandInput placeholder="Search inventory..." className="h-9" />
-                                <CommandList>
-                                  <CommandEmpty>No items found.</CommandEmpty>
-                                  <CommandGroup>
-                                    {availableInventory.map((it) => (
-                                      <CommandItem
-                                        key={it.id}
-                                        value={`${it.name} ${it.sku}`}
-                                        onSelect={() => {
-                                          // Reset unit when item changes so we don't carry stale unitId
-                                          setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id, unitId: undefined } : p));
-                                          setIngredientPickerOpenIdx(null);
-                                        }}
-                                      >
-                                        <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
-                                        <div className="flex-1 min-w-0">
-                                          <div className="text-sm truncate">{it.name}</div>
-                                          <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <button
-                            type="button"
-                            onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
-                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
-                            aria-label="Remove ingredient"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={g.quantity || ""}
-                            onChange={(e) => {
-                              const v = parseFloat(e.target.value) || 0;
-                              setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
-                            }}
-                            placeholder="Qty"
-                            className="h-9 text-sm w-20"
-                          />
-                          {g.inventoryItemId && unitOptions.length > 0 && (
-                            <Select
-                              value={activeUnitId}
-                              onValueChange={(v) => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, unitId: v } : p))}
-                            >
-                              <SelectTrigger className="h-9 w-36">
-                                <SelectValue placeholder="Unit" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {unitOptions.map((opt) => (
-                                  <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                          {g.inventoryItemId && (
-                            <span className="text-[11px] text-muted-foreground tabular-nums ml-auto">
-                              @ {formatNaira(unitCost)} = <span className="font-medium text-foreground">{formatNaira(lineCost)}</span>
-                            </span>
-                          )}
-                        </div>
-                        {g.inventoryItemId && (
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1">
-                              <span className="text-[11px] text-muted-foreground">Role</span>
-                              <TooltipProvider delayDuration={150}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" className="text-muted-foreground/70 hover:text-foreground" aria-label="What does role mean?">
-                                      <Info className="h-3 w-3" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
-                                    <p className="font-medium mb-1">Primary vs Secondary</p>
-                                    <p><span className="font-medium">Primary</span>: a core ingredient that defines the dish (e.g. the protein or main carb). Used to determine producible quantity.</p>
-                                    <p className="mt-1"><span className="font-medium">Secondary</span>: a supporting ingredient (e.g. seasoning, garnish) that contributes to cost but isn't the main driver of yield.</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </div>
-                            <div className="flex gap-1">
-                              <Button
-                                type="button"
-                                variant={(g.role ?? "primary") === "primary" ? "default" : "outline"}
-                                size="sm"
-                                className="h-7 text-xs px-2.5"
-                                onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "primary" } : p))}
-                              >
-                                Primary
-                              </Button>
-                              <Button
-                                type="button"
-                                variant={g.role === "secondary" ? "secondary" : "outline"}
-                                size="sm"
-                                className="h-7 text-xs px-2.5"
-                                onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "secondary" } : p))}
-                              >
-                                Secondary
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                        {g.inventoryItemId && (
-                          <ComponentSubstituteEditor
-                            originalItemId={g.inventoryItemId}
-                            config={g}
-                            onChange={(next) =>
-                              setIngredients((prev) =>
-                                prev.map((p, i) => (i === idx ? { ...p, ...next } : p))
-                              )
-                            }
-                            inventoryItems={inventoryItems}
-                            groups={subGroups}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {validIngredients.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div className="rounded-md border bg-muted/30 p-2.5">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Material Cost</div>
-                      <div className="text-sm font-semibold tabular-nums mt-0.5">{formatNaira(totalMaterialCost)}</div>
-                    </div>
-                    <div className={cn(
-                      "rounded-md border p-2.5",
-                      !hasComponents ? "bg-muted/30" :
-                        producible === 0 ? "border-destructive/40 bg-destructive/5" :
-                        producible < 5 ? "border-warning/40 bg-warning/5" :
-                        "border-success/40 bg-success/5"
-                    )}>
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Sellable Qty</div>
-                      <div className={cn(
-                        "text-sm font-semibold tabular-nums mt-0.5",
-                        hasComponents && producible === 0 && "text-destructive"
-                      )}>
-                        {hasComponents ? `${producible} units` : "—"}
-                      </div>
-                      {limitingName && hasComponents && (
-                        <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                          Limited by <span className="font-medium text-foreground">{limitingName}</span>
+                      {isLinked ? (
+                        <Input className="mt-1 h-9 text-sm bg-muted/50" value={sku} readOnly disabled />
+                      ) : (
+                        <div className="mt-1">
+                          <BarcodeScanner value={sku} onChange={setSku} placeholder="Scan or enter barcode" />
                         </div>
                       )}
                     </div>
+                    <div>
+                      <Label className="text-xs flex items-center gap-1.5">
+                        Quantity in stock
+                        {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                      </Label>
+                      <Input
+                        className={cn("mt-1 h-9 text-sm", isLinked && "bg-muted/50")}
+                        type="number"
+                        min="0"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        placeholder="0"
+                        readOnly={isLinked}
+                        disabled={isLinked}
+                      />
+                    </div>
                   </div>
-                )}
-              </FormGroup>
-            );
-          })()}
 
-          {/* PRICING */}
-          <FormGroup title="Pricing">
-            {(() => {
-              const strategyOptions = itemType === "service"
-                ? ([
+                  {!isLinked && (
+                    <div className="flex items-start gap-3 rounded-md bg-muted/40 px-3 py-2">
+                      <Switch
+                        id="add-to-inventory"
+                        checked={addToInventory}
+                        onCheckedChange={setAddToInventory}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <Label htmlFor="add-to-inventory" className="text-xs cursor-pointer">
+                          Also add this item to Inventory
+                        </Label>
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          Creates a matching inventory record so stock deducts automatically when sold.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </FormGroup>
+              );
+            })()}
+
+            {/* COMPOSITION — Composite items only (shown before Pricing) */}
+            {itemType === "composite" && (() => {
+              // Per-component unit options: base unit + every conversion target.
+              const getCompUnitOptions = (itemId: string) => {
+                const item = inventoryItems.find((i) => i.id === itemId);
+                if (!item) return [] as { id: string; label: string; baseUnitsPer: number }[];
+                const baseUnit = defaultMeasuringUnits.find((u) => u.id === item.unitId);
+                const opts: { id: string; label: string; baseUnitsPer: number }[] = [
+                  {
+                    id: item.unitId,
+                    label: baseUnit ? `${baseUnit.name} (${baseUnit.abbreviation})` : "Base unit",
+                    baseUnitsPer: 1,
+                  },
+                ];
+                (item.conversions || []).forEach((c) => {
+                  if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0) return;
+                  const u = defaultMeasuringUnits.find((x) => x.id === c.toUnitId);
+                  opts.push({
+                    id: c.toUnitId,
+                    label: u ? `${u.name} (${u.abbreviation})` : c.toUnitId,
+                    baseUnitsPer: c.fromQuantity / c.toQuantity,
+                  });
+                });
+                return opts;
+              };
+              const getCompUnitCost = (g: MenuIngredient) => {
+                const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                if (!item) return 0;
+                const baseCost = item.costPrice ?? 0;
+                if (!g.unitId || g.unitId === item.unitId) return baseCost;
+                const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
+                return baseCost * (opt?.baseUnitsPer ?? 1);
+              };
+              const getCompBaseConsumed = (g: MenuIngredient) => {
+                const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                if (!item) return 0;
+                let baseUnitsPer = 1;
+                if (g.unitId && g.unitId !== item.unitId) {
+                  const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
+                  baseUnitsPer = opt?.baseUnitsPer ?? 1;
+                }
+                return (g.quantity || 0) * baseUnitsPer;
+              };
+              const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
+              const totalMaterialCost = validIngredients.reduce(
+                (s, g) => s + getCompUnitCost(g) * (g.quantity || 0),
+                0
+              );
+              let sellableQty = Infinity;
+              let limitingId: string | undefined;
+              for (const g of validIngredients) {
+                const consumed = getCompBaseConsumed(g);
+                if (consumed <= 0) continue;
+                const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                const stock = item?.stock ?? 0;
+                const possible = Math.floor(stock / consumed);
+                if (possible < sellableQty) { sellableQty = possible; limitingId = g.inventoryItemId; }
+              }
+              const hasComponents = sellableQty !== Infinity;
+              const producible = hasComponents ? sellableQty : 0;
+              const limitingName = limitingId ? inventoryItems.find((i) => i.id === limitingId)?.name : "";
+
+              return (
+                <FormGroup>
+                  <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Composition
+                      </h3>
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
+                            Composition lists the inventory items (ingredients/raw materials) used to make this item. Each sale automatically deducts the configured quantity from stock, calculates the material cost, and shows how many units you can still produce from current stock.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">Inventory consumed per sale</span>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1, role: "primary" }])}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
+                    </Button>
+                  </div>
+
+                  {ingredients.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                      No ingredients yet. Add inventory items that make up this dish.
+                    </p>
+                  )}
+
+                  <div className="space-y-2">
+                    {ingredients.map((g, idx) => {
+                      const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                      const unitOptions = g.inventoryItemId ? getCompUnitOptions(g.inventoryItemId) : [];
+                      const activeUnitId = g.unitId || inv?.unitId || "";
+                      const unitCost = getCompUnitCost(g);
+                      const lineCost = unitCost * (g.quantity || 0);
+                      return (
+                        <div key={idx} className="space-y-2 p-2.5 border rounded-md">
+                          <div className="flex items-center gap-2">
+                            <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
+                              <PopoverTrigger asChild>
+                                <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm flex-1">
+                                  {inv ? (
+                                    <span className="truncate">{inv.name}</span>
+                                  ) : (
+                                    <span className="text-muted-foreground">Select inventory item...</span>
+                                  )}
+                                  <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Search inventory..." className="h-9" />
+                                  <CommandList>
+                                    <CommandEmpty>No items found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {availableInventory.map((it) => (
+                                        <CommandItem
+                                          key={it.id}
+                                          value={`${it.name} ${it.sku}`}
+                                          onSelect={() => {
+                                            // Reset unit when item changes so we don't carry stale unitId
+                                            setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id, unitId: undefined } : p));
+                                            setIngredientPickerOpenIdx(null);
+                                          }}
+                                        >
+                                          <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
+                                          <div className="flex-1 min-w-0">
+                                            <div className="text-sm truncate">{it.name}</div>
+                                            <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                            <button
+                              type="button"
+                              onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
+                              className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
+                              aria-label="Remove ingredient"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={g.quantity || ""}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value) || 0;
+                                setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
+                              }}
+                              placeholder="Qty"
+                              className="h-9 text-sm w-20"
+                            />
+                            {g.inventoryItemId && unitOptions.length > 0 && (
+                              <Select
+                                value={activeUnitId}
+                                onValueChange={(v) => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, unitId: v } : p))}
+                              >
+                                <SelectTrigger className="h-9 w-36">
+                                  <SelectValue placeholder="Unit" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {unitOptions.map((opt) => (
+                                    <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            {g.inventoryItemId && (
+                              <span className="text-[11px] text-muted-foreground tabular-nums ml-auto">
+                                @ {formatNaira(unitCost)} = <span className="font-medium text-foreground">{formatNaira(lineCost)}</span>
+                              </span>
+                            )}
+                          </div>
+                          {g.inventoryItemId && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[11px] text-muted-foreground">Role</span>
+                                <TooltipProvider delayDuration={150}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="text-muted-foreground/70 hover:text-foreground" aria-label="What does role mean?">
+                                        <Info className="h-3 w-3" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
+                                      <p className="font-medium mb-1">Primary vs Secondary</p>
+                                      <p><span className="font-medium">Primary</span>: a core ingredient that defines the dish (e.g. the protein or main carb). Used to determine producible quantity.</p>
+                                      <p className="mt-1"><span className="font-medium">Secondary</span>: a supporting ingredient (e.g. seasoning, garnish) that contributes to cost but isn't the main driver of yield.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant={(g.role ?? "primary") === "primary" ? "default" : "outline"}
+                                  size="sm"
+                                  className="h-7 text-xs px-2.5"
+                                  onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "primary" } : p))}
+                                >
+                                  Primary
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant={g.role === "secondary" ? "secondary" : "outline"}
+                                  size="sm"
+                                  className="h-7 text-xs px-2.5"
+                                  onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "secondary" } : p))}
+                                >
+                                  Secondary
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          {g.inventoryItemId && (
+                            <ComponentSubstituteEditor
+                              originalItemId={g.inventoryItemId}
+                              config={g}
+                              onChange={(next) =>
+                                setIngredients((prev) =>
+                                  prev.map((p, i) => (i === idx ? { ...p, ...next } : p))
+                                )
+                              }
+                              inventoryItems={inventoryItems}
+                              groups={subGroups}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {validIngredients.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div className="rounded-md border bg-muted/30 p-2.5">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Material Cost</div>
+                        <div className="text-sm font-semibold tabular-nums mt-0.5">{formatNaira(totalMaterialCost)}</div>
+                      </div>
+                      <div className={cn(
+                        "rounded-md border p-2.5",
+                        !hasComponents ? "bg-muted/30" :
+                          producible === 0 ? "border-destructive/40 bg-destructive/5" :
+                            producible < 5 ? "border-warning/40 bg-warning/5" :
+                              "border-success/40 bg-success/5"
+                      )}>
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Sellable Qty</div>
+                        <div className={cn(
+                          "text-sm font-semibold tabular-nums mt-0.5",
+                          hasComponents && producible === 0 && "text-destructive"
+                        )}>
+                          {hasComponents ? `${producible} units` : "—"}
+                        </div>
+                        {limitingName && hasComponents && (
+                          <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                            Limited by <span className="font-medium text-foreground">{limitingName}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </FormGroup>
+              );
+            })()}
+
+            {/* PRICING */}
+            <FormGroup title="Pricing">
+              {(() => {
+                const strategyOptions = itemType === "service"
+                  ? ([
                     { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
                     { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
                   ] as const)
-                : ([
+                  : ([
                     { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
                     { id: "variant", label: "Variants", desc: "Sizes or options", icon: Layers },
                     { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
                   ] as const);
-              return (
-                <>
-                <div className={cn("grid gap-2", itemType === "service" ? "grid-cols-2" : "grid-cols-3")}>
-                  {strategyOptions.map((opt) => {
-                    const Icon = opt.icon;
-                    const active = pricingStrategy === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => {
-                          setPricingStrategy(opt.id);
-                          if (opt.id === "open") {
-                            setPrice("");
-                            setShowSale(false);
-                            setSalePrice("");
-                            setSalePeriodStart(null);
-                            setSalePeriodEnd(null);
-                          }
-                          if (opt.id === "variant" && variants.length === 0) {
-                            addVariant();
-                          }
-                          if (opt.id !== "variant") {
-                            setVariants([]);
-                          }
-                        }}
-                        className={cn(
-                          "flex flex-col items-center justify-center gap-0.5 rounded-md border px-2 py-1.5 min-h-[3.25rem] text-xs transition-colors text-center",
-                          active
-                            ? "border-primary bg-primary/5 text-primary font-medium"
-                            : "border-border text-muted-foreground hover:bg-muted/50",
-                        )}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <Icon className="h-3.5 w-3.5" />
-                          <span>{opt.label}</span>
-                        </div>
-                        <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{opt.desc}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {pricingStrategy === "base" && (() => {
-                  const isSimple = itemType === "simple";
-                  const linkedInv = isSimple && linkedInventoryItemId
-                    ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
-                    : null;
-
-                  // LINKED → read-only summary sourced from inventory record
-                  if (linkedInv) {
-                    const cost = linkedInv.costPrice ?? 0;
-                    const sell = linkedInv.sellPrice ?? (parseFloat(price) || 0);
-                    const profit = sell - cost;
-                    const markupPct = cost > 0 ? (profit / cost) * 100 : 0;
-                    const methodLabel =
-                      linkedInv.pricingMethod === "margin" ? "Margin"
-                      : linkedInv.pricingMethod === "fixed" ? "Fixed"
-                      : "Markup";
-                    return (
-                      <div className="space-y-2">
-                        <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                            <Lock className="h-3 w-3" /> Synced from inventory
-                          </div>
-                          <div className="grid grid-cols-3 gap-3 text-sm">
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cost / unit</p>
-                              <p className="font-medium tabular-nums">₦{cost.toFixed(2)}</p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{methodLabel}{linkedInv.pricingMethod !== "fixed" ? " %" : ""}</p>
-                              <p className="font-medium tabular-nums">
-                                {linkedInv.pricingValue != null
-                                  ? (linkedInv.pricingMethod === "fixed"
-                                      ? `₦${Number(linkedInv.pricingValue).toFixed(2)}`
-                                      : `${Number(linkedInv.pricingValue).toFixed(1)}%`)
-                                  : `${markupPct.toFixed(1)}%`}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell Price</p>
-                              <div className="flex items-center gap-1">
-                                {isLinkedSellPriceEditable ? (
-                                  <>
-                                    <span className="font-medium tabular-nums text-primary">₦</span>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      autoFocus
-                                      value={price}
-                                      onChange={(e) => setPrice(e.target.value)}
-                                      onBlur={() => setIsLinkedSellPriceEditable(false)}
-                                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setIsLinkedSellPriceEditable(false); }}
-                                      className="h-auto border-0 bg-transparent p-0 font-medium tabular-nums text-primary text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                                      aria-label="Sell price"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => setIsLinkedSellPriceEditable(false)}
-                                      className="text-primary hover:text-primary/80 transition-colors"
-                                      aria-label="Done editing sell price"
-                                    >
-                                      <CheckIcon className="h-3.5 w-3.5" />
-                                    </button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <p className="font-medium tabular-nums text-primary">₦{sell.toFixed(2)}</p>
-                                    <button
-                                      type="button"
-                                      onClick={() => setIsLinkedSellPriceEditable(true)}
-                                      className="text-muted-foreground hover:text-primary transition-colors"
-                                      aria-label="Edit sell price"
-                                      title="Edit sell price"
-                                    >
-                                      <Pencil className="h-3 w-3" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {cost > 0 && sell > 0 && (
-                            <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-border/60">
-                              <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
-                              <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
-                                ₦{profit.toFixed(2)}/unit profit
-                              </span>
-                              <span className="text-muted-foreground">({markupPct.toFixed(1)}% markup)</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // SIMPLE (not linked) → editable cost + sell price & markup
-                  if (isSimple) {
-                    const cost = parseFloat(costPrice) || 0;
-                    const sell = parseFloat(price) || 0;
-                    const profit = sell - cost;
-                    return (
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor="item-cost-nv" className="text-xs">Cost Price / unit</Label>
-                          <Input
-                            id="item-cost-nv"
-                            className="mt-1 h-9"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={costPrice}
-                            onChange={(e) => {
-                              const cp = e.target.value;
-                              setCostPrice(cp);
-                              const cpNum = parseFloat(cp) || 0;
-                              const valNum = parseFloat(menuPricingValue) || 0;
-                              if (cpNum > 0) {
-                                const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
-                                setPrice(String(newSell));
+                return (
+                  <>
+                    <div className={cn("grid gap-2", itemType === "service" ? "grid-cols-2" : "grid-cols-3")}>
+                      {strategyOptions.map((opt) => {
+                        const Icon = opt.icon;
+                        const active = pricingStrategy === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setPricingStrategy(opt.id);
+                              if (opt.id === "open") {
+                                setPrice("");
+                                setShowSale(false);
+                                setSalePrice("");
+                                setSalePeriodStart(null);
+                                setSalePeriodEnd(null);
+                              }
+                              if (opt.id === "variant" && variants.length === 0) {
+                                addVariant();
+                              }
+                              if (opt.id !== "variant") {
+                                setVariants([]);
                               }
                             }}
-                            placeholder="0.00"
-                          />
-                          <p className="text-[10px] text-muted-foreground mt-1">Optional — enables markup-based sell pricing.</p>
-                        </div>
+                            className={cn(
+                              "flex flex-col items-center justify-center gap-0.5 rounded-md border px-2 py-1.5 min-h-[3.25rem] text-xs transition-colors text-center",
+                              active
+                                ? "border-primary bg-primary/5 text-primary font-medium"
+                                : "border-border text-muted-foreground hover:bg-muted/50",
+                            )}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <Icon className="h-3.5 w-3.5" />
+                              <span>{opt.label}</span>
+                            </div>
+                            <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{opt.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                        <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
-                            <Select
-                              value={menuPricingMethod}
-                              onValueChange={(v) => {
-                                const method = v as PricingMethod;
-                                setMenuPricingMethod(method);
-                                const cpNum = parseFloat(costPrice) || 0;
-                                const valNum = parseFloat(menuPricingValue) || 0;
-                                if (cpNum > 0) {
-                                  const newSell = Math.round(calcMenuSellPrice(cpNum, method, valNum) * 100) / 100;
-                                  setPrice(String(newSell));
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="markup">Markup %</SelectItem>
-                                <SelectItem value="margin">Margin %</SelectItem>
-                                <SelectItem value="fixed">Fixed Price</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                              {menuPricingMethod === "fixed" ? "Price" : "%"}
-                            </label>
-                            <Input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              className="h-9"
-                              value={menuPricingValue}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setMenuPricingValue(val);
-                                const cpNum = parseFloat(costPrice) || 0;
-                                const valNum = parseFloat(val) || 0;
-                                if (cpNum > 0) {
-                                  const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
-                                  setPrice(String(newSell));
-                                }
-                              }}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
-                            <Input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              className="h-9"
-                              value={price}
-                              onChange={(e) => setPrice(e.target.value)}
-                              placeholder="0.00"
-                            />
-                          </div>
-                        </div>
+                    {pricingStrategy === "base" && (() => {
+                      const isSimple = itemType === "simple";
+                      const linkedInv = isSimple && linkedInventoryItemId
+                        ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
+                        : null;
 
-                        {cost > 0 && sell > 0 && (
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
-                            <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
-                              ₦{profit.toFixed(2)}/unit profit
-                            </span>
-                            <span className="text-muted-foreground">
-                              ({((profit / cost) * 100).toFixed(1)}% markup)
-                            </span>
+                      // LINKED → read-only summary sourced from inventory record
+                      if (linkedInv) {
+                        const cost = linkedInv.costPrice ?? 0;
+                        const sell = linkedInv.sellPrice ?? (parseFloat(price) || 0);
+                        const profit = sell - cost;
+                        const markupPct = cost > 0 ? (profit / cost) * 100 : 0;
+                        const methodLabel =
+                          linkedInv.pricingMethod === "margin" ? "Margin"
+                            : linkedInv.pricingMethod === "fixed" ? "Fixed"
+                              : "Markup";
+                        return (
+                          <div className="space-y-2">
+                            <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                                <Lock className="h-3 w-3" /> Synced from inventory
+                              </div>
+                              <div className="grid grid-cols-3 gap-3 text-sm">
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cost / unit</p>
+                                  <p className="font-medium tabular-nums">₦{cost.toFixed(2)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{methodLabel}{linkedInv.pricingMethod !== "fixed" ? " %" : ""}</p>
+                                  <p className="font-medium tabular-nums">
+                                    {linkedInv.pricingValue != null
+                                      ? (linkedInv.pricingMethod === "fixed"
+                                        ? `₦${Number(linkedInv.pricingValue).toFixed(2)}`
+                                        : `${Number(linkedInv.pricingValue).toFixed(1)}%`)
+                                      : `${markupPct.toFixed(1)}%`}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell Price</p>
+                                  <div className="flex items-center gap-1">
+                                    {isLinkedSellPriceEditable ? (
+                                      <>
+                                        <span className="font-medium tabular-nums text-primary">₦</span>
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          autoFocus
+                                          value={price}
+                                          onChange={(e) => setPrice(e.target.value)}
+                                          onBlur={() => setIsLinkedSellPriceEditable(false)}
+                                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setIsLinkedSellPriceEditable(false); }}
+                                          className="h-auto border-0 bg-transparent p-0 font-medium tabular-nums text-primary text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                                          aria-label="Sell price"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => setIsLinkedSellPriceEditable(false)}
+                                          className="text-primary hover:text-primary/80 transition-colors"
+                                          aria-label="Done editing sell price"
+                                        >
+                                          <CheckIcon className="h-3.5 w-3.5" />
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p className="font-medium tabular-nums text-primary">₦{sell.toFixed(2)}</p>
+                                        <button
+                                          type="button"
+                                          onClick={() => setIsLinkedSellPriceEditable(true)}
+                                          className="text-muted-foreground hover:text-primary transition-colors"
+                                          aria-label="Edit sell price"
+                                          title="Edit sell price"
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              {cost > 0 && sell > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-border/60">
+                                  <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
+                                  <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                                    ₦{profit.toFixed(2)}/unit profit
+                                  </span>
+                                  <span className="text-muted-foreground">({markupPct.toFixed(1)}% markup)</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  }
-
-                  // COMPOSITE → cost auto-derived from ingredients (material cost)
-                  if (itemType === "composite") {
-                    const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
-                    const cost = validIngredients.reduce((sum, g) => {
-                      const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                      if (!inv) return sum;
-                      const baseCost = inv.costPrice ?? 0;
-                      let unitCost = baseCost;
-                      if (g.unitId && g.unitId !== inv.unitId) {
-                        const conv = (inv.conversions || []).find((c) => c.toUnitId === g.unitId);
-                        if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
-                          unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
-                        }
+                        );
                       }
-                      return sum + unitCost * (Number(g.quantity) || 0);
-                    }, 0);
-                    const sell = parseFloat(price) || 0;
-                    const profit = sell - cost;
-                    return (
-                      <div className="space-y-3">
-                        <div className="rounded-md border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                            <Lock className="h-3 w-3" /> Material Cost / unit
-                          </div>
-                          <div className="text-sm font-semibold tabular-nums">{formatNaira(cost)}</div>
-                        </div>
 
-                        <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
-                            <Select
-                              value={menuPricingMethod}
-                              onValueChange={(v) => {
-                                const method = v as PricingMethod;
-                                setMenuPricingMethod(method);
-                                const valNum = parseFloat(menuPricingValue) || 0;
-                                if (cost > 0 || method === "fixed") {
-                                  const newSell = Math.round(calcMenuSellPrice(cost, method, valNum) * 100) / 100;
-                                  setPrice(String(newSell));
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="markup">Markup %</SelectItem>
-                                <SelectItem value="margin">Margin %</SelectItem>
-                                <SelectItem value="fixed">Fixed Price</SelectItem>
-                              </SelectContent>
-                            </Select>
+                      // SIMPLE (not linked) → editable cost + sell price & markup
+                      if (isSimple) {
+                        const cost = parseFloat(costPrice) || 0;
+                        const sell = parseFloat(price) || 0;
+                        const profit = sell - cost;
+                        return (
+                          <div className="space-y-3">
+                            <div>
+                              <Label htmlFor="item-cost-nv" className="text-xs">Cost Price / unit</Label>
+                              <Input
+                                id="item-cost-nv"
+                                className="mt-1 h-9"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={costPrice}
+                                onChange={(e) => {
+                                  const cp = e.target.value;
+                                  setCostPrice(cp);
+                                  const cpNum = parseFloat(cp) || 0;
+                                  const valNum = parseFloat(menuPricingValue) || 0;
+                                  if (cpNum > 0) {
+                                    const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
+                                    setPrice(String(newSell));
+                                  }
+                                }}
+                                placeholder="0.00"
+                              />
+                              <p className="text-[10px] text-muted-foreground mt-1">Optional — enables markup-based sell pricing.</p>
+                            </div>
+
+                            <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                                <Select
+                                  value={menuPricingMethod}
+                                  onValueChange={(v) => {
+                                    const method = v as PricingMethod;
+                                    setMenuPricingMethod(method);
+                                    const cpNum = parseFloat(costPrice) || 0;
+                                    const valNum = parseFloat(menuPricingValue) || 0;
+                                    if (cpNum > 0) {
+                                      const newSell = Math.round(calcMenuSellPrice(cpNum, method, valNum) * 100) / 100;
+                                      setPrice(String(newSell));
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="markup">Markup %</SelectItem>
+                                    <SelectItem value="margin">Margin %</SelectItem>
+                                    <SelectItem value="fixed">Fixed Price</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                  {menuPricingMethod === "fixed" ? "Price" : "%"}
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  className="h-9"
+                                  value={menuPricingValue}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setMenuPricingValue(val);
+                                    const cpNum = parseFloat(costPrice) || 0;
+                                    const valNum = parseFloat(val) || 0;
+                                    if (cpNum > 0) {
+                                      const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
+                                      setPrice(String(newSell));
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  className="h-9"
+                                  value={price}
+                                  onChange={(e) => setPrice(e.target.value)}
+                                  placeholder="0.00"
+                                />
+                              </div>
+                            </div>
+
+                            {cost > 0 && sell > 0 && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
+                                <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                                  ₦{profit.toFixed(2)}/unit profit
+                                </span>
+                                <span className="text-muted-foreground">
+                                  ({((profit / cost) * 100).toFixed(1)}% markup)
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                              {menuPricingMethod === "fixed" ? "Price" : "%"}
-                            </label>
+                        );
+                      }
+
+                      // COMPOSITE → cost auto-derived from ingredients (material cost)
+                      if (itemType === "composite") {
+                        const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
+                        const cost = validIngredients.reduce((sum, g) => {
+                          const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
+                          if (!inv) return sum;
+                          const baseCost = inv.costPrice ?? 0;
+                          let unitCost = baseCost;
+                          if (g.unitId && g.unitId !== inv.unitId) {
+                            const conv = (inv.conversions || []).find((c) => c.toUnitId === g.unitId);
+                            if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
+                              unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
+                            }
+                          }
+                          return sum + unitCost * (Number(g.quantity) || 0);
+                        }, 0);
+                        const sell = parseFloat(price) || 0;
+                        const profit = sell - cost;
+                        return (
+                          <div className="space-y-3">
+                            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                                <Lock className="h-3 w-3" /> Material Cost / unit
+                              </div>
+                              <div className="text-sm font-semibold tabular-nums">{formatNaira(cost)}</div>
+                            </div>
+
+                            <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
+                                <Select
+                                  value={menuPricingMethod}
+                                  onValueChange={(v) => {
+                                    const method = v as PricingMethod;
+                                    setMenuPricingMethod(method);
+                                    const valNum = parseFloat(menuPricingValue) || 0;
+                                    if (cost > 0 || method === "fixed") {
+                                      const newSell = Math.round(calcMenuSellPrice(cost, method, valNum) * 100) / 100;
+                                      setPrice(String(newSell));
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="markup">Markup %</SelectItem>
+                                    <SelectItem value="margin">Margin %</SelectItem>
+                                    <SelectItem value="fixed">Fixed Price</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                  {menuPricingMethod === "fixed" ? "Price" : "%"}
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  className="h-9"
+                                  value={menuPricingValue}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setMenuPricingValue(val);
+                                    const valNum = parseFloat(val) || 0;
+                                    if (cost > 0 || menuPricingMethod === "fixed") {
+                                      const newSell = Math.round(calcMenuSellPrice(cost, menuPricingMethod, valNum) * 100) / 100;
+                                      setPrice(String(newSell));
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  className="h-9"
+                                  value={price}
+                                  onChange={(e) => setPrice(e.target.value)}
+                                  placeholder="0.00"
+                                />
+                              </div>
+                            </div>
+
+                            {cost > 0 && sell > 0 && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
+                                <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                                  ₦{profit.toFixed(2)}/unit profit
+                                </span>
+                                <span className="text-muted-foreground">
+                                  ({((profit / cost) * 100).toFixed(1)}% markup)
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      // SERVICE → original simple Price field
+                      return (
+                        <div>
+                          <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
+                          <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                        </div>
+                      );
+                    })()}
+
+                    {pricingStrategy === "variant" && itemType !== "service" && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
+                          <span>Variant name</span>
+                          <span>Price</span>
+                          <span />
+                        </div>
+                        {variants.map((v, idx) => (
+                          <div key={v.id} className="grid grid-cols-[1fr,140px,32px] gap-2 items-center">
                             <Input
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              className="h-9"
-                              value={menuPricingValue}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setMenuPricingValue(val);
-                                const valNum = parseFloat(val) || 0;
-                                if (cost > 0 || menuPricingMethod === "fixed") {
-                                  const newSell = Math.round(calcMenuSellPrice(cost, menuPricingMethod, valNum) * 100) / 100;
-                                  setPrice(String(newSell));
-                                }
-                              }}
+                              className="h-9 text-sm"
+                              value={v.name}
+                              onChange={(e) => updateVariant(v.id, { ...v, name: e.target.value })}
+                              placeholder={idx === 0 ? "e.g. Small" : "Variant name"}
                             />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
                             <Input
+                              className="h-9 text-sm"
                               type="number"
-                              min={0}
+                              min="0"
                               step="0.01"
-                              className="h-9"
-                              value={price}
-                              onChange={(e) => setPrice(e.target.value)}
+                              value={v.price || ""}
+                              onChange={(e) => updateVariant(v.id, { ...v, price: parseFloat(e.target.value) || 0 })}
                               placeholder="0.00"
                             />
+                            <button
+                              type="button"
+                              onClick={() => removeVariant(v.id)}
+                              disabled={variants.length === 1}
+                              className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                              aria-label="Remove variant"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                        </div>
+                        ))}
+                        <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
+                        </Button>
+                      </div>
+                    )}
 
-                        {cost > 0 && sell > 0 && (
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
-                            <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
-                              ₦{profit.toFixed(2)}/unit profit
-                            </span>
-                            <span className="text-muted-foreground">
-                              ({((profit / cost) * 100).toFixed(1)}% markup)
-                            </span>
+                    {pricingStrategy === "open" && (
+                      <p className="text-xs text-muted-foreground">
+                        Price will be entered at checkout.
+                      </p>
+                    )}
+
+                    {pricingStrategy === "base" && (
+                      <div className="space-y-3 pt-1">
+                        <div className="flex items-center gap-2">
+                          <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                          <Label className="text-xs">On Sale</Label>
+                        </div>
+                        {showSale && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div>
+                              <Label className="text-xs">Sale Price</Label>
+                              <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                            </div>
+                            <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
+                            <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
                           </div>
                         )}
                       </div>
-                    );
-                  }
-
-                  // SERVICE → original simple Price field
-                  return (
-                    <div>
-                      <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
-                      <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                    </div>
-                  );
-                })()}
-
-                {pricingStrategy === "variant" && itemType !== "service" && (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
-                      <span>Variant name</span>
-                      <span>Price</span>
-                      <span />
-                    </div>
-                    {variants.map((v, idx) => (
-                      <div key={v.id} className="grid grid-cols-[1fr,140px,32px] gap-2 items-center">
-                        <Input
-                          className="h-9 text-sm"
-                          value={v.name}
-                          onChange={(e) => updateVariant(v.id, { ...v, name: e.target.value })}
-                          placeholder={idx === 0 ? "e.g. Small" : "Variant name"}
-                        />
-                        <Input
-                          className="h-9 text-sm"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={v.price || ""}
-                          onChange={(e) => updateVariant(v.id, { ...v, price: parseFloat(e.target.value) || 0 })}
-                          placeholder="0.00"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeVariant(v.id)}
-                          disabled={variants.length === 1}
-                          className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                          aria-label="Remove variant"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
-                    </Button>
-                  </div>
-                )}
-
-                {pricingStrategy === "open" && (
-                  <p className="text-xs text-muted-foreground">
-                    Price will be entered at checkout.
-                  </p>
-                )}
-
-                {pricingStrategy === "base" && (
-                  <div className="space-y-3 pt-1">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
-                      <Label className="text-xs">On Sale</Label>
-                    </div>
-                    {showSale && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div>
-                          <Label className="text-xs">Sale Price</Label>
-                          <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
-                        </div>
-                        <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                        <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
-                      </div>
                     )}
-                  </div>
-                )}
-                </>
-              );
-            })()}
-          </FormGroup>
-
-          {/* IMAGES — hidden for Service items. Compact thumbnail row, no
-              wrapping section card. */}
-          {itemType !== "service" && (
-            <FormGroup title="Images" hint="Up to 4 — first is the POS thumbnail">
-              <div className="flex gap-2 flex-wrap">
-                {images.map((img, idx) => (
-                  <div key={idx} className="relative h-16 w-16 rounded-md border border-border overflow-hidden group">
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                    <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <X className="h-3 w-3 text-destructive" />
-                    </button>
-                  </div>
-                ))}
-                {images.length < 4 && (
-                  <button onClick={handleImageUpload} className="h-16 w-16 rounded-md border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-primary transition-colors">
-                    <ImagePlus className="h-4 w-4" />
-                    <span className="text-[10px]">Add</span>
-                  </button>
-                )}
-              </div>
+                  </>
+                );
+              })()}
             </FormGroup>
-          )}
 
-          {/* ADD-ONS — optional for all outlets, collapsed by default. */}
-          <FormGroup>
-            <Accordion type="single" collapsible defaultValue={extras.length > 0 || modifierGroupIds.length > 0 ? "extras" : undefined}>
-              <AccordionItem value="extras" className="border-b-0">
-                <AccordionTrigger className="py-2 hover:no-underline">
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    <ListPlus className="h-3.5 w-3.5" />
-                    <span>Add-ons</span>
-                    <span className="font-normal normal-case tracking-normal text-[11px] text-muted-foreground/70">(optional)</span>
-                    {extras.length > 0 && (
-                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
-                        {extras.length}
-                      </Badge>
-                    )}
-                  </div>
-                </AccordionTrigger>
+            {/* IMAGES — hidden for Service items. Compact thumbnail row, no
+              wrapping section card. */}
+            {itemType !== "service" && (
+              <FormGroup title="Images" hint="Up to 4 — first is the POS thumbnail">
+                <div className="flex gap-2 flex-wrap">
+                  {images.map((img, idx) => (
+                    <div key={idx} className="relative h-16 w-16 rounded-md border border-border overflow-hidden group">
+                      <img src={img} alt="" className="h-full w-full object-cover" />
+                      <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="h-3 w-3 text-destructive" />
+                      </button>
+                    </div>
+                  ))}
+                  {images.length < 4 && (
+                    <button onClick={handleImageUpload} className="h-16 w-16 rounded-md border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-primary transition-colors">
+                      <ImagePlus className="h-4 w-4" />
+                      <span className="text-[10px]">Add</span>
+                    </button>
+                  )}
+                </div>
+              </FormGroup>
+            )}
+
+            {/* ADD-ONS — optional for all outlets, collapsed by default. */}
+            <FormGroup>
+              <Accordion type="single" collapsible defaultValue={extras.length > 0 || modifierGroupIds.length > 0 ? "extras" : undefined}>
+                <AccordionItem value="extras" className="border-b-0">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <ListPlus className="h-3.5 w-3.5" />
+                      <span>Add-ons</span>
+                      <span className="font-normal normal-case tracking-normal text-[11px] text-muted-foreground/70">(optional)</span>
+                      {extras.length > 0 && (
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
+                          {extras.length}
+                        </Badge>
+                      )}
+                    </div>
+                  </AccordionTrigger>
                   <AccordionContent className="space-y-4 pt-2">
                     {/* Reusable modifier groups (managed in Admin → Modifier Groups) */}
                     <div className="space-y-2">
@@ -1799,70 +1800,70 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           <Plus className="h-3.5 w-3.5 mr-1" /> Add
                         </Button>
                       </div>
-                    {extras.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
-                        No add-ons yet.
-                      </p>
-                    )}
-                    {extras.map((extra, idx) => (
-                      <div key={extra.id} className="border border-border rounded-md p-3 space-y-2 bg-muted/20">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs font-medium">
-                            Add-on #{idx + 1}
-                          </Label>
-                          <button
-                            onClick={() => setExtras((prev) => prev.filter((e) => e.id !== extra.id))}
-                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                      {extras.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                          No add-ons yet.
+                        </p>
+                      )}
+                      {extras.map((extra, idx) => (
+                        <div key={extra.id} className="border border-border rounded-md p-3 space-y-2 bg-muted/20">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-medium">
+                              Add-on #{idx + 1}
+                            </Label>
+                            <button
+                              onClick={() => setExtras((prev) => prev.filter((e) => e.id !== extra.id))}
+                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <div>
+                              <Label className="text-[11px]">Name *</Label>
+                              <Input
+                                className="mt-1 h-8 text-sm"
+                                value={extra.name}
+                                onChange={(e) =>
+                                  setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, name: e.target.value } : ex))
+                                }
+                                placeholder="e.g. Extra cheese"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[11px]">Price *</Label>
+                              <Input
+                                className="mt-1 h-8 text-sm"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={extra.price || ""}
+                                onChange={(e) =>
+                                  setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, price: parseFloat(e.target.value) || 0 } : ex))
+                                }
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-[11px]">Group</Label>
+                              <Input
+                                className="mt-1 h-8 text-sm"
+                                value={extra.category || ""}
+                                onChange={(e) =>
+                                  setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, category: e.target.value } : ex))
+                                }
+                                placeholder="e.g. Toppings"
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          <div>
-                            <Label className="text-[11px]">Name *</Label>
-                            <Input
-                              className="mt-1 h-8 text-sm"
-                              value={extra.name}
-                              onChange={(e) =>
-                                setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, name: e.target.value } : ex))
-                              }
-                              placeholder="e.g. Extra cheese"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-[11px]">Price *</Label>
-                            <Input
-                              className="mt-1 h-8 text-sm"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={extra.price || ""}
-                              onChange={(e) =>
-                                setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, price: parseFloat(e.target.value) || 0 } : ex))
-                              }
-                              placeholder="0.00"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-[11px]">Group</Label>
-                            <Input
-                              className="mt-1 h-8 text-sm"
-                              value={extra.category || ""}
-                              onChange={(e) =>
-                                setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, category: e.target.value } : ex))
-                              }
-                              placeholder="e.g. Toppings"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                     </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </FormGroup>
-        </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </FormGroup>
+          </div>
 
         </div>
         <SheetFooter className="px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
@@ -1870,6 +1871,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           <Button
             onClick={handleSave}
             disabled={(() => {
+              if (isSaving) return true;
               if (!name.trim()) return true;
               if (!selectedCatId) return true;
               if (selectedOutletIds.length === 0) return true;
@@ -1883,6 +1885,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               if (variants.length > 0 && variants.some((v) => !v.name.trim())) return true;
               return false;
             })()}>
+            {(isSaving) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitLabel}
           </Button>
         </SheetFooter>

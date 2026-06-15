@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Copy, ArrowRight, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import type { MenuItem } from "./MenuItemForm";
-import type { Outlet } from "@/data/outlets";
+import type { Outlet } from "@/lib/types/outlet";
 
 interface PriceOverride {
   basePrice?: number;

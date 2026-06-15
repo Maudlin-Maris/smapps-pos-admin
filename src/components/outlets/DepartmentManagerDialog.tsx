@@ -37,7 +37,7 @@ import { sampleMenuItems, getCategoryMap, getDeptItemCount } from "@/data/depart
 interface DepartmentManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  outletId: number;
+  outletId: number | string;
   outletName: string;
   departments: Department[];
   onUpdateDepartments: (departments: Department[]) => void;
@@ -51,7 +51,7 @@ export default function DepartmentManagerDialog({
   departments,
   onUpdateDepartments,
 }: DepartmentManagerDialogProps) {
-  const outletDepts = departments.filter((d) => d.outletId === outletId);
+  const outletDepts = departments.filter((d) => String(d.outletId) === String(outletId));
   const [selectedDept, setSelectedDept] = useState<Department | null>(null);
   const [addingDept, setAddingDept] = useState(false);
   const [editingDept, setEditingDept] = useState<Department | null>(null);

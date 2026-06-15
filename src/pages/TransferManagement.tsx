@@ -25,15 +25,26 @@ import { format } from "date-fns";
 import {
   ArrowLeft, ArrowLeftRight, ArrowRight, Plus, Search, Trash2, Truck,
   PackageCheck, Send, ShieldCheck, ShieldX, X, Eye, History, AlertTriangle,
-  Warehouse, Store as StoreIcon, ScanBarcode, Pencil, Info,
+  Warehouse, Store as StoreIcon, ScanBarcode, Pencil, Info, Loader2,
 } from "lucide-react";
 import {
-  listTransfers, listLocations, listLocationInventory, getEffectiveStock,
-  getEffectiveCost, projectDestWac,
-  getReservedQty, nextReference, upsertTransfer, getTransfer,
-  submitForApproval, approveTransfer, rejectTransfer, dispatchTransfer,
-  receiveTransfer, cancelTransfer, listMovements, deleteTransfer, audit,
+  listLocations, listMovements,
 } from "@/lib/transfers-store";
+import { useGetOutlets } from "@/services/api/outlets";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
+import {
+  useGetTransfers,
+  useGetTransfer,
+  useCreateTransfer,
+  useUpdateTransfer,
+  useApproveTransfer,
+  useCancelTransfer,
+  useDispatchTransfer,
+  useReceiveTransfer,
+  useRejectTransfer,
+  useSubmitTransfer,
+  useDeleteTransfer,
+} from "@/services/api/inventory/transfers";
 import {
   type StockTransferV2, type TransferStatus, type TransferItem,
   type TransferLocation, type TransferReason, type ValuationStrategy,
@@ -43,14 +54,10 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 // Hooks
 // ─────────────────────────────────────────────────────────────────────────────
-function useTransfers() {
-  const [v, setV] = useState(0);
-  useEffect(() => {
-    const h = () => setV((x) => x + 1);
-    window.addEventListener("transfers:changed", h);
-    return () => window.removeEventListener("transfers:changed", h);
-  }, []);
-  return useMemo(() => listTransfers(), [v]);
+function useTransfers(params?: { status?: TransferStatus; page?: number; per_page?: number }) {
+  const { data: response, isLoading, mutate } = useGetTransfers(params);
+  const transfers = useMemo(() => response?.data || [], [response]);
+  return { transfers, isLoading, mutate };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,7 +81,7 @@ function LocationChip({ loc }: { loc: TransferLocation }) {
 // LIST screen
 // ─────────────────────────────────────────────────────────────────────────────
 function TransferList() {
-  const transfers = useTransfers();
+  const { transfers, isLoading } = useTransfers();
   const nav = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TransferStatus>("all");
@@ -97,6 +104,25 @@ function TransferList() {
     received: transfers.filter((t) => t.status === "RECEIVED").length,
     pendingMine: transfers.filter((t) => t.status === "PENDING_APPROVAL").length,
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 pb-20 lg:pb-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-heading font-bold tracking-tight">Stock Transfers</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Move inventory between outlets, warehouses & branches with full audit
+            </p>
+          </div>
+        </div>
+        <Card className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading transfers...
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -211,17 +237,22 @@ function TransferList() {
 function TransferCreate() {
   const nav = useNavigate();
   const { id: editId } = useParams();
-  const locations = listLocations();
+  const { data: outlets = [] } = useGetOutlets();
+  const locations = useMemo(() => listLocations(outlets), [outlets]);
 
-  // Load existing draft if editing
-  const existing = useMemo(() => (editId ? getTransfer(editId) : undefined), [editId]);
+  const { data: existing, isLoading: isExistingLoading } = useGetTransfer(editId);
   const isEditing = Boolean(editId);
 
-  const [sourceId, setSourceId] = useState(existing?.source.id ?? "");
-  const [destId, setDestId]     = useState(existing?.destination.id ?? "");
-  const [reason, setReason]     = useState<TransferReason>(existing?.reason ?? "replenishment");
-  const [notes, setNotes]       = useState(existing?.notes ?? "");
-  const [carrier, setCarrier]   = useState(existing?.carrier ?? "");
+  const { trigger: triggerCreateTransfer, isMutating: isCreatingTransfer } = useCreateTransfer();
+  const { trigger: triggerUpdateTransfer, isMutating: isUpdatingTransfer } = useUpdateTransfer();
+  const { trigger: triggerSubmitTransfer, isMutating: isSubmittingTransfer } = useSubmitTransfer();
+  const { trigger: triggerDeleteTransfer, isMutating: isDeletingTransfer } = useDeleteTransfer();
+
+  const [sourceId, setSourceId] = useState("");
+  const [destId, setDestId]     = useState("");
+  const [reason, setReason]     = useState<TransferReason>("replenishment");
+  const [notes, setNotes]       = useState("");
+  const [carrier, setCarrier]   = useState("");
   const [search, setSearch]     = useState("");
   type LineDraft = {
     itemId: string;
@@ -229,38 +260,119 @@ function TransferCreate() {
     strategy: ValuationStrategy;
     customCost?: number;
   };
-  const [lines, setLines] = useState<LineDraft[]>(
-    existing?.items.map((it) => ({
-      itemId: it.inventoryItemId,
-      qty: it.requestedQty,
-      strategy: it.valuationStrategy ?? "source",
-      customCost: it.customUnitCost,
-    })) ?? []
+  const [lines, setLines] = useState<LineDraft[]>([]);
+
+  // Fetch live inventory items for source outlet
+  const { data: sourceInventoryRes } = useGetInventoryItems(
+    sourceId ? { outletId: sourceId, per_page: 1000 } : undefined
   );
+  
+  // Fetch live inventory items for destination outlet
+  const { data: destInventoryRes } = useGetInventoryItems(
+    destId ? { outletId: destId, per_page: 1000 } : undefined
+  );
+
+  // Fetch transfers to compute live reserved quantities
+  const { transfers: allTransfers } = useTransfers();
+
+  const allSourceItems = useMemo(() => {
+    if (!sourceInventoryRes?.data) return [];
+    return sourceInventoryRes.data.map((i) => ({
+      id: i.id,
+      name: i.name,
+      sku: i.sku,
+      stock: i.quantity,
+      unitCost: i.costPrice,
+      minStock: 0,
+      unit: "unit",
+    }));
+  }, [sourceInventoryRes]);
+
+  const allDestItems = useMemo(() => {
+    if (!destInventoryRes?.data) return [];
+    return destInventoryRes.data.map((i) => ({
+      id: i.id,
+      name: i.name,
+      sku: i.sku,
+      stock: i.quantity,
+      unitCost: i.costPrice,
+      minStock: 0,
+      unit: "unit",
+    }));
+  }, [destInventoryRes]);
+
+  const getLiveReservedQty = (outletId: string, itemId: string) => {
+    let reserved = 0;
+    for (const t of allTransfers) {
+      if (t.source.id !== outletId) continue;
+      if (!ACTIVE_STATUSES.includes(t.status)) continue;
+      if (existing && t.id === existing.id) continue;
+      for (const it of t.items) {
+        if (it.inventoryItemId !== itemId) continue;
+        const planned = t.status === "PENDING_APPROVAL" ? it.requestedQty : it.approvedQty;
+        const remaining = Math.max(0, planned - it.dispatchedQty);
+        reserved += remaining;
+      }
+    }
+    return reserved;
+  };
+
+  useEffect(() => {
+    if (existing) {
+      setSourceId(existing.source.id);
+      setDestId(existing.destination.id);
+      setReason(existing.reason);
+      setNotes(existing.notes ?? "");
+      setCarrier(existing.carrier ?? "");
+      setLines(
+        existing.items.map((it) => ({
+          itemId: it.inventoryItemId,
+          qty: it.requestedQty,
+          strategy: it.valuationStrategy ?? "source",
+          customCost: it.customUnitCost,
+        }))
+      );
+    }
+  }, [existing]);
+
   const [discardOpen, setDiscardOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<null | "draft" | "submit">(null);
 
   // Guard: can only edit DRAFT transfers via this screen
   useEffect(() => {
-    if (isEditing && existing && existing.status !== "DRAFT") {
-      toast.error("Only draft transfers can be edited");
-      nav(`/inventory/transfers/${existing.id}`, { replace: true });
+    if (isEditing && !isExistingLoading) {
+      if (!existing) {
+        toast.error("Draft not found");
+        nav("/inventory/transfers", { replace: true });
+      } else if (existing.status !== "DRAFT") {
+        toast.error("Only draft transfers can be edited");
+        nav(`/inventory/transfers/${existing.id}`, { replace: true });
+      }
     }
-    if (isEditing && !existing) {
-      toast.error("Draft not found");
-      nav("/inventory/transfers", { replace: true });
-    }
-  }, [isEditing, existing, nav]);
+  }, [isEditing, existing, isExistingLoading, nav]);
 
   // If source changes, drop lines that no longer exist at the new source
   useEffect(() => {
-    if (!sourceId) return;
-    const inv = listLocationInventory(sourceId);
-    setLines((prev) => prev.filter((l) => inv.some((i) => i.id === l.itemId)));
-  }, [sourceId]);
+    if (!sourceId || !sourceInventoryRes) return;
+    setLines((prev) => prev.filter((l) => allSourceItems.some((i) => i.id === l.itemId)));
+  }, [sourceId, sourceInventoryRes, allSourceItems]);
+
+  if (editId && isExistingLoading) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => nav("/inventory/transfers")}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
+        <Card className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading draft transfer...
+        </Card>
+      </div>
+    );
+  }
 
   const sourceItems = sourceId
-    ? listLocationInventory(sourceId).filter((i) =>
+    ? allSourceItems.filter((i) =>
         !search.trim() ||
         i.name.toLowerCase().includes(search.toLowerCase()) ||
         i.sku.toLowerCase().includes(search.toLowerCase()))
@@ -282,28 +394,32 @@ function TransferCreate() {
     if (!existing) { nav("/inventory/transfers"); return; }
     setDiscardOpen(true);
   };
-  const confirmDiscard = () => {
+  const confirmDiscard = async () => {
     if (!existing) return;
-    deleteTransfer(existing.id);
-    toast.success("Draft discarded");
-    nav("/inventory/transfers");
+    try {
+      await triggerDeleteTransfer(existing.id);
+      toast.success("Draft discarded");
+      nav("/inventory/transfers");
+    } catch (e) {
+      // Handled
+    }
   };
 
-  const onSave = (submit: boolean) => {
+  const onSave = async (submit: boolean) => {
     if (!sourceId || !destId) return toast.error("Select source and destination");
     if (sourceId === destId) return toast.error("Source and destination must differ");
     if (submit && lines.length === 0) return toast.error("Add at least one item");
 
     const src = locations.find((l) => l.id === sourceId)!;
     const dst = locations.find((l) => l.id === destId)!;
-    const inv = listLocationInventory(sourceId);
+    const inv = allSourceItems;
 
-    // Validate stock & build TransferItems
-    const items: TransferItem[] = [];
+    // Validate stock
+    const items = [];
     for (const l of lines) {
       const i = inv.find((x) => x.id === l.itemId);
       if (!i) continue;
-      const reserved = getReservedQty(sourceId, i.id);
+      const reserved = getLiveReservedQty(sourceId, i.id);
       const transferable = Math.max(0, i.stock - reserved);
       if (submit) {
         if (l.qty <= 0) return toast.error(`Quantity for ${i.name} must be > 0`);
@@ -312,79 +428,42 @@ function TransferCreate() {
           return toast.error(`${i.name}: enter a valid custom unit cost`);
         }
       }
-      const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
-      const destAvailable = getEffectiveStock(destId, i.id);
-      const { before, after } = projectDestWac(destId, i.id, Math.max(0, l.qty || 0), incomingCost);
-
-      // Preserve existing line id if editing
-      const prior = existing?.items.find((it) => it.inventoryItemId === i.id);
       items.push({
-        id: prior?.id ?? crypto.randomUUID(),
         inventoryItemId: i.id,
-        itemName: i.name,
-        sku: i.sku,
-        unit: i.unit,
-        unitCost: i.unitCost,
-        availableQty: i.stock,
-        reservedQty: reserved,
-        transferableQty: transferable,
         requestedQty: Math.max(0, l.qty || 0),
-        approvedQty: 0,
-        dispatchedQty: 0,
-        receivedQty: 0,
-        damagedQty: 0,
-        varianceQty: 0,
-        destAvailableQty: destAvailable,
-        destWacBefore: before,
-        valuationStrategy: l.strategy,
-        customUnitCost: l.strategy === "custom" ? l.customCost : undefined,
-        incomingUnitCost: incomingCost,
-        destWacAfter: after,
+        unit: i.unit || "unit",
       });
     }
 
-    const t: StockTransferV2 = existing
-      ? {
-          ...existing,
-          source: src,
-          destination: dst,
-          reason,
-          notes: notes.trim(),
-          carrier: carrier.trim() || undefined,
-          items,
+    if (isEditing && existing) {
+      try {
+        await triggerUpdateTransfer({ id: existing.id, payload: { notes: notes.trim() } });
+        if (submit) {
+          await triggerSubmitTransfer(existing.id);
+          toast.success("Transfer submitted for approval");
+        } else {
+          toast.success("Draft updated");
         }
-      : {
-          id: crypto.randomUUID(),
-          reference: nextReference(),
+        nav(`/inventory/transfers/${existing.id}`);
+      } catch (e) {
+        // Handled
+      }
+    } else {
+      try {
+        const payload = {
           source: src,
           destination: dst,
-          status: "DRAFT",
           reason,
-          items,
           notes: notes.trim(),
-          carrier: carrier.trim() || undefined,
-          createdAt: new Date().toISOString(),
-          createdBy: "Current User",
-          audit: [{
-            id: crypto.randomUUID(),
-            ts: new Date().toISOString(),
-            actor: "Current User",
-            action: "CREATED",
-          }],
+          items,
+          submit,
         };
-
-    if (existing) {
-      audit(t, { actor: "Current User", action: "EDITED" });
-    }
-    upsertTransfer(t);
-
-    if (submit) {
-      try { submitForApproval(t.id); } catch (e: any) { toast.error(e.message); return; }
-      toast.success("Transfer submitted for approval");
-      nav(`/inventory/transfers/${t.id}`);
-    } else {
-      toast.success(isEditing ? "Draft updated" : "Draft saved");
-      nav(`/inventory/transfers/${t.id}`);
+        const created = await triggerCreateTransfer(payload);
+        toast.success(submit ? "Transfer submitted for approval" : "Draft saved");
+        nav(`/inventory/transfers/${created.id}`);
+      } catch (e) {
+        // Handled
+      }
     }
   };
 
@@ -499,7 +578,7 @@ function TransferCreate() {
                     <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">No items.</td></tr>
                   )}
                   {sourceItems.map((i) => {
-                    const reserved = getReservedQty(sourceId, i.id);
+                    const reserved = getLiveReservedQty(sourceId, i.id);
                     const transferable = Math.max(0, i.stock - reserved);
                     const low = i.stock <= i.minStock;
                     const inLines = lines.some((l) => l.itemId === i.id);
@@ -618,14 +697,17 @@ function TransferCreate() {
                   </TooltipProvider>
                   <tbody>
                     {lines.map((l) => {
-                      const i = listLocationInventory(sourceId).find((x) => x.id === l.itemId);
+                      const i = allSourceItems.find((x) => x.id === l.itemId);
                       if (!i) return null;
-                      const reserved = getReservedQty(sourceId, i.id);
+                      const reserved = getLiveReservedQty(sourceId, i.id);
                       const transferable = Math.max(0, i.stock - reserved);
-                      const destQty = destId ? getEffectiveStock(destId, i.id) : 0;
+                      const destItem = destId ? allDestItems.find((x) => x.id === i.id || x.sku === i.sku) : null;
+                      const destQty = destItem ? destItem.stock : 0;
+                      const destWac = destItem ? destItem.unitCost : 0;
                       const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
-                      const projected = destId
-                        ? projectDestWac(destId, i.id, Math.max(0, l.qty || 0), incomingCost).after
+                      const totalQty = destQty + Math.max(0, l.qty || 0);
+                      const projected = totalQty > 0
+                        ? ((destQty * destWac) + (Math.max(0, l.qty || 0) * incomingCost)) / totalQty
                         : incomingCost;
                       return (
                         <tr key={l.itemId} className="border-t align-top">
@@ -682,8 +764,18 @@ function TransferCreate() {
       </Card>
 
       <div className="flex flex-col sm:flex-row justify-end gap-2">
-        <Button variant="outline" onClick={() => setConfirmAction("draft")}>{isEditing ? "Save Draft" : "Save as Draft"}</Button>
-        <Button onClick={() => setConfirmAction("submit")} className="gap-1.5">
+        <Button
+          variant="outline"
+          onClick={() => setConfirmAction("draft")}
+          disabled={isCreatingTransfer || isUpdatingTransfer || isSubmittingTransfer || isDeletingTransfer}
+        >
+          {isEditing ? "Save Draft" : "Save as Draft"}
+        </Button>
+        <Button
+          onClick={() => setConfirmAction("submit")}
+          className="gap-1.5"
+          disabled={isCreatingTransfer || isUpdatingTransfer || isSubmittingTransfer || isDeletingTransfer}
+        >
           <Send className="h-4 w-4" /> Submit for Approval
         </Button>
       </div>
@@ -697,8 +789,13 @@ function TransferCreate() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDiscard} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel onClick={() => setDiscardOpen(false)} disabled={isDeletingTransfer}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDiscard}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeletingTransfer}
+            >
+              {isDeletingTransfer && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Discard
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -719,8 +816,12 @@ function TransferCreate() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmAction(null)}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { onSave(confirmAction === "submit"); setConfirmAction(null); }}>
+            <AlertDialogCancel onClick={() => setConfirmAction(null)} disabled={isCreatingTransfer || isUpdatingTransfer || isSubmittingTransfer}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { onSave(confirmAction === "submit"); setConfirmAction(null); }}
+              disabled={isCreatingTransfer || isUpdatingTransfer || isSubmittingTransfer}
+            >
+              {(isCreatingTransfer || isUpdatingTransfer || isSubmittingTransfer) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {confirmAction === "draft" ? "Save Draft" : "Submit"}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -736,11 +837,27 @@ function TransferCreate() {
 function TransferDetails() {
   const { id = "" } = useParams();
   const nav = useNavigate();
-  const transfers = useTransfers();
-  const t = transfers.find((x) => x.id === id);
+  const { data: t, isLoading, mutate } = useGetTransfer(id);
   const [actionDialog, setActionDialog] = useState<null | "approve" | "reject" | "dispatch" | "receive" | "cancel">(null);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
+
+  const { trigger: triggerSubmitTransfer, isMutating: isSubmitting } = useSubmitTransfer();
+  const { trigger: triggerDeleteTransfer, isMutating: isDeleting } = useDeleteTransfer();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => nav("/inventory/transfers")}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
+        <Card className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading transfer details...
+        </Card>
+      </div>
+    );
+  }
 
   if (!t) {
     return (
@@ -975,6 +1092,7 @@ function TransferDetails() {
         kind={actionDialog}
         transfer={t}
         onClose={() => setActionDialog(null)}
+        onChanged={mutate}
       />
 
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
@@ -986,15 +1104,21 @@ function TransferDetails() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDiscardOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setDiscardOpen(false)} disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                deleteTransfer(t.id);
-                toast.success("Draft discarded");
-                nav("/inventory/transfers");
+              onClick={async () => {
+                try {
+                  await triggerDeleteTransfer(t.id);
+                  toast.success("Draft discarded");
+                  nav("/inventory/transfers");
+                } catch (e) {
+                  // Handled
+                }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
             >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Discard
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1011,13 +1135,21 @@ function TransferDetails() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmSubmit(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setConfirmSubmit(false)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => {
-                try { submitForApproval(t.id); toast.success("Submitted"); } catch (e: any) { toast.error(e.message); }
-                setConfirmSubmit(false);
+              onClick={async () => {
+                try {
+                  await triggerSubmitTransfer(t.id);
+                  toast.success("Submitted");
+                  setConfirmSubmit(false);
+                  mutate();
+                } catch (e) {
+                  // Handled
+                }
               }}
+              disabled={isSubmitting}
             >
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1031,25 +1163,40 @@ function TransferDetails() {
 // Action dialogs (approve / reject / dispatch / receive / cancel)
 // ─────────────────────────────────────────────────────────────────────────────
 function ActionDialog({
-  kind, transfer, onClose,
+  kind, transfer, onClose, onChanged,
 }: {
   kind: null | "approve" | "reject" | "dispatch" | "receive" | "cancel";
   transfer: StockTransferV2;
   onClose: () => void;
+  onChanged?: () => void;
 }) {
   const [approvals, setApprovals] = useState<Record<string, number>>({});
   const [dispatches, setDispatches] = useState<Record<string, number>>({});
-  const [receipts, setReceipts] = useState<Record<string, { received: number; damaged: number }>>({});
+  const [receipts, setReceipts] = useState<Record<string, { received: number; damaged: number; notes?: string }>>({});
   const [reason, setReason] = useState("");
   const [carrier, setCarrier] = useState("");
   const [tracking, setTracking] = useState("");
+
+  const { trigger: triggerApprove, isMutating: isApproving } = useApproveTransfer();
+  const { trigger: triggerReject, isMutating: isRejecting } = useRejectTransfer();
+  const { trigger: triggerDispatch, isMutating: isDispatching } = useDispatchTransfer();
+  const { trigger: triggerReceive, isMutating: isReceiving } = useReceiveTransfer();
+  const { trigger: triggerCancel, isMutating: isCancelling } = useCancelTransfer();
+
+  const isMutating = isApproving || isRejecting || isDispatching || isReceiving || isCancelling;
+
+  const { data: sourceInventoryRes } = useGetInventoryItems(
+    (kind === "dispatch" || kind === "approve") && transfer?.source?.id
+      ? { outletId: transfer.source.id, per_page: 1000 }
+      : undefined
+  );
 
   useEffect(() => {
     if (!kind) return;
     setApprovals(Object.fromEntries(transfer.items.map((i) => [i.id, i.requestedQty])));
     setDispatches(Object.fromEntries(transfer.items.map((i) => [i.id, i.approvedQty])));
     setReceipts(Object.fromEntries(transfer.items.map((i) =>
-      [i.id, { received: Math.max(0, i.dispatchedQty - i.receivedQty - i.damagedQty), damaged: 0 }])));
+      [i.id, { received: Math.max(0, i.dispatchedQty - i.receivedQty - i.damagedQty), damaged: 0, notes: "" }])));
     setReason("");
     setCarrier(transfer.carrier || "");
     setTracking(transfer.trackingNumber || "");
@@ -1065,16 +1212,34 @@ function ActionDialog({
     cancel: "Cancel Transfer",
   };
 
-  const submit = () => {
+  const submit = async () => {
     try {
-      if (kind === "approve") approveTransfer(transfer.id, approvals);
-      if (kind === "reject")  { if (!reason.trim()) return toast.error("Reason required"); rejectTransfer(transfer.id, reason); }
-      if (kind === "dispatch") dispatchTransfer(transfer.id, dispatches, { carrier, tracking });
-      if (kind === "receive")  receiveTransfer(transfer.id, receipts);
-      if (kind === "cancel")   { if (!reason.trim()) return toast.error("Reason required"); cancelTransfer(transfer.id, reason); }
+      if (kind === "approve") {
+        await triggerApprove({ id: transfer.id, payload: { lineApprovals: approvals } });
+      }
+      if (kind === "reject") {
+        if (!reason.trim()) return toast.error("Reason required");
+        await triggerReject({ id: transfer.id, payload: { reason: reason.trim() } });
+      }
+      if (kind === "dispatch") {
+        await triggerDispatch({
+          id: transfer.id,
+          payload: { dispatchQtys: dispatches, carrier: carrier.trim(), trackingNumber: tracking.trim() }
+        });
+      }
+      if (kind === "receive") {
+        await triggerReceive({ id: transfer.id, payload: { receipts } });
+      }
+      if (kind === "cancel") {
+        if (!reason.trim()) return toast.error("Reason required");
+        await triggerCancel({ id: transfer.id, payload: { reason: reason.trim() } });
+      }
       toast.success(`Transfer ${kind}d`);
       onClose();
-    } catch (e: any) { toast.error(e.message || "Action failed"); }
+      onChanged?.();
+    } catch (e: any) {
+      // Handled
+    }
   };
 
   return (
@@ -1122,7 +1287,9 @@ function ActionDialog({
                     </>}
                     {kind === "dispatch" && <>
                       <td className="p-2 text-right">{it.approvedQty}</td>
-                      <td className="p-2 text-right">{getEffectiveStock(transfer.source.id, it.inventoryItemId)}</td>
+                      <td className="p-2 text-right">
+                        {sourceInventoryRes?.data?.find(x => x.id === it.inventoryItemId || x.sku === it.sku)?.quantity ?? 0}
+                      </td>
                       <td className="p-2 text-right">
                         <Input type="number" min={0} max={it.approvedQty}
                           value={dispatches[it.id] ?? 0}
@@ -1167,8 +1334,8 @@ function ActionDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit}>Confirm</Button>
+          <Button variant="outline" onClick={onClose} disabled={isMutating}>Cancel</Button>
+          <Button onClick={submit} isLoading={isMutating}>Confirm</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

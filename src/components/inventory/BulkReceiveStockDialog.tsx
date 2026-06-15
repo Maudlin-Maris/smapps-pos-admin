@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import type { InventoryItem } from "./InventoryItemForm";
 import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 import type { BusinessTypeId } from "@/data/businessTypes";
 import type { StockReceivePricing, PricingMethod, AdjustmentType } from "./StockAdjustmentHistory";
 
@@ -74,6 +74,7 @@ export default function BulkReceiveStockDialog({
   open, onOpenChange, items, units, outletId, onReceive,
 }: BulkReceiveStockDialogProps) {
   const [search, setSearch] = useState("");
+  const { data: outlets = [] } = useGetOutlets();
   const [reason, setReason] = useState("");
   const [syncToCatalog, setSyncToCatalog] = useState(true);
   const [lineItems, setLineItems] = useState<ReceiveLineItem[]>([]);
