@@ -26,7 +26,7 @@ export const useGetTransfers = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_TRANSFERS, params)
+    ? createUrlWithParams(API_ENDPOINTS.TRANSFERS, params)
     : null;
   return useApi<TransferListResponse>(url, options);
 };
@@ -37,7 +37,7 @@ export const useGetTransfer = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<StockTransferV2>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_TRANSFER(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_TRANSFER(id) : null,
     options,
   );
 };
@@ -56,7 +56,7 @@ export const useCreateTransfer = (
     return data;
   };
   return useSWRMutation<StockTransferV2, APIError, string, CreateTransferPayload>(
-    API_ENDPOINTS.CREATE_TRANSFER,
+    API_ENDPOINTS.TRANSFERS,
     fetcher,
     {
       onError(err) {
@@ -81,7 +81,7 @@ export const useUpdateTransfer = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg }: { arg: { id: string | number; payload: { notes: string } } }) => {
-    const { data } = await api.patch(API_ENDPOINTS.UPDATE_TRANSFER(arg.id), arg.payload);
+    const { data } = await api.patch(API_ENDPOINTS.SINGLE_TRANSFER(arg.id), arg.payload);
     return data;
   };
   return useSWRMutation<
@@ -314,7 +314,7 @@ export const useDeleteTransfer = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg: id }: { arg: string | number }) => {
-    const { data } = await api.delete(API_ENDPOINTS.DELETE_TRANSFER(id));
+    const { data } = await api.delete(API_ENDPOINTS.SINGLE_TRANSFER(id));
     return data;
   };
   return useSWRMutation<void, APIError, string, string | number>(

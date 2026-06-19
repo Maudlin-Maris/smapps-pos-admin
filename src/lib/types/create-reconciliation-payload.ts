@@ -2,8 +2,8 @@ import { ReconciliationReason } from "@/data/snapshotTypes";
 
 export interface CreateReconciliationCount {
   snapshotId: string;
-  actualQty: number;
-  skipped: boolean;
+  actualQty?: number;
+  skipped?: boolean;
   reasonCode?: ReconciliationReason;
   reasonNote?: string;
 }

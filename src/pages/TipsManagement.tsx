@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { outlets } from "@/data/outlets";
-import { TIP_STAFF, getTips, getPayouts } from "@/lib/tips-store";
 import { formatNaira } from "@/lib/currency";
 import { KpiCard } from "@/components/KpiCard";
 import { Card } from "@/components/ui/card";
@@ -24,9 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PaginationControls from "@/components/inventory/PaginationControls";
-import { usePagination } from "@/hooks/use-pagination";
 import ProcessPayoutDialog from "@/components/tips/ProcessPayoutDialog";
-import { Wallet, CircleCheck, Hourglass, Lock, BadgeDollarSign } from "lucide-react";
+import { Wallet, CircleCheck, Hourglass, Lock, BadgeDollarSign, Loader2 } from "lucide-react";
+import { useGetTips, useGetTipsPayouts } from "@/services/api/tips";
+import { useGetOutlets } from "@/services/api/outlets";
 
 function fmtDateTime(d?: string) {
   if (!d) return "—";
@@ -42,6 +41,12 @@ export default function TipsManagement() {
   const { hasPermission, user } = useAuth();
   const [outletId, setOutletId] = useState<string>("all");
   const [staffId, setStaffId] = useState<string>("all");
+
+  const [tipsPage, setTipsPage] = useState(1);
+  const [tipsPerPage, setTipsPerPage] = useState(10);
+  const [payoutsPage, setPayoutsPage] = useState(1);
+  const [payoutsPerPage, setPayoutsPerPage] = useState(10);
+
   const [payoutCtx, setPayoutCtx] = useState<{
     staffId: string;
     staffName: string;
@@ -51,7 +56,21 @@ export default function TipsManagement() {
     tipIds?: string[];
     contextLabel?: string;
   } | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+
+  const { data: outletsRes, isLoading: isLoadingOutlets } = useGetOutlets();
+  const outlets = outletsRes?.data || [];
+
+  const { data: tipsData, isLoading: isLoadingTips, mutate: mutateTips } = useGetTips({
+    outletId: outletId === "all" ? undefined : outletId,
+    page: tipsPage,
+    per_page: tipsPerPage,
+  });
+
+  const { data: payoutsData, isLoading: isLoadingPayouts, mutate: mutatePayouts } = useGetTipsPayouts({
+    outletId: outletId === "all" ? undefined : outletId,
+    page: payoutsPage,
+    per_page: payoutsPerPage,
+  });
 
   if (!hasPermission("tips.view")) {
     return (
@@ -64,36 +83,21 @@ export default function TipsManagement() {
     );
   }
 
-  const tips = useMemo(() => {
-    let list = getTips().filter((t) => t.status !== "reversed");
-    if (outletId !== "all") list = list.filter((t) => t.outletId === outletId);
-    if (staffId !== "all") list = list.filter((t) => t.staffId === staffId);
-    return list;
-  }, [outletId, staffId, refreshKey]);
+  const staffList = tipsData?.staff || [];
+  const orderRows = tipsData?.data || [];
+  const payouts = payoutsData?.data || [];
 
-  const payouts = useMemo(() => {
-    let list = getPayouts().filter((p) => p.status === "paid");
-    if (outletId !== "all") list = list.filter((p) => p.outletId === outletId);
-    if (staffId !== "all") list = list.filter((p) => p.staffId === staffId);
-    return list.sort((a, b) =>
-      (b.paidAt || b.createdAt).localeCompare(a.paidAt || a.createdAt),
-    );
-  }, [outletId, staffId, refreshKey]);
-
-  const totalTips = tips.reduce((s, t) => s + t.amount, 0);
-  const paidTips = tips.reduce((s, t) => s + t.paidAmount, 0);
-  const awaitingTips = totalTips - paidTips;
-
-  // Tips ordered table (orders with tips)
-  const orderRows = useMemo(
-    () => [...tips].sort((a, b) => b.earnedAt.localeCompare(a.earnedAt)),
-    [tips],
-  );
+  const totalTips = tipsData?.totals?.totalEarned || 0;
+  const paidTips = tipsData?.totals?.totalPaid || 0;
+  const awaitingTips = tipsData?.totals?.totalOutstanding || 0;
 
   // Awaiting-payment groups, only meaningful when a specific cashier is selected.
   const awaitingGroups = useMemo(() => {
     if (staffId === "all") return [];
-    const unpaid = tips.filter((t) => t.status !== "paid" && t.amount - t.paidAmount > 0);
+    // Awaiting payment filters from the active loaded tips page
+    const unpaid = orderRows.filter(
+      (t) => t.staffId === staffId && t.status !== "paid" && t.amount - t.paidAmount > 0
+    );
     const byOutlet = new Map<
       string,
       { outletId: string; outletName: string; outstanding: number; count: number }
@@ -111,13 +115,10 @@ export default function TipsManagement() {
       byOutlet.set(t.outletId, cur);
     }
     return Array.from(byOutlet.values()).sort((a, b) => b.outstanding - a.outstanding);
-  }, [tips, staffId]);
+  }, [orderRows, staffId]);
 
   const selectedStaffName =
-    TIP_STAFF.find((s) => s.id === staffId)?.name || "";
-
-  const ordersPg = usePagination(orderRows, 10);
-  const payoutsPg = usePagination(payouts, 10);
+    staffList.find((s) => s.id === staffId)?.name || "";
 
   return (
     <div className="space-y-6">
@@ -135,13 +136,17 @@ export default function TipsManagement() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <Label className="text-xs">Outlet</Label>
-            <Select value={outletId} onValueChange={setOutletId}>
+            <Select value={outletId} onValueChange={(v) => { setOutletId(v); setTipsPage(1); setPayoutsPage(1); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All outlets</SelectItem>
-                {outlets.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                ))}
+                {isLoadingOutlets ? (
+                  <SelectItem value="loading" disabled>Loading outlets...</SelectItem>
+                ) : (
+                  outlets.map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -151,7 +156,7 @@ export default function TipsManagement() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All cashiers</SelectItem>
-                {TIP_STAFF.map((s) => (
+                {staffList.map((s) => (
                   <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -162,13 +167,23 @@ export default function TipsManagement() {
 
       {/* Overview cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard title="Total tips" value={formatNaira(totalTips)} icon={Wallet} />
-        <KpiCard title="Paid tips" value={formatNaira(paidTips)} icon={CircleCheck} />
-        <KpiCard
-          title="Awaiting payment"
-          value={formatNaira(awaitingTips)}
-          icon={Hourglass}
-        />
+        {isLoadingTips ? (
+          <>
+            <div className="h-24 bg-muted animate-pulse rounded-lg border" />
+            <div className="h-24 bg-muted animate-pulse rounded-lg border" />
+            <div className="h-24 bg-muted animate-pulse rounded-lg border" />
+          </>
+        ) : (
+          <>
+            <KpiCard title="Total tips" value={formatNaira(totalTips)} icon={Wallet} />
+            <KpiCard title="Paid tips" value={formatNaira(paidTips)} icon={CircleCheck} />
+            <KpiCard
+              title="Awaiting payment"
+              value={formatNaira(awaitingTips)}
+              icon={Hourglass}
+            />
+          </>
+        )}
       </div>
 
       {/* Awaiting payment per cashier */}
@@ -187,7 +202,7 @@ export default function TipsManagement() {
           </div>
           {awaitingGroups.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-6">
-              All tips for this cashier are fully paid.
+              All tips for this cashier on this page are fully paid.
             </div>
           ) : (
             <div className="space-y-2">
@@ -234,17 +249,17 @@ export default function TipsManagement() {
         <div className="flex items-center justify-between">
           <h3 className="font-heading font-semibold">Orders with tips</h3>
           <span className="text-xs text-muted-foreground">
-            {orderRows.length} {orderRows.length === 1 ? "order" : "orders"}
+            {tipsData?.meta?.total || 0} order{tipsData?.meta?.total === 1 ? "" : "s"}
           </span>
         </div>
         <PaginationControls
-          page={ordersPg.page}
-          totalPages={ordersPg.totalPages}
-          perPage={ordersPg.perPage}
-          totalItems={ordersPg.totalItems}
-          pageSizeOptions={ordersPg.pageSizeOptions}
-          onPageChange={ordersPg.setPage}
-          onPerPageChange={ordersPg.setPerPage}
+          page={tipsPage}
+          totalPages={tipsData?.meta?.last_page || 1}
+          perPage={tipsPerPage}
+          totalItems={tipsData?.meta?.total || 0}
+          pageSizeOptions={[10, 20, 50]}
+          onPageChange={setTipsPage}
+          onPerPageChange={setTipsPerPage}
         />
         <Table>
           <TableHeader>
@@ -261,77 +276,87 @@ export default function TipsManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ordersPg.paginatedItems.map((t) => {
-              const outstanding = Math.max(0, t.amount - t.paidAmount);
-              const isPaid = t.status === "paid";
-              const isPartial = t.status === "partially_paid";
-              return (
-                <TableRow key={t.id}>
-                  <TableCell>{new Date(t.earnedAt).toLocaleDateString()}</TableCell>
-                  <TableCell className="font-mono text-xs">{t.orderId || "—"}</TableCell>
-                  <TableCell>{t.staffName}</TableCell>
-                  <TableCell>{t.outletName}</TableCell>
-                  <TableCell className="text-right">
-                    {t.orderAmount ? formatNaira(t.orderAmount) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {t.orderPaidAmount != null ? formatNaira(t.orderPaidAmount) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">{formatNaira(t.amount)}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={isPaid ? "default" : isPartial ? "secondary" : "outline"}
-                      className={
-                        isPaid
-                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                          : isPartial
-                            ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                            : ""
-                      }
-                    >
-                      {isPaid
-                        ? "Paid"
-                        : isPartial
-                          ? `Partial · ${formatNaira(outstanding)} left`
-                          : "Unpaid"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {isPaid ? (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={!hasPermission("tips.payout.process")}
-                        onClick={() =>
-                          setPayoutCtx({
-                            staffId: t.staffId,
-                            staffName: t.staffName,
-                            outletId: t.outletId,
-                            outletName: t.outletName,
-                            outstanding,
-                            tipIds: [t.id],
-                            contextLabel: t.orderId
-                              ? `order ${t.orderId}`
-                              : "this tip",
-                          })
-                        }
-                      >
-                        <BadgeDollarSign className="h-4 w-4" />
-                        Mark as paid
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {orderRows.length === 0 && (
+            {isLoadingTips ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8">
+                  <div className="flex justify-center items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Loading orders...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : orderRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No orders with tips for the selected filters.
                 </TableCell>
               </TableRow>
+            ) : (
+              orderRows.map((t) => {
+                const outstanding = Math.max(0, t.amount - t.paidAmount);
+                const isPaid = t.status === "paid";
+                const isPartial = t.status === "partially_paid";
+                return (
+                  <TableRow key={t.id}>
+                    <TableCell>{new Date(t.earnedAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-mono text-xs">{t.orderId || "—"}</TableCell>
+                    <TableCell>{t.staffName}</TableCell>
+                    <TableCell>{t.outletName}</TableCell>
+                    <TableCell className="text-right">
+                      {t.orderAmount ? formatNaira(t.orderAmount) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {t.orderPaidAmount != null ? formatNaira(t.orderPaidAmount) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{formatNaira(t.amount)}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={isPaid ? "default" : isPartial ? "secondary" : "outline"}
+                        className={
+                          isPaid
+                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                            : isPartial
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                              : ""
+                        }
+                      >
+                        {isPaid
+                          ? "Paid"
+                          : isPartial
+                            ? `Partial · ${formatNaira(outstanding)} left`
+                            : "Unpaid"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isPaid ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!hasPermission("tips.payout.process")}
+                          onClick={() =>
+                            setPayoutCtx({
+                              staffId: t.staffId,
+                              staffName: t.staffName,
+                              outletId: t.outletId,
+                              outletName: t.outletName,
+                              outstanding,
+                              tipIds: [t.id],
+                              contextLabel: t.orderId
+                                ? `order ${t.orderId}`
+                                : "this tip",
+                            })
+                          }
+                        >
+                          <BadgeDollarSign className="h-4 w-4" />
+                          Mark as paid
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -342,17 +367,17 @@ export default function TipsManagement() {
         <div className="flex items-center justify-between">
           <h3 className="font-heading font-semibold">Paid tips</h3>
           <span className="text-xs text-muted-foreground">
-            {payouts.length} {payouts.length === 1 ? "payout" : "payouts"}
+            {payoutsData?.meta?.total || 0} payout{payoutsData?.meta?.total === 1 ? "" : "s"}
           </span>
         </div>
         <PaginationControls
-          page={payoutsPg.page}
-          totalPages={payoutsPg.totalPages}
-          perPage={payoutsPg.perPage}
-          totalItems={payoutsPg.totalItems}
-          pageSizeOptions={payoutsPg.pageSizeOptions}
-          onPageChange={payoutsPg.setPage}
-          onPerPageChange={payoutsPg.setPerPage}
+          page={payoutsPage}
+          totalPages={payoutsData?.meta?.last_page || 1}
+          perPage={payoutsPerPage}
+          totalItems={payoutsData?.meta?.total || 0}
+          pageSizeOptions={[10, 20, 50]}
+          onPageChange={setPayoutsPage}
+          onPerPageChange={setPayoutsPerPage}
         />
         <Table>
           <TableHeader>
@@ -365,23 +390,33 @@ export default function TipsManagement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {payoutsPg.paginatedItems.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="text-xs">{fmtDateTime(p.paidAt)}</TableCell>
-                <TableCell className="font-medium">{p.staffName}</TableCell>
-                <TableCell className="text-xs">{p.outletName}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {p.reference || p.id}
+            {isLoadingPayouts ? (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8">
+                  <div className="flex justify-center items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Loading payouts...</span>
+                  </div>
                 </TableCell>
-                <TableCell className="text-right">{formatNaira(p.amount)}</TableCell>
               </TableRow>
-            ))}
-            {payouts.length === 0 && (
+            ) : payouts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   No paid tips for the selected filters.
                 </TableCell>
               </TableRow>
+            ) : (
+              payouts.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="text-xs">{fmtDateTime(p.createdAt)}</TableCell>
+                  <TableCell className="font-medium">{p.staffName}</TableCell>
+                  <TableCell className="text-xs">{p.outletId}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {p.reference || p.id}
+                  </TableCell>
+                  <TableCell className="text-right">{formatNaira(p.amount)}</TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
@@ -400,7 +435,10 @@ export default function TipsManagement() {
           actor={user?.display_name || user?.email || "system"}
           tipIds={payoutCtx.tipIds}
           contextLabel={payoutCtx.contextLabel}
-          onConfirmed={() => setRefreshKey((k) => k + 1)}
+          onConfirmed={() => {
+            mutateTips();
+            mutatePayouts();
+          }}
         />
       )}
     </div>

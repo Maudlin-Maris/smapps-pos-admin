@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Tag, Percent } from "lucide-react";
+import { Plus, Trash2, Tag, Percent, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -11,24 +11,32 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  getOutletDiscountTipConfig,
-  setOutletDiscountTipConfig,
-  type OutletTipPreset,
-} from "@/data/outletDiscountTips";
-import type { POSDiscount } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
+import {
+  useGetOutletDiscounts,
+  useCreateOutletDiscount,
+  useDeleteOutletDiscount,
+  useGetOutletTips,
+  useCreateOutletTip,
+  useDeleteOutletTip,
+} from "@/services/api/outlets";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   outletId: string | number;
   outletName: string;
+  onUpdated?: () => void;
 }
 
-export default function DiscountTipManagerDialog({ open, onOpenChange, outletId, outletName }: Props) {
-  const [discounts, setDiscounts] = useState<POSDiscount[]>([]);
-  const [tips, setTips] = useState<OutletTipPreset[]>([]);
+export default function DiscountTipManagerDialog({ open, onOpenChange, outletId, outletName, onUpdated }: Props) {
+  const { data: discounts = [], isLoading: isLoadingDiscounts, mutate: mutateDiscounts } = useGetOutletDiscounts(outletId);
+  const { data: tips = [], isLoading: isLoadingTips, mutate: mutateTips } = useGetOutletTips(outletId);
+
+  const { trigger: triggerCreateDiscount, isMutating: isCreatingDiscount } = useCreateOutletDiscount(outletId);
+  const { trigger: triggerDeleteDiscount } = useDeleteOutletDiscount(outletId);
+  const { trigger: triggerCreateTip, isMutating: isCreatingTip } = useCreateOutletTip(outletId);
+  const { trigger: triggerDeleteTip } = useDeleteOutletTip(outletId);
 
   const [discName, setDiscName] = useState("");
   const [discType, setDiscType] = useState<"percentage" | "fixed">("percentage");
@@ -36,23 +44,7 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
 
   const [tipValue, setTipValue] = useState("");
 
-  useEffect(() => {
-    if (open) {
-      const cfg = getOutletDiscountTipConfig(outletId);
-      setDiscounts(cfg.discounts);
-      setTips(cfg.tips);
-    }
-  }, [open, outletId]);
-
-  const persist = (next: { discounts?: POSDiscount[]; tips?: OutletTipPreset[] }) => {
-    const updated = {
-      discounts: next.discounts ?? discounts,
-      tips: next.tips ?? tips,
-    };
-    setOutletDiscountTipConfig(outletId, updated);
-  };
-
-  const addDiscount = () => {
+  const addDiscount = async () => {
     const val = parseFloat(discValue);
     if (!discName.trim() || isNaN(val) || val <= 0) {
       toast.error("Enter a valid name and value");
@@ -62,23 +54,30 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
       toast.error("Percentage cannot exceed 100");
       return;
     }
-    const next = [
-      ...discounts,
-      { id: `disc-${Date.now()}`, name: discName.trim(), type: discType, value: val },
-    ];
-    setDiscounts(next);
-    persist({ discounts: next });
-    setDiscName(""); setDiscValue("");
-    toast.success("Discount added");
+    try {
+      await triggerCreateDiscount({
+        name: discName.trim(),
+        type: discType,
+        value: val,
+      });
+      mutateDiscounts();
+      onUpdated?.();
+      setDiscName("");
+      setDiscValue("");
+      toast.success("Discount added");
+    } catch (e) {}
   };
 
-  const removeDiscount = (id: string) => {
-    const next = discounts.filter((d) => d.id !== id);
-    setDiscounts(next);
-    persist({ discounts: next });
+  const removeDiscount = async (id: string) => {
+    try {
+      await triggerDeleteDiscount(id);
+      mutateDiscounts();
+      onUpdated?.();
+      toast.success("Discount removed");
+    } catch (e) {}
   };
 
-  const addTip = () => {
+  const addTip = async () => {
     const val = parseFloat(tipValue);
     if (isNaN(val) || val <= 0 || val > 100) {
       toast.error("Tip must be between 1 and 100%");
@@ -88,17 +87,22 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
       toast.error("Tip preset already exists");
       return;
     }
-    const next = [...tips, { id: `tip-${Date.now()}`, value: val }].sort((a, b) => a.value - b.value);
-    setTips(next);
-    persist({ tips: next });
-    setTipValue("");
-    toast.success("Tip preset added");
+    try {
+      await triggerCreateTip({ value: val });
+      mutateTips();
+      onUpdated?.();
+      setTipValue("");
+      toast.success("Tip preset added");
+    } catch (e) {}
   };
 
-  const removeTip = (id: string) => {
-    const next = tips.filter((t) => t.id !== id);
-    setTips(next);
-    persist({ tips: next });
+  const removeTip = async (id: string) => {
+    try {
+      await triggerDeleteTip(id);
+      mutateTips();
+      onUpdated?.();
+      toast.success("Tip preset removed");
+    } catch (e) {}
   };
 
   return (
@@ -138,7 +142,8 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
               <Label className="text-xs">Value</Label>
               <Input type="number" min="0" value={discValue} onChange={(e) => setDiscValue(e.target.value)} placeholder={discType === "percentage" ? "10" : "500"} />
             </div>
-            <Button onClick={addDiscount} size="sm" className="h-10">
+            <Button onClick={addDiscount} size="sm" className="h-10" disabled={isCreatingDiscount}>
+              {isCreatingDiscount && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               <Plus className="h-4 w-4 mr-1" /> Add
             </Button>
           </div>
@@ -154,7 +159,13 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {discounts.length === 0 ? (
+                {isLoadingDiscounts ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-6">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : discounts.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-6 text-muted-foreground text-sm">No discounts configured</TableCell></TableRow>
                 ) : discounts.map((d) => (
                   <TableRow key={d.id}>
@@ -189,17 +200,20 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
               <Label className="text-xs">Percentage</Label>
               <Input type="number" min="1" max="100" value={tipValue} onChange={(e) => setTipValue(e.target.value)} placeholder="e.g. 10" />
             </div>
-            <Button onClick={addTip} size="sm" className="h-10">
+            <Button onClick={addTip} size="sm" className="h-10" disabled={isCreatingTip}>
+              {isCreatingTip && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               <Plus className="h-4 w-4 mr-1" /> Add Tip
             </Button>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {tips.length === 0 ? (
+            {isLoadingTips ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : tips.length === 0 ? (
               <p className="text-sm text-muted-foreground py-2">No tip presets configured</p>
             ) : tips.map((t) => (
               <div key={t.id} className="flex items-center gap-1.5 rounded-md border bg-muted/30 px-3 py-1.5 text-sm">
-                <span className="font-medium">{t.value}%</span>
+                <span className="font-medium">{t.label || `${t.value}%`}</span>
                 <button onClick={() => removeTip(t.id)} className="text-muted-foreground hover:text-destructive">
                   <Trash2 className="h-3 w-3" />
                 </button>

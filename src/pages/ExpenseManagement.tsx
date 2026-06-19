@@ -26,12 +26,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Pencil, Trash2, Search, Receipt, RefreshCw } from "lucide-react";
+import { CalendarIcon, Plus, Pencil, Trash2, Search, Receipt, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { outlets } from "@/data/outlets";
-import { useExpenses, expenseCategories, type Expense, type ExpenseCategory } from "@/hooks/use-financial-data";
-import { usePagination } from "@/hooks/use-pagination";
+import { expenseCategories, type Expense, type ExpenseCategory } from "@/hooks/use-financial-data";
 import PaginationControls from "@/components/inventory/PaginationControls";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// API
+import { useGetExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from "@/services/api/expenses";
 
 interface ExpenseForm {
   outletId: string;
@@ -54,7 +57,6 @@ const emptyForm = (outletId: string = ""): ExpenseForm => ({
 });
 
 export default function ExpenseManagement() {
-  const { expenses, addExpense, updateExpense, deleteExpense } = useExpenses();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ExpenseForm>(emptyForm());
@@ -62,13 +64,40 @@ export default function ExpenseManagement() {
   const [filterOutlet, setFilterOutlet] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
 
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+
+  // API query
+  const { data: expensesResponse, isLoading: isExpensesLoading, mutate: mutateExpenses } = useGetExpenses({
+    outletId: filterOutlet === "all" ? undefined : filterOutlet,
+    category: filterCategory === "all" ? undefined : filterCategory,
+    search: search.trim() || undefined,
+    page,
+    per_page: perPage,
+  });
+
+  const expenses = expensesResponse?.data || [];
+  const totalItems = expensesResponse?.meta?.total ?? 0;
+  const totalPages = expensesResponse?.meta?.last_page ?? 1;
+  const pageSizeOptions = [5, 10, 20, 50];
+
+  const totalFiltered = expensesResponse?.summary?.totalAmount ?? 0;
+
+  // Mutations
+  const createExpenseMutation = useCreateExpense();
+  const updateExpenseMutation = useUpdateExpense(editingId || undefined);
+  const deleteExpenseMutation = useDeleteExpense();
+
+  const isSaving = createExpenseMutation.isMutating || updateExpenseMutation.isMutating;
+
   const openNew = () => {
     setEditingId(null);
     setForm(emptyForm(filterOutlet === "all" ? "" : filterOutlet));
     setOpen(true);
   };
 
-  const openEdit = (expense: Expense) => {
+  const openEdit = (expense: any) => {
     setEditingId(expense.id);
     setForm({
       outletId: expense.outletId,
@@ -82,7 +111,7 @@ export default function ExpenseManagement() {
     setOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.outletId) {
       toast.error("Please select an outlet");
       return;
@@ -96,7 +125,7 @@ export default function ExpenseManagement() {
       return;
     }
 
-    const data = {
+    const payload = {
       outletId: form.outletId,
       category: form.category,
       amount: form.amount,
@@ -106,35 +135,45 @@ export default function ExpenseManagement() {
       recurringPeriod: form.recurring ? form.recurringPeriod : undefined,
     };
 
-    if (editingId) {
-      updateExpense(editingId, data);
-      toast.success("Expense updated");
-    } else {
-      addExpense(data as Omit<Expense, "id">);
-      toast.success("Expense recorded");
+    try {
+      if (editingId) {
+        await updateExpenseMutation.trigger(payload);
+        toast.success("Expense updated");
+      } else {
+        await createExpenseMutation.trigger(payload);
+        toast.success("Expense recorded");
+      }
+      mutateExpenses();
+      setOpen(false);
+    } catch (err) {
+      // handled
     }
-    setOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    deleteExpense(id);
-    toast.success("Expense deleted");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteExpenseMutation.trigger(id);
+      toast.success("Expense deleted");
+      mutateExpenses();
+    } catch (err) {
+      // handled
+    }
   };
 
-  const filtered = useMemo(() => {
-    return expenses
-      .filter((e) => filterOutlet === "all" || e.outletId === filterOutlet)
-      .filter((e) => filterCategory === "all" || e.category === filterCategory)
-      .filter((e) =>
-        e.description.toLowerCase().includes(search.toLowerCase()) ||
-        e.category.toLowerCase().includes(search.toLowerCase())
-      )
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [expenses, filterOutlet, filterCategory, search]);
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setPage(1);
+  };
 
-  const totalFiltered = useMemo(() => filtered.reduce((sum, e) => sum + e.amount, 0), [filtered]);
+  const handleOutletChange = (val: string) => {
+    setFilterOutlet(val);
+    setPage(1);
+  };
 
-  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
+  const handleCategoryChange = (val: string) => {
+    setFilterCategory(val);
+    setPage(1);
+  };
 
   const getOutletName = (id: string) => outlets.find((o) => o.id === id)?.name || id;
   const getCategoryLabel = (cat: string) => expenseCategories.find((c) => c.value === cat)?.label || cat;
@@ -158,9 +197,9 @@ export default function ExpenseManagement() {
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search expenses..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Search expenses..." value={search} onChange={(e) => handleSearchChange(e.target.value)} className="pl-9" />
         </div>
-        <Select value={filterOutlet} onValueChange={setFilterOutlet}>
+        <Select value={filterOutlet} onValueChange={handleOutletChange}>
           <SelectTrigger className="w-[180px] h-9">
             <SelectValue />
           </SelectTrigger>
@@ -171,7 +210,7 @@ export default function ExpenseManagement() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
+        <Select value={filterCategory} onValueChange={handleCategoryChange}>
           <SelectTrigger className="w-[160px] h-9">
             <SelectValue />
           </SelectTrigger>
@@ -192,7 +231,7 @@ export default function ExpenseManagement() {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Total (filtered)</p>
-            <p className="text-lg font-heading font-bold">{fmt(totalFiltered)}</p>
+            {isExpensesLoading ? <Skeleton className="h-6 w-24 mt-0.5" /> : <p className="text-lg font-heading font-bold">{fmt(totalFiltered)}</p>}
           </div>
         </div>
         <Badge variant="secondary" className="text-xs">
@@ -207,53 +246,70 @@ export default function ExpenseManagement() {
         totalItems={totalItems}
         pageSizeOptions={pageSizeOptions}
         onPageChange={setPage}
-        onPerPageChange={setPerPage}
+        onPerPageChange={(val) => { setPerPage(val); setPage(1); }}
       />
 
       {/* Expense List */}
       <div className="grid gap-3">
-        {paginatedItems.map((expense) => (
-          <Card key={expense.id} className="p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={cn(
-                  "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                  expense.recurring ? "bg-accent/10" : "bg-muted"
-                )}>
-                  {expense.recurring ? <RefreshCw className="h-4 w-4 text-accent" /> : <Receipt className="h-4 w-4 text-muted-foreground" />}
+        {isExpensesLoading ? (
+          Array.from({ length: perPage }).map((_, idx) => (
+            <Card key={idx} className="p-4">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg shrink-0" />
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-24" />
                 </div>
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">{expense.description}</p>
-                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{getCategoryLabel(expense.category)}</Badge>
-                    <span className="text-[10px] text-muted-foreground">{getOutletName(expense.outletId)}</span>
-                    {expense.recurring && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-accent/30 text-accent">
-                        {expense.recurringPeriod}
-                      </Badge>
-                    )}
+                <div className="text-right space-y-1.5">
+                  <Skeleton className="h-4 w-16 ml-auto" />
+                  <Skeleton className="h-3 w-12 ml-auto" />
+                </div>
+              </div>
+            </Card>
+          ))
+        ) : expenses.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No expenses found</p>
+        ) : (
+          expenses.map((expense) => (
+            <Card key={expense.id} className="p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className={cn(
+                    "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+                    expense.recurring ? "bg-accent/10" : "bg-muted"
+                  )}>
+                    {expense.recurring ? <RefreshCw className="h-4 w-4 text-accent" /> : <Receipt className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm truncate">{expense.description}</p>
+                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{getCategoryLabel(expense.category)}</Badge>
+                      <span className="text-[10px] text-muted-foreground">{getOutletName(expense.outletId)}</span>
+                      {expense.recurring && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-accent/30 text-accent">
+                          {expense.recurringPeriod}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm font-heading font-bold">{fmt(expense.amount)}</p>
+                    <p className="text-xs text-muted-foreground">{format(new Date(expense.date), "MMM d, yyyy")}</p>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(expense)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(expense.id)} disabled={deleteExpenseMutation.isMutating}>
+                      {deleteExpenseMutation.isMutating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    </Button>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-sm font-heading font-bold">{fmt(expense.amount)}</p>
-                  <p className="text-xs text-muted-foreground">{format(new Date(expense.date), "MMM d, yyyy")}</p>
-                </div>
-                <div className="flex gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(expense)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(expense.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-8">No expenses found</p>
+            </Card>
+          ))
         )}
       </div>
 
@@ -266,7 +322,7 @@ export default function ExpenseManagement() {
           <div className="grid gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Outlet *</label>
-              <Select value={form.outletId} onValueChange={(v) => setForm({ ...form, outletId: v })}>
+              <Select value={form.outletId} onValueChange={(v) => setForm({ ...form, outletId: v })} disabled={isSaving}>
                 <SelectTrigger><SelectValue placeholder="Select outlet" /></SelectTrigger>
                 <SelectContent>
                   {outlets.map((o) => (
@@ -278,7 +334,7 @@ export default function ExpenseManagement() {
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Category *</label>
-                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as ExpenseCategory })}>
+                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v as ExpenseCategory })} disabled={isSaving}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {expenseCategories.map((c) => (
@@ -296,13 +352,14 @@ export default function ExpenseManagement() {
                   value={form.amount || ""}
                   onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
                   placeholder="0.00"
+                  disabled={isSaving}
                 />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Date *</label>
               <Popover>
-                <PopoverTrigger asChild>
+                <PopoverTrigger asChild disabled={isSaving}>
                   <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !form.date && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {format(form.date, "PPP")}
@@ -324,6 +381,7 @@ export default function ExpenseManagement() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="e.g. Monthly rent payment"
+                disabled={isSaving}
               />
             </div>
             <div className="flex items-center justify-between border-t pt-4">
@@ -331,12 +389,12 @@ export default function ExpenseManagement() {
                 <p className="text-sm font-medium">Recurring expense</p>
                 <p className="text-xs text-muted-foreground">This expense repeats on a schedule</p>
               </div>
-              <Switch checked={form.recurring} onCheckedChange={(v) => setForm({ ...form, recurring: v })} />
+              <Switch checked={form.recurring} onCheckedChange={(v) => setForm({ ...form, recurring: v })} disabled={isSaving} />
             </div>
             {form.recurring && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Frequency</label>
-                <Select value={form.recurringPeriod} onValueChange={(v) => setForm({ ...form, recurringPeriod: v as ExpenseForm["recurringPeriod"] })}>
+                <Select value={form.recurringPeriod} onValueChange={(v) => setForm({ ...form, recurringPeriod: v as ExpenseForm["recurringPeriod"] })} disabled={isSaving}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="weekly">Weekly</SelectItem>
@@ -349,8 +407,11 @@ export default function ExpenseManagement() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingId ? "Update" : "Record"}</Button>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {editingId ? "Update" : "Record"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Trash2, Wallet, Plus, Pencil, X, Check } from "lucide-react";
+import { Trash2, Wallet, Plus, Pencil, X, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -16,31 +16,40 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  getOutletPaymentMethods,
-  addOutletPaymentMethod,
-  updateOutletPaymentMethod,
-  deleteOutletPaymentMethod,
-  MAX_PAYMENT_METHODS_PER_OUTLET,
-  type OutletPaymentMethod,
-} from "@/data/outletPaymentMethods";
+  useGetOutletPaymentMethods,
+  useCreateOutletPaymentMethod,
+  useUpdateOutletPaymentMethod,
+  useDeleteOutletPaymentMethod,
+} from "@/services/api/outlets";
+import type { PaymentMethodRecord } from "@/lib/types/outlet-subresources";
+
+const MAX_PAYMENT_METHODS_PER_OUTLET = 10;
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   outletId: string | number;
   outletName: string;
+  onUpdated?: () => void;
 }
 
-export default function PaymentMethodManagerDialog({ open, onOpenChange, outletId, outletName }: Props) {
-  const [methods, setMethods] = useState<OutletPaymentMethod[]>([]);
+export default function PaymentMethodManagerDialog({ open, onOpenChange, outletId, outletName, onUpdated }: Props) {
+  const { data: methods = [], isLoading: isLoadingMethods, mutate: mutateMethods } = useGetOutletPaymentMethods(outletId);
+  const { trigger: triggerCreate, isMutating: isCreating } = useCreateOutletPaymentMethod(outletId);
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateOutletPaymentMethod(outletId);
+  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteOutletPaymentMethod(outletId);
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formLabel, setFormLabel] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<OutletPaymentMethod | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PaymentMethodRecord | null>(null);
 
-  const reload = () => setMethods(getOutletPaymentMethods(outletId));
-
-  useEffect(() => { if (open) { reload(); setShowForm(false); setEditingId(null); } }, [open, outletId]);
+  useEffect(() => {
+    if (open) {
+      setShowForm(false);
+      setEditingId(null);
+    }
+  }, [open]);
 
   const atLimit = methods.length >= MAX_PAYMENT_METHODS_PER_OUTLET;
 
@@ -54,43 +63,54 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
     setShowForm(true);
   };
 
-  const startEdit = (m: OutletPaymentMethod) => {
+  const startEdit = (m: PaymentMethodRecord) => {
     setEditingId(m.id);
-    setFormLabel(m.label);
+    setFormLabel(m.name);
     setShowForm(true);
   };
 
-  const cancelForm = () => { setShowForm(false); setEditingId(null); };
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+  };
 
-  const submitForm = () => {
+  const submitForm = async () => {
     const label = formLabel.trim();
-    if (!label) { toast.error("Enter a name for the payment method"); return; }
-    if (editingId) {
-      updateOutletPaymentMethod(outletId, editingId, { label });
-      toast.success("Payment method updated");
-    } else {
-      const added = addOutletPaymentMethod(outletId, { label, enabled: true });
-      if (!added) {
-        toast.error(`Limit reached — max ${MAX_PAYMENT_METHODS_PER_OUTLET} payment methods per outlet.`);
-        return;
-      }
-      toast.success("Payment method added");
+    if (!label) {
+      toast.error("Enter a name for the payment method");
+      return;
     }
-    reload();
-    cancelForm();
+    try {
+      if (editingId) {
+        await triggerUpdate({ pmId: editingId, payload: { label } });
+        toast.success("Payment method updated");
+      } else {
+        await triggerCreate({ label });
+        toast.success("Payment method added");
+      }
+      mutateMethods();
+      onUpdated?.();
+      cancelForm();
+    } catch (e) {}
   };
 
-  const toggleEnabled = (m: OutletPaymentMethod, enabled: boolean) => {
-    updateOutletPaymentMethod(outletId, m.id, { enabled });
-    reload();
+  const toggleEnabled = async (m: PaymentMethodRecord, enabled: boolean) => {
+    try {
+      await triggerUpdate({ pmId: m.id, payload: { enabled } });
+      mutateMethods();
+      onUpdated?.();
+    } catch (e) {}
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    deleteOutletPaymentMethod(outletId, deleteTarget.id);
-    toast.success(`Removed "${deleteTarget.label}"`);
-    setDeleteTarget(null);
-    reload();
+    try {
+      await triggerDelete(deleteTarget.id);
+      toast.success(`Removed "${deleteTarget.name}"`);
+      setDeleteTarget(null);
+      mutateMethods();
+      onUpdated?.();
+    } catch (e) {}
   };
 
   return (
@@ -119,15 +139,26 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
                   placeholder="e.g. Cash, POS Terminal, Opay Transfer"
                   maxLength={40}
                   autoFocus
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitForm(); } }}
+                  disabled={isCreating || isUpdating}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitForm();
+                    }
+                  }}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-1">
-                <Button variant="ghost" size="sm" onClick={cancelForm}>
+                <Button variant="ghost" size="sm" onClick={cancelForm} disabled={isCreating || isUpdating}>
                   <X className="h-4 w-4 mr-1" /> Cancel
                 </Button>
-                <Button size="sm" onClick={submitForm}>
-                  <Check className="h-4 w-4 mr-1" /> {editingId ? "Save" : "Add Method"}
+                <Button size="sm" onClick={submitForm} disabled={isCreating || isUpdating}>
+                  {isCreating || isUpdating ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-1" />
+                  )}
+                  {editingId ? "Save" : "Add Method"}
                 </Button>
               </div>
             </div>
@@ -143,32 +174,39 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {methods.length === 0 && (
+                {isLoadingMethods ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ) : methods.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
                       No payment methods yet. Click "Add Method" to create one.
                     </TableCell>
                   </TableRow>
+                ) : (
+                  methods.map((m) => (
+                    <TableRow key={m.id} className={!m.enabled ? "opacity-60" : ""}>
+                      <TableCell className="font-medium">{m.name}</TableCell>
+                      <TableCell className="text-center">
+                        <Switch
+                          checked={m.enabled}
+                          onCheckedChange={(v) => toggleEnabled(m, v)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(m)} title="Edit">
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(m)} title="Delete">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
-                {methods.map((m) => (
-                  <TableRow key={m.id} className={!m.enabled ? "opacity-60" : ""}>
-                    <TableCell className="font-medium">{m.label}</TableCell>
-                    <TableCell className="text-center">
-                      <Switch
-                        checked={m.enabled}
-                        onCheckedChange={(v) => toggleEnabled(m, v)}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(m)} title="Edit">
-                        <Pencil className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(m)} title="Delete">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
               </TableBody>
             </Table>
           </div>
@@ -182,7 +220,7 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
               variant="outline"
               size="sm"
               onClick={startCreate}
-              disabled={(showForm && !editingId) || atLimit}
+              disabled={(showForm && !editingId) || atLimit || isLoadingMethods}
             >
               <Plus className="h-4 w-4 mr-1" /> Add Method
             </Button>
@@ -194,15 +232,26 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{deleteTarget?.label}"?</AlertDialogTitle>
+            <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
               Cashiers at this outlet will no longer be able to accept this payment method. Existing payment records are not affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                confirmDelete();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                "Delete"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

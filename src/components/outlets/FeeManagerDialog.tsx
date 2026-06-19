@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Percent } from "lucide-react";
+import { Plus, Pencil, Trash2, Percent, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import FeeFormDialog, { type FeeFormData } from "@/components/fees/FeeFormDialog";
 import { getFeatures } from "@/data/businessTypes";
+import {
+  useGetOutletFees,
+  useCreateOutletFee,
+  useUpdateOutletFee,
+  useDeleteOutletFee,
+} from "@/services/api/outlets";
+import type { FeeRecord } from "@/lib/types/outlet-subresources";
 
 const serviceOptionLabels: Record<string, string> = {
   all: "All",
@@ -28,21 +35,25 @@ interface FeeManagerDialogProps {
   outletId: number | string;
   outletName: string;
   businessType: string;
-  fees: FeeFormData[];
-  onUpdateFees: (fees: FeeFormData[]) => void;
+  onUpdated?: () => void;
 }
 
 export default function FeeManagerDialog({
-  open, onOpenChange, outletId, outletName, businessType, fees, onUpdateFees,
+  open, onOpenChange, outletId, outletName, businessType, onUpdated,
 }: FeeManagerDialogProps) {
-  const outletFees = fees.filter((f) => f.outletId === String(outletId));
+  const { data: fees = [], isLoading: isLoadingFees, mutate: mutateFees } = useGetOutletFees(outletId);
+
+  const { trigger: triggerCreate, isMutating: isCreating } = useCreateOutletFee(outletId);
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateOutletFee(outletId);
+  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteOutletFee(outletId);
+
   const features = getFeatures(businessType);
   const showServiceOption = features.hasDineIn || features.hasTakeaway;
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"add" | "edit">("add");
-  const [editingFee, setEditingFee] = useState<FeeFormData | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<FeeFormData | null>(null);
+  const [editingFee, setEditingFee] = useState<FeeRecord | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FeeRecord | null>(null);
 
   const handleAdd = () => {
     setFormMode("add");
@@ -50,28 +61,48 @@ export default function FeeManagerDialog({
     setFormOpen(true);
   };
 
-  const handleEdit = (fee: FeeFormData) => {
+  const handleEdit = (fee: FeeRecord) => {
     setFormMode("edit");
     setEditingFee(fee);
     setFormOpen(true);
   };
 
-  const handleSubmit = (data: FeeFormData) => {
-    if (formMode === "add") {
-      const newFee: FeeFormData = { ...data, id: Date.now(), outletId: String(outletId) };
-      onUpdateFees([...fees, newFee]);
-      toast.success(`Fee "${data.name}" added`);
-    } else {
-      onUpdateFees(fees.map((f) => (f.id === data.id ? { ...data, outletId: String(outletId) } : f)));
-      toast.success(`Fee "${data.name}" updated`);
-    }
+  const handleSubmit = async (data: FeeFormData) => {
+    try {
+      if (formMode === "add") {
+        await triggerCreate({
+          name: data.name,
+          serviceOption: data.serviceOption || "all",
+          isFixed: data.isFixed || false,
+          chargeToCustomers: data.chargeToCustomers || false,
+          value: parseFloat(data.value) || 0,
+        });
+        toast.success(`Fee "${data.name}" added`);
+      } else if (editingFee) {
+        await triggerUpdate({
+          feeId: editingFee.id,
+          payload: {
+            value: parseFloat(data.value) || 0,
+            enabled: data.chargeToCustomers ?? true,
+          },
+        });
+        toast.success(`Fee "${data.name}" updated`);
+      }
+      mutateFees();
+      onUpdated?.();
+      setFormOpen(false);
+    } catch (e) {}
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    onUpdateFees(fees.filter((f) => f.id !== deleteTarget.id));
-    toast.success(`Fee "${deleteTarget.name}" deleted`);
-    setDeleteTarget(null);
+    try {
+      await triggerDelete(deleteTarget.id);
+      toast.success(`Fee "${deleteTarget.name}" deleted`);
+      mutateFees();
+      onUpdated?.();
+      setDeleteTarget(null);
+    } catch (e) {}
   };
 
   return (
@@ -84,7 +115,8 @@ export default function FeeManagerDialog({
           </DialogHeader>
 
           <div className="flex justify-end">
-            <Button size="sm" onClick={handleAdd}>
+            <Button size="sm" onClick={handleAdd} disabled={isCreating}>
+              {isCreating && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
               <Plus className="h-4 w-4 mr-1" /> Add Fee / Tax
             </Button>
           </div>
@@ -97,12 +129,19 @@ export default function FeeManagerDialog({
                   {showServiceOption && <TableHead>Service</TableHead>}
                   <TableHead className="text-center">Type</TableHead>
                   <TableHead className="text-right">Value</TableHead>
-                  <TableHead className="text-center">Customer</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {outletFees.length === 0 ? (
+                {isLoadingFees ? (
+                  <TableRow>
+                    <TableCell colSpan={showServiceOption ? 6 : 5} className="text-center py-10">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Loading fees...</p>
+                    </TableCell>
+                  </TableRow>
+                ) : fees.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={showServiceOption ? 6 : 5} className="text-center py-10 text-muted-foreground">
                       <Percent className="h-7 w-7 mx-auto mb-2 opacity-40" />
@@ -113,50 +152,47 @@ export default function FeeManagerDialog({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  outletFees.map((fee) => (
-                    <TableRow key={fee.id}>
-                      <TableCell className="font-medium">{fee.name}</TableCell>
-                      {showServiceOption && (
-                        <TableCell>
-                          <Badge variant="secondary" className="text-xs">
-                            {serviceOptionLabels[fee.serviceOption]}
+                  fees.map((fee) => {
+                    const isFixed = fee.type === "fixed";
+                    return (
+                      <TableRow key={fee.id}>
+                        <TableCell className="font-medium">{fee.name}</TableCell>
+                        {showServiceOption && (
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">
+                              {serviceOptionLabels["all"]}
+                            </Badge>
+                          </TableCell>
+                        )}
+                        <TableCell className="text-center">
+                          <Badge variant={isFixed ? "default" : "outline"} className="text-xs">
+                            {isFixed ? "Fixed" : "Percentage"}
                           </Badge>
                         </TableCell>
-                      )}
-                      <TableCell className="text-center">
-                        <Badge variant={fee.isFixed ? "default" : "outline"} className="text-xs">
-                          {fee.isFixed ? "Fixed" : "Percentage"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-sm">
-                        {fee.isFixed ? (
-                          <span className="text-xs text-muted-foreground">
-                            {fee.minimumFee}/{fee.maximumFee} @{fee.orderPeg}
-                          </span>
-                        ) : (
+                        <TableCell className="text-right tabular-nums text-sm">
                           <span>{fee.value}%</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge
-                          variant="secondary"
-                          className={`text-xs ${fee.chargeToCustomers ? "bg-success/10 text-success" : ""}`}
-                        >
-                          {fee.chargeToCustomers ? "Yes" : "No"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(fee)}>
-                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(fee)}>
-                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant="secondary"
+                            className={`text-xs ${fee.enabled ? "bg-success/10 text-success" : ""}`}
+                          >
+                            {fee.enabled ? "Enabled" : "Disabled"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(fee)}>
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(fee)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -164,15 +200,32 @@ export default function FeeManagerDialog({
         </DialogContent>
       </Dialog>
 
-      <FeeFormDialog
-        open={formOpen}
-        onOpenChange={setFormOpen}
-        mode={formMode}
-        initialData={editingFee ? { ...editingFee, outletId: String(outletId) } : { outletId: String(outletId) }}
-        onSubmit={handleSubmit}
-        hideOutletSelector
-        showServiceOption={showServiceOption}
-      />
+      {formOpen && (
+        <FeeFormDialog
+          open={formOpen}
+          onOpenChange={setFormOpen}
+          mode={formMode}
+          initialData={
+            editingFee
+              ? {
+                  id: editingFee.id,
+                  outletId: String(outletId),
+                  name: editingFee.name,
+                  value: String(editingFee.value),
+                  isFixed: editingFee.type === "fixed",
+                  chargeToCustomers: editingFee.enabled,
+                  serviceOption: "all",
+                  orderPeg: "",
+                  minimumFee: "",
+                  maximumFee: "",
+                }
+              : { outletId: String(outletId) }
+          }
+          onSubmit={handleSubmit}
+          hideOutletSelector
+          showServiceOption={showServiceOption}
+        />
+      )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
@@ -183,8 +236,9 @@ export default function FeeManagerDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isDeleting}>
+              {isDeleting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -25,7 +25,7 @@ export const useGetSubstituteGroups = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_SUBSTITUTE_GROUPS, params)
+    ? createUrlWithParams(API_ENDPOINTS.SUBSTITUTE_GROUPS, params)
     : null;
   return useApi<SubstituteGroupListResponse>(url, options);
 };
@@ -36,7 +36,7 @@ export const useGetSubstituteGroup = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<SubstituteGroupResponse>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_SUBSTITUTE_GROUP(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(id) : null,
     options,
   );
 };
@@ -55,7 +55,7 @@ export const useCreateSubstituteGroup = (
     return data;
   };
   return useSWRMutation<SubstituteGroupResponse, APIError, string, CreateSubstituteGroupPayload>(
-    API_ENDPOINTS.CREATE_SUBSTITUTE_GROUP,
+    API_ENDPOINTS.SUBSTITUTE_GROUPS,
     fetcher,
     {
       onError(err) {
@@ -80,7 +80,7 @@ export const useUpdateSubstituteGroup = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg }: { arg: { id: string | number; payload: UpdateSubstituteGroupPayload } }) => {
-    const { data } = await api.patch(API_ENDPOINTS.UPDATE_SUBSTITUTE_GROUP(arg.id), arg.payload);
+    const { data } = await api.patch(API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(arg.id), arg.payload);
     return data;
   };
   return useSWRMutation<
@@ -114,7 +114,7 @@ export const useDeleteSubstituteGroup = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg: id }: { arg: string }) => {
-    const { data } = await api.delete(API_ENDPOINTS.DELETE_SUBSTITUTE_GROUP(id));
+    const { data } = await api.delete(API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(id));
     return data;
   };
   return useSWRMutation<{ message: string }, APIError, string, string>(

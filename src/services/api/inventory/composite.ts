@@ -25,7 +25,7 @@ export const useGetComposites = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_COMPOSITES, params)
+    ? createUrlWithParams(API_ENDPOINTS.COMPOSITES, params)
     : null;
   return useApi<CompositeListResponse>(url, options);
 };
@@ -36,7 +36,7 @@ export const useGetComposite = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<CompositeResponse>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_COMPOSITE(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_COMPOSITE(id) : null,
     options,
   );
 };
@@ -55,12 +55,12 @@ export const useCreateComposite = (
     return data;
   };
   return useSWRMutation<CompositeResponse, APIError, string, CreateCompositePayload>(
-    API_ENDPOINTS.CREATE_COMPOSITE,
+    API_ENDPOINTS.COMPOSITES,
     fetcher,
     {
       onError(err) {
         toast({
-          title: "Failed to create recipe",
+          title: "Failed to create composite",
           description: err.response?.data?.message ?? "Please try again later",
           variant: "destructive",
         });
@@ -80,7 +80,7 @@ export const useUpdateComposite = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg }: { arg: { id: string | number; payload: UpdateCompositePayload } }) => {
-    const { data } = await api.patch(API_ENDPOINTS.UPDATE_COMPOSITE(arg.id), arg.payload);
+    const { data } = await api.patch(API_ENDPOINTS.SINGLE_COMPOSITE(arg.id), arg.payload);
     return data;
   };
   return useSWRMutation<
@@ -94,7 +94,7 @@ export const useUpdateComposite = (
     {
       onError(err) {
         toast({
-          title: "Failed to update recipe",
+          title: "Failed to update composite",
           description: err.response?.data?.message ?? "Please try again later",
           variant: "destructive",
         });
@@ -114,7 +114,7 @@ export const useDeleteComposite = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg: id }: { arg: string }) => {
-    const { data } = await api.delete(API_ENDPOINTS.DELETE_COMPOSITE(id));
+    const { data } = await api.delete(API_ENDPOINTS.SINGLE_COMPOSITE(id));
     return data;
   };
   return useSWRMutation<{ message: string }, APIError, string, string>(

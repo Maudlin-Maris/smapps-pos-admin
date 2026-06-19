@@ -21,7 +21,7 @@ export const useGetModifierGroups = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_MODIFIER_GROUPS, params)
+    ? createUrlWithParams(API_ENDPOINTS.MODIFIER_GROUPS, params)
     : null;
   return useApi<ModifierGroupsListResponse>(url, options);
 };
@@ -32,7 +32,7 @@ export const useGetModifierGroup = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<ApiModifierGroup>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_MODIFIER_GROUP(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id) : null,
     options,
   );
 };
@@ -47,7 +47,7 @@ export const useCreateModifierGroup = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<CreateModifierGroupPayload, ApiModifierGroup>(
-    API_ENDPOINTS.CREATE_MODIFIER_GROUP,
+    API_ENDPOINTS.MODIFIER_GROUPS,
     "POST",
     undefined,
     {
@@ -74,7 +74,7 @@ export const useUpdateModifierGroup = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<UpdateModifierGroupPayload, ApiModifierGroup>(
-    id ? API_ENDPOINTS.UPDATE_MODIFIER_GROUP(id) : null,
+    id ? API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id) : null,
     "PATCH",
     undefined,
     {
@@ -101,7 +101,7 @@ export const useDeleteModifierGroup = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<undefined, { message?: string }>(
-    id ? API_ENDPOINTS.DELETE_MODIFIER_GROUP(id) : null,
+    id ? API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id) : null,
     "DELETE",
     undefined,
     {

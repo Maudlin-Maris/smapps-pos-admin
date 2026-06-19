@@ -15,8 +15,9 @@ import type { MeasuringUnitListResponse } from "@/lib/types/measuring-unit-list-
 import type { CreateMeasuringUnitPayload } from "@/lib/types/create-measuring-unit-payload";
 import type { UpdateMeasuringUnitPayload } from "@/lib/types/update-measuring-unit-payload";
 
-export const useGetMeasuringUnits = (
+export const useGetUnits = (
   params?: {
+    outletId?: string;
     page?: number;
     per_page?: number;
   },
@@ -24,23 +25,23 @@ export const useGetMeasuringUnits = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_UNITS, params)
+    ? createUrlWithParams(API_ENDPOINTS.UNITS, params)
     : null;
   return useApi<MeasuringUnitListResponse>(url, options);
 };
 
-export const useGetMeasuringUnit = (
+export const useGetUnit = (
   id: number | string | undefined,
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<MeasuringUnit>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_UNIT(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_UNIT(id) : null,
     options,
   );
 };
 
-export const useCreateMeasuringUnit = (
+export const useCreateUnit = (
   options?: SWRMutationConfiguration<
     MeasuringUnit,
     APIError,
@@ -54,12 +55,12 @@ export const useCreateMeasuringUnit = (
     return data;
   };
   return useSWRMutation<MeasuringUnit, APIError, string, CreateMeasuringUnitPayload>(
-    API_ENDPOINTS.CREATE_UNIT,
+    API_ENDPOINTS.UNITS,
     fetcher,
     {
       onError(err) {
         toast({
-          title: "Failed to create unit",
+          title: "Failed to create measuring unit",
           description: err.response?.data?.message ?? "Please try again later",
           variant: "destructive",
         });
@@ -69,7 +70,7 @@ export const useCreateMeasuringUnit = (
   );
 };
 
-export const useUpdateMeasuringUnit = (
+export const useUpdateUnit = (
   options?: SWRMutationConfiguration<
     MeasuringUnit,
     APIError,
@@ -79,7 +80,7 @@ export const useUpdateMeasuringUnit = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg }: { arg: { id: string | number; payload: UpdateMeasuringUnitPayload } }) => {
-    const { data } = await api.patch(API_ENDPOINTS.UPDATE_UNIT(arg.id), arg.payload);
+    const { data } = await api.patch(API_ENDPOINTS.SINGLE_UNIT(arg.id), arg.payload);
     return data;
   };
   return useSWRMutation<
@@ -93,7 +94,7 @@ export const useUpdateMeasuringUnit = (
     {
       onError(err) {
         toast({
-          title: "Failed to update unit",
+          title: "Failed to update measuring unit",
           description: err.response?.data?.message ?? "Please try again later",
           variant: "destructive",
         });
@@ -103,7 +104,7 @@ export const useUpdateMeasuringUnit = (
   );
 };
 
-export const useDeleteMeasuringUnit = (
+export const useDeleteUnit = (
   options?: SWRMutationConfiguration<
     { message: string },
     APIError,
@@ -113,7 +114,7 @@ export const useDeleteMeasuringUnit = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg: id }: { arg: string }) => {
-    const { data } = await api.delete(API_ENDPOINTS.DELETE_UNIT(id));
+    const { data } = await api.delete(API_ENDPOINTS.SINGLE_UNIT(id));
     return data;
   };
   return useSWRMutation<{ message: string }, APIError, string, string>(
@@ -131,3 +132,8 @@ export const useDeleteMeasuringUnit = (
     },
   );
 };
+
+export const useCreateMeasuringUnit = useCreateUnit;
+export const useUpdateMeasuringUnit = useUpdateUnit;
+export const useDeleteMeasuringUnit = useDeleteUnit;
+export const useGetMeasuringUnits = useGetUnits;

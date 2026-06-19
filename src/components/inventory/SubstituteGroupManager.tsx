@@ -33,7 +33,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Plus, Pencil, Trash2, Layers, ArrowUp, ArrowDown, X, Check, Info } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, ArrowUp, ArrowDown, X, Check, Info, Loader2, Calendar } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -44,6 +44,8 @@ import {
   useDeleteSubstituteGroup,
   useGetSubstituteGroups,
 } from "@/services/api/inventory/substitute-group";
+import { useGetSubstitutionLogs } from "@/services/api/inventory/live-inventory";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
 import type { SubstituteGroupResponse as SubstituteGroup, SubstituteGroupResponseItem as SubstituteGroupItem } from "@/lib/types/substitute-group-response";
 
 interface Props {
@@ -62,6 +64,14 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
     outletId: selectedOutletId || undefined,
   });
   const groups = groupsRes?.data ?? [];
+
+  const [activeSubTab, setActiveSubTab] = useState<"groups" | "logs">("groups");
+  const [logsPage, setLogsPage] = useState(1);
+  const { data: logsResponse, isLoading: isLogsLoading } = useGetSubstitutionLogs({
+    page: logsPage,
+    per_page: 10,
+    outletId: selectedOutletId || undefined,
+  });
 
   const createGroupMutation = useCreateSubstituteGroup();
   const updateGroupMutation = useUpdateSubstituteGroup();
@@ -170,80 +180,168 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <p className="text-sm text-muted-foreground">
-            Reusable substitute groups (e.g. "Burger Patties") for composite components.
-          </p>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-[280px]">
-              <p className="text-xs">Create ordered lists of interchangeable inventory items. Composite components can link to these groups so substitutions happen automatically based on stock availability and priority.</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        {!readOnly && (
-          <Button size="sm" onClick={openNew}>
-            <Plus className="h-4 w-4 mr-1" /> Add Group
-          </Button>
-        )}
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setActiveSubTab("groups")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium border-b-2 -mb-[2px] transition-colors",
+            activeSubTab === "groups"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Substitute Groups
+        </button>
+        <button
+          onClick={() => setActiveSubTab("logs")}
+          className={cn(
+            "px-4 py-2 text-sm font-medium border-b-2 -mb-[2px] transition-colors",
+            activeSubTab === "logs"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Substitution Logs
+        </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visible.map((g) => (
-          <Card key={g.id} className="p-4">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Layers className="h-4 w-4 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="font-heading font-semibold text-sm truncate">{g.name}</p>
-                  <p className="text-xs text-muted-foreground">{g.items.length} items</p>
-                </div>
-              </div>
-              {!readOnly && (
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-destructive"
-                    onClick={() => setDeleteTarget(g)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
+      {activeSubTab === "groups" ? (
+        <>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm text-muted-foreground">
+                Reusable substitute groups (e.g. "Burger Patties") for composite components.
+              </p>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[280px]">
+                  <p className="text-xs">Create ordered lists of interchangeable inventory items. Composite components can link to these groups so substitutions happen automatically based on stock availability and priority.</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
-            <ul className="space-y-1">
-              {[...g.items]
-                .sort((a, b) => a.priority - b.priority)
-                .map((it, idx) => {
-                  const inv = inventoryItems.find((i) => i.id === it.inventoryItemId);
-                  return (
-                    <li key={it.inventoryItemId} className="flex items-center gap-2 text-xs">
-                      <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                        #{idx + 1}
-                      </Badge>
-                      <span className="truncate flex-1">{inv?.name ?? "Unknown item"}</span>
-                      <span className="text-muted-foreground tabular-nums">×{it.conversionRatio}</span>
-                    </li>
-                  );
-                })}
-            </ul>
-          </Card>
-        ))}
-        {visible.length === 0 && (
-          <p className="text-sm text-muted-foreground col-span-full text-center py-8">
-            No substitute groups yet
-          </p>
-        )}
-      </div>
+            {!readOnly && (
+              <Button size="sm" onClick={openNew}>
+                <Plus className="h-4 w-4 mr-1" /> Add Group
+              </Button>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((g) => (
+              <Card key={g.id} className="p-4">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Layers className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-heading font-semibold text-sm truncate">{g.name}</p>
+                      <p className="text-xs text-muted-foreground">{g.items.length} items</p>
+                    </div>
+                  </div>
+                  {!readOnly && (
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(g)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={() => setDeleteTarget(g)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <ul className="space-y-1">
+                  {[...g.items]
+                    .sort((a, b) => a.priority - b.priority)
+                    .map((it, idx) => {
+                      const inv = inventoryItems.find((i) => i.id === it.inventoryItemId);
+                      return (
+                        <li key={it.inventoryItemId} className="flex items-center gap-2 text-xs">
+                          <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                            #{idx + 1}
+                          </Badge>
+                          <span className="truncate flex-1">{inv?.name ?? "Unknown item"}</span>
+                          <span className="text-muted-foreground tabular-nums">×{it.conversionRatio}</span>
+                        </li>
+                      );
+                    })}
+                </ul>
+              </Card>
+            ))}
+            {visible.length === 0 && (
+              <p className="text-sm text-muted-foreground col-span-full text-center py-8">
+                No substitute groups yet
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <Card className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading font-semibold text-sm">Substitution Audit Trail</h3>
+            <p className="text-xs text-muted-foreground">Log of all dynamic recipe item swaps</p>
+          </div>
+          {isLogsLoading ? (
+            <div className="py-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Loading substitution logs...
+            </div>
+          ) : !logsResponse?.data || logsResponse.data.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground space-y-2">
+              <Calendar className="h-8 w-8 text-muted-foreground/35 mx-auto" />
+              <p className="text-sm">No substitution logs recorded</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="text-left p-3">Order ID</th>
+                      <th className="text-left p-3">Original Item</th>
+                      <th className="text-left p-3">Substitute Item</th>
+                      <th className="text-right p-3">Qty Swapped</th>
+                      <th className="text-left p-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logsResponse.data.map((log) => {
+                      const orig = inventoryItems.find((i) => i.id === log.originalItemId);
+                      const sub = inventoryItems.find((i) => i.id === log.substituteItemId);
+                      return (
+                        <tr key={log.id} className="border-b hover:bg-muted/30">
+                          <td className="p-3 font-mono text-xs">{log.orderId || "—"}</td>
+                          <td className="p-3 font-medium">{orig?.name || log.originalItemId}</td>
+                          <td className="p-3 font-medium text-accent">{sub?.name || log.substituteItemId}</td>
+                          <td className="p-3 text-right font-semibold">{log.quantity}</td>
+                          <td className="p-3 text-muted-foreground text-xs">
+                            {new Date(log.createdAt).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <ResuablePagination
+                currentPage={logsPage}
+                totalPages={logsResponse.meta?.last_page || 1}
+                totalItems={logsResponse.meta?.total || 0}
+                onPageChange={setLogsPage}
+                rowsPerPage={10}
+              />
+            </div>
+          )}
+        </Card>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden">

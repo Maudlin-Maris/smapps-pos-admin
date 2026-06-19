@@ -10,6 +10,10 @@ import {
   ShoppingBag, Tag, StickyNote, Pencil, Receipt, CheckCircle2,
   Clock, XCircle, CreditCard, ChevronLeft, ChevronRight,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// API
+import { useGetCustomerTransactions } from "@/services/api/customers";
 
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 
@@ -62,71 +66,49 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0 }).format(n);
 }
 
-// Generate deterministic mock transactions per customer
-function generateMockTransactions(customer: Customer): CustomerTransaction[] {
-  const locations = ["Main Branch", "Lekki Outlet", "VI Branch"];
-  const methods = ["Cash", "Card", "Transfer", "Mobile Money"];
-  const itemNames = [
-    "Cappuccino", "Latte", "Croissant", "Grilled Chicken", "Jollof Rice",
-    "Smoothie", "Pancakes", "Espresso", "Sandwich", "Cake Slice",
-  ];
-
-  const txns: CustomerTransaction[] = [];
-  const count = Math.min(customer.visitCount, 15); // Show up to 15 recent transactions
-  const baseDate = new Date("2024-06-14");
-
-  for (let i = 0; i < count; i++) {
-    const date = new Date(baseDate);
-    date.setDate(date.getDate() - i * 2 - Math.floor(i / 3));
-
-    const itemCount = 1 + (i % 3);
-    const items = Array.from({ length: itemCount }, (_, j) => {
-      const idx = (i * 3 + j) % itemNames.length;
-      const qty = 1 + (j % 2);
-      const unitPrice = [1500, 2000, 800, 4500, 3500, 2500, 1800, 1200, 3000, 1000][idx];
-      return { name: itemNames[idx], qty, unitPrice };
-    });
-
-    const amount = items.reduce((s, item) => s + item.qty * item.unitPrice, 0);
-    const statuses: ("Paid" | "Pending" | "Refunded")[] = ["Paid", "Paid", "Paid", "Paid", "Pending"];
-    const orderStatuses: ("Completed" | "Processing" | "Cancelled")[] = ["Completed", "Completed", "Completed", "Completed", "Processing"];
-
-    txns.push({
-      id: `ORD-${customer.id.slice(0, 2).toUpperCase()}${(1000 + i).toString()}`,
-      date: format(date, "MMM d, yyyy · h:mm a"),
-      amount,
-      items,
-      paymentMethod: methods[i % methods.length],
-      paymentStatus: statuses[i % statuses.length],
-      orderStatus: orderStatuses[i % orderStatuses.length],
-      location: locations[i % locations.length],
-    });
-  }
-
-  return txns;
-}
-
 interface CustomerDetailPanelProps {
   customer: Customer | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (customer: Customer) => void;
+  onMutate?: () => void;
 }
 
 const TXN_PER_PAGE = 5;
 
 export default function CustomerDetailPanel({ customer, open, onOpenChange, onEdit }: CustomerDetailPanelProps) {
   const [txnPage, setTxnPage] = useState(1);
+  const [lastCustomerId, setLastCustomerId] = useState<string | null>(null);
+
+  if (customer && customer.id !== lastCustomerId) {
+    setLastCustomerId(customer.id);
+    setTxnPage(1);
+  }
+
+  // Load live transaction data
+  const { data: txnsResponse, isLoading: isTxnsLoading } = useGetCustomerTransactions(
+    customer?.id,
+    { page: txnPage, per_page: TXN_PER_PAGE }
+  );
 
   const transactions = useMemo(() => {
-    if (!customer) return [];
-    setTxnPage(1);
-    return generateMockTransactions(customer);
-  }, [customer]);
+    if (!txnsResponse?.data) return [];
+    return txnsResponse.data.map((t) => ({
+      id: t.orderId || t.id,
+      date: t.createdAt ? format(new Date(t.createdAt), "MMM d, yyyy · h:mm a") : "—",
+      amount: t.amount,
+      items: (t as any).items || [],
+      paymentMethod: (t as any).paymentMethod || (t.type === "purchase" ? "Card" : "Refund"),
+      paymentStatus: (t as any).paymentStatus || (t.type === "purchase" ? "Paid" : "Refunded"),
+      orderStatus: (t as any).orderStatus || "Completed",
+      location: (t as any).location || "Main Store",
+    }));
+  }, [txnsResponse]);
 
-  const txnTotalPages = Math.max(1, Math.ceil(transactions.length / TXN_PER_PAGE));
+  const txnTotalPages = txnsResponse?.meta?.last_page ?? 1;
+  const totalTxns = txnsResponse?.meta?.total ?? 0;
   const safeTxnPage = Math.min(txnPage, txnTotalPages);
-  const paginatedTxns = transactions.slice((safeTxnPage - 1) * TXN_PER_PAGE, safeTxnPage * TXN_PER_PAGE);
+
 
   if (!customer) return null;
 
@@ -215,17 +197,32 @@ export default function CustomerDetailPanel({ customer, open, onOpenChange, onEd
           <div className="px-5 py-4">
             <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-3">
               <Receipt className="h-4 w-4" /> Transaction History
-              <span className="text-muted-foreground font-normal">({transactions.length})</span>
+              <span className="text-muted-foreground font-normal">({totalTxns})</span>
             </h3>
 
-            {transactions.length === 0 ? (
+            {isTxnsLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="p-3 border rounded-lg space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-3 w-32" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : transactions.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">No transactions yet</p>
             ) : (
               <>
                 {txnTotalPages > 1 && (
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs text-muted-foreground">
-                      {(safeTxnPage - 1) * TXN_PER_PAGE + 1}–{Math.min(safeTxnPage * TXN_PER_PAGE, transactions.length)} of {transactions.length}
+                      {(safeTxnPage - 1) * TXN_PER_PAGE + 1}–{Math.min(safeTxnPage * TXN_PER_PAGE, totalTxns)} of {totalTxns}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button variant="outline" size="icon" className="h-7 w-7" disabled={safeTxnPage <= 1} onClick={() => setTxnPage(safeTxnPage - 1)}>
@@ -239,7 +236,7 @@ export default function CustomerDetailPanel({ customer, open, onOpenChange, onEd
                   </div>
                 )}
                 <div className="space-y-2">
-                  {paginatedTxns.map((txn) => {
+                  {transactions.map((txn) => {
                     const ps = paymentStatusStyles[txn.paymentStatus];
                     const PIcon = ps?.icon ?? CheckCircle2;
                     return (
@@ -262,34 +259,36 @@ export default function CustomerDetailPanel({ customer, open, onOpenChange, onEd
                             <p className="text-[10px] text-muted-foreground">{txn.paymentMethod}</p>
                           </div>
                         </summary>
-                        <div className="border-t border-border bg-muted/20 px-3 py-2">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="text-muted-foreground">
-                                <th className="text-left py-1 font-medium">Item</th>
-                                <th className="text-center py-1 font-medium">Qty</th>
-                                <th className="text-right py-1 font-medium">Price</th>
-                                <th className="text-right py-1 font-medium">Total</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {txn.items.map((item, i) => (
-                                <tr key={i} className="border-t border-border/30">
-                                  <td className="py-1 font-medium">{item.name}</td>
-                                  <td className="py-1 text-center text-muted-foreground">{item.qty}</td>
-                                  <td className="py-1 text-right text-muted-foreground">{fmt(item.unitPrice)}</td>
-                                  <td className="py-1 text-right font-medium">{fmt(item.qty * item.unitPrice)}</td>
+                        {txn.items && txn.items.length > 0 && (
+                          <div className="border-t border-border bg-muted/20 px-3 py-2">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="text-muted-foreground">
+                                  <th className="text-left py-1 font-medium">Item</th>
+                                  <th className="text-center py-1 font-medium">Qty</th>
+                                  <th className="text-right py-1 font-medium">Price</th>
+                                  <th className="text-right py-1 font-medium">Total</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                            <tfoot>
-                              <tr className="border-t border-border">
-                                <td colSpan={3} className="py-1 text-right font-semibold">Total</td>
-                                <td className="py-1 text-right font-semibold">{fmt(txn.amount)}</td>
-                              </tr>
-                            </tfoot>
-                          </table>
-                        </div>
+                              </thead>
+                              <tbody>
+                                {txn.items.map((item, i) => (
+                                  <tr key={i} className="border-t border-border/30">
+                                    <td className="py-1 font-medium">{item.name}</td>
+                                    <td className="py-1 text-center text-muted-foreground">{item.qty}</td>
+                                    <td className="py-1 text-right text-muted-foreground">{fmt(item.unitPrice)}</td>
+                                    <td className="py-1 text-right font-medium">{fmt(item.qty * item.unitPrice)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot>
+                                <tr className="border-t border-border">
+                                  <td colSpan={3} className="py-1 text-right font-semibold">Total</td>
+                                  <td className="py-1 text-right font-semibold">{fmt(txn.amount)}</td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        )}
                       </details>
                     );
                   })}

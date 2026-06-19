@@ -18,7 +18,7 @@ export const useGetCategories = (
   options?: SWRInfiniteConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();
-  const url = isLoggedIn ? API_ENDPOINTS.LIST_CATEGORIES : null;
+  const url = isLoggedIn ? API_ENDPOINTS.CATEGORIES : null;
   return useApiInfinite<CatalogCategoriesListReponse>(
     url,
     params,
@@ -37,7 +37,7 @@ export const useCreateCategory = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<CreateCategoryPayload, CreateCategoryResponse>(
-    API_ENDPOINTS.CREATE_CATEGORY,
+    API_ENDPOINTS.CATEGORIES,
     "POST",
     undefined,
     {
@@ -64,7 +64,7 @@ export const useUpdateCategory = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<UpdateCategoryPayload, UpdateCategoryResponse>(
-    id ? API_ENDPOINTS.UPDATE_CATEGORY(id) : null,
+    id ? API_ENDPOINTS.SINGLE_CATEGORY(id) : null,
     "PATCH",
     undefined,
     {
@@ -91,7 +91,7 @@ export const useDeleteCategory = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<undefined, { message: string }>(
-    id ? API_ENDPOINTS.DELETE_CATEGORY(id) : null,
+    id ? API_ENDPOINTS.SINGLE_CATEGORY(id) : null,
     "DELETE",
     undefined,
     {

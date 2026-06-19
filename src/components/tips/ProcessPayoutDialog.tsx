@@ -25,10 +25,10 @@ import {
 } from "@/components/ui/input-otp";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatNaira } from "@/lib/currency";
-import { createPayout, markPayoutPaid } from "@/lib/tips-store";
 import type { PayoutMethod } from "@/data/tipsTypes";
 import { useToast } from "@/hooks/use-toast";
-import { Mail, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Mail, ShieldCheck, ArrowLeft, Loader2 } from "lucide-react";
+import { useSendTipsPayoutOtp, useConfirmTipsPayout } from "@/services/api/tips";
 
 interface Props {
   open: boolean;
@@ -77,9 +77,9 @@ export default function ProcessPayoutDialog({
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [otp, setOtp] = useState("");
-  const [expectedOtp, setExpectedOtp] = useState("");
-  const [otpSentAt, setOtpSentAt] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+
+  const { trigger: triggerSendOtp, isMutating: isSendingOtp } = useSendTipsPayoutOtp();
+  const { trigger: triggerConfirm, isMutating: isConfirming } = useConfirmTipsPayout();
 
   useEffect(() => {
     if (open) {
@@ -89,8 +89,6 @@ export default function ProcessPayoutDialog({
       setReference("");
       setNotes("");
       setOtp("");
-      setExpectedOtp("");
-      setOtpSentAt(null);
     }
   }, [open, outstandingAmount]);
 
@@ -102,59 +100,47 @@ export default function ProcessPayoutDialog({
   const amountValid =
     numericAmount > 0 && numericAmount <= outstandingAmount + 0.0001;
 
-  function sendOtp() {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setExpectedOtp(code);
-    setOtp("");
-    setOtpSentAt(Date.now());
-    setStep("otp");
-    toast({
-      title: "Verification code sent",
-      description: `A 6-digit code was sent to ${maskEmail(businessEmail)}. For this demo, the code is ${code}.`,
-    });
-  }
-
-  function confirmPayout() {
-    if (otp !== expectedOtp) {
-      toast({
-        title: "Invalid code",
-        description: "The verification code is incorrect.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSubmitting(true);
+  async function sendOtp() {
     try {
-      const now = new Date().toISOString();
-      const payout = createPayout({
+      await triggerSendOtp({
+        email: businessEmail,
         staffId,
         outletId,
-        periodStart: new Date(0).toISOString(),
-        periodEnd: now,
         amount: numericAmount,
         method,
-        reference: reference.trim() || undefined,
+        reference: reference.trim() || "transfer",
         notes: notes.trim() || undefined,
-        actor,
-        tipIds,
       });
-      if (!payout || payout.amount <= 0) {
-        toast({
-          title: "Nothing to pay",
-          description: "No outstanding tips were available to allocate.",
-          variant: "destructive",
-        });
-        return;
-      }
-      markPayoutPaid(payout.id, actor);
+      setOtp("");
+      setStep("otp");
+      toast({
+        title: "Verification code sent",
+        description: `A verification code was sent to ${maskEmail(businessEmail)}.`,
+      });
+    } catch (e) {
+      // Handled by SWR onError toast
+    }
+  }
+
+  async function confirmPayout() {
+    try {
+      await triggerConfirm({
+        email: businessEmail,
+        otp,
+        staffId,
+        outletId,
+        amount: numericAmount,
+        method,
+        reference: reference.trim() || "transfer",
+      });
       toast({
         title: "Payout recorded",
-        description: `${formatNaira(payout.amount)} paid to ${staffName}.`,
+        description: `${formatNaira(numericAmount)} paid to ${staffName}.`,
       });
       onConfirmed();
       onOpenChange(false);
-    } finally {
-      setSubmitting(false);
+    } catch (e) {
+      // Handled by SWR onError toast
     }
   }
 
@@ -252,7 +238,8 @@ export default function ProcessPayoutDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button disabled={!amountValid} onClick={sendOtp}>
+              <Button disabled={!amountValid || isSendingOtp} onClick={sendOtp}>
+                {isSendingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Send verification code
               </Button>
             </DialogFooter>
@@ -280,10 +267,11 @@ export default function ProcessPayoutDialog({
               </InputOTP>
               <button
                 type="button"
-                className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                className="text-xs text-muted-foreground underline-offset-2 hover:underline animate-pulse"
                 onClick={sendOtp}
+                disabled={isSendingOtp}
               >
-                Resend code
+                {isSendingOtp ? "Resending..." : "Resend code"}
               </button>
             </div>
 
@@ -291,14 +279,15 @@ export default function ProcessPayoutDialog({
               <Button
                 variant="outline"
                 onClick={() => setStep("amount")}
-                disabled={submitting}
+                disabled={isConfirming}
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </Button>
               <Button
-                disabled={otp.length !== 6 || submitting}
+                disabled={otp.length !== 6 || isConfirming}
                 onClick={confirmPayout}
               >
+                {isConfirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Confirm payout
               </Button>
             </DialogFooter>

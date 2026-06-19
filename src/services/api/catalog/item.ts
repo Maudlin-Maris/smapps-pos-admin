@@ -24,7 +24,7 @@ export const useGetItems = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_ITEMS, params)
+    ? createUrlWithParams(API_ENDPOINTS.ITEMS, params)
     : null;
   return useApi<CatalogItemsListResponse>(url, options);
 };
@@ -35,7 +35,7 @@ export const useGetItem = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<CatalogItem>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_ITEM(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_ITEM(id) : null,
     options,
   );
 };
@@ -50,7 +50,7 @@ export const useCreateItem = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<CreateItemPayload, CreateItemResponse>(
-    API_ENDPOINTS.CREATE_ITEM,
+    API_ENDPOINTS.ITEMS,
     "POST",
     undefined,
     {
@@ -77,7 +77,7 @@ export const useUpdateItem = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<UpdateItemPayload, UpdateItemResponse>(
-    id ? API_ENDPOINTS.UPDATE_ITEM(id) : null,
+    id ? API_ENDPOINTS.SINGLE_ITEM(id) : null,
     "PATCH",
     undefined,
     {
@@ -104,7 +104,7 @@ export const useDeleteItem = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<undefined, { message: string }>(
-    id ? API_ENDPOINTS.DELETE_ITEM(id) : null,
+    id ? API_ENDPOINTS.SINGLE_ITEM(id) : null,
     "DELETE",
     undefined,
     {

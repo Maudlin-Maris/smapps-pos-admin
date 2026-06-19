@@ -17,6 +17,7 @@ import type { UpdateInventoryCategoryPayload } from "@/lib/types/update-inventor
 
 export const useGetInventoryCategories = (
   params?: {
+    outletId?: string;
     page?: number;
     per_page?: number;
   },
@@ -24,7 +25,7 @@ export const useGetInventoryCategories = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_INVENTORY_CATEGORIES, params)
+    ? createUrlWithParams(API_ENDPOINTS.INVENTORY_CATEGORIES, params)
     : null;
   return useApi<InventoryCategoryListResponse>(url, options);
 };
@@ -35,7 +36,7 @@ export const useGetInventoryCategory = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<InventoryCategoryResponse>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_INVENTORY_CATEGORY(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_INVENTORY_CATEGORY(id) : null,
     options,
   );
 };
@@ -54,12 +55,12 @@ export const useCreateInventoryCategory = (
     return data;
   };
   return useSWRMutation<InventoryCategoryResponse, APIError, string, CreateInventoryCategoryPayload>(
-    API_ENDPOINTS.CREATE_INVENTORY_CATEGORY,
+    API_ENDPOINTS.INVENTORY_CATEGORIES,
     fetcher,
     {
       onError(err) {
         toast({
-          title: "Failed to create category",
+          title: "Failed to create inventory category",
           description: err.response?.data?.message ?? "Please try again later",
           variant: "destructive",
         });
@@ -79,7 +80,7 @@ export const useUpdateInventoryCategory = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg }: { arg: { id: string | number; payload: UpdateInventoryCategoryPayload } }) => {
-    const { data } = await api.patch(API_ENDPOINTS.UPDATE_INVENTORY_CATEGORY(arg.id), arg.payload);
+    const { data } = await api.patch(API_ENDPOINTS.SINGLE_INVENTORY_CATEGORY(arg.id), arg.payload);
     return data;
   };
   return useSWRMutation<
@@ -113,7 +114,7 @@ export const useDeleteInventoryCategory = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg: id }: { arg: string }) => {
-    const { data } = await api.delete(API_ENDPOINTS.DELETE_INVENTORY_CATEGORY(id));
+    const { data } = await api.delete(API_ENDPOINTS.SINGLE_INVENTORY_CATEGORY(id));
     return data;
   };
   return useSWRMutation<{ message: string }, APIError, string, string>(

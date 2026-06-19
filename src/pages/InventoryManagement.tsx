@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, Eye, Clock, Truck, Upload } from "lucide-react";
+import { AlertTriangle, Eye, Clock, Truck, Upload, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
 import { useGetInventoryItems, useAdjustInventoryItem, useCreateInventoryItem } from "@/services/api/inventory/item";
+import { useGetInventoryAdjustments } from "@/services/api/inventory/live-inventory";
 import { useGetInventoryCategories } from "@/services/api/inventory/category";
 import {
   Select,
@@ -188,6 +189,11 @@ export default function InventoryManagement() {
     outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
   });
 
+  const { data: adjustmentsResponse, isLoading: isAdjustmentsLoading, mutate: mutateAdjustments } = useGetInventoryAdjustments({
+    per_page: 1000,
+    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+  });
+
   const createItemMutation = useCreateInventoryItem();
   const adjustMutation = useAdjustInventoryItem();
 
@@ -250,10 +256,37 @@ export default function InventoryManagement() {
     [composites, selectedOutletId, isAllOutlets]
   );
 
-  const outletAdjustments = useMemo(
-    () => isAllOutlets ? adjustments : adjustments.filter((a) => a.outletId === selectedOutletId),
-    [adjustments, selectedOutletId, isAllOutlets]
-  );
+  const mappedApiAdjustments = useMemo<StockAdjustment[]>(() => {
+    if (!adjustmentsResponse?.data) return [];
+    return adjustmentsResponse.data.map((a: any) => {
+      const item = allItems.find((i) => i.id === a.inventoryItemId);
+      const stock = item?.stock ?? 0;
+      const change = a.quantity ?? 0;
+      const type = a.type === "add" ? "add" : "remove";
+      return {
+        id: a.id,
+        inventoryItemId: a.inventoryItemId,
+        type: type,
+        quantityChange: change,
+        previousStock: Math.max(0, type === "add" ? stock - change : stock + change),
+        newStock: stock,
+        reason: a.reason,
+        timestamp: new Date(a.createdAt),
+        outletId: item?.outletId ?? selectedOutletId,
+        costPrice: item?.costPrice ?? 0,
+        costTotal: change * (item?.costPrice ?? 0),
+      };
+    });
+  }, [adjustmentsResponse, allItems, selectedOutletId]);
+
+  const outletAdjustments = useMemo(() => {
+    const apiAdjs = mappedApiAdjustments;
+    const localOnly = adjustments.filter(
+      (la) => !apiAdjs.some((aa) => aa.id === la.id)
+    );
+    const combined = [...localOnly, ...apiAdjs];
+    return isAllOutlets ? combined : combined.filter((a) => a.outletId === selectedOutletId);
+  }, [mappedApiAdjustments, adjustments, isAllOutlets, selectedOutletId]);
 
   const lowStockCount = outletItems.filter((i) => i.status === "low" || i.status === "critical").length;
 
@@ -338,6 +371,7 @@ export default function InventoryManagement() {
       await mutateAllItems();
       await mutateCategories();
       await mutateComposites();
+      await mutateAdjustments();
 
       // Handle catalog sync for retail business types
       if (pricing?.syncToCatalog && type === "add") {
@@ -589,7 +623,14 @@ export default function InventoryManagement() {
         />
       )}
       {tab === "adjustments" && (
-        <StockAdjustmentHistory adjustments={outletAdjustments} inventoryItems={outletItems} units={units} />
+        isAdjustmentsLoading ? (
+          <Card className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading adjustments...
+          </Card>
+        ) : (
+          <StockAdjustmentHistory adjustments={outletAdjustments} inventoryItems={outletItems} units={units} />
+        )
       )}
       {tab === "categories" && (
         <InventoryCategoryManager categories={categories} onMutate={mutateCategories} />
@@ -631,6 +672,11 @@ export default function InventoryManagement() {
         units={units}
         outletId={selectedOutletId}
         onReceive={handleAdjustStock}
+        onSuccess={() => {
+          mutateItems();
+          mutateAllItems();
+          mutateAdjustments();
+        }}
       />
 
       <BulkImportInventoryDialog

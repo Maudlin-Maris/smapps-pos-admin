@@ -27,6 +27,7 @@ import type { InventoryItem } from "./InventoryItemForm";
 import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { useGetOutlets } from "@/services/api/outlets";
+import { useBulkReceiveInventory } from "@/services/api/inventory/live-inventory";
 import type { BusinessTypeId } from "@/data/businessTypes";
 import type { StockReceivePricing, PricingMethod, AdjustmentType } from "./StockAdjustmentHistory";
 
@@ -63,6 +64,7 @@ interface BulkReceiveStockDialogProps {
   items: InventoryItem[];
   units: MeasuringUnit[];
   outletId: string;
+  onSuccess?: () => void;
   onReceive: (
     itemId: string, type: AdjustmentType, quantity: number, reason: string,
     batchCostPrice?: number, batchNumber?: string, expiryDate?: string,
@@ -71,8 +73,9 @@ interface BulkReceiveStockDialogProps {
 }
 
 export default function BulkReceiveStockDialog({
-  open, onOpenChange, items, units, outletId, onReceive,
+  open, onOpenChange, items, units, outletId, onSuccess, onReceive,
 }: BulkReceiveStockDialogProps) {
+  const { trigger: triggerBulkReceive, isMutating: isReceiving } = useBulkReceiveInventory();
   const [search, setSearch] = useState("");
   const { data: outlets = [] } = useGetOutlets();
   const [reason, setReason] = useState("");
@@ -144,7 +147,7 @@ export default function BulkReceiveStockDialog({
   const totalCost = selectedLines.reduce((sum, li) => sum + li.quantity * li.costPrice, 0);
   const totalRetail = selectedLines.reduce((sum, li) => sum + li.quantity * li.sellPrice, 0);
 
-  const handleReceiveAll = () => {
+  const handleReceiveAll = async () => {
     if (selectedLines.length === 0) {
       toast.error("Select at least one item with a quantity to receive");
       return;
@@ -162,28 +165,26 @@ export default function BulkReceiveStockDialog({
 
     const batchTimestamp = new Date().toISOString().slice(0, 16).replace("T", " ");
 
-    for (const line of selectedLines) {
-      const pricing: StockReceivePricing | undefined = isRetail ? {
-        method: line.pricingMethod,
-        value: line.pricingValue,
-        sellPrice: line.sellPrice,
-        syncToCatalog,
-      } : undefined;
+    try {
+      await triggerBulkReceive({
+        outletId: effectiveOutletId,
+        reason: reason.trim(),
+        reference: `REC-${Date.now()}`,
+        lines: selectedLines.map(line => ({
+          inventoryItemId: line.itemId,
+          quantity: line.quantity,
+          costPrice: line.costPrice,
+          batchNumber: isBatchTracked ? batchTimestamp : undefined,
+          expiryDate: isBatchTracked ? line.expiryDate || undefined : undefined,
+        })),
+      });
 
-      onReceive(
-        line.itemId,
-        "add",
-        line.quantity,
-        reason,
-        line.costPrice,
-        isBatchTracked ? batchTimestamp : undefined,
-        isBatchTracked ? line.expiryDate || undefined : undefined,
-        pricing
-      );
+      toast.success(`Received ${totalItems} items from shipment`, { duration: 4000 });
+      onSuccess?.();
+      onOpenChange(false);
+    } catch (e: any) {
+      // Handled
     }
-
-    toast.success(`Received ${totalItems} items from shipment`, { duration: 4000 });
-    onOpenChange(false);
   };
 
   const getUnit = (item: InventoryItem) => units.find(u => u.id === item.unitId)?.abbreviation || "";
@@ -455,7 +456,7 @@ export default function BulkReceiveStockDialog({
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button onClick={handleReceiveAll} disabled={totalItems === 0}>
+              <Button onClick={handleReceiveAll} disabled={totalItems === 0} isLoading={isReceiving}>
                 <Truck className="h-4 w-4 mr-2" />
                 Receive {totalItems > 0 ? `${totalItems} Items` : "Stock"}
               </Button>

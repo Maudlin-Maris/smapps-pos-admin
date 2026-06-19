@@ -30,6 +30,8 @@ import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "@/components/inventory/PaginationControls";
 
 import { useGetOutlets } from "@/services/api/outlets";
+import type { Outlet } from "@/lib/types/outlet";
+import { useGetInventoryCategories } from "@/services/api/inventory/category";
 import {
   type DailyInventorySnapshot,
   type InventoryReconciliation,
@@ -42,9 +44,14 @@ import {
 } from "@/data/snapshotTypes";
 import {
   isoDate,
-  listMovementsForSnapshot,
 } from "@/lib/inventory-snapshots-store";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
+import {
+  useGetInventorySnapshots,
+  useGetInventorySnapshotsSummary,
+  useRegenerateSnapshots,
+  useGetInventoryMovements,
+} from "@/services/api/inventory/live-inventory";
 import {
   useGetReconciliations,
   useCreateReconciliation,
@@ -78,6 +85,11 @@ const reconStatusColor: Record<ReconciliationStatus, string> = {
 
 export default function InventoryHistory() {
   const { data: outlets = [] } = useGetOutlets();
+  const { data: categoriesResponse } = useGetInventoryCategories({ page: 1, per_page: 100 });
+  const categories = useMemo(() => {
+    return categoriesResponse?.data || CATEGORIES;
+  }, [categoriesResponse]);
+
   const [tab, setTab] = useState<Tab>("history");
   const [tick, setTick] = useState(0);
 
@@ -101,10 +113,25 @@ export default function InventoryHistory() {
     per_page: 1000,
   });
 
+  const { data: snapshotsResponse, isLoading: isSnapshotsLoading, mutate: mutateSnapshots } = useGetInventorySnapshots({
+    date: toDate,
+    outletId: locationId === "all" ? undefined : locationId,
+    per_page: 1000,
+  });
+
+  const { data: summaryResponse, mutate: mutateSummary } = useGetInventorySnapshotsSummary({
+    date: toDate,
+    outletId: locationId === "all" ? (outlets[0]?.id || "outlet-1") : locationId,
+  });
+
+  const { trigger: triggerRegenerate, isMutating: isRegenerating } = useRegenerateSnapshots();
+
   const refresh = () => {
     setTick((t) => t + 1);
     mutateRecons();
     mutateInventory();
+    mutateSnapshots();
+    mutateSummary();
   };
 
   // Drill-down + counting modals
@@ -132,43 +159,56 @@ export default function InventoryHistory() {
   }), [locationId, categoryId, search, fromDate, toDate, varianceOnly]);
 
   const snapshots = useMemo(() => {
-    if (!inventoryResponse?.data) return [];
+    if (!snapshotsResponse?.data) return [];
     
-    const items = inventoryResponse.data;
-    const mapped = items.map((i) => ({
-      id: i.id,
-      date: today,
-      outletId: locationId === "all" ? (outlets[0]?.id || "outlet-1") : locationId,
-      inventoryItemId: i.id,
-      itemName: i.name,
-      sku: i.sku,
-      categoryId: i.categoryId || categoryId,
-      unit: "unit",
-      unitCost: i.costPrice,
-      openingQty: i.quantity,
-      receivedQty: 0,
-      soldQty: 0,
-      returnedQty: 0,
-      wastedQty: 0,
-      adjustedQty: 0,
-      transferredInQty: 0,
-      transferredOutQty: 0,
-      expectedClosingQty: i.quantity,
-      actualCountedQty: i.quantity,
-      varianceQty: 0,
-      varianceCost: 0,
-      generatedAt: new Date().toISOString(),
-      source: "AUTO" as const,
-    }));
+    const items = snapshotsResponse.data;
+    const mapped = items.map((snap) => {
+      const item = inventoryResponse?.data?.find((i) => i.id === snap.inventoryItemId);
+      const sku = item?.sku ?? "SKU-N/A";
+      const catId = item?.categoryId ?? "1";
+      const unit = "unit";
+      const unitCost = item?.costPrice ?? 0;
+      const opening = snap.openingQty ?? 0;
+      const closing = snap.closingQty ?? 0;
+      const diff = closing - opening;
+      
+      return {
+        id: snap.id,
+        date: snap.snapshotDate || today,
+        outletId: locationId === "all" ? (outlets[0]?.id || "outlet-1") : locationId,
+        inventoryItemId: snap.inventoryItemId,
+        itemName: snap.itemName,
+        sku,
+        categoryId: catId,
+        unit,
+        unitCost,
+        openingQty: opening,
+        receivedQty: 0,
+        soldQty: 0,
+        returnedQty: 0,
+        wastedQty: 0,
+        adjustedQty: 0,
+        transferredInQty: 0,
+        transferredOutQty: 0,
+        expectedClosingQty: opening,
+        actualCountedQty: closing,
+        varianceQty: diff,
+        varianceCost: diff * unitCost,
+        generatedAt: new Date().toISOString(),
+        source: "AUTO" as const,
+      };
+    });
     
     return mapped
       .filter((s) => {
+        if (categoryId !== "all" && s.categoryId !== categoryId) return false;
+        if (varianceOnly && s.varianceQty === 0) return false;
         if (!search.trim()) return true;
         const q = search.toLowerCase();
         return s.itemName.toLowerCase().includes(q) || s.sku.toLowerCase().includes(q);
       })
       .sort((a, b) => b.date.localeCompare(a.date) || a.itemName.localeCompare(b.itemName));
-  }, [inventoryResponse, locationId, categoryId, search, today, outlets]);
+  }, [snapshotsResponse, inventoryResponse, locationId, categoryId, varianceOnly, search, today, outlets]);
 
   const reconciliations = useMemo(() => {
     return (reconsResponse?.data || [])
@@ -194,11 +234,20 @@ export default function InventoryHistory() {
       pendingReconciliations,
       totalVarianceCost,
     };
-  }, [snapshots, reconciliations]);
+  }, [snapshots, reconciliations, summaryResponse]);
 
-  const handleGenerateToday = () => {
-    mutateInventory();
-    toast.success("Inventory cache revalidated and updated");
+  const handleGenerateToday = async () => {
+    try {
+      await triggerRegenerate({
+        date: toDate,
+        outletId: locationId === "all" ? (outlets[0]?.id || "outlet-1") : locationId,
+        locationKind: "outlet",
+      });
+      toast.success("Inventory snapshots regenerated successfully");
+      refresh();
+    } catch (e: any) {
+      // Handled
+    }
   };
 
   const { trigger: triggerDeleteRecon, isMutating: isDeletingRecon } = useDeleteReconciliation();
@@ -225,7 +274,7 @@ export default function InventoryHistory() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-1.5" onClick={handleGenerateToday}>
+          <Button variant="outline" className="gap-1.5" onClick={handleGenerateToday} isLoading={isRegenerating}>
             <RefreshCw className="h-4 w-4" /> Regenerate Today
           </Button>
           <Button
@@ -243,7 +292,7 @@ export default function InventoryHistory() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiTile icon={<History className="h-5 w-5 text-accent" />} label="Snapshots in range" value={snapshots.length.toString()} tone="accent" />
+        <KpiTile icon={<History className="h-5 w-5 text-accent" />} label="Snapshots in range" value={(summaryResponse?.totalItems ?? snapshots.length).toString()} tone="accent" />
         <KpiTile icon={<AlertTriangle className="h-5 w-5 text-warning" />} label="Items w/ variance" value={variance.countedSnapshots.toString()} tone="warning" />
         <KpiTile icon={<Clock className="h-5 w-5 text-info" />} label="Open counts" value={variance.pendingReconciliations.toString()} tone="info" />
         <KpiTile icon={<FileBarChart className="h-5 w-5 text-destructive" />} label="Net variance value" value={formatNaira(variance.totalVarianceCost)} tone="destructive" />
@@ -268,7 +317,7 @@ export default function InventoryHistory() {
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {CATEGORIES.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -312,7 +361,14 @@ export default function InventoryHistory() {
       </div>
 
       {tab === "history" && (
-        <HistoryTable snapshots={snapshots} onDrill={setDrillSnap} />
+        isSnapshotsLoading ? (
+          <Card className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            Loading stock history...
+          </Card>
+        ) : (
+          <HistoryTable snapshots={snapshots} onDrill={setDrillSnap} outlets={outlets} />
+        )
       )}
 
       {tab === "reconciliation" && (
@@ -332,14 +388,15 @@ export default function InventoryHistory() {
       )}
 
       {tab === "variance" && (
-        <VarianceReview snapshots={snapshots.filter((s) => s.varianceQty !== 0)} onDrill={setDrillSnap} />
+        <VarianceReview snapshots={snapshots.filter((s) => s.varianceQty !== 0)} onDrill={setDrillSnap} outlets={outlets} />
       )}
 
-      <MovementDrillDialog snap={drillSnap} onClose={() => setDrillSnap(null)} />
+      <MovementDrillDialog snap={drillSnap} onClose={() => setDrillSnap(null)} outlets={outlets} />
       <StockCountDialog
         session={countSession}
         onOpenChange={(o) => { if (!o) setCountSession(null); }}
         onChanged={refresh}
+        outlets={outlets}
       />
       <ReconciliationReviewDialog
         recon={reviewRecon} onClose={() => setReviewRecon(null)}
@@ -448,8 +505,8 @@ function ThNum({ label }: { label: string }) {
 }
 
 // ── History table ──
-function HistoryTable({ snapshots, onDrill }:
-  { snapshots: DailyInventorySnapshot[]; onDrill: (s: DailyInventorySnapshot) => void }) {
+function HistoryTable({ snapshots, onDrill, outlets = [] }:
+  { snapshots: DailyInventorySnapshot[]; onDrill: (s: DailyInventorySnapshot) => void; outlets?: Outlet[] }) {
   const {
     page, setPage, perPage, setPerPage, totalPages,
     paginatedItems, totalItems, pageSizeOptions,
@@ -649,8 +706,8 @@ function ReconciliationList({ items, onContinue, onReview, onDelete }:
 }
 
 // ── Variance review ──
-function VarianceReview({ snapshots, onDrill }:
-  { snapshots: DailyInventorySnapshot[]; onDrill: (s: DailyInventorySnapshot) => void }) {
+function VarianceReview({ snapshots, onDrill, outlets = [] }:
+  { snapshots: DailyInventorySnapshot[]; onDrill: (s: DailyInventorySnapshot) => void; outlets?: Outlet[] }) {
   if (!snapshots.length) {
     return <Card className="p-8 text-center text-muted-foreground">
       <CheckCircle2 className="h-10 w-10 mx-auto mb-2 text-success" />
@@ -687,9 +744,31 @@ function VarianceReview({ snapshots, onDrill }:
 }
 
 // ── Drill-down dialog ──
-function MovementDrillDialog({ snap, onClose }:
-  { snap: DailyInventorySnapshot | null; onClose: () => void }) {
-  const movements = snap ? listMovementsForSnapshot(snap) : [];
+function MovementDrillDialog({ snap, onClose, outlets = [] }:
+  { snap: DailyInventorySnapshot | null; onClose: () => void; outlets?: Outlet[] }) {
+  const { data: movementsResponse, isLoading } = useGetInventoryMovements(
+    snap
+      ? {
+          outletId: snap.outletId,
+          inventoryItemId: snap.inventoryItemId,
+          per_page: 100,
+        }
+      : undefined
+  );
+
+  const movements = useMemo(() => {
+    if (!movementsResponse?.data) return [];
+    return movementsResponse.data.map((m: any) => ({
+      ts: m.createdAt || new Date().toISOString(),
+      type: m.type,
+      quantity: m.quantity,
+      unitCost: snap?.unitCost ?? 0,
+      reference: m.id.slice(0, 8).toUpperCase(),
+      notes: `Location: ${m.locationKind} (${m.locationId})`,
+      source: "api",
+    }));
+  }, [movementsResponse, snap]);
+
   return (
     <Dialog open={!!snap} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
@@ -709,35 +788,42 @@ function MovementDrillDialog({ snap, onClose }:
               <Metric label="Outlet" value={outlets.find((o) => o.id === snap.outletId)?.name ?? snap.outletId} />
               <Metric label="Variance value" value={formatNaira(snap.varianceCost)} />
             </div>
-            <div className="max-h-[420px] overflow-auto border rounded-lg">
-              <table className="w-full text-xs">
-                <thead className="bg-muted/50 border-b">
-                  <tr>
-                    <th className="text-left p-2">Time</th>
-                    <th className="text-left p-2">Type</th>
-                    <th className="text-right p-2">Qty</th>
-                    <th className="text-right p-2">Unit Cost</th>
-                    <th className="text-left p-2">Reference</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.length === 0 && (
-                    <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No movements recorded for this day.</td></tr>
-                  )}
-                  {movements.map((m, i) => (
-                    <tr key={i} className="border-b">
-                      <td className="p-2 font-mono">{m.ts.slice(11, 16)}</td>
-                      <td className="p-2"><Badge variant="secondary" className="text-[10px]">{m.type}</Badge></td>
-                      <td className={cn("p-2 text-right font-medium", m.quantity < 0 ? "text-destructive" : "text-success")}>
-                        {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
-                      </td>
-                      <td className="p-2 text-right">{formatNaira(m.unitCost)}</td>
-                      <td className="p-2 text-muted-foreground">{m.reference ?? (m.source === "synthetic" ? "—" : "")}{m.notes ? ` · ${m.notes}` : ""}</td>
+            {isLoading ? (
+              <div className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading movements...
+              </div>
+            ) : (
+              <div className="max-h-[420px] overflow-auto border rounded-lg">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50 border-b">
+                    <tr>
+                      <th className="text-left p-2">Time</th>
+                      <th className="text-left p-2">Type</th>
+                      <th className="text-right p-2">Qty</th>
+                      <th className="text-right p-2">Unit Cost</th>
+                      <th className="text-left p-2">Reference</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {movements.length === 0 && (
+                      <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No movements recorded for this day.</td></tr>
+                    )}
+                    {movements.map((m, i) => (
+                      <tr key={i} className="border-b">
+                        <td className="p-2 font-mono">{m.ts.slice(11, 16)}</td>
+                        <td className="p-2"><Badge variant="secondary" className="text-[10px]">{m.type}</Badge></td>
+                        <td className={cn("p-2 text-right font-medium", m.quantity < 0 ? "text-destructive" : "text-success")}>
+                          {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
+                        </td>
+                        <td className="p-2 text-right">{formatNaira(m.unitCost)}</td>
+                        <td className="p-2 text-muted-foreground">{m.reference ?? (m.source === "synthetic" ? "—" : "")}{m.notes ? ` · ${m.notes}` : ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </>
         )}
       </DialogContent>
@@ -764,7 +850,7 @@ interface LocalCount {
 }
 
 function StockCountDialog({
-  session, onOpenChange, onChanged,
+  session, onOpenChange, onChanged, outlets = [],
 }: {
   session:
     | { mode: "new"; outletId?: string; date: string }
@@ -772,6 +858,7 @@ function StockCountDialog({
     | null;
   onOpenChange: (o: boolean) => void;
   onChanged: () => void;
+  outlets?: Outlet[];
 }) {
   const open = !!session;
   const isContinue = session?.mode === "continue";

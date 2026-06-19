@@ -6,6 +6,8 @@ export interface InventoryListItem {
   sku: string;
   quantity: number;
   costPrice: number;
+  categoryId?: string;
+  unitId?: string;
 }
 
 export interface InventoryListResponse {

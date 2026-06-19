@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { usePagination } from "@/hooks/use-pagination";
+import { useState, useMemo, useEffect } from "react";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,13 +28,12 @@ import { format } from "date-fns";
 import {
   Gift, Star, Award, TrendingUp, Settings2, History, Plus, Pencil, Trash2,
   Percent, DollarSign, Coffee, Users, ArrowUpRight, Search,
-  ToggleLeft, Zap, Crown, Shield, MapPin, Building2, Globe, HelpCircle,
+  ToggleLeft, Zap, Crown, Shield, MapPin, Building2, Globe, HelpCircle, Loader2,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  type LoyaltyTier, type LoyaltyReward, type ActivityEntry,
-  tierConfig, loyaltyCustomers, loyaltyRewards, POINTS_PER_NAIRA,
-  mockActivity, outletEarnOverrides, type OutletEarnOverride,
+  type LoyaltyTier, type LoyaltyReward,
+  tierConfig, POINTS_PER_NAIRA,
 } from "@/data/loyaltyData";
 import { outlets } from "@/data/outlets";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,6 +41,24 @@ import { defaultInventoryItems } from "@/data/inventoryItems";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, Package } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// API
+import {
+  useGetLoyaltyOverview,
+  useGetLoyaltyRewards,
+  useGetLoyaltyActivity,
+  useGetLoyaltyOutletPerformance,
+  useGetLoyaltySettings,
+  useGetLoyaltyTierBreakdown,
+  useCreateLoyaltyReward,
+  useUpdateLoyaltyReward,
+  useDeleteLoyaltyReward,
+  useUpdateLoyaltySettings,
+  useUpdateLoyaltyProgramEnabled,
+} from "@/services/api/loyalty";
+import { api } from "@/services/api/base";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
 
 type Tab = "overview" | "rewards" | "settings" | "activity";
 
@@ -60,12 +76,13 @@ const rewardTypeLabels: Record<string, string> = {
 
 // ── Reward Form Dialog (with outlet selection) ──
 function RewardFormDialog({
-  open, onOpenChange, reward, onSave,
+  open, onOpenChange, reward, onSave, isSaving,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   reward: LoyaltyReward | null;
   onSave: (r: LoyaltyReward) => void;
+  isSaving: boolean;
 }) {
   const [name, setName] = useState(reward?.name ?? "");
   const [description, setDescription] = useState(reward?.description ?? "");
@@ -115,7 +132,6 @@ function RewardFormDialog({
       freeItemId: type === "free_item" ? freeItemId : undefined,
       freeItemQuantity: qty,
     });
-    onOpenChange(false);
   };
 
   return (
@@ -130,16 +146,16 @@ function RewardFormDialog({
         <div className="space-y-4">
           <div>
             <Label>Reward Name *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Free Coffee" />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Free Coffee" disabled={isSaving} />
           </div>
           <div>
             <Label>Description</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="What the customer gets..." />
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="What the customer gets..." disabled={isSaving} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Reward Type</Label>
-              <Select value={type} onValueChange={(v) => setType(v as LoyaltyReward["type"])}>
+              <Select value={type} onValueChange={(v) => setType(v as LoyaltyReward["type"])} disabled={isSaving}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="discount_percentage">% Discount</SelectItem>
@@ -150,13 +166,13 @@ function RewardFormDialog({
             </div>
             <div>
               <Label>Points Cost *</Label>
-              <Input type="number" min="1" value={pointsCost} onChange={(e) => setPointsCost(e.target.value)} placeholder="100" />
+              <Input type="number" min="1" value={pointsCost} onChange={(e) => setPointsCost(e.target.value)} placeholder="100" disabled={isSaving} />
             </div>
           </div>
           {type !== "free_item" && (
             <div>
               <Label>{type === "discount_percentage" ? "Discount %" : "Discount Amount (₦)"}</Label>
-              <Input type="number" min="1" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "discount_percentage" ? "10" : "1000"} />
+              <Input type="number" min="1" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "discount_percentage" ? "10" : "1000"} disabled={isSaving} />
             </div>
           )}
 
@@ -170,7 +186,7 @@ function RewardFormDialog({
                   Stock will be deducted from inventory each time this reward is redeemed.
                 </p>
                 <Popover open={itemPickerOpen} onOpenChange={setItemPickerOpen}>
-                  <PopoverTrigger asChild>
+                  <PopoverTrigger asChild disabled={isSaving}>
                     <Button
                       type="button"
                       variant="outline"
@@ -235,6 +251,7 @@ function RewardFormDialog({
                   value={freeItemQuantity}
                   onChange={(e) => setFreeItemQuantity(e.target.value)}
                   placeholder="1"
+                  disabled={isSaving}
                 />
               </div>
             </div>
@@ -245,10 +262,10 @@ function RewardFormDialog({
           <div>
             <Label className="mb-2 block">Outlet Availability</Label>
             <div className="flex gap-2 mb-2">
-              <Button type="button" variant={availabilityMode === "all" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setAvailabilityMode("all")}>
+              <Button type="button" variant={availabilityMode === "all" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setAvailabilityMode("all")} disabled={isSaving}>
                 <Globe className="h-3.5 w-3.5" /> All Outlets
               </Button>
-              <Button type="button" variant={availabilityMode === "specific" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setAvailabilityMode("specific")}>
+              <Button type="button" variant={availabilityMode === "specific" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setAvailabilityMode("specific")} disabled={isSaving}>
                 <MapPin className="h-3.5 w-3.5" /> Specific Outlets
               </Button>
             </div>
@@ -256,7 +273,7 @@ function RewardFormDialog({
               <div className="rounded-lg border p-2 space-y-1 max-h-32 overflow-y-auto">
                 {outlets.map(o => (
                   <label key={o.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
-                    <Checkbox checked={selectedOutletIds.includes(o.id)} onCheckedChange={() => toggleOutlet(o.id)} />
+                    <Checkbox checked={selectedOutletIds.includes(o.id)} onCheckedChange={() => toggleOutlet(o.id)} disabled={isSaving} />
                     {o.name}
                   </label>
                 ))}
@@ -266,12 +283,15 @@ function RewardFormDialog({
 
           <div className="flex items-center justify-between">
             <Label>Available to Cashiers</Label>
-            <Switch checked={isActive} onCheckedChange={setIsActive} />
+            <Switch checked={isActive} onCheckedChange={setIsActive} disabled={isSaving} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave}>{reward ? "Save Changes" : "Create Reward"}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {reward ? "Save Changes" : "Create Reward"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -281,114 +301,237 @@ function RewardFormDialog({
 // ── Main Page ──
 export default function LoyaltyManagement() {
   const [tab, setTab] = useState<Tab>("overview");
-  const [rewards, setRewards] = useState<LoyaltyReward[]>([...loyaltyRewards]);
-  const [activity] = useState<ActivityEntry[]>(mockActivity);
-  const [programEnabled, setProgramEnabled] = useState(true);
-  const [earnRate, setEarnRate] = useState((POINTS_PER_NAIRA * 100).toString());
-  const [earnOverrides, setEarnOverrides] = useState<OutletEarnOverride[]>([...outletEarnOverrides]);
-  const [tierThresholds, setTierThresholds] = useState<Record<LoyaltyTier, number>>(() => {
-    const t = {} as Record<LoyaltyTier, number>;
-    (Object.keys(tierConfig) as LoyaltyTier[]).forEach(k => { t[k] = tierConfig[k].minPoints; });
-    return t;
-  });
-  const [tierMultipliers, setTierMultipliers] = useState<Record<LoyaltyTier, number>>(() => {
-    const m = {} as Record<LoyaltyTier, number>;
-    (Object.keys(tierConfig) as LoyaltyTier[]).forEach(k => { m[k] = tierConfig[k].earnMultiplier; });
-    return m;
-  });
-
-  // Outlet filter (global across tabs)
   const [outletFilter, setOutletFilter] = useState("all");
 
-  // Reward form
+  // Local settings states (synced with settingsData API hook)
+  const [programEnabled, setProgramEnabled] = useState(true);
+  const [earnRate, setEarnRate] = useState("1");
+  const [earnOverrides, setEarnOverrides] = useState<any[]>([]);
+  const [tierThresholds, setTierThresholds] = useState<Record<string, number>>({
+    bronze: 0,
+    silver: 500,
+    gold: 2000,
+    platinum: 5000,
+  });
+  const [tierMultipliers, setTierMultipliers] = useState<Record<string, number>>({
+    bronze: 1,
+    silver: 1.5,
+    gold: 2,
+    platinum: 3,
+  });
+
+  // Reward form state
   const [rewardFormOpen, setRewardFormOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<LoyaltyReward | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LoyaltyReward | null>(null);
 
-  // Activity filter
+  // Activity search/filter states
   const [activitySearch, setActivitySearch] = useState("");
   const [activityType, setActivityType] = useState("all");
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityPerPage, setActivityPerPage] = useState(10);
 
-  const customers = loyaltyCustomers;
+  // API hooks
+  const { data: overviewData, isLoading: isOverviewLoading } = useGetLoyaltyOverview({
+    outletId: outletFilter === "all" ? undefined : outletFilter,
+  });
 
-  // ── Stats (filtered by outlet where applicable) ──
-  const stats = useMemo(() => {
-    const totalMembers = customers.length; // members are global
-    const totalPoints = customers.reduce((s, c) => s + c.points, 0);
-    const filteredAct = outletFilter === "all" ? activity : activity.filter(a => a.outletId === outletFilter);
-    const totalRedemptions = filteredAct.filter((a) => a.type === "redeem").length;
-    const pointsEarned = filteredAct.filter(a => a.type === "earn").reduce((s, a) => s + a.points, 0);
-    const activeRewards = rewards.filter((r) => r.isActive && (r.outletIds.length === 0 || outletFilter === "all" || r.outletIds.includes(outletFilter))).length;
-    return { totalMembers, totalPoints, totalRedemptions, activeRewards, pointsEarned };
-  }, [customers, activity, rewards, outletFilter]);
+  const { data: rewardsResponse, isLoading: isRewardsLoading, mutate: mutateRewards } = useGetLoyaltyRewards({
+    page: 1,
+    per_page: 100, // Load all rewards for the card list view
+  });
 
-  const tierBreakdown = useMemo(() => {
-    return (Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => ({
-      tier,
-      ...tierConfig[tier],
-      count: customers.filter((c) => c.loyaltyTier === tier).length,
-    }));
-  }, [customers]);
+  const { data: activityResponse, isLoading: isActivityLoading, mutate: mutateActivity } = useGetLoyaltyActivity({
+    page: activityPage,
+    per_page: activityPerPage,
+    type: activityType === "all" ? undefined : activityType,
+    search: activitySearch.trim() || undefined,
+  });
 
-  // ── Outlet performance comparison ──
-  const outletPerformance = useMemo(() => {
-    const outletIds = [...new Set(activity.map(a => a.outletId))];
-    return outletIds.map(oid => {
-      const acts = activity.filter(a => a.outletId === oid);
-      const earned = acts.filter(a => a.type === "earn").reduce((s, a) => s + a.points, 0);
-      const redeemed = acts.filter(a => a.type === "redeem").reduce((s, a) => s + Math.abs(a.points), 0);
-      const registrations = acts.filter(a => a.type === "register").length;
-      const outletName = acts[0]?.outletName || oid;
-      return { outletId: oid, outletName, earned, redeemed, registrations, transactions: acts.length };
-    }).sort((a, b) => b.earned - a.earned);
-  }, [activity]);
+  const { data: performanceData, isLoading: isPerformanceLoading } = useGetLoyaltyOutletPerformance({
+    from: "2026-05-01",
+    to: format(new Date(), "yyyy-MM-dd"),
+  });
 
-  // ── Reward handlers ──
-  const handleSaveReward = (r: LoyaltyReward) => {
-    setRewards((prev) => {
-      const idx = prev.findIndex((x) => x.id === r.id);
-      if (idx >= 0) { const n = [...prev]; n[idx] = r; return n; }
-      return [...prev, r];
-    });
-    toast.success(editingReward ? "Reward updated" : "Reward created");
-    setEditingReward(null);
-  };
+  const { data: tierBreakdownData, isLoading: isTierBreakdownLoading } = useGetLoyaltyTierBreakdown({
+    outletId: outletFilter === "all" ? undefined : outletFilter,
+  });
 
-  const handleDeleteReward = () => {
-    if (!deleteTarget) return;
-    setRewards((prev) => prev.filter((r) => r.id !== deleteTarget.id));
-    toast.success(`"${deleteTarget.name}" deleted`);
-    setDeleteTarget(null);
-  };
+  const { data: settingsData, isLoading: isSettingsLoading, mutate: mutateSettings } = useGetLoyaltySettings();
 
-  const toggleRewardActive = (id: string) => {
-    setRewards((prev) => prev.map((r) => {
-      if (r.id !== id) return r;
-      const updated = { ...r, isActive: !r.isActive };
-      toast.success(`"${r.name}" ${updated.isActive ? "enabled" : "disabled"}`);
-      return updated;
-    }));
-  };
-
-  // ── Filtered activity ──
-  const filteredActivity = useMemo(() => {
-    let list = activity;
-    if (outletFilter !== "all") list = list.filter(a => a.outletId === outletFilter);
-    if (activityType !== "all") list = list.filter((a) => a.type === activityType);
-    if (activitySearch) {
-      const q = activitySearch.toLowerCase();
-      list = list.filter((a) => a.customerName.toLowerCase().includes(q) || a.description.toLowerCase().includes(q));
+  // Sync SWR settings response into editable local states
+  useEffect(() => {
+    if (settingsData) {
+      setProgramEnabled(settingsData.programEnabled);
+      setEarnRate(settingsData.pointsPerCurrency.toString());
+      if (settingsData.tierConfigs) {
+        const thresholds: Record<string, number> = {};
+        const multipliers: Record<string, number> = {};
+        settingsData.tierConfigs.forEach((tc) => {
+          thresholds[tc.tier] = tc.minPoints;
+          multipliers[tc.tier] = tc.earnMultiplier;
+        });
+        setTierThresholds(prev => ({ ...prev, ...thresholds }));
+        setTierMultipliers(prev => ({ ...prev, ...multipliers }));
+      }
     }
-    return list;
-  }, [activity, activityType, activitySearch, outletFilter]);
+  }, [settingsData]);
 
-  const activityPagination = usePagination(filteredActivity, 10);
+  // Map rewards back to the format used in UI
+  const rewards = useMemo(() => {
+    if (!rewardsResponse?.data) return [];
+    return rewardsResponse.data.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description || "",
+      pointsCost: r.pointsCost,
+      type: r.type || (r.discountType === "percentage" ? "discount_percentage" : r.discountType === "fixed" ? "discount_fixed" : "free_item") as any,
+      value: r.value ?? r.discountValue ?? 0,
+      isActive: r.isActive,
+      outletIds: r.outletIds || [],
+      freeItemId: r.freeItemId,
+      freeItemQuantity: r.freeItemQuantity,
+    }));
+  }, [rewardsResponse]);
 
-  // ── Filtered rewards by outlet ──
+  // Filter rewards by outlet locally for visual consistency
   const filteredRewards = useMemo(() => {
     if (outletFilter === "all") return rewards;
     return rewards.filter(r => r.outletIds.length === 0 || r.outletIds.includes(outletFilter));
   }, [rewards, outletFilter]);
+
+  // Map activity entries
+  const activity = useMemo(() => {
+    if (!activityResponse?.data) return [];
+    return activityResponse.data.map(a => ({
+      ...a,
+      date: new Date(a.date),
+      outletId: a.outletId || "outlet-1",
+    }));
+  }, [activityResponse]);
+
+  const activityTotal = activityResponse?.meta?.total ?? 0;
+  const activityTotalPages = activityResponse?.meta?.last_page ?? 1;
+
+  // Map outlet performance
+  const outletPerformance = useMemo(() => {
+    return performanceData?.data || [];
+  }, [performanceData]);
+
+  // Map tier breakdown
+  const tierBreakdown = useMemo(() => {
+    const apiData = tierBreakdownData?.data || [];
+    return (Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => {
+      const match = apiData.find((item: any) => item.tier === tier);
+      return {
+        tier,
+        ...tierConfig[tier],
+        count: match ? match.count : 0,
+      };
+    });
+  }, [tierBreakdownData]);
+
+  // Stats computation
+  const stats = useMemo(() => {
+    return {
+      totalMembers: overviewData?.totalMembers ?? 0,
+      totalPoints: overviewData?.pointsIssued ?? 0,
+      totalRedemptions: overviewData?.pointsRedeemed ?? 0,
+      activeRewards: rewards.filter(r => r.isActive && (r.outletIds.length === 0 || outletFilter === "all" || r.outletIds.includes(outletFilter))).length,
+      pointsEarned: overviewData?.pointsIssued ?? 0,
+    };
+  }, [overviewData, rewards, outletFilter]);
+
+  // Mutations
+  const createRewardMutation = useCreateLoyaltyReward();
+  const updateRewardMutation = useUpdateLoyaltyReward(editingReward?.id);
+  const deleteRewardMutation = useDeleteLoyaltyReward();
+  const updateSettingsMutation = useUpdateLoyaltySettings();
+  const updateProgramEnabledMutation = useUpdateLoyaltyProgramEnabled();
+
+  const isRewardSaving = createRewardMutation.isMutating || updateRewardMutation.isMutating;
+
+  const handleSaveReward = async (r: any) => {
+    try {
+      if (editingReward) {
+        await updateRewardMutation.trigger(r);
+        toast.success("Reward updated");
+      } else {
+        await createRewardMutation.trigger(r);
+        toast.success("Reward created");
+      }
+      mutateRewards();
+      setEditingReward(null);
+      setRewardFormOpen(false);
+    } catch (err) {
+      // handled
+    }
+  };
+
+  const handleDeleteReward = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteRewardMutation.trigger(deleteTarget.id);
+      toast.success(`"${deleteTarget.name}" deleted`);
+      mutateRewards();
+      setDeleteTarget(null);
+    } catch (err) {
+      // handled
+    }
+  };
+
+  const toggleRewardActive = async (reward: any) => {
+    try {
+      await api.patch(API_ENDPOINTS.UPDATE_LOYALTY_REWARD(reward.id), {
+        isActive: !reward.isActive,
+      });
+      toast.success(`"${reward.name}" ${!reward.isActive ? "enabled" : "disabled"}`);
+      mutateRewards();
+    } catch (err) {
+      toast.error("Failed to toggle reward status");
+    }
+  };
+
+  const handleToggleProgramEnabled = async (enabled: boolean) => {
+    try {
+      setProgramEnabled(enabled);
+      await updateProgramEnabledMutation.trigger({ enabled });
+      mutateSettings();
+      toast.success(enabled ? "Loyalty program enabled" : "Loyalty program paused");
+    } catch (err) {
+      setProgramEnabled(!enabled);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      const tierConfigs = (Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => ({
+        tier,
+        minPoints: tierThresholds[tier],
+        earnMultiplier: tierMultipliers[tier],
+      }));
+
+      await updateSettingsMutation.trigger({
+        programEnabled,
+        pointsPerCurrency: Number(earnRate),
+        tierConfigs,
+      });
+      toast.success("Settings saved");
+      mutateSettings();
+    } catch (err) {
+      // handled
+    }
+  };
+
+  const handleActivitySearchChange = (val: string) => {
+    setActivitySearch(val);
+    setActivityPage(1);
+  };
+
+  const handleActivityTypeChange = (val: string) => {
+    setActivityType(val);
+    setActivityPage(1);
+  };
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: TrendingUp },
@@ -424,8 +567,16 @@ export default function LoyaltyManagement() {
             </SelectContent>
           </Select>
           <div className="flex items-center gap-2">
-            <Switch checked={programEnabled} onCheckedChange={(v) => { setProgramEnabled(v); toast.success(v ? "Loyalty program enabled" : "Loyalty program paused"); }} />
-            <span className="text-sm font-medium">{programEnabled ? "Active" : "Paused"}</span>
+            <Switch checked={programEnabled} onCheckedChange={handleToggleProgramEnabled} disabled={updateProgramEnabledMutation.isMutating} />
+            <span className="text-sm font-medium">
+              {updateProgramEnabledMutation.isMutating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : programEnabled ? (
+                "Active"
+              ) : (
+                "Paused"
+              )}
+            </span>
           </div>
           {tab === "rewards" && (
             <Button size="sm" className="gap-1.5" onClick={() => { setEditingReward(null); setRewardFormOpen(true); }}>
@@ -434,6 +585,7 @@ export default function LoyaltyManagement() {
           )}
         </div>
       </div>
+
 
       {/* Tabs */}
       <div className="flex gap-1 bg-muted p-1 rounded-lg max-w-full overflow-x-auto scrollbar-none" style={{ touchAction: "pan-x", WebkitOverflowScrolling: "touch" }}>
@@ -489,7 +641,11 @@ export default function LoyaltyManagement() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                    <p className="text-lg sm:text-xl lg:text-2xl font-heading font-bold">{kpi.value}</p>
+                    {isOverviewLoading ? (
+                      <Skeleton className="h-7 w-20 mt-1" />
+                    ) : (
+                      <p className="text-lg sm:text-xl lg:text-2xl font-heading font-bold">{kpi.value}</p>
+                    )}
                     {kpi.sub && <p className="text-[10px] text-muted-foreground">{kpi.sub}</p>}
                   </div>
                 </div>
@@ -501,32 +657,42 @@ export default function LoyaltyManagement() {
           <div>
             <h2 className="text-lg font-heading font-semibold mb-3">Tier Breakdown</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {tierBreakdown.map((t) => {
-                const TierIcon = t.tier === "platinum" ? Crown : t.tier === "gold" ? Star : t.tier === "silver" ? Shield : Award;
-                return (
-                  <Card key={t.tier} className="p-4 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 rounded-bl-full opacity-10" style={{ backgroundColor: t.color }} />
-                    <div className="flex items-center gap-3 mb-3">
-                      <Badge className={cn("text-xs font-semibold", t.badgeClass)}>
-                        <TierIcon className="h-3 w-3 mr-1" />
-                        {t.label}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <p className="text-xl sm:text-2xl lg:text-3xl font-heading font-bold text-foreground">{t.count}</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {t.minPoints.toLocaleString()}+ pts &bull; {t.earnMultiplier}x earn rate
-                    </p>
+              {isTierBreakdownLoading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <Card key={idx} className="p-4 space-y-2">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-8 w-12" />
+                    <Skeleton className="h-4 w-28" />
                   </Card>
-                );
-              })}
+                ))
+              ) : (
+                tierBreakdown.map((t) => {
+                  const TierIcon = t.tier === "platinum" ? Crown : t.tier === "gold" ? Star : t.tier === "silver" ? Shield : Award;
+                  return (
+                    <Card key={t.tier} className="p-4 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-16 h-16 rounded-bl-full opacity-10" style={{ backgroundColor: t.color }} />
+                      <div className="flex items-center gap-3 mb-3">
+                        <Badge className={cn("text-xs font-semibold", t.badgeClass)}>
+                          <TierIcon className="h-3 w-3 mr-1" />
+                          {t.label}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        <p className="text-xl sm:text-2xl lg:text-3xl font-heading font-bold text-foreground">{t.count}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t.minPoints.toLocaleString()}+ pts &bull; {t.earnMultiplier}x earn rate
+                      </p>
+                    </Card>
+                  );
+                })
+              )}
             </div>
           </div>
 
           {/* Outlet Performance Comparison */}
-          {outletFilter === "all" && outletPerformance.length > 1 && (
+          {outletFilter === "all" && (
             <div>
               <h2 className="text-lg font-heading font-semibold mb-3">Outlet Performance</h2>
               <Card className="overflow-x-auto" style={{ touchAction: "pan-x" }}>
@@ -537,24 +703,37 @@ export default function LoyaltyManagement() {
                       <TableHead className="text-right">Points Earned</TableHead>
                       <TableHead className="text-right">Points Redeemed</TableHead>
                       <TableHead className="text-right">New Members</TableHead>
-                      <TableHead className="text-right">Transactions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {outletPerformance.map(op => (
-                      <TableRow key={op.outletId} className="cursor-pointer hover:bg-muted/50" onClick={() => setOutletFilter(op.outletId)}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-medium">{op.outletName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-success font-semibold">+{op.earned.toLocaleString()}</TableCell>
-                        <TableCell className="text-right text-destructive font-semibold">-{op.redeemed.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{op.registrations}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{op.transactions}</TableCell>
+                    {isPerformanceLoading ? (
+                      Array.from({ length: 3 }).map((_, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : outletPerformance.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No outlet data available</TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      outletPerformance.map(op => (
+                        <TableRow key={op.outletId} className="cursor-pointer hover:bg-muted/50" onClick={() => setOutletFilter(op.outletId)}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="font-medium">{op.outletName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-success font-semibold">+{op.pointsEarned.toLocaleString()}</TableCell>
+                          <TableCell className="text-right text-destructive font-semibold">-{op.pointsRedeemed?.toLocaleString() ?? 0}</TableCell>
+                          <TableCell className="text-right">{op.members}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </Card>
@@ -570,40 +749,57 @@ export default function LoyaltyManagement() {
               </Button>
             </div>
             <Card className="divide-y">
-              {(outletFilter === "all" ? activity : activity.filter(a => a.outletId === outletFilter)).slice(0, 5).map((a) => (
-                <div key={a.id} className="flex items-center justify-between p-3 text-sm">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "h-8 w-8 rounded-full flex items-center justify-center text-xs",
-                      a.type === "earn" ? "bg-success/10 text-success" :
-                      a.type === "redeem" ? "bg-primary/10 text-primary" :
-                      a.type === "adjust" ? "bg-warning/10 text-warning" :
-                      "bg-muted text-muted-foreground"
-                    )}>
-                      {a.type === "earn" ? <ArrowUpRight className="h-3.5 w-3.5" /> :
-                       a.type === "redeem" ? <Gift className="h-3.5 w-3.5" /> :
-                       a.type === "adjust" ? <Settings2 className="h-3.5 w-3.5" /> :
-                       <Users className="h-3.5 w-3.5" />}
-                    </div>
-                    <div>
-                      <p className="font-medium">{a.customerName}</p>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>{a.description}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{a.outletName}</span>
+              {isActivityLoading ? (
+                Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="space-y-1">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-32" />
                       </div>
                     </div>
+                    <Skeleton className="h-4 w-12 ml-auto" />
                   </div>
-                  <div className="text-right">
-                    {a.points !== 0 && (
-                      <p className={cn("font-semibold text-sm", a.points > 0 ? "text-success" : "text-destructive")}>
-                        {a.points > 0 ? "+" : ""}{a.points} pts
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">{format(a.date, "MMM d, h:mm a")}</p>
+                ))
+              ) : activity.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-6 text-center">No recent activity</p>
+              ) : (
+                activity.slice(0, 5).map((a) => (
+                  <div key={a.id} className="flex items-center justify-between p-3 text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-8 w-8 rounded-full flex items-center justify-center text-xs",
+                        a.type === "earn" ? "bg-success/10 text-success" :
+                        a.type === "redeem" ? "bg-primary/10 text-primary" :
+                        a.type === "adjust" ? "bg-warning/10 text-warning" :
+                        "bg-muted text-muted-foreground"
+                      )}>
+                        {a.type === "earn" ? <ArrowUpRight className="h-3.5 w-3.5" /> :
+                         a.type === "redeem" ? <Gift className="h-3.5 w-3.5" /> :
+                         a.type === "adjust" ? <Settings2 className="h-3.5 w-3.5" /> :
+                         <Users className="h-3.5 w-3.5" />}
+                      </div>
+                      <div>
+                        <p className="font-medium">{a.customerName}</p>
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <span>{a.description || "—"}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" />{outletLabel(a.outletId)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {a.points !== 0 && (
+                        <p className={cn("font-semibold text-sm", a.points > 0 ? "text-success" : "text-destructive")}>
+                          {a.points > 0 ? "+" : ""}{a.points} pts
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground">{format(a.date, "MMM d, h:mm a")}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </Card>
           </div>
         </div>
@@ -620,65 +816,81 @@ export default function LoyaltyManagement() {
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredRewards.map((r) => {
-              const TypeIcon = rewardTypeIcons[r.type] || Gift;
-              return (
-                <Card key={r.id} className={cn("p-5 transition-all", !r.isActive && "opacity-60 border-dashed")}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "h-11 w-11 rounded-xl flex items-center justify-center",
-                        r.isActive ? "bg-primary/10" : "bg-muted"
-                      )}>
-                        <TypeIcon className={cn("h-5 w-5", r.isActive ? "text-primary" : "text-muted-foreground")} />
-                      </div>
-                      <div>
-                        <h3 className="font-heading font-semibold">{r.name}</h3>
-                        <p className="text-xs text-muted-foreground">{r.description}</p>
-                      </div>
+            {isRewardsLoading ? (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <Card key={idx} className="p-5 space-y-3">
+                  <div className="flex gap-3">
+                    <Skeleton className="h-11 w-11 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-40" />
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 flex-wrap text-sm mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Star className="h-3.5 w-3.5 text-warning" />
-                      <span className="font-semibold">{r.pointsCost.toLocaleString()} pts</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {rewardTypeLabels[r.type]}
-                      {r.type === "discount_percentage" && ` (${r.value}%)`}
-                      {r.type === "discount_fixed" && ` (${formatNaira(r.value)})`}
-                    </Badge>
-                  </div>
-
-                  {/* Outlet availability badge */}
-                  <div className="flex items-center gap-1.5 mb-3 text-xs text-muted-foreground">
-                    {r.outletIds.length === 0 ? (
-                      <Badge variant="secondary" className="text-[10px] gap-1"><Globe className="h-2.5 w-2.5" /> All Outlets</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-[10px] gap-1"><MapPin className="h-2.5 w-2.5" /> {r.outletIds.length} outlet{r.outletIds.length > 1 ? "s" : ""}</Badge>
-                    )}
-                  </div>
-
-                  <Separator className="mb-3" />
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={r.isActive} onCheckedChange={() => toggleRewardActive(r.id)} />
-                      <span className="text-xs text-muted-foreground">{r.isActive ? "Visible at POS" : "Hidden"}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingReward(r); setRewardFormOpen(true); }}>
-                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
-                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-24" />
                 </Card>
-              );
-            })}
+              ))
+            ) : (
+              filteredRewards.map((r) => {
+                const TypeIcon = rewardTypeIcons[r.type] || Gift;
+                return (
+                  <Card key={r.id} className={cn("p-5 transition-all", !r.isActive && "opacity-60 border-dashed")}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "h-11 w-11 rounded-xl flex items-center justify-center",
+                          r.isActive ? "bg-primary/10" : "bg-muted"
+                        )}>
+                          <TypeIcon className={cn("h-5 w-5", r.isActive ? "text-primary" : "text-muted-foreground")} />
+                        </div>
+                        <div>
+                          <h3 className="font-heading font-semibold">{r.name}</h3>
+                          <p className="text-xs text-muted-foreground">{r.description}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap text-sm mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5 text-warning" />
+                        <span className="font-semibold">{r.pointsCost.toLocaleString()} pts</span>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {rewardTypeLabels[r.type]}
+                        {r.type === "discount_percentage" && ` (${r.value}%)`}
+                        {r.type === "discount_fixed" && ` (${formatNaira(r.value)})`}
+                      </Badge>
+                    </div>
+
+                    {/* Outlet availability badge */}
+                    <div className="flex items-center gap-1.5 mb-3 text-xs text-muted-foreground">
+                      {r.outletIds.length === 0 ? (
+                        <Badge variant="secondary" className="text-[10px] gap-1"><Globe className="h-2.5 w-2.5" /> All Outlets</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] gap-1"><MapPin className="h-2.5 w-2.5" /> {r.outletIds.length} outlet{r.outletIds.length > 1 ? "s" : ""}</Badge>
+                      )}
+                    </div>
+
+                    <Separator className="mb-3" />
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={r.isActive} onCheckedChange={() => toggleRewardActive(r)} />
+                        <span className="text-xs text-muted-foreground">{r.isActive ? "Visible at POS" : "Hidden"}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingReward(r); setRewardFormOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
 
             {/* Add card */}
             <Card
@@ -700,9 +912,9 @@ export default function LoyaltyManagement() {
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[200px] max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9 h-9" placeholder="Search by customer or action..." value={activitySearch} onChange={(e) => setActivitySearch(e.target.value)} />
+              <Input className="pl-9 h-9" placeholder="Search by customer or action..." value={activitySearch} onChange={(e) => handleActivitySearchChange(e.target.value)} />
             </div>
-            <Select value={activityType} onValueChange={setActivityType}>
+            <Select value={activityType} onValueChange={handleActivityTypeChange}>
               <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
@@ -715,13 +927,13 @@ export default function LoyaltyManagement() {
           </div>
 
           <PaginationControls
-            page={activityPagination.page}
-            totalPages={activityPagination.totalPages}
-            perPage={activityPagination.perPage}
-            totalItems={activityPagination.totalItems}
-            pageSizeOptions={activityPagination.pageSizeOptions}
-            onPageChange={activityPagination.setPage}
-            onPerPageChange={activityPagination.setPerPage}
+            page={activityPage}
+            totalPages={activityTotalPages}
+            perPage={activityPerPage}
+            totalItems={activityTotal}
+            pageSizeOptions={[5, 10, 20, 50]}
+            onPageChange={setActivityPage}
+            onPerPageChange={(val) => { setActivityPerPage(val); setActivityPage(1); }}
           />
 
           <Card className="overflow-x-auto" style={{ touchAction: "pan-x" }}>
@@ -737,43 +949,55 @@ export default function LoyaltyManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {activityPagination.paginatedItems.map((a) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="text-muted-foreground whitespace-nowrap">{format(a.date, "MMM d, yyyy h:mm a")}</TableCell>
-                    <TableCell className="font-medium">{a.customerName}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Building2 className="h-3 w-3" />
-                        {a.outletName}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className={cn("text-xs capitalize",
-                        a.type === "earn" ? "bg-success/10 text-success" :
-                        a.type === "redeem" ? "bg-primary/10 text-primary" :
-                        a.type === "adjust" ? "bg-warning/10 text-warning" :
-                        "bg-muted text-muted-foreground"
-                      )}>
-                        {a.type === "earn" ? "Earned" : a.type === "redeem" ? "Redeemed" : a.type === "adjust" ? "Adjusted" : "Registered"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{a.description}</TableCell>
-                    <TableCell className="text-right">
-                      {a.points !== 0 && (
-                        <span className={cn("font-semibold", a.points > 0 ? "text-success" : "text-destructive")}>
-                          {a.points > 0 ? "+" : ""}{a.points}
-                        </span>
-                      )}
-                      {a.points === 0 && <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredActivity.length === 0 && (
+                {isActivityLoading ? (
+                  Array.from({ length: activityPerPage }).map((_, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : activity.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
                       No activity matches your filter
                     </TableCell>
                   </TableRow>
+                ) : (
+                  activity.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">{format(a.date, "MMM d, yyyy h:mm a")}</TableCell>
+                      <TableCell className="font-medium">{a.customerName}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Building2 className="h-3 w-3" />
+                          {outletLabel(a.outletId)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className={cn("text-xs capitalize",
+                          a.type === "earn" ? "bg-success/10 text-success" :
+                          a.type === "redeem" ? "bg-primary/10 text-primary" :
+                          a.type === "adjust" ? "bg-warning/10 text-warning" :
+                          "bg-muted text-muted-foreground"
+                        )}>
+                          {a.type === "earn" ? "Earned" : a.type === "redeem" ? "Redeemed" : a.type === "adjust" ? "Adjusted" : "Registered"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{a.description || "—"}</TableCell>
+                      <TableCell className="text-right">
+                        {a.points !== 0 && (
+                          <span className={cn("font-semibold", a.points > 0 ? "text-success" : "text-destructive")}>
+                            {a.points > 0 ? "+" : ""}{a.points}
+                          </span>
+                        )}
+                        {a.points === 0 && <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -951,7 +1175,10 @@ export default function LoyaltyManagement() {
 
           {/* Save applies to Points Earning Rules, Per-Outlet Overrides, and Tier Thresholds */}
           <div className="flex justify-end">
-            <Button onClick={() => toast.success("Settings saved")}>Save Settings</Button>
+            <Button onClick={handleSaveSettings} disabled={updateSettingsMutation.isMutating}>
+              {updateSettingsMutation.isMutating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Settings
+            </Button>
           </div>
 
           {/* Program behaviour */}
@@ -1010,6 +1237,7 @@ export default function LoyaltyManagement() {
         onOpenChange={setRewardFormOpen}
         reward={editingReward}
         onSave={handleSaveReward}
+        isSaving={isRewardSaving}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

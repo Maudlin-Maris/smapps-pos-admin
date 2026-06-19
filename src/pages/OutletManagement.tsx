@@ -35,12 +35,7 @@ export default function OutletManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
   const [editingOutlet, setEditingOutlet] = useState<Outlet | null>(null);
-  const [departments, setDepartments] = useState<Department[]>(initialDepartments);
   const [deptDialogOutlet, setDeptDialogOutlet] = useState<Outlet | null>(null);
-  const [fees, setFees] = useState<FeeFormData[]>([
-    { id: 1, outletId: "1", name: "VAT", serviceOption: "all", isFixed: false, chargeToCustomers: true, value: "7.5", orderPeg: "", minimumFee: "", maximumFee: "" },
-    { id: 2, outletId: "1", name: "Service Charge", serviceOption: "dine_in", isFixed: true, chargeToCustomers: true, value: "", orderPeg: "2000", minimumFee: "500", maximumFee: "1000" },
-  ]);
   const [feeDialogOutlet, setFeeDialogOutlet] = useState<Outlet | null>(null);
   const [discountTipOutlet, setDiscountTipOutlet] = useState<Outlet | null>(null);
   const [paymentMethodOutlet, setPaymentMethodOutlet] = useState<Outlet | null>(null);
@@ -165,12 +160,6 @@ export default function OutletManagement() {
     };
   };
 
-  const getDeptCount = (outletId: number | string) =>
-    departments.filter((d) => String(d.outletId) === String(outletId)).length;
-
-  const getFeeCount = (outletId: number | string) =>
-    fees.filter((f) => String(f.outletId) === String(outletId)).length;
-
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -284,7 +273,7 @@ export default function OutletManagement() {
                     <LayoutGrid className="h-3.5 w-3.5" />
                     Departments
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                      {outlet.departmentCount ?? getDeptCount(outlet.id)}
+                      {outlet.departmentCount ?? 0}
                     </Badge>
                   </Button>
                   <Button
@@ -296,7 +285,7 @@ export default function OutletManagement() {
                     <Percent className="h-3.5 w-3.5" />
                     Fees & Taxes
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">
-                      {outlet.feesCount ?? getFeeCount(outlet.id)}
+                      {outlet.feesCount ?? 0}
                     </Badge>
                   </Button>
                   <Button
@@ -354,8 +343,7 @@ export default function OutletManagement() {
           onOpenChange={(open) => !open && setDeptDialogOutlet(null)}
           outletId={deptDialogOutlet.id}
           outletName={deptDialogOutlet.name}
-          departments={departments}
-          onUpdateDepartments={setDepartments}
+          onUpdated={mutate}
         />
       )}
 
@@ -366,8 +354,7 @@ export default function OutletManagement() {
           outletId={feeDialogOutlet.id}
           outletName={feeDialogOutlet.name}
           businessType={feeDialogOutlet.businessType}
-          fees={fees}
-          onUpdateFees={setFees}
+          onUpdated={mutate}
         />
       )}
 
@@ -377,6 +364,7 @@ export default function OutletManagement() {
           onOpenChange={(open) => !open && setDiscountTipOutlet(null)}
           outletId={discountTipOutlet.id}
           outletName={discountTipOutlet.name}
+          onUpdated={mutate}
         />
       )}
 
@@ -386,6 +374,7 @@ export default function OutletManagement() {
           onOpenChange={(open) => !open && setPaymentMethodOutlet(null)}
           outletId={paymentMethodOutlet.id}
           outletName={paymentMethodOutlet.name}
+          onUpdated={mutate}
         />
       )}
 
@@ -395,6 +384,7 @@ export default function OutletManagement() {
           onOpenChange={(open) => !open && setLocationOutlet(null)}
           outletId={locationOutlet.id}
           outletName={locationOutlet.name}
+          onUpdated={mutate}
         />
       )}
 

@@ -28,7 +28,7 @@ export const useGetInventoryItems = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_INVENTORY, params)
+    ? createUrlWithParams(API_ENDPOINTS.INVENTORY, params)
     : null;
   return useApi<InventoryListResponse>(url, options);
 };
@@ -39,13 +39,13 @@ export const useGetInventoryItem = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<InventoryDetailResponse>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_INVENTORY(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_INVENTORY(id) : null,
     options,
   );
 };
 
 export const getInventoryItemDetails = async (id: number | string): Promise<InventoryDetailResponse> => {
-  const { data } = await api.get(API_ENDPOINTS.GET_INVENTORY(id));
+  const { data } = await api.get(API_ENDPOINTS.SINGLE_INVENTORY(id));
   return data;
 }
 
@@ -63,7 +63,7 @@ export const useCreateInventoryItem = (
     return data;
   };
   return useSWRMutation<InventoryListResponse, APIError, string, CreateInventoryPayload>(
-    API_ENDPOINTS.CREATE_INVENTORY,
+    API_ENDPOINTS.INVENTORY,
     fetcher,
     {
       onError(err) {
@@ -88,7 +88,7 @@ export const useUpdateInventoryItem = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg }: { arg: { id: string | number; payload: UpdateInventoryPayload } }) => {
-    const { data } = await api.patch(API_ENDPOINTS.UPDATE_INVENTORY(arg.id), arg.payload);
+    const { data } = await api.patch(API_ENDPOINTS.SINGLE_INVENTORY(arg.id), arg.payload);
     return data;
   };
   return useSWRMutation<
@@ -122,7 +122,7 @@ export const useDeleteInventoryItem = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg: id }: { arg: string }) => {
-    const { data } = await api.delete(API_ENDPOINTS.DELETE_INVENTORY(id));
+    const { data } = await api.delete(API_ENDPOINTS.SINGLE_INVENTORY(id));
     return data;
   };
   return useSWRMutation<{ message: string }, APIError, string, string>(

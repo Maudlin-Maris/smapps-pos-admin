@@ -17,15 +17,16 @@ import type { DraftReconciliationPayload } from "@/lib/types/draft-reconciliatio
 
 export const useGetReconciliations = (
   params?: {
+    outletId?: string;
     page?: number;
     per_page?: number;
-    outletId?: string;
+    status?: string;
   },
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_RECONCILIATIONS, params)
+    ? createUrlWithParams(API_ENDPOINTS.RECONCILIATIONS, params)
     : null;
   return useApi<ReconciliationListResponse>(url, options);
 };
@@ -35,15 +36,15 @@ export const useGetReconciliation = (
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();
-  return useApi<InventoryReconciliation>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_RECONCILIATION(id) : null,
+  return useApi<any>(
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_RECONCILIATION(id) : null,
     options,
   );
 };
 
 export const useCreateReconciliation = (
   options?: SWRMutationConfiguration<
-    InventoryReconciliation,
+    any,
     APIError,
     string,
     CreateReconciliationPayload
@@ -54,8 +55,8 @@ export const useCreateReconciliation = (
     const { data } = await api.post(url, arg);
     return data;
   };
-  return useSWRMutation<InventoryReconciliation, APIError, string, CreateReconciliationPayload>(
-    API_ENDPOINTS.CREATE_RECONCILIATION,
+  return useSWRMutation<any, APIError, string, CreateReconciliationPayload>(
+    API_ENDPOINTS.RECONCILIATIONS,
     fetcher,
     {
       onError(err) {
@@ -264,7 +265,7 @@ export const useDeleteReconciliation = (
 ) => {
   const { toast } = useToast();
   const fetcher = async (_key: string, { arg: id }: { arg: string | number }) => {
-    const { data } = await api.delete(API_ENDPOINTS.DELETE_RECONCILIATION(id));
+    const { data } = await api.delete(API_ENDPOINTS.SINGLE_RECONCILIATION(id));
     return data;
   };
   return useSWRMutation<void, APIError, string, string | number>(

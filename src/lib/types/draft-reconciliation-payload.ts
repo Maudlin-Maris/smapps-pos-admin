@@ -1,7 +1,7 @@
 export interface DraftReconciliationCount {
   snapshotId: string;
-  actualQty: number;
-  skipped: boolean;
+  actualQty?: number;
+  skipped?: boolean;
 }
 
 export interface DraftReconciliationPayload {

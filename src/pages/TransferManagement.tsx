@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, ArrowLeftRight, ArrowRight, Plus, Search, Trash2, Truck,
   PackageCheck, Send, ShieldCheck, ShieldX, X, Eye, History, AlertTriangle,
@@ -32,6 +34,7 @@ import {
 } from "@/lib/transfers-store";
 import { useGetOutlets } from "@/services/api/outlets";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
+import { useGetInventoryLocations } from "@/services/api/inventory/live-inventory";
 import {
   useGetTransfers,
   useGetTransfer,
@@ -198,7 +201,7 @@ function TransferList() {
               )}
               {filtered.map((t) => (
                 <tr key={t.id} className="border-b hover:bg-muted/30 cursor-pointer"
-                    onClick={() => nav(`/inventory/transfers/${t.id}`)}>
+                  onClick={() => nav(`/inventory/transfers/${t.id}`)}>
                   <td className="p-3 font-mono text-xs">{t.reference}</td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
@@ -217,7 +220,7 @@ function TransferList() {
                   </td>
                   <td className="p-3 text-right">
                     <Button size="sm" variant="ghost" className="gap-1 text-xs"
-                            onClick={(e) => { e.stopPropagation(); nav(`/inventory/transfers/${t.id}`); }}>
+                      onClick={(e) => { e.stopPropagation(); nav(`/inventory/transfers/${t.id}`); }}>
                       <Eye className="h-3 w-3" /> Open
                     </Button>
                   </td>
@@ -238,7 +241,30 @@ function TransferCreate() {
   const nav = useNavigate();
   const { id: editId } = useParams();
   const { data: outlets = [] } = useGetOutlets();
-  const locations = useMemo(() => listLocations(outlets), [outlets]);
+  const { data: warehouses } = useGetInventoryLocations();
+  const locations = useMemo(() => {
+    const outletLocs = outlets.map((o) => ({
+      id: o.id,
+      name: o.name,
+      kind: "outlet" as const,
+    }));
+
+    const warehouseLocs =
+      warehouses?.data?.map((w) => ({
+        id: w.id,
+        name: w.name,
+        kind: w.kind as "warehouse",
+      })) ?? [];
+
+    return Array.from(
+      new Map(
+        [...outletLocs, ...warehouseLocs].map((location) => [
+          location.id,
+          location,
+        ])
+      ).values()
+    );
+  }, [outlets, warehouses]);
 
   const { data: existing, isLoading: isExistingLoading } = useGetTransfer(editId);
   const isEditing = Boolean(editId);
@@ -249,11 +275,25 @@ function TransferCreate() {
   const { trigger: triggerDeleteTransfer, isMutating: isDeletingTransfer } = useDeleteTransfer();
 
   const [sourceId, setSourceId] = useState("");
-  const [destId, setDestId]     = useState("");
-  const [reason, setReason]     = useState<TransferReason>("replenishment");
-  const [notes, setNotes]       = useState("");
-  const [carrier, setCarrier]   = useState("");
-  const [search, setSearch]     = useState("");
+  const [destId, setDestId] = useState("");
+  const [reason, setReason] = useState<TransferReason>("replenishment");
+  const [notes, setNotes] = useState("");
+  const [carrier, setCarrier] = useState("");
+  const [search, setSearch] = useState("");
+  const [pickerPage, setPickerPage] = useState(1);
+  const [pickerPerPage, setPickerPerPage] = useState(10);
+
+  // Keep a merged dictionary of all source inventory items we have fetched or loaded from existing
+  const [sourceItemsCache, setSourceItemsCache] = useState<Record<string, {
+    id: string;
+    name: string;
+    sku: string;
+    stock: number;
+    unitCost: number;
+    minStock: number;
+    unit: string;
+  }>>({});
+
   type LineDraft = {
     itemId: string;
     qty: number;
@@ -263,10 +303,15 @@ function TransferCreate() {
   const [lines, setLines] = useState<LineDraft[]>([]);
 
   // Fetch live inventory items for source outlet
-  const { data: sourceInventoryRes } = useGetInventoryItems(
-    sourceId ? { outletId: sourceId, per_page: 1000 } : undefined
+  const { data: sourceInventoryRes, isLoading: isSourceInventoryLoading } = useGetInventoryItems(
+    sourceId ? {
+      outletId: sourceId,
+      page: pickerPage,
+      per_page: pickerPerPage,
+      search: search.trim() || undefined
+    } : undefined
   );
-  
+
   // Fetch live inventory items for destination outlet
   const { data: destInventoryRes } = useGetInventoryItems(
     destId ? { outletId: destId, per_page: 1000 } : undefined
@@ -317,6 +362,43 @@ function TransferCreate() {
     return reserved;
   };
 
+  // Sync fetched source inventory data into sourceItemsCache
+  useEffect(() => {
+    if (sourceInventoryRes?.data) {
+      setSourceItemsCache((prev) => {
+        const next = { ...prev };
+        sourceInventoryRes.data.forEach((i) => {
+          next[i.id] = {
+            id: i.id,
+            name: i.name,
+            sku: i.sku,
+            stock: i.quantity,
+            unitCost: i.costPrice,
+            minStock: 0,
+            unit: "unit",
+          };
+        });
+        return next;
+      });
+    }
+  }, [sourceInventoryRes]);
+
+  // Reset page to 1 when search query, source, or items per page change
+  useEffect(() => {
+    setPickerPage(1);
+  }, [search, sourceId, pickerPerPage]);
+
+  // Handle manual sourceId change (reset lines, pagination, and clear the item cache)
+  const prevSourceIdRef = useRef("");
+  useEffect(() => {
+    const prevSourceId = prevSourceIdRef.current;
+    if (sourceId && prevSourceId && sourceId !== prevSourceId) {
+      setLines([]);
+      setSourceItemsCache({});
+    }
+    prevSourceIdRef.current = sourceId;
+  }, [sourceId]);
+
   useEffect(() => {
     if (existing) {
       setSourceId(existing.source.id);
@@ -324,6 +406,24 @@ function TransferCreate() {
       setReason(existing.reason);
       setNotes(existing.notes ?? "");
       setCarrier(existing.carrier ?? "");
+
+      // Populate sourceItemsCache with existing items so they don't get lost
+      setSourceItemsCache((prev) => {
+        const next = { ...prev };
+        existing.items.forEach((it) => {
+          next[it.inventoryItemId] = {
+            id: it.inventoryItemId,
+            name: it.itemName,
+            sku: it.sku,
+            stock: it.availableQty,
+            unitCost: it.unitCost,
+            minStock: 0,
+            unit: it.unit || "unit",
+          };
+        });
+        return next;
+      });
+
       setLines(
         existing.items.map((it) => ({
           itemId: it.inventoryItemId,
@@ -351,12 +451,6 @@ function TransferCreate() {
     }
   }, [isEditing, existing, isExistingLoading, nav]);
 
-  // If source changes, drop lines that no longer exist at the new source
-  useEffect(() => {
-    if (!sourceId || !sourceInventoryRes) return;
-    setLines((prev) => prev.filter((l) => allSourceItems.some((i) => i.id === l.itemId)));
-  }, [sourceId, sourceInventoryRes, allSourceItems]);
-
   if (editId && isExistingLoading) {
     return (
       <div className="space-y-4">
@@ -371,12 +465,7 @@ function TransferCreate() {
     );
   }
 
-  const sourceItems = sourceId
-    ? allSourceItems.filter((i) =>
-        !search.trim() ||
-        i.name.toLowerCase().includes(search.toLowerCase()) ||
-        i.sku.toLowerCase().includes(search.toLowerCase()))
-    : [];
+  const sourceItems = sourceId ? allSourceItems : [];
 
   const addLine = (itemId: string) => {
     setLines((prev) => prev.find((l) => l.itemId === itemId) ? prev : [...prev, { itemId, qty: 1, strategy: "source" }]);
@@ -412,12 +501,12 @@ function TransferCreate() {
 
     const src = locations.find((l) => l.id === sourceId)!;
     const dst = locations.find((l) => l.id === destId)!;
-    const inv = allSourceItems;
+    const inv = sourceItemsCache;
 
     // Validate stock
     const items = [];
     for (const l of lines) {
-      const i = inv.find((x) => x.id === l.itemId);
+      const i = inv[l.itemId];
       if (!i) continue;
       const reserved = getLiveReservedQty(sourceId, i.id);
       const transferable = Math.max(0, i.stock - reserved);
@@ -496,7 +585,7 @@ function TransferCreate() {
               <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
               <SelectContent>
                 {locations.map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
+                  <SelectItem key={`source-${l.id}`} value={l.id}>
                     {l.kind === "warehouse" ? "🏭 " : "🏬 "}{l.name}
                   </SelectItem>
                 ))}
@@ -509,7 +598,7 @@ function TransferCreate() {
               <SelectTrigger><SelectValue placeholder="Select destination" /></SelectTrigger>
               <SelectContent>
                 {locations.filter((l) => l.id !== sourceId).map((l) => (
-                  <SelectItem key={l.id} value={l.id}>
+                  <SelectItem key={`dest-${l.id}`} value={l.id}>
                     {l.kind === "warehouse" ? "🏭 " : "🏬 "}{l.name}
                   </SelectItem>
                 ))}
@@ -561,56 +650,83 @@ function TransferCreate() {
             </div>
 
             {/* Picker */}
-            <div className="border rounded-lg max-h-64 overflow-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 sticky top-0">
-                  <tr>
-                    <th className="text-left p-2 font-medium">Item</th>
-                    <th className="text-left p-2 font-medium">SKU</th>
-                    <th className="text-right p-2 font-medium">Stock</th>
-                    <th className="text-right p-2 font-medium">Reserved</th>
-                    <th className="text-right p-2 font-medium">Transferable</th>
-                    <th className="p-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sourceItems.length === 0 && (
-                    <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">No items.</td></tr>
-                  )}
-                  {sourceItems.map((i) => {
-                    const reserved = getLiveReservedQty(sourceId, i.id);
-                    const transferable = Math.max(0, i.stock - reserved);
-                    const low = i.stock <= i.minStock;
-                    const inLines = lines.some((l) => l.itemId === i.id);
-                    return (
-                      <tr key={i.id} className="border-t hover:bg-muted/30">
-                        <td className="p-2">
-                          <div className="font-medium">{i.name}</div>
-                          {low && (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-warning">
-                              <AlertTriangle className="h-3 w-3" /> Low stock
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-2 font-mono text-xs">{i.sku}</td>
-                        <td className="p-2 text-right">{i.stock}</td>
-                        <td className="p-2 text-right text-muted-foreground">{reserved}</td>
-                        <td className={cn("p-2 text-right font-medium", transferable === 0 && "text-destructive")}>
-                          {transferable}
-                        </td>
-                        <td className="p-2 text-right">
-                          <Button size="sm" variant={inLines ? "secondary" : "outline"}
-                                  disabled={transferable === 0}
-                                  onClick={() => addLine(i.id)}
-                                  className="h-7 text-xs">
-                            {inLines ? "Added" : "Add"}
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="border rounded-lg flex flex-col overflow-hidden">
+              <div className="max-h-64 overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="text-left p-2 font-medium">Item</th>
+                      <th className="text-left p-2 font-medium">SKU</th>
+                      <th className="text-right p-2 font-medium">Stock</th>
+                      <th className="text-right p-2 font-medium">Reserved</th>
+                      <th className="text-right p-2 font-medium">Transferable</th>
+                      <th className="p-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isSourceInventoryLoading ? (
+                      Array.from({ length: 5 }).map((_, idx) => (
+                        <tr key={`skeleton-${idx}`} className="border-t animate-pulse">
+                          <td className="p-2">
+                            <Skeleton className="h-4 w-2/3 mb-1" />
+                            <Skeleton className="h-3 w-1/3" />
+                          </td>
+                          <td className="p-2"><Skeleton className="h-4 w-20" /></td>
+                          <td className="p-2 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                          <td className="p-2 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                          <td className="p-2 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                          <td className="p-2 text-right"><Skeleton className="h-7 w-16 ml-auto" /></td>
+                        </tr>
+                      ))
+                    ) : sourceItems.length === 0 ? (
+                      <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">No items.</td></tr>
+                    ) : (
+                      sourceItems.map((i) => {
+                        const reserved = getLiveReservedQty(sourceId, i.id);
+                        const transferable = Math.max(0, i.stock - reserved);
+                        const low = i.stock <= i.minStock;
+                        const inLines = lines.some((l) => l.itemId === i.id);
+                        return (
+                          <tr key={i.id} className="border-t hover:bg-muted/30">
+                            <td className="p-2">
+                              <div className="font-medium">{i.name}</div>
+                              {low && (
+                                <span className="inline-flex items-center gap-1 text-[10px] text-warning">
+                                  <AlertTriangle className="h-3 w-3" /> Low stock
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2 font-mono text-xs">{i.sku}</td>
+                            <td className="p-2 text-right">{i.stock}</td>
+                            <td className="p-2 text-right text-muted-foreground">{reserved}</td>
+                            <td className={cn("p-2 text-right font-medium", transferable === 0 && "text-destructive")}>
+                              {transferable}
+                            </td>
+                            <td className="p-2 text-right">
+                              <Button size="sm" variant={inLines ? "secondary" : "outline"}
+                                disabled={transferable === 0}
+                                onClick={() => addLine(i.id)}
+                                className="h-7 text-xs">
+                                {inLines ? "Added" : "Add"}
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <ResuablePagination
+                currentPage={pickerPage}
+                totalPages={sourceInventoryRes?.meta?.last_page || 1}
+                onPageChange={setPickerPage}
+                totalItems={sourceInventoryRes?.meta?.total || 0}
+                rowsPerPage={pickerPerPage}
+                onRowsPerPageChange={setPickerPerPage}
+                rowsPerPageOptions={[5, 10, 20]}
+                className="border-t border-border bg-card/20 rounded-b-lg"
+              />
             </div>
 
             {/* Selected lines */}
@@ -697,7 +813,7 @@ function TransferCreate() {
                   </TooltipProvider>
                   <tbody>
                     {lines.map((l) => {
-                      const i = allSourceItems.find((x) => x.id === l.itemId);
+                      const i = sourceItemsCache[l.itemId];
                       if (!i) return null;
                       const reserved = getLiveReservedQty(sourceId, i.id);
                       const transferable = Math.max(0, i.stock - reserved);
@@ -718,8 +834,8 @@ function TransferCreate() {
                           <td className="p-2 text-right">{transferable}</td>
                           <td className="p-2 text-right">
                             <Input type="number" min={1} max={transferable} value={l.qty}
-                                   onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 0)}
-                                   className="h-8 w-20 ml-auto text-right" />
+                              onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 0)}
+                              className="h-8 w-20 ml-auto text-right" />
                           </td>
                           <td className="p-2 text-right">
                             {destId ? destQty : <span className="text-muted-foreground">—</span>}
@@ -737,9 +853,9 @@ function TransferCreate() {
                           <td className="p-2 text-right">
                             {l.strategy === "custom" ? (
                               <Input type="number" min={0} step="0.01" value={l.customCost ?? ""}
-                                     placeholder="Cost"
-                                     onChange={(e) => updateCustomCost(l.itemId, parseFloat(e.target.value) || 0)}
-                                     className="h-8 w-28 ml-auto text-right" />
+                                placeholder="Cost"
+                                onChange={(e) => updateCustomCost(l.itemId, parseFloat(e.target.value) || 0)}
+                                className="h-8 w-28 ml-auto text-right" />
                             ) : (
                               <span className="text-muted-foreground">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                             )}
@@ -899,15 +1015,15 @@ function TransferDetails() {
           {can.submit && (
             <>
               <Button size="sm" variant="outline" className="gap-1.5"
-                      onClick={() => nav(`/inventory/transfers/${t.id}/edit`)}>
+                onClick={() => nav(`/inventory/transfers/${t.id}/edit`)}>
                 <Pencil className="h-4 w-4" /> Edit Draft
               </Button>
               <Button size="sm" variant="outline" className="gap-1.5 text-destructive"
-                      onClick={() => setDiscardOpen(true)}>
+                onClick={() => setDiscardOpen(true)}>
                 <Trash2 className="h-4 w-4" /> Discard
               </Button>
               <Button size="sm" className="gap-1.5"
-                      onClick={() => setConfirmSubmit(true)}>
+                onClick={() => setConfirmSubmit(true)}>
                 <Send className="h-4 w-4" /> Submit
               </Button>
             </>
@@ -934,7 +1050,7 @@ function TransferDetails() {
           )}
           {can.cancel && (
             <Button size="sm" variant="outline" className="gap-1.5 text-destructive"
-                    onClick={() => setActionDialog("cancel")}>
+              onClick={() => setActionDialog("cancel")}>
               <X className="h-4 w-4" /> Cancel
             </Button>
           )}
@@ -1066,8 +1182,8 @@ function TransferDetails() {
                     <td className="p-2">
                       <Badge variant="secondary" className={cn("text-[10px]",
                         m.type === "TRANSFER_IN" ? "bg-success/15 text-success" :
-                        m.type === "TRANSFER_OUT" ? "bg-info/15 text-info" :
-                        "bg-destructive/15 text-destructive")}>
+                          m.type === "TRANSFER_OUT" ? "bg-info/15 text-info" :
+                            "bg-destructive/15 text-destructive")}>
                         {m.type.replace("TRANSFER_", "")}
                       </Badge>
                     </td>

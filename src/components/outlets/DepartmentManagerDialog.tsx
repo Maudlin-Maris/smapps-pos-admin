@@ -29,18 +29,26 @@ import {
   ChevronLeft,
   Search,
   LayoutGrid,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { Department } from "@/data/departments";
-import { sampleMenuItems, getCategoryMap, getDeptItemCount } from "@/data/departments";
+
+import {
+  useGetOutletCatalogCategories,
+  useGetOutletDepartments,
+  useCreateOutletDepartment,
+  useUpdateOutletDepartment,
+  useUpdateOutletDepartmentCategories,
+  useDeleteOutletDepartment,
+} from "@/services/api/outlets";
+import type { DepartmentRecord } from "@/lib/types/outlet-subresources";
 
 interface DepartmentManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   outletId: number | string;
   outletName: string;
-  departments: Department[];
-  onUpdateDepartments: (departments: Department[]) => void;
+  onUpdated?: () => void;
 }
 
 export default function DepartmentManagerDialog({
@@ -48,82 +56,84 @@ export default function DepartmentManagerDialog({
   onOpenChange,
   outletId,
   outletName,
-  departments,
-  onUpdateDepartments,
+  onUpdated,
 }: DepartmentManagerDialogProps) {
-  const outletDepts = departments.filter((d) => String(d.outletId) === String(outletId));
-  const [selectedDept, setSelectedDept] = useState<Department | null>(null);
+  const { data: categories = [], isLoading: isLoadingCats } = useGetOutletCatalogCategories(outletId);
+  const { data: departments = [], isLoading: isLoadingDepts, mutate: mutateDepts } = useGetOutletDepartments(outletId);
+
+  const { trigger: triggerCreate, isMutating: isCreating } = useCreateOutletDepartment(outletId);
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateOutletDepartment(outletId);
+  const { trigger: triggerAssignCategories, isMutating: isAssigning } = useUpdateOutletDepartmentCategories(outletId);
+  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteOutletDepartment(outletId);
+
+  const [selectedDept, setSelectedDept] = useState<DepartmentRecord | null>(null);
   const [addingDept, setAddingDept] = useState(false);
-  const [editingDept, setEditingDept] = useState<Department | null>(null);
+  const [editingDept, setEditingDept] = useState<DepartmentRecord | null>(null);
   const [deptName, setDeptName] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<Department | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DepartmentRecord | null>(null);
   const [menuSearch, setMenuSearch] = useState("");
 
-  const categoryMap = getCategoryMap(sampleMenuItems);
-
-  const handleAddDept = () => {
+  const handleAddDept = async () => {
     if (!deptName.trim()) {
       toast.error("Department name is required");
       return;
     }
-    if (outletDepts.some((d) => d.name.toLowerCase() === deptName.trim().toLowerCase())) {
+    if (departments.some((d) => d.name.toLowerCase() === deptName.trim().toLowerCase())) {
       toast.error("Department already exists");
       return;
     }
-    const newDept: Department = {
-      id: `dept-${Date.now()}`,
-      name: deptName.trim(),
-      outletId,
-      assignedCategories: [],
-      assignedSubcategories: [],
-    };
-    onUpdateDepartments([...departments, newDept]);
-    toast.success(`Department "${newDept.name}" added`);
-    setDeptName("");
-    setAddingDept(false);
+    try {
+      await triggerCreate({ name: deptName.trim() });
+      toast.success(`Department "${deptName.trim()}" added`);
+      mutateDepts();
+      onUpdated?.();
+      setDeptName("");
+      setAddingDept(false);
+    } catch (e) {}
   };
 
-  const handleEditDept = () => {
+  const handleEditDept = async () => {
     if (!editingDept || !deptName.trim()) return;
-    onUpdateDepartments(
-      departments.map((d) =>
-        d.id === editingDept.id ? { ...d, name: deptName.trim() } : d
-      )
-    );
-    toast.success(`Department renamed to "${deptName.trim()}"`);
-    setEditingDept(null);
-    setDeptName("");
-    if (selectedDept?.id === editingDept.id) {
-      setSelectedDept({ ...editingDept, name: deptName.trim() });
-    }
+    try {
+      await triggerUpdate({
+        deptId: editingDept.id,
+        payload: { name: deptName.trim() },
+      });
+      toast.success(`Department renamed to "${deptName.trim()}"`);
+      mutateDepts();
+      onUpdated?.();
+      setEditingDept(null);
+      setDeptName("");
+      if (selectedDept?.id === editingDept.id) {
+        setSelectedDept({ ...editingDept, name: deptName.trim() });
+      }
+    } catch (e) {}
   };
 
-  const handleDeleteDept = () => {
+  const handleDeleteDept = async () => {
     if (!deleteTarget) return;
-    onUpdateDepartments(departments.filter((d) => d.id !== deleteTarget.id));
-    toast.success(`Department "${deleteTarget.name}" deleted`);
-    if (selectedDept?.id === deleteTarget.id) setSelectedDept(null);
-    setDeleteTarget(null);
+    try {
+      await triggerDelete(deleteTarget.id);
+      toast.success(`Department "${deleteTarget.name}" deleted`);
+      mutateDepts();
+      onUpdated?.();
+      if (selectedDept?.id === deleteTarget.id) setSelectedDept(null);
+      setDeleteTarget(null);
+    } catch (e) {}
   };
 
-  const toggleCategory = (deptId: string, category: string) => {
-    onUpdateDepartments(
-      departments.map((d) => {
-        if (d.id !== deptId) return d;
-        const has = d.assignedCategories.includes(category);
-        if (has) {
-          return {
-            ...d,
-            assignedCategories: d.assignedCategories.filter((c) => c !== category),
-          };
-        } else {
-          return {
-            ...d,
-            assignedCategories: [...d.assignedCategories, category],
-          };
-        }
-      })
-    );
+  const toggleCategory = async (dept: DepartmentRecord, categoryId: string) => {
+    const has = dept.categoryIds.includes(categoryId);
+    const newCategoryIds = has
+      ? dept.categoryIds.filter((id) => id !== categoryId)
+      : [...dept.categoryIds, categoryId];
+    try {
+      await triggerAssignCategories({
+        deptId: dept.id,
+        payload: { categoryIds: newCategoryIds },
+      });
+      mutateDepts();
+    } catch (e) {}
   };
 
   // Sync selectedDept with latest departments data
@@ -132,15 +142,11 @@ export default function DepartmentManagerDialog({
     : null;
 
   // Filter categories by search
-  const allCategories = Object.keys(categoryMap).sort();
   const filteredCategories = menuSearch
-    ? allCategories.filter((cat) =>
-        cat.toLowerCase().includes(menuSearch.toLowerCase())
+    ? categories.filter((cat) =>
+        cat.name.toLowerCase().includes(menuSearch.toLowerCase())
       )
-    : allCategories;
-
-  const getItemCountForCategory = (category: string) =>
-    sampleMenuItems.filter((m) => m.category === category).length;
+    : categories;
 
   return (
     <>
@@ -155,12 +161,16 @@ export default function DepartmentManagerDialog({
             </DialogTitle>
           </DialogHeader>
 
-          {!currentSelectedDept ? (
+          {isLoadingDepts || isLoadingCats ? (
+            <div className="flex-1 flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : !currentSelectedDept ? (
             /* Department List View */
             <div className="space-y-4 overflow-y-auto flex-1">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
-                  {outletDepts.length} department{outletDepts.length !== 1 ? "s" : ""}
+                  {departments.length} department{departments.length !== 1 ? "s" : ""}
                 </p>
                 <Button
                   size="sm"
@@ -169,7 +179,9 @@ export default function DepartmentManagerDialog({
                     setAddingDept(true);
                     setDeptName("");
                   }}
+                  disabled={isCreating}
                 >
+                  {isCreating && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
                   <Plus className="h-4 w-4 mr-1" /> Add Department
                 </Button>
               </div>
@@ -183,14 +195,17 @@ export default function DepartmentManagerDialog({
                     onKeyDown={(e) => e.key === "Enter" && handleAddDept()}
                     autoFocus
                     className="h-8"
+                    disabled={isCreating}
                   />
-                  <Button size="sm" onClick={handleAddDept}>
+                  <Button size="sm" onClick={handleAddDept} disabled={isCreating}>
+                    {isCreating && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
                     Add
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => setAddingDept(false)}
+                    disabled={isCreating}
                   >
                     Cancel
                   </Button>
@@ -206,8 +221,10 @@ export default function DepartmentManagerDialog({
                     onKeyDown={(e) => e.key === "Enter" && handleEditDept()}
                     autoFocus
                     className="h-8"
+                    disabled={isUpdating}
                   />
-                  <Button size="sm" onClick={handleEditDept}>
+                  <Button size="sm" onClick={handleEditDept} disabled={isUpdating}>
+                    {isUpdating && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
                     Save
                   </Button>
                   <Button
@@ -217,6 +234,7 @@ export default function DepartmentManagerDialog({
                       setEditingDept(null);
                       setDeptName("");
                     }}
+                    disabled={isUpdating}
                   >
                     Cancel
                   </Button>
@@ -224,8 +242,7 @@ export default function DepartmentManagerDialog({
               )}
 
               <div className="space-y-2">
-                {outletDepts.map((dept) => {
-                  const itemCount = getDeptItemCount(dept, sampleMenuItems);
+                {departments.map((dept) => {
                   return (
                     <div
                       key={dept.id}
@@ -244,12 +261,7 @@ export default function DepartmentManagerDialog({
                         <div>
                           <p className="text-sm font-medium">{dept.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {itemCount} menu item{itemCount !== 1 ? "s" : ""}
-                            {dept.assignedCategories.length > 0 && (
-                              <span className="ml-1">
-                                · {dept.assignedCategories.length} categor{dept.assignedCategories.length !== 1 ? "ies" : "y"}
-                              </span>
-                            )}
+                            {dept.categoryIds.length} assigned categor{dept.categoryIds.length !== 1 ? "ies" : "y"}
                           </p>
                         </div>
                       </div>
@@ -286,7 +298,7 @@ export default function DepartmentManagerDialog({
                   );
                 })}
 
-                {outletDepts.length === 0 && !addingDept && (
+                {departments.length === 0 && !addingDept && (
                   <div className="text-center py-8">
                     <LayoutGrid className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">
@@ -305,14 +317,16 @@ export default function DepartmentManagerDialog({
                   size="sm"
                   onClick={() => setSelectedDept(null)}
                   className="gap-1 text-muted-foreground"
+                  disabled={isAssigning}
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Back
                 </Button>
                 <Separator orientation="vertical" className="h-5" />
                 <Badge variant="secondary" className="text-xs">
-                  {getDeptItemCount(currentSelectedDept, sampleMenuItems)} items covered
+                  {currentSelectedDept.categoryIds.length} categories assigned
                 </Badge>
+                {isAssigning && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
 
               <div className="relative">
@@ -322,28 +336,28 @@ export default function DepartmentManagerDialog({
                   className="pl-9 h-9"
                   value={menuSearch}
                   onChange={(e) => setMenuSearch(e.target.value)}
+                  disabled={isAssigning}
                 />
               </div>
 
               <div className="space-y-2">
                 {filteredCategories.map((category) => {
-                  const isCategoryAssigned = currentSelectedDept.assignedCategories.includes(category);
+                  const isCategoryAssigned = currentSelectedDept.categoryIds.includes(category.id);
 
                   return (
                     <div
-                      key={category}
+                      key={category.id}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border cursor-pointer transition-colors ${
                         isCategoryAssigned ? "bg-accent/10" : "hover:bg-muted/50"
                       }`}
+                      onClick={() => !isAssigning && toggleCategory(currentSelectedDept, category.id)}
                     >
                       <Checkbox
                         checked={isCategoryAssigned}
-                        onCheckedChange={() => toggleCategory(currentSelectedDept.id, category)}
+                        onCheckedChange={() => toggleCategory(currentSelectedDept, category.id)}
+                        disabled={isAssigning}
                       />
-                      <span className="text-sm font-medium flex-1">{category}</span>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {getItemCountForCategory(category)} items
-                      </Badge>
+                      <span className="text-sm font-medium flex-1">{category.name}</span>
                     </div>
                   );
                 })}
@@ -375,11 +389,13 @@ export default function DepartmentManagerDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteDept}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
             >
+              {isDeleting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

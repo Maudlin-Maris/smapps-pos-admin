@@ -21,7 +21,7 @@ export const useGetPromoBundles = (
 ) => {
   const { isLoggedIn } = useAuth();
   const url = isLoggedIn
-    ? createUrlWithParams(API_ENDPOINTS.LIST_BUNDLES, params)
+    ? createUrlWithParams(API_ENDPOINTS.BUNDLES, params)
     : null;
   return useApi<ListPromoBundlesResponse>(url, options);
 };
@@ -32,7 +32,7 @@ export const useGetPromoBundle = (
 ) => {
   const { isLoggedIn } = useAuth();
   return useApi<ApiPromoBundle>(
-    isLoggedIn && id ? API_ENDPOINTS.GET_BUNDLE(id) : null,
+    isLoggedIn && id ? API_ENDPOINTS.SINGLE_BUNDLE(id) : null,
     options,
   );
 };
@@ -47,7 +47,7 @@ export const useCreatePromoBundle = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<CreatePromoBundlePayload, ApiPromoBundle>(
-    API_ENDPOINTS.CREATE_BUNDLE,
+    API_ENDPOINTS.BUNDLES,
     "POST",
     undefined,
     {
@@ -74,7 +74,7 @@ export const useDeletePromoBundle = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<undefined, { message?: string }>(
-    id ? API_ENDPOINTS.DELETE_BUNDLE(id) : null,
+    id ? API_ENDPOINTS.SINGLE_BUNDLE(id) : null,
     "DELETE",
     undefined,
     {
@@ -128,7 +128,7 @@ export const useUpdatePromoBundle = (
 ) => {
   const { toast } = useToast();
   return useApiMutation<CreatePromoBundlePayload, ApiPromoBundle>(
-    id ? `/api/admin/catalog/bundles/${id}` : null,
+    id ? API_ENDPOINTS.SINGLE_BUNDLE(id) : null,
     "PUT",
     undefined,
     {
