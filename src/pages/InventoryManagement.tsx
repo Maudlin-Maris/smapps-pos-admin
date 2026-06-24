@@ -42,11 +42,10 @@ import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialo
 import BulkImportInventoryDialog from "@/components/inventory/BulkImportInventoryDialog";
 import ProfitabilityView from "@/components/inventory/ProfitabilityView";
 import { computeProfitability } from "@/lib/profitability";
-import { defaultInventoryItems } from "@/data/inventoryItems";
 import { useCompositesStore } from "@/hooks/use-composites-store";
 import SubstituteGroupManager from "@/components/inventory/SubstituteGroupManager";
 
-const defaultItems: InventoryItem[] = defaultInventoryItems;
+const defaultItems: InventoryItem[] = [];
 
 const defaultComposites: CompositeItem[] = [
   { id: "c1", name: "Cappuccino", menuItemId: "m1", menuVariantId: "v1", description: "Classic cappuccino", components: [{ inventoryItemId: "i1", quantity: 0.02, role: "primary" }, { inventoryItemId: "i2", quantity: 0.15, role: "secondary" }, { inventoryItemId: "i4", quantity: 1, role: "secondary" }], outletId: "outlet-1", sellPrice: 1500, overheadPerUnit: 150 },

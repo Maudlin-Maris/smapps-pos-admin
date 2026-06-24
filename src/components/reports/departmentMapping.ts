@@ -2,7 +2,6 @@
 // Used by the Sales by Department report.
 
 import { outletItemSales } from "./salesData";
-import { outlets } from "@/data/outlets";
 
 // Per-outlet category → department mapping. Matches realistic POS departments
 // for each business type configured in src/data/outlets.ts.
@@ -51,7 +50,7 @@ export interface DepartmentSalesRow {
 const AVG_BASKET_SIZE = 1.6;
 
 /** Aggregate item sales into departments across the selected outlets. */
-export function aggregateItemsByDepartment(selectedOutlets: string[]): DepartmentSalesRow[] {
+export function aggregateItemsByDepartment(selectedOutlets: string[], outlets: any[] = []): DepartmentSalesRow[] {
   const map: Record<string, DepartmentSalesRow> = {};
   selectedOutlets.forEach((outletId) => {
     const items = outletItemSales[outletId] || [];

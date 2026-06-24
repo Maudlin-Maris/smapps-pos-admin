@@ -29,12 +29,9 @@ import {
   PackageCheck, Send, ShieldCheck, ShieldX, X, Eye, History, AlertTriangle,
   Warehouse, Store as StoreIcon, ScanBarcode, Pencil, Info, Loader2,
 } from "lucide-react";
-import {
-  listLocations, listMovements,
-} from "@/lib/transfers-store";
 import { useGetOutlets } from "@/services/api/outlets";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
-import { useGetInventoryLocations } from "@/services/api/inventory/live-inventory";
+import { useGetInventoryLocations, useGetInventoryMovements } from "@/services/api/inventory/live-inventory";
 import {
   useGetTransfers,
   useGetTransfer,
@@ -958,6 +955,22 @@ function TransferDetails() {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
 
+  const { data: movementsResponse } = useGetInventoryMovements();
+  const movements = useMemo(() => {
+    if (!movementsResponse?.data) return [];
+    return movementsResponse.data.map((m: any) => {
+      const transferItem = t?.items?.find((ti: any) => ti.inventoryItemId === m.inventoryItemId);
+      return {
+        id: m.id,
+        transferId: m.transferId || id,
+        type: m.type || "TRANSFER_OUT",
+        itemName: m.itemName || transferItem?.itemName || "Unknown Item",
+        quantity: m.quantity || 0,
+        balanceAfter: m.balanceAfter || 0,
+      };
+    });
+  }, [movementsResponse, t, id]);
+
   const { trigger: triggerSubmitTransfer, isMutating: isSubmitting } = useSubmitTransfer();
   const { trigger: triggerDeleteTransfer, isMutating: isDeleting } = useDeleteTransfer();
 
@@ -1177,7 +1190,7 @@ function TransferDetails() {
                 </tr>
               </thead>
               <tbody>
-                {listMovements().filter((m) => m.transferId === t.id).map((m) => (
+                {movements.filter((m) => m.transferId === t.id).map((m) => (
                   <tr key={m.id} className="border-t">
                     <td className="p-2">
                       <Badge variant="secondary" className={cn("text-[10px]",
@@ -1195,7 +1208,7 @@ function TransferDetails() {
                     <td className="p-2 text-right">{m.balanceAfter}</td>
                   </tr>
                 ))}
-                {listMovements().filter((m) => m.transferId === t.id).length === 0 && (
+                {movements.filter((m) => m.transferId === t.id).length === 0 && (
                   <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">No movements yet.</td></tr>
                 )}
               </tbody>

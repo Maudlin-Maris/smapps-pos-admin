@@ -35,9 +35,9 @@ import {
   type LoyaltyTier, type LoyaltyReward,
   tierConfig, POINTS_PER_NAIRA,
 } from "@/data/loyaltyData";
-import { outlets } from "@/data/outlets";
 import { Checkbox } from "@/components/ui/checkbox";
-import { defaultInventoryItems } from "@/data/inventoryItems";
+import { useGetOutlets } from "@/services/api/outlets";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, Package } from "lucide-react";
@@ -76,13 +76,15 @@ const rewardTypeLabels: Record<string, string> = {
 
 // ── Reward Form Dialog (with outlet selection) ──
 function RewardFormDialog({
-  open, onOpenChange, reward, onSave, isSaving,
+  open, onOpenChange, reward, onSave, isSaving, outlets = [], inventoryItems = [],
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   reward: LoyaltyReward | null;
   onSave: (r: LoyaltyReward) => void;
   isSaving: boolean;
+  outlets?: any[];
+  inventoryItems?: any[];
 }) {
   const [name, setName] = useState(reward?.name ?? "");
   const [description, setDescription] = useState(reward?.description ?? "");
@@ -103,12 +105,12 @@ function RewardFormDialog({
   // Filter inventory by outlet availability scope
   const availableInventory = useMemo(() => {
     if (availabilityMode === "specific" && selectedOutletIds.length > 0) {
-      return defaultInventoryItems.filter(i => selectedOutletIds.includes(i.outletId));
+      return inventoryItems.filter(i => selectedOutletIds.includes(i.outletId));
     }
-    return defaultInventoryItems;
-  }, [availabilityMode, selectedOutletIds]);
+    return inventoryItems;
+  }, [availabilityMode, selectedOutletIds, inventoryItems]);
 
-  const selectedItem = freeItemId ? defaultInventoryItems.find(i => i.id === freeItemId) : null;
+  const selectedItem = freeItemId ? inventoryItems.find(i => i.id === freeItemId) : null;
 
   const toggleOutlet = (id: string) => {
     setSelectedOutletIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -300,6 +302,25 @@ function RewardFormDialog({
 
 // ── Main Page ──
 export default function LoyaltyManagement() {
+  const { data: outletsResponse, isLoading: isOutletsLoading } = useGetOutlets();
+  const outlets = outletsResponse || [];
+
+  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
+  const inventoryItems = useMemo(() => {
+    if (!inventoryResponse?.data) return [];
+    return inventoryResponse.data.map((i: any) => ({
+      id: i.id,
+      name: i.name,
+      sku: i.sku,
+      stock: i.quantity ?? i.stock ?? 0,
+      costPrice: i.costPrice ?? 0,
+      categoryId: i.categoryId ?? "",
+      unitId: i.unitId ?? "",
+      outletId: i.outletId ?? "",
+      conversions: i.conversions || [],
+    }));
+  }, [inventoryResponse]);
+
   const [tab, setTab] = useState<Tab>("overview");
   const [outletFilter, setOutletFilter] = useState("all");
 
@@ -1238,6 +1259,8 @@ export default function LoyaltyManagement() {
         reward={editingReward}
         onSave={handleSaveReward}
         isSaving={isRewardSaving}
+        outlets={outlets}
+        inventoryItems={inventoryItems}
       />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

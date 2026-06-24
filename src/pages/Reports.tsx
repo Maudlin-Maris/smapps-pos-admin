@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, subDays, startOfYear, startOfYear as soy, endOfYear, subYears } from "date-fns";
 import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText, User, X } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
 import PnLStatement from "@/components/reports/PnLStatement";
 
@@ -52,6 +52,9 @@ function fmt(n: number) {
 }
 
 export default function Reports() {
+  const { data: outletsResponse } = useGetOutlets();
+  const outlets = outletsResponse || [];
+
   const [activeTab, setActiveTab] = useState<string>("pnl");
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
   const [selectedCashier, setSelectedCashier] = useState<string>("all");
@@ -283,13 +286,14 @@ export default function Reports() {
         dateFrom,
         dateTo,
         filteredSales: filteredSalesForExport,
+        outlets,
       });
     if (activeTab === "items")
       return exportSalesByItemExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "categories")
       return exportSalesByCategoryExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "departments")
-      return exportSalesByDepartmentExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+      return exportSalesByDepartmentExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo, outlets });
     if (activeTab === "transactions") {
       // Build workbook for transactions tab
 
@@ -321,13 +325,14 @@ export default function Reports() {
         dateFrom,
         dateTo,
         filteredSales: filteredSalesForExport,
+        outlets,
       });
     if (activeTab === "items")
       return exportSalesByItemPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "categories")
       return exportSalesByCategoryPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
     if (activeTab === "departments")
-      return exportSalesByDepartmentPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+      return exportSalesByDepartmentPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo, outlets });
     if (activeTab === "transactions")
       return exportTransactionsPDF({
         outletLabel,
@@ -713,7 +718,7 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="sales" className="mt-6">
-          <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+          <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} outlets={outlets} />
         </TabsContent>
 
         <TabsContent value="items" className="mt-6">
@@ -725,7 +730,7 @@ export default function Reports() {
         </TabsContent>
 
         <TabsContent value="departments" className="mt-6">
-          <SalesByDepartment sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+          <SalesByDepartment sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} outlets={outlets} />
         </TabsContent>
 
         <TabsContent value="transactions" className="mt-6">

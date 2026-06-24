@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Pencil, Trash2, Search, Receipt, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 import { expenseCategories, type Expense, type ExpenseCategory } from "@/hooks/use-financial-data";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,6 +67,9 @@ export default function ExpenseManagement() {
   // Pagination states
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+
+  const { data: outletsResponse } = useGetOutlets();
+  const outlets = outletsResponse || [];
 
   // API query
   const { data: expensesResponse, isLoading: isExpensesLoading, mutate: mutateExpenses } = useGetExpenses({

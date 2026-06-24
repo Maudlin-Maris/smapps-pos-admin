@@ -1,7 +1,6 @@
 import * as XLSX from "@/lib/xlsx-compat";
 import { format } from "date-fns";
 import type { SalesRecord } from "@/hooks/use-financial-data";
-import { outlets } from "@/data/outlets";
 import {
   outletPaymentSplits,
   aggregateItems,
@@ -28,9 +27,10 @@ export interface SalesSummaryExport {
   dateFrom: Date;
   dateTo: Date;
   filteredSales: SalesRecord[];
+  outlets?: any[];
 }
 
-function buildSalesSummary({ selectedOutlets, dateFrom, dateTo, filteredSales }: SalesSummaryExport) {
+function buildSalesSummary({ selectedOutlets, dateFrom, dateTo, filteredSales, outlets = [] }: SalesSummaryExport) {
   const totalSales = filteredSales.reduce((s, r) => s + r.totalSales, 0);
   const totalOther = filteredSales.reduce((s, r) => s + r.otherIncome, 0);
   const totalRevenue = totalSales + totalOther;
@@ -235,6 +235,7 @@ export interface ItemsExport {
   selectedOutlets: string[];
   dateFrom: Date;
   dateTo: Date;
+  outlets?: any[];
 }
 
 export function exportSalesByItemExcel(input: ItemsExport) {
@@ -395,7 +396,7 @@ export function exportSalesByCategoryPDF(input: ItemsExport) {
 // ─────────────────────── Sales by Department ──────────────────────
 
 export function exportSalesByDepartmentExcel(input: ItemsExport) {
-  const rows = aggregateItemsByDepartment(input.selectedOutlets);
+  const rows = aggregateItemsByDepartment(input.selectedOutlets, input.outlets || []);
   const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
   const totalQty = rows.reduce((s, r) => s + r.qty, 0);
 
@@ -423,7 +424,7 @@ export function exportSalesByDepartmentExcel(input: ItemsExport) {
 }
 
 export function exportSalesByDepartmentPDF(input: ItemsExport) {
-  const rows = aggregateItemsByDepartment(input.selectedOutlets);
+  const rows = aggregateItemsByDepartment(input.selectedOutlets, input.outlets || []);
   const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
   const totalQty = rows.reduce((s, r) => s + r.qty, 0);
 

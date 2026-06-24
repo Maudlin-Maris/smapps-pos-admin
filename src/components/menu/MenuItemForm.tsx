@@ -45,13 +45,29 @@ import type { Outlet } from "@/lib/types/outlet";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { loadModifierGroups, type ModifierGroup } from "@/data/modifierGroups";
+import { useGetModifierGroups } from "@/services/api/catalog/modifier-group";
+
+interface Modifier {
+  id: string;
+  name: string;
+  price: number;
+  linkedInventoryItemId?: string;
+}
+
+interface ModifierGroup {
+  id: string;
+  name: string;
+  description?: string;
+  minSelect: number;
+  maxSelect: number;
+  modifiers: Modifier[];
+}
 import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
 import { formatNaira } from "@/lib/currency";
 import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
 import type { ComponentSubstituteConfig } from "@/lib/composite-substitution";
 import ComponentSubstituteEditor from "@/components/inventory/ComponentSubstituteEditor";
-import { useSubstituteGroups } from "@/data/substituteGroups";
+import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
   { name: "Hour", abbreviation: "hr" },
@@ -302,7 +318,8 @@ function FormGroup({
 
 export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, isSaving, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
-  const [allSubGroups] = useSubstituteGroups();
+  const { data: subGroupsRes } = useGetSubstituteGroups({ per_page: 1000 });
+  const allSubGroups = subGroupsRes?.data || [];
   const subGroups = allSubGroups.filter(
     (g) => !currentOutletId || !g.outletId || g.outletId === currentOutletId
   );
@@ -350,9 +367,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [modifierPickerOpen, setModifierPickerOpen] = useState(false);
 
+  const { data: modifierGroupsRes } = useGetModifierGroups({ per_page: 1000 });
+
   useEffect(() => {
-    if (open) setModifierGroups(loadModifierGroups());
-  }, [open]);
+    if (open && modifierGroupsRes?.data) {
+      setModifierGroups(modifierGroupsRes.data as unknown as ModifierGroup[]);
+    }
+  }, [open, modifierGroupsRes]);
 
   // Derive business type from the outlet selected inside the form so the
   // add-ons / modifiers section appears even when the page-level outlet

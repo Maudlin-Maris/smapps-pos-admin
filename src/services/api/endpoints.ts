@@ -124,4 +124,23 @@ export const API_ENDPOINTS = {
   CONFIRM_TIPS_PAYOUT: "/api/admin/tips/payouts/confirm",
   REVERSE_TIPS_PAYOUT: (id: string | number) => `/api/admin/tips/payouts/${id}/reverse`,
   SEND_TIPS_PAYOUT_OTP: "/api/admin/tips/payouts/send-otp",
+
+  // Cashiers
+  CASHIERS: "/api/cashiers",
+  SINGLE_CASHIER: (id: string | number) => `/api/cashiers/${id}`,
+  REGENERATE_CASHIER_PIN: (id: string | number) => `/api/cashiers/${id}/regenerate-pin`,
+
+  // Users
+  USERS: "/api/admin/users",
+  SINGLE_USER: (id: string | number) => `/api/admin/users/${id}`,
+  DEACTIVATE_USER: (id: string | number) => `/api/admin/users/${id}/deactivate`,
+
+  // Roles & Permissions
+  ROLES: "/api/admin/roles",
+  SINGLE_ROLE: (id: string | number) => `/api/admin/roles/${id}`,
+  ROLE_PERMISSIONS: "/api/admin/roles/permissions",
+
+  // Terminals
+  TERMINALS: "/api/admin/terminals",
+  SINGLE_TERMINAL: (id: string | number) => `/api/admin/terminals/${id}`,
 } as const;

@@ -5,17 +5,15 @@
 // reduce per-tip paidAmount; reversals restore liabilities.
 // =====================================================================
 
-import {
-  TipEntry,
-  TipPayout,
-  TipAuditEntry,
-  TipStatus,
-  PayoutStatus,
-  PayoutMethod,
-  PayoutAllocation,
-  AuditAction,
-} from "@/data/tipsTypes";
-import { outlets } from "@/data/outlets";
+type TipEntry = any;
+type TipPayout = any;
+type TipAuditEntry = any;
+type TipStatus = any;
+type PayoutStatus = any;
+type PayoutMethod = any;
+type PayoutAllocation = any;
+type AuditAction = any;
+const outlets: any[] = [];
 
 const TIPS_KEY = "smapps_tips_ledger_v1";
 const PAYOUTS_KEY = "smapps_tips_payouts_v1";

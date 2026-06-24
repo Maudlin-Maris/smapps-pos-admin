@@ -32,7 +32,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { formatNaira } from "@/lib/currency";
-import { defaultInventoryItems } from "@/data/inventoryItems";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { ResuablePagination } from "@/components/ui/reusable-pagination";
 
@@ -79,11 +79,8 @@ export default function ModifierGroups() {
   const [draft, setDraft] = useState<DraftGroup>(emptyDraft);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-
-  useEffect(() => {
-    setInventory(defaultInventoryItems);
-  }, []);
+  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
+  const inventory = inventoryResponse?.data || [];
 
   const { data: listData, isLoading, mutate } = useGetModifierGroups({
     page: currentPage,

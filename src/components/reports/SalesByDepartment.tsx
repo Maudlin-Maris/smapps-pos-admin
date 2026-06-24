@@ -17,9 +17,10 @@ interface Props {
   selectedOutlets: string[];
   dateRange: { from: Date; to: Date };
   cashierFilter?: string;
+  outlets?: any[];
 }
 
-export default function SalesByDepartment({ sales, selectedOutlets, dateRange, cashierFilter }: Props) {
+export default function SalesByDepartment({ sales, selectedOutlets, dateRange, cashierFilter, outlets = [] }: Props) {
   const [dailyOpen, setDailyOpen] = useState<{ department: string; orders: number; revenue: number } | null>(null);
 
   const filteredSales = useMemo(
@@ -28,7 +29,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
   );
 
   const salesByDepartment = useMemo(() => {
-    const rows = aggregateItemsByDepartment(selectedOutlets);
+    const rows = aggregateItemsByDepartment(selectedOutlets, outlets);
     const totalRev = rows.reduce((s, r) => s + r.revenue, 0);
     return rows
       .map((r) => ({
@@ -37,7 +38,7 @@ export default function SalesByDepartment({ sales, selectedOutlets, dateRange, c
         pctNum: totalRev > 0 ? (r.revenue / totalRev) * 100 : 0,
       }))
       .sort((a, b) => b.revenue - a.revenue);
-  }, [selectedOutlets]);
+  }, [selectedOutlets, outlets]);
 
   const totalOrders = salesByDepartment.reduce((s, c) => s + c.orders, 0);
   const totalRevenue = salesByDepartment.reduce((s, c) => s + c.revenue, 0);

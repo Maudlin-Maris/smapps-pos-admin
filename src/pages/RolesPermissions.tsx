@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
-import { useAuth, loadUsers } from "@/contexts/AuthContext";
+import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
-  loadRoles, saveRoles, Role, PERMISSION_CATALOG, PermissionId,
-  generateRoleId, ALL_PERMISSIONS,
+  PERMISSION_CATALOG,
+  PermissionId,
+  ALL_PERMISSIONS,
 } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,9 +18,18 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Lock, Shield, Users as UsersIcon } from "lucide-react";
 import { Navigate } from "react-router-dom";
+
+import {
+  useGetRoles,
+  useCreateRole,
+  useUpdateRole,
+  useDeleteRole,
+} from "@/services/api/roles-permissions";
+import { useGetUsers } from "@/services/api/users";
+import type { RoleRecord } from "@/lib/types/roles-permissions";
 
 interface RoleForm {
   name: string;
@@ -32,31 +41,58 @@ const emptyRole: RoleForm = { name: "", description: "", permissions: [] };
 
 export default function RolesPermissions() {
   const { hasPermission, bumpRolesVersion } = useAuth();
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [userCounts, setUserCounts] = useState<Record<string, number>>({});
-  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const { toast } = useToast();
+
+  const { data: rolesList = [], isLoading: isRolesLoading, mutate } = useGetRoles();
+  const { data: usersList = [] } = useGetUsers();
+
+  const [editingRole, setEditingRole] = useState<RoleRecord | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<RoleForm>(emptyRole);
   const [errors, setErrors] = useState<{ name?: string }>({});
-  const [confirmDelete, setConfirmDelete] = useState<Role | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<RoleRecord | null>(null);
 
-  useEffect(() => {
-    refresh();
-  }, []);
+  const { trigger: createRole, isMutating: isCreating } = useCreateRole({
+    onSuccess: () => {
+      mutate();
+      setDialogOpen(false);
+      bumpRolesVersion();
+      toast({ title: "Role created" });
+    }
+  });
+
+  const { trigger: updateRole, isMutating: isUpdating } = useUpdateRole(editingRole?.id, {
+    onSuccess: () => {
+      mutate();
+      setDialogOpen(false);
+      bumpRolesVersion();
+      toast({ title: "Role updated" });
+    }
+  });
+
+  const { trigger: deleteRole, isMutating: isDeleting } = useDeleteRole(confirmDelete?.id, {
+    onSuccess: () => {
+      mutate();
+      setConfirmDelete(null);
+      bumpRolesVersion();
+      toast({ title: "Role deleted" });
+    }
+  });
+
+  const userCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    usersList.forEach((u) => {
+      const roleId = u.role?.id;
+      if (roleId) {
+        counts[roleId] = (counts[roleId] ?? 0) + 1;
+      }
+    });
+    return counts;
+  }, [usersList]);
 
   if (!hasPermission("roles.manage")) {
     return <Navigate to="/" replace />;
   }
-
-  const refresh = () => {
-    setRoles(loadRoles());
-    const users = loadUsers();
-    const counts: Record<string, number> = {};
-    users.forEach((u) => {
-      counts[u.role_id] = (counts[u.role_id] ?? 0) + 1;
-    });
-    setUserCounts(counts);
-  };
 
   const openCreate = () => {
     setEditingRole(null);
@@ -65,12 +101,12 @@ export default function RolesPermissions() {
     setDialogOpen(true);
   };
 
-  const openEdit = (role: Role) => {
+  const openEdit = (role: RoleRecord) => {
     setEditingRole(role);
     setForm({
       name: role.name,
       description: role.description,
-      permissions: [...role.permissions],
+      permissions: [...role.permissions] as PermissionId[],
     });
     setErrors({});
     setDialogOpen(true);
@@ -95,47 +131,46 @@ export default function RolesPermissions() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
       setErrors({ name: "Role name is required" });
       return;
     }
-    const all = loadRoles();
+
+    const isSystem = editingRole?.isSystem || (editingRole as any)?.system;
+
     if (editingRole) {
-      // System roles: only description is editable; permissions locked
-      const idx = all.findIndex((r) => r.id === editingRole.id);
-      if (idx === -1) return;
-      if (editingRole.system) {
-        all[idx] = { ...all[idx], description: form.description.trim() };
-      } else {
-        all[idx] = {
-          ...all[idx],
+      try {
+        if (isSystem) {
+          // System roles: only description is editable
+          await updateRole({ description: form.description.trim() });
+        } else {
+          await updateRole({
+            name: form.name.trim(),
+            description: form.description.trim(),
+            permissions: form.permissions,
+          });
+        }
+      } catch (e) {}
+    } else {
+      try {
+        await createRole({
           name: form.name.trim(),
           description: form.description.trim(),
           permissions: form.permissions,
-        };
-      }
-      saveRoles(all);
-      toast({ title: "Role updated" });
-    } else {
-      const newRole: Role = {
-        id: generateRoleId(),
-        name: form.name.trim(),
-        description: form.description.trim(),
-        permissions: form.permissions,
-      };
-      saveRoles([...all, newRole]);
-      toast({ title: "Role created" });
+        });
+      } catch (e) {}
     }
-    setDialogOpen(false);
-    bumpRolesVersion();
-    refresh();
   };
 
-  const deleteRole = (role: Role) => {
-    if (role.system) return;
-    if ((userCounts[role.id] ?? 0) > 0) {
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    const isSystem = confirmDelete.isSystem || (confirmDelete as any).system;
+    if (isSystem) return;
+
+    const count = confirmDelete.userCount ?? userCounts[confirmDelete.id] ?? 0;
+    if (count > 0) {
       toast({
         title: "Can't delete role",
         description: "Reassign all users on this role first.",
@@ -144,14 +179,13 @@ export default function RolesPermissions() {
       setConfirmDelete(null);
       return;
     }
-    saveRoles(loadRoles().filter((r) => r.id !== role.id));
-    toast({ title: "Role deleted" });
-    bumpRolesVersion();
-    refresh();
-    setConfirmDelete(null);
+
+    try {
+      await deleteRole();
+    } catch (e) {}
   };
 
-  const isSystemEdit = editingRole?.system === true;
+  const isSystemEdit = editingRole?.isSystem === true || (editingRole as any)?.system === true;
 
   return (
     <div className="space-y-6">
@@ -168,56 +202,82 @@ export default function RolesPermissions() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {roles.map((role) => (
-          <Card key={role.id}>
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-primary shrink-0" />
-                    <h3 className="font-semibold truncate">{role.name}</h3>
-                    {role.system && (
-                      <Badge variant="outline" className="text-[10px] gap-1 px-1.5">
-                        <Lock className="w-3 h-3" /> System
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                    {role.description || "No description"}
-                  </p>
+        {isRolesLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 bg-muted rounded shrink-0" />
+                  <div className="h-5 w-32 bg-muted rounded" />
                 </div>
-              </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-full bg-muted rounded" />
+                  <div className="h-3 w-4/5 bg-muted rounded" />
+                </div>
+                <div className="h-4 w-24 bg-muted rounded" />
+                <div className="flex gap-2 pt-1">
+                  <div className="h-8 flex-1 bg-muted rounded" />
+                  <div className="h-8 w-10 bg-muted rounded" />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          rolesList.map((role) => {
+            const isSystem = role.isSystem || (role as any).system;
+            const count = role.userCount ?? userCounts[role.id] ?? 0;
+            return (
+              <Card key={role.id}>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-primary shrink-0" />
+                        <h3 className="font-semibold truncate">{role.name}</h3>
+                        {isSystem && (
+                          <Badge variant="outline" className="text-[10px] gap-1 px-1.5">
+                            <Lock className="w-3 h-3" /> System
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {role.description || "No description"}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <UsersIcon className="w-3 h-3" /> {userCounts[role.id] ?? 0} users
-                </span>
-                <span>·</span>
-                <span>
-                  {role.permissions.length === ALL_PERMISSIONS.length
-                    ? "All permissions"
-                    : `${role.permissions.length} permissions`}
-                </span>
-              </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <UsersIcon className="w-3 h-3" /> {count} users
+                    </span>
+                    <span>·</span>
+                    <span>
+                      {role.permissions?.length === ALL_PERMISSIONS.length
+                        ? "All permissions"
+                        : `${role.permissions?.length ?? 0} permissions`}
+                    </span>
+                  </div>
 
-              <div className="flex gap-2 pt-1">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(role)}>
-                  <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                  {role.system ? "View" : "Edit"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={role.system}
-                  onClick={() => setConfirmDelete(role)}
-                  title={role.system ? "System roles can't be deleted" : "Delete role"}
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  <div className="flex gap-2 pt-1">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(role)}>
+                      <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                      {isSystem ? "View" : "Edit"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={isSystem}
+                      onClick={() => setConfirmDelete(role)}
+                      title={isSystem ? "System roles can't be deleted" : "Delete role"}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -312,7 +372,9 @@ export default function RolesPermissions() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">{editingRole ? "Save changes" : "Create role"}</Button>
+              <Button type="submit" disabled={isCreating || isUpdating}>
+                {isCreating || isUpdating ? "Saving..." : editingRole ? "Save changes" : "Create role"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -330,10 +392,11 @@ export default function RolesPermissions() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => confirmDelete && deleteRole(confirmDelete)}
+              onClick={handleDelete}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

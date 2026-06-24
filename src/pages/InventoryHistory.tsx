@@ -42,9 +42,7 @@ import {
   RECONCILIATION_REASON_LABELS,
   RECONCILIATION_STATUS_LABELS,
 } from "@/data/snapshotTypes";
-import {
-  isoDate,
-} from "@/lib/inventory-snapshots-store";
+const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
 import { useGetInventoryItems } from "@/services/api/inventory/item";
 import {
   useGetInventorySnapshots,

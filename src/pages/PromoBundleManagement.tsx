@@ -12,9 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Search, Package, Trash2, Pencil, Gift, Tag, ArrowRightLeft, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { posProducts, type POSProduct } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
-import { type PromoBundle, type BundleItem, type BundlePricingType } from "@/data/promoBundles";
+import { type PromoBundle, type BundleItem, type BundlePricingType, type POSProduct } from "@/lib/types/promo-bundle";
+import { useGetItems } from "@/services/api/catalog/item";
 
 import { useGetOutlets } from "@/services/api/outlets";
 import {
@@ -308,6 +308,23 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
 
   const { data: outletsData } = useGetOutlets();
   const outlets = outletsData || [];
+
+  const { data: itemsResponse } = useGetItems();
+  const posProducts = useMemo<POSProduct[]>(() => {
+    if (!itemsResponse?.data) return [];
+    return itemsResponse.data.map(item => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      categoryId: item.category,
+      subcategoryId: item.subcategory,
+      image: item.images?.[0],
+      barcode: item.sku,
+      variants: [],
+      inStock: item.status === "active" || item.status === "good" || item.status === "available" || true,
+      outletId: item.outletId,
+    }));
+  }, [itemsResponse]);
 
   // Reset form when dialog opens
   const handleOpenChange = (isOpen: boolean) => {

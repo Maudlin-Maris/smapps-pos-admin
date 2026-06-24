@@ -20,7 +20,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Pencil, Trash2, Printer, QrCode, MapPin, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { buildLocationMenuUrl } from "@/data/outletLocations";
+function buildLocationMenuUrl(outletId: number | string, locationId: string): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return `${origin}/menu/${outletId}/${locationId}`;
+}
 import {
   useGetOutletLocations,
   useCreateOutletLocation,

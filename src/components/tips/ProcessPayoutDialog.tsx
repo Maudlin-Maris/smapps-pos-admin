@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/input-otp";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatNaira } from "@/lib/currency";
-import type { PayoutMethod } from "@/data/tipsTypes";
+import type { PayoutMethod } from "@/lib/types/tips";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, ShieldCheck, ArrowLeft, Loader2 } from "lucide-react";
 import { useSendTipsPayoutOtp, useConfirmTipsPayout } from "@/services/api/tips";

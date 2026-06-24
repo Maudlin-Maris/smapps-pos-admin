@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,19 +22,27 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Plus, Search, Pencil, Trash2, Store, Building2, Mail, Phone,
-  LayoutGrid, List, ChevronLeft, ChevronRight, MoreVertical,
-  KeyRound, ShieldOff, ShieldCheck, Copy, CheckCircle2, ShieldAlert,
+  LayoutGrid, List, KeyRound, ShieldOff, ShieldCheck, Copy, CheckCircle2, ShieldAlert,
+  MoreVertical,
 } from "lucide-react";
 import CashierFormDialog, {
   type CashierFormData,
 } from "@/components/cashiers/CashierFormDialog";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/use-pagination";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import {
+  useGetCashiers,
+  useCreateCashier,
+  useUpdateCashier,
+  useRegenerateCashierPin,
+  useDeleteCashier,
+} from "@/services/api/cashiers";
 
 type CashierStatus = "active" | "suspended";
 
 interface CashierRecord {
-  id: number;
+  id: string | number;
   data: CashierFormData;
   pin: string;
   status: CashierStatus;
@@ -86,17 +94,80 @@ interface PinRevealState {
 }
 
 export default function CashierManagement() {
-  const [cashiers, setCashiers] = useState<CashierRecord[]>(initialCashiers);
+  const { data: cashiersList = [], isLoading, mutate } = useGetCashiers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
   const [editingCashier, setEditingCashier] = useState<CashierRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CashierRecord | null>(null);
   const [regenTarget, setRegenTarget] = useState<CashierRecord | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<CashierRecord | null>(null);
+  const [reactivateTarget, setReactivateTarget] = useState<CashierRecord | null>(null);
   const [pinReveal, setPinReveal] = useState<PinRevealState | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | CashierStatus>("all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
+  const { trigger: createCashier, isMutating: isCreating } = useCreateCashier({
+    onSuccess: (result) => {
+      mutate();
+      setDialogOpen(false);
+      if (result) {
+        setPinReveal({ cashier: result as any, reason: "created" });
+      }
+    }
+  });
+
+  const { trigger: updateCashier, isMutating: isUpdating } = useUpdateCashier(editingCashier?.id, {
+    onSuccess: () => {
+      mutate();
+      setDialogOpen(false);
+    }
+  });
+
+  const { trigger: deleteCashier, isMutating: isDeleting } = useDeleteCashier(deleteTarget?.id, {
+    onSuccess: () => {
+      mutate();
+      setDeleteTarget(null);
+      toast.success("Cashier removed successfully");
+    }
+  });
+
+  const { trigger: regeneratePin, isMutating: isRegenerating } = useRegenerateCashierPin(regenTarget?.id, {
+    onSuccess: (result) => {
+      mutate();
+      setRegenTarget(null);
+      if (result) {
+        setPinReveal({ cashier: result as any, reason: "regenerated" });
+        toast.success(`New PIN emailed to ${result.data.email || "cashier"}`);
+      }
+    }
+  });
+
+  const { trigger: suspendCashier, isMutating: isSuspending } = useUpdateCashier(suspendTarget?.id, {
+    onSuccess: (result) => {
+      mutate();
+      setSuspendTarget(null);
+      if (result) {
+        toast.warning(`${result.data.firstName}'s POS access suspended. Active sessions terminated.`);
+      }
+    }
+  });
+
+  const { trigger: reactivateCashier, isMutating: isReactivating } = useUpdateCashier(reactivateTarget?.id, {
+    onSuccess: (result) => {
+      mutate();
+      setReactivateTarget(null);
+      if (result) {
+        toast.success(`${result.data.firstName}'s POS access reactivated`);
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (reactivateTarget) {
+      reactivateCashier({ status: "active" });
+    }
+  }, [reactivateTarget]);
 
   const handleAdd = () => {
     setDialogMode("add"); setEditingCashier(null); setDialogOpen(true);
@@ -105,57 +176,40 @@ export default function CashierManagement() {
     setDialogMode("edit"); setEditingCashier(cashier); setDialogOpen(true);
   };
 
-  const handleSubmit = (data: CashierFormData) => {
+  const handleSubmit = async (data: CashierFormData) => {
     if (dialogMode === "add") {
-      const pin = generatePin();
-      const record: CashierRecord = {
-        id: Date.now(),
-        data,
-        pin,
-        status: "active",
-        pinIssuedAt: new Date().toISOString(),
-      };
-      setCashiers((prev) => [...prev, record]);
-      setPinReveal({ cashier: record, reason: "created" });
-      toast.success(`Cashier added — PIN emailed to ${data.email || "cashier"}`);
+      try {
+        await createCashier(data);
+      } catch (e) {}
     } else if (editingCashier) {
-      setCashiers((prev) =>
-        prev.map((c) => (c.id === editingCashier.id ? { ...c, data } : c))
-      );
-      toast.success(`Cashier ${data.firstName} ${data.lastName} updated`);
+      try {
+        await updateCashier(data);
+        toast.success(`Cashier ${data.firstName} ${data.lastName} updated`);
+      } catch (e) {}
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
-    setCashiers((prev) => prev.filter((c) => c.id !== deleteTarget.id));
-    toast.success(`Cashier ${deleteTarget.data.firstName} ${deleteTarget.data.lastName} removed`);
-    setDeleteTarget(null);
+    try {
+      await deleteCashier();
+    } catch (e) {}
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
     if (!regenTarget) return;
-    const newPin = generatePin();
-    const updated: CashierRecord = {
-      ...regenTarget,
-      pin: newPin,
-      pinIssuedAt: new Date().toISOString(),
-    };
-    setCashiers((prev) => prev.map((c) => (c.id === regenTarget.id ? updated : c)));
-    setRegenTarget(null);
-    setPinReveal({ cashier: updated, reason: "regenerated" });
-    toast.success(`New PIN emailed to ${regenTarget.data.email || "cashier"}`);
+    try {
+      await regeneratePin();
+    } catch (e) {}
   };
 
   const toggleStatus = (cashier: CashierRecord) => {
     const next: CashierStatus = cashier.status === "active" ? "suspended" : "active";
-    setCashiers((prev) => prev.map((c) => (c.id === cashier.id ? { ...c, status: next } : c)));
     if (next === "suspended") {
-      toast.warning(`${cashier.data.firstName}'s POS access suspended. Active sessions terminated.`);
+      setSuspendTarget(cashier);
     } else {
-      toast.success(`${cashier.data.firstName}'s POS access reactivated`);
+      setReactivateTarget(cashier);
     }
-    setSuspendTarget(null);
   };
 
   const copyPin = async (pin: string) => {
@@ -167,7 +221,7 @@ export default function CashierManagement() {
     }
   };
 
-  const filtered = cashiers.filter((c) => {
+  const filtered = cashiersList.filter((c) => {
     const q = search.toLowerCase();
     const matchesSearch = !q ||
       c.data.firstName.toLowerCase().includes(q) ||
@@ -308,7 +362,36 @@ export default function CashierManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedItems.map((cashier) => (
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i} className="animate-pulse">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-muted shrink-0" />
+                          <div className="space-y-2">
+                            <div className="h-4 w-28 bg-muted rounded" />
+                            <div className="h-3 w-20 bg-muted rounded md:hidden" />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="space-y-1.5">
+                          <div className="h-3 w-32 bg-muted rounded" />
+                          <div className="h-3 w-24 bg-muted rounded" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-5 w-24 bg-muted rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-6 w-16 bg-muted rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-8 w-8 bg-muted rounded-md ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedItems.map((cashier) => (
                   <TableRow key={cashier.id} className={cashier.status === "suspended" ? "opacity-70" : ""}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -366,7 +449,7 @@ export default function CashierManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {paginatedItems.length === 0 && (
+                {!isLoading && paginatedItems.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-12">
                       <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
@@ -385,7 +468,28 @@ export default function CashierManagement() {
       {/* Grid View */}
       {viewMode === "grid" && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {paginatedItems.map((cashier) => (
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <Card key={i} className="p-4 space-y-4 animate-pulse">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-full bg-muted shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 w-24 bg-muted rounded" />
+                    <div className="h-3 w-16 bg-muted rounded" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-32 bg-muted rounded" />
+                  <div className="h-3 w-24 bg-muted rounded" />
+                </div>
+                <div className="h-px bg-muted" />
+                <div className="flex justify-between items-center">
+                  <div className="h-5 w-16 bg-muted rounded" />
+                  <div className="h-5 w-12 bg-muted rounded" />
+                </div>
+              </Card>
+            ))
+          ) : paginatedItems.map((cashier) => (
             <Card key={cashier.id} className={`p-4 hover:shadow-md transition-shadow ${cashier.status === "suspended" ? "opacity-70" : ""}`}>
               <div className="flex items-start justify-between mb-2.5">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -440,7 +544,7 @@ export default function CashierManagement() {
             </Card>
           ))}
 
-          {paginatedItems.length === 0 && (
+          {!isLoading && paginatedItems.length === 0 && (
             <div className="sm:col-span-2 lg:col-span-3 xl:col-span-4 text-center py-12">
               <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
               <p className="text-muted-foreground text-sm">
@@ -453,24 +557,15 @@ export default function CashierManagement() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>
-            Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, totalItems)} of {totalItems}
-          </span>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-8 w-8" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <Button key={p} variant={p === page ? "default" : "outline"} size="icon" className="h-8 w-8 text-xs" onClick={() => setPage(p)}>
-                {p}
-              </Button>
-            ))}
-            <Button variant="outline" size="icon" className="h-8 w-8" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        <ResuablePagination
+          currentPage={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={totalItems}
+          rowsPerPage={perPage}
+          onRowsPerPageChange={setPerPage}
+          rowsPerPageOptions={pageSizeOptions}
+        />
       )}
 
       <CashierFormDialog
@@ -561,7 +656,9 @@ export default function CashierManagement() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRegenerate}>Regenerate</AlertDialogAction>
+            <AlertDialogAction onClick={handleRegenerate} disabled={isRegenerating}>
+              {isRegenerating ? "Regenerating..." : "Regenerate"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -581,10 +678,11 @@ export default function CashierManagement() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => suspendTarget && toggleStatus(suspendTarget)}
+              onClick={() => suspendTarget && suspendCashier({ status: "suspended" })}
+              disabled={isSuspending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Suspend
+              {isSuspending ? "Suspending..." : "Suspend"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -607,9 +705,10 @@ export default function CashierManagement() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {isDeleting ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

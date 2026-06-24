@@ -3,8 +3,8 @@
 // (deltas applied on top of seed inventory) that simulates DB-side balances
 // without mutating the seed data file.
 
-import { defaultInventoryItems } from "@/data/inventoryItems";
-import { outlets } from "@/data/outlets";
+const defaultInventoryItems: any[] = [];
+const outlets: any[] = [];
 import {
   type StockTransferV2,
   type TransferItem,

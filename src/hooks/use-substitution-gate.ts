@@ -24,18 +24,31 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { defaultInventoryItems } from "@/data/inventoryItems";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import type { CompositeItem } from "@/components/inventory/CompositeItemForm";
 import { useCompositesStore } from "@/hooks/use-composites-store";
-import { useSubstituteGroups } from "@/data/substituteGroups";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
+import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
 import {
   resolveComponent,
   getViableSubstitutes,
   type ViableSubstitute,
 } from "@/lib/composite-substitution";
-import { logSubstitution } from "@/data/substitutionLogs";
-import type { CartSubstitutionRecord } from "@/data/posData";
+import type { CartSubstitutionRecord } from "@/lib/types/substitution-logs-response";
+
+const logSubstitution = (entry: any) => {
+  try {
+    const raw = localStorage.getItem("substitution_logs_v1");
+    const current = raw ? JSON.parse(raw) : [];
+    const full = {
+      ...entry,
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+    };
+    localStorage.setItem("substitution_logs_v1", JSON.stringify([...current, full].slice(-1000)));
+    window.dispatchEvent(new CustomEvent("substitution-logs-update"));
+  } catch {}
+};
 
 interface GateInput {
   productName: string;
@@ -73,8 +86,15 @@ export interface GateResult {
 
 export function useSubstitutionGate() {
   const [composites] = useCompositesStore([]);
-  const [groups] = useSubstituteGroups([]);
-  const inventory: InventoryItem[] = defaultInventoryItems;
+  const { data: subGroupsResponse } = useGetSubstituteGroups({ per_page: 1000 });
+  const groups = useMemo(() => subGroupsResponse?.data || [], [subGroupsResponse]);
+  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
+  const inventory = useMemo(() => {
+    return (inventoryResponse?.data || []).map((item) => ({
+      ...item,
+      stock: item.quantity,
+    })) as unknown as InventoryItem[];
+  }, [inventoryResponse]);
 
   const [pendingRequest, setPendingRequest] = useState<ConsolidatedApprovalRequest | null>(null);
   // Resolver receives a Map<originalItemId, picked-substitute> or null = reject all.

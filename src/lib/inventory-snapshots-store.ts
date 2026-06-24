@@ -15,8 +15,8 @@
 // Integrates safely with the existing transfers-store inventory ledger:
 // transferred-in / transferred-out values are sourced from `listMovements()`.
 
-import { defaultInventoryItems } from "@/data/inventoryItems";
-import { outlets } from "@/data/outlets";
+const defaultInventoryItems: any[] = [];
+const outlets: any[] = [];
 import {
   type DailyInventorySnapshot,
   type InventoryReconciliation,

@@ -96,3 +96,5 @@ export interface SendTipsPayoutOtpResponse {
 export interface ReverseTipsPayoutPayload {
   reason: string;
 }
+
+export type PayoutMethod = "cash" | "transfer" | "payroll";

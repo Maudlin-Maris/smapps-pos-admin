@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { defaultInventoryItems } from "@/data/inventoryItems";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
 import { upsertCompositeFromMenu, removeCompositesForMenu } from "@/hooks/use-composites-store";
 import type { CompositeItem, CompositeComponent } from "@/components/inventory/CompositeItemForm";
 
@@ -53,6 +53,22 @@ export default function MenuManagement() {
 
   const { data: outletsData, isLoading: isOutletsLoading } = useGetOutlets();
   const outlets = outletsData || [];
+
+  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
+  const inventoryItems = useMemo(() => {
+    if (!inventoryResponse?.data) return [];
+    return inventoryResponse.data.map((i: any) => ({
+      id: i.id,
+      name: i.name,
+      sku: i.sku,
+      stock: i.quantity ?? i.stock ?? 0,
+      costPrice: i.costPrice ?? 0,
+      categoryId: i.categoryId ?? "",
+      unitId: i.unitId ?? "",
+      outletId: i.outletId ?? "",
+      conversions: i.conversions || [],
+    }));
+  }, [inventoryResponse]);
 
   const {
     data: categoriesData,
@@ -397,7 +413,7 @@ export default function MenuManagement() {
         businessType={currentOutlet?.businessType}
         outlets={outlets}
         currentOutletId={isAllOutlets ? undefined : selectedOutletId}
-        inventoryItems={defaultInventoryItems}
+        inventoryItems={inventoryItems}
       />
 
       <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !isMutating && setDeleteConfirmOpen(open)}>

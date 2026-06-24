@@ -21,7 +21,7 @@ import {
 import { Plus, Search, Calendar, Clock, User, Phone, Pencil, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { outlets } from "@/data/outlets";
+import { useGetOutlets } from "@/services/api/outlets";
 
 interface Appointment {
   id: string;
@@ -75,6 +75,8 @@ export default function ServiceBookings() {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [form, setForm] = useState<Omit<Appointment, "id">>(emptyForm);
 
+  const { data: outletsResponse } = useGetOutlets();
+  const outlets = outletsResponse || [];
   const serviceOutlets = outlets.filter(o => ["salon", "barber"].includes(o.businessType));
   const isAllOutlets = selectedOutletId === "all";
 

@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { outlets } from "@/data/outlets";
 
 export interface FeeFormData {
   id?: number;
@@ -35,10 +34,11 @@ interface FeeFormDialogProps {
   hideOutletSelector?: boolean;
   /** Show service option field only for dine-in capable businesses */
   showServiceOption?: boolean;
+  outlets?: any[];
 }
 
 export default function FeeFormDialog({
-  open, onOpenChange, mode, initialData, onSubmit, hideOutletSelector = false, showServiceOption = false,
+  open, onOpenChange, mode, initialData, onSubmit, hideOutletSelector = false, showServiceOption = false, outlets = [],
 }: FeeFormDialogProps) {
   const form = useForm<FeeFormData>({
     defaultValues: {

@@ -11,7 +11,7 @@ export const createUrlWithParams = (
     | Record<string, string | number | boolean | undefined>
     | URLSearchParams,
 ) => {
-  if (!params) return pathname;
+  if (Object.keys(params ?? {}).length === 0) return pathname;
 
   const searchParams = new URLSearchParams(
     Object.fromEntries(

@@ -13,7 +13,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { initialDepartments, type Department } from "@/data/departments";
 import { type FeeFormData } from "@/components/fees/FeeFormDialog";
 import { toast } from "sonner";
 import { getBusinessType } from "@/data/businessTypes";

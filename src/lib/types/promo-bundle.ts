@@ -36,3 +36,68 @@ export interface ListPromoBundlesResponse {
 export interface UpdatePromoBundleStatusPayload {
   status: "active" | "inactive";
 }
+
+export interface SwapOption {
+  productId: string;
+  productName: string;
+  /** Optional: lock to a specific variant */
+  variantId?: string;
+  variantName?: string;
+}
+
+export interface BundleItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  /** If set, lock to this variant */
+  variantId?: string;
+  variantName?: string;
+  /** Admin-configured allowed swap alternatives for this slot */
+  swapOptions?: SwapOption[];
+  /** Whether swapping is enabled for this slot */
+  swappable?: boolean;
+}
+
+export type BundlePricingType = "fixed" | "percentage_discount";
+
+export interface PromoBundle {
+  id: string;
+  name: string;
+  description: string;
+  outletId: string;
+  items: BundleItem[];
+  /** "fixed" = sell at this price; "percentage_discount" = X% off combined item total */
+  pricingType: BundlePricingType;
+  /** For fixed: the bundle price. For percentage_discount: the % off (0-100) */
+  pricingValue: number;
+  /** Computed original price (sum of items) */
+  originalPrice: number;
+  /** Computed final price */
+  bundlePrice: number;
+  status: "active" | "inactive";
+  startDate?: Date;
+  endDate?: Date;
+  image?: string;
+}
+
+export interface POSVariant {
+  id: string;
+  name: string;
+  price: number;
+  sku?: string;
+}
+
+export interface POSProduct {
+  id: string;
+  name: string;
+  price: number;
+  categoryId: string;
+  subcategoryId?: string;
+  image?: string;
+  barcode?: string;
+  variants?: POSVariant[];
+  inStock: boolean;
+  outletId: string;
+}
+
+

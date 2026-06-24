@@ -8,7 +8,21 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { UserPlus, Pencil, Building2 } from "lucide-react";
 import { toast } from "sonner";
-import { initialDepartments } from "@/data/departments";
+const initialDepartments = [
+  { id: "dept-1", name: "Kitchen", outletId: 1 },
+  { id: "dept-2", name: "Bar", outletId: 1 },
+  { id: "dept-3", name: "Front of House", outletId: 1 },
+  { id: "dept-4", name: "Drive-Through", outletId: 1 },
+  { id: "dept-5", name: "Sales Floor", outletId: 2 },
+  { id: "dept-6", name: "Checkout", outletId: 2 },
+  { id: "dept-7", name: "Customer Service", outletId: 2 },
+  { id: "dept-8", name: "Stock Room", outletId: 2 },
+  { id: "dept-9", name: "Counter", outletId: 3 },
+  { id: "dept-10", name: "Lounge Service", outletId: 3 },
+  { id: "dept-11", name: "Dispensary", outletId: 4 },
+  { id: "dept-12", name: "Front Desk", outletId: 4 },
+  { id: "dept-13", name: "Warehouse", outletId: 4 },
+];
 
 const availableOutlets = [
   { id: "outlet-1", name: "Downtown Flagship", outletNumericId: 1 },

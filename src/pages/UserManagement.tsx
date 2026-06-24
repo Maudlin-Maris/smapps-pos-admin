@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
-import { useAuth, loadUsers, saveUsers, generatePassword, MockUser } from "@/contexts/AuthContext";
-import { loadRoles, Role } from "@/lib/rbac";
-import { outlets } from "@/data/outlets";
+import { useAuth } from "@/contexts/AuthContext";
+import { useGetOutlets } from "@/services/api/outlets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,9 +16,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, UserX, UserCheck, Copy, Search, ShieldAlert, Mail, Phone, Store, Building2, ShieldCheck } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Plus, Pencil, UserX, UserCheck, Search, ShieldAlert, Mail, Phone, Store, Building2, ShieldCheck } from "lucide-react";
 import { Navigate } from "react-router-dom";
+
+import {
+  useGetUsers,
+  useCreateUser,
+  useUpdateUser,
+  useDeactivateUser,
+} from "@/services/api/users";
+import { useGetRoles } from "@/services/api/roles-permissions";
+import type { UserRecord } from "@/lib/types/users";
 
 interface FormState {
   first_name: string;
@@ -41,39 +49,70 @@ const emptyForm: FormState = {
   status: "active",
 };
 
-function deriveDisplayName(first: string, last: string): string {
-  return `${first.trim()} ${last.trim()}`.trim();
-}
-
 export default function UserManagement() {
   const { user: currentUser, hasPermission } = useAuth();
-  const [users, setUsers] = useState<MockUser[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const { toast } = useToast();
+
+  const { data: usersList = [], isLoading: isUsersLoading, mutate } = useGetUsers();
+  const { data: rolesList = [] } = useGetRoles();
+  const { data: outletsResponse } = useGetOutlets();
+  const outlets = outletsResponse || [];
+
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
-  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
-  const [generatedFor, setGeneratedFor] = useState<string>("");
-  const [confirmDeactivate, setConfirmDeactivate] = useState<MockUser | null>(null);
+  const [confirmDeactivate, setConfirmDeactivate] = useState<UserRecord | null>(null);
+  const [reactivateTarget, setReactivateTarget] = useState<UserRecord | null>(null);
+
+  const { trigger: createUser, isMutating: isCreating } = useCreateUser({
+    onSuccess: () => {
+      mutate();
+      setDialogOpen(false);
+      toast({ title: "User created", description: "Invitation email has been sent to the user." });
+    }
+  });
+
+  const { trigger: updateUser, isMutating: isUpdating } = useUpdateUser(editingId, {
+    onSuccess: () => {
+      mutate();
+      setDialogOpen(false);
+      toast({ title: "User updated" });
+    }
+  });
+
+  const { trigger: deactivateUser, isMutating: isDeactivating } = useDeactivateUser(confirmDeactivate?.id, {
+    onSuccess: (result) => {
+      mutate();
+      setConfirmDeactivate(null);
+      toast({ title: result.isActive ? "User reactivated" : "User deactivated" });
+    }
+  });
+
+  const { trigger: reactivateUser } = useUpdateUser(reactivateTarget?.id, {
+    onSuccess: () => {
+      mutate();
+      setReactivateTarget(null);
+      toast({ title: "User reactivated" });
+    }
+  });
 
   useEffect(() => {
-    setUsers(loadUsers());
-    setRoles(loadRoles());
-  }, []);
+    if (reactivateTarget) {
+      reactivateUser({ status: "active" });
+    }
+  }, [reactivateTarget]);
 
   if (!hasPermission("users.manage")) {
     return <Navigate to="/" replace />;
   }
 
-  const refresh = () => setUsers(loadUsers());
-
-  const filtered = users.filter((u) => {
+  const filtered = usersList.filter((u) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
-      u.display_name.toLowerCase().includes(q) ||
+      (u.displayName || `${u.firstName} ${u.lastName}`).toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q)
     );
   });
@@ -85,24 +124,16 @@ export default function UserManagement() {
     setDialogOpen(true);
   };
 
-  const openEdit = (u: MockUser) => {
+  const openEdit = (u: UserRecord) => {
     setEditingId(u.id);
-    // Backward-compat: if first_name/last_name are empty, try to split display_name
-    let first = u.first_name;
-    let last = u.last_name;
-    if (!first && !last && u.display_name) {
-      const parts = u.display_name.trim().split(/\s+/);
-      first = parts[0] ?? "";
-      last = parts.slice(1).join(" ") ?? "";
-    }
     setForm({
-      first_name: first,
-      last_name: last,
+      first_name: u.firstName || "",
+      last_name: u.lastName || "",
       email: u.email,
-      phone: u.phone,
-      role_id: u.role_id,
-      outlet_ids: u.outlet_ids,
-      status: u.status,
+      phone: u.phone || "",
+      role_id: u.role?.id || "",
+      outlet_ids: u.outlets || [],
+      status: u.isActive ? "active" : "inactive",
     });
     setErrors({});
     setDialogOpen(true);
@@ -115,8 +146,8 @@ export default function UserManagement() {
     if (!form.email.trim()) e.email = "Email is required";
     else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email";
     if (!form.role_id) e.role_id = "Role is required";
-    // unique email
-    const dup = users.find(
+
+    const dup = usersList.find(
       (u) => u.email.toLowerCase() === form.email.trim().toLowerCase() && u.id !== editingId,
     );
     if (dup) e.email = "Another user already uses this email";
@@ -124,77 +155,48 @@ export default function UserManagement() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (ev: React.FormEvent) => {
+  const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
-    const displayName = deriveDisplayName(form.first_name, form.last_name);
-    const all = loadUsers();
+
     if (editingId) {
-      const idx = all.findIndex((u) => u.id === editingId);
-      if (idx === -1) return;
-      all[idx] = {
-        ...all[idx],
-        display_name: displayName,
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
-        role_id: form.role_id,
-        outlet_ids: form.outlet_ids,
-        status: form.status,
-        role: form.role_id === "role_admin" ? "admin" : form.role_id === "role_manager" ? "manager" : "staff",
-      };
-      saveUsers(all);
-      toast({ title: "User updated" });
-      setDialogOpen(false);
-      refresh();
+      try {
+        await updateUser({
+          first_name: form.first_name.trim(),
+          last_name: form.last_name.trim(),
+          phone: form.phone.trim(),
+          status: form.status,
+          role_id: form.role_id,
+          outlets: form.outlet_ids,
+        });
+      } catch (e) {}
     } else {
-      const password = generatePassword(12);
-      const newUser: MockUser = {
-        id: `u_${Math.random().toString(36).slice(2, 10)}`,
-        email: form.email.trim(),
-        password,
-        display_name: displayName,
-        first_name: form.first_name.trim(),
-        last_name: form.last_name.trim(),
-        phone: form.phone.trim(),
-        avatar_url: null,
-        role: form.role_id === "role_admin" ? "admin" : form.role_id === "role_manager" ? "manager" : "staff",
-        role_id: form.role_id,
-        outlet_ids: form.outlet_ids,
-        status: form.status,
-        created_at: new Date().toISOString(),
-      };
-      saveUsers([...all, newUser]);
-      setDialogOpen(false);
-      setGeneratedPassword(password);
-      setGeneratedFor(newUser.email);
-      refresh();
-      toast({ title: "User created", description: `Temporary password emailed to ${newUser.email}` });
+      try {
+        await createUser({
+          email: form.email.trim(),
+          first_name: form.first_name.trim(),
+          last_name: form.last_name.trim(),
+          phone: form.phone.trim(),
+          role_id: form.role_id,
+          status: form.status,
+          outlets: form.outlet_ids,
+        });
+      } catch (e) {}
     }
   };
 
-  const toggleStatus = (u: MockUser) => {
-    const all = loadUsers();
-    const idx = all.findIndex((x) => x.id === u.id);
-    if (idx === -1) return;
-    all[idx] = { ...all[idx], status: u.status === "active" ? "inactive" : "active" };
-    saveUsers(all);
-    refresh();
-    toast({ title: u.status === "active" ? "User deactivated" : "User reactivated" });
-    setConfirmDeactivate(null);
+  const toggleStatus = (u: UserRecord) => {
+    if (u.isActive) {
+      setConfirmDeactivate(u);
+    } else {
+      setReactivateTarget(u);
+    }
   };
 
-  const copyPassword = async () => {
-    if (!generatedPassword) return;
-    await navigator.clipboard.writeText(generatedPassword);
-    toast({ title: "Password copied to clipboard" });
-  };
-
-  const roleName = (id: string) => roles.find((r) => r.id === id)?.name ?? "—";
+  const roleName = (id: string) => rolesList.find((r) => r.id === id)?.name ?? "—";
 
   const outletLabel = (ids: string[]) => {
-    if (!ids.length) return "All outlets";
+    if (!ids || !ids.length) return "All outlets";
     if (ids.length === 1) return outlets.find((o) => o.id === ids[0])?.name ?? "—";
     return `${ids.length} outlets`;
   };
@@ -240,120 +242,144 @@ export default function UserManagement() {
 
       {/* User Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((u) => {
-          const isSelf = currentUser?.id === u.id;
-          const assignedOutlets = u.outlet_ids.length
-            ? outlets.filter((o) => u.outlet_ids.includes(o.id))
-            : [];
-          return (
-            <Card key={u.id} className="p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
-                    {initials(u.display_name)}
-                  </div>
-                  <div>
-                    <h3 className="font-heading font-semibold text-sm">
-                      {u.display_name}
-                      {isSelf && (
-                        <span className="ml-2 text-xs font-normal text-muted-foreground">(you)</span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      {u.outlet_ids.length === 0
-                        ? "All outlets"
-                        : `${u.outlet_ids.length} outlet${u.outlet_ids.length !== 1 ? "s" : ""}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    title="Edit user"
-                    onClick={() => openEdit(u)}
-                  >
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={isSelf}
-                    title={
-                      isSelf
-                        ? "You can't deactivate yourself"
-                        : u.status === "active"
-                        ? "Deactivate user"
-                        : "Reactivate user"
-                    }
-                    onClick={() => setConfirmDeactivate(u)}
-                  >
-                    {u.status === "active" ? (
-                      <UserX className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                    ) : (
-                      <UserCheck className="h-4 w-4 text-success" />
-                    )}
-                  </Button>
+        {isUsersLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="p-5 space-y-4 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-muted shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-28 bg-muted rounded" />
+                  <div className="h-3 w-16 bg-muted rounded" />
                 </div>
               </div>
-
-              <div className="space-y-1.5 text-sm mb-3">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate text-xs">{u.email}</span>
-                </div>
-                {u.phone && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate text-xs">{u.phone}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-                  <span className="text-xs">{roleName(u.role_id)}</span>
-                </div>
+              <div className="space-y-2">
+                <div className="h-3 w-36 bg-muted rounded" />
+                <div className="h-3 w-24 bg-muted rounded" />
               </div>
-
-              <Separator className="mb-3" />
-
-              <div className="flex items-start justify-between gap-2">
-                <div className="space-y-2 flex-1 min-w-0">
-                  {assignedOutlets.length === 0 ? (
-                    <div className="flex items-center gap-2 text-xs">
-                      <Store className="h-3.5 w-3.5 text-accent shrink-0" />
-                      <span className="font-medium">All outlets</span>
-                    </div>
-                  ) : (
-                    assignedOutlets.slice(0, 3).map((o) => (
-                      <div key={o.id} className="flex items-center gap-2 text-xs">
-                        <Store className="h-3.5 w-3.5 text-accent shrink-0" />
-                        <span className="font-medium truncate">{o.name}</span>
-                      </div>
-                    ))
-                  )}
-                  {assignedOutlets.length > 3 && (
-                    <p className="text-[10px] text-muted-foreground pl-5">
-                      +{assignedOutlets.length - 3} more
-                    </p>
-                  )}
-                </div>
-                {u.status === "active" ? (
-                  <Badge className="bg-success/15 text-success hover:bg-success/15 border-success/20 shrink-0">
-                    Active
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-muted-foreground shrink-0">
-                    Inactive
-                  </Badge>
-                )}
+              <div className="h-px bg-muted" />
+              <div className="flex justify-between items-center">
+                <div className="h-5 w-20 bg-muted rounded" />
+                <div className="h-5 w-12 bg-muted rounded" />
               </div>
             </Card>
-          );
-        })}
+          ))
+        ) : (
+          filtered.map((u) => {
+            const isSelf = currentUser?.id === u.id;
+            const assignedOutlets = u.outlets && u.outlets.length
+              ? outlets.filter((o) => u.outlets.includes(o.id))
+              : [];
+            const displayName = u.displayName || `${u.firstName} ${u.lastName}`;
+            return (
+              <Card key={u.id} className="p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold shrink-0">
+                      {initials(displayName)}
+                    </div>
+                    <div>
+                      <h3 className="font-heading font-semibold text-sm">
+                        {displayName}
+                        {isSelf && (
+                          <span className="ml-2 text-xs font-normal text-muted-foreground">(you)</span>
+                        )}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {!u.outlets || u.outlets.length === 0
+                          ? "All outlets"
+                          : `${u.outlets.length} outlet${u.outlets.length !== 1 ? "s" : ""}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="Edit user"
+                      onClick={() => openEdit(u)}
+                    >
+                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={isSelf}
+                      title={
+                        isSelf
+                          ? "You can't deactivate yourself"
+                          : u.isActive
+                          ? "Deactivate user"
+                          : "Reactivate user"
+                      }
+                      onClick={() => toggleStatus(u)}
+                    >
+                      {u.isActive ? (
+                        <UserX className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                      ) : (
+                        <UserCheck className="h-4 w-4 text-success" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
 
-        {filtered.length === 0 && (
+                <div className="space-y-1.5 text-sm mb-3">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate text-xs">{u.email}</span>
+                  </div>
+                  {u.phone && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate text-xs">{u.phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                    <span className="text-xs">{u.role?.name || roleName(u.role?.id ?? "")}</span>
+                  </div>
+                </div>
+
+                <Separator className="mb-3" />
+
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-2 flex-1 min-w-0">
+                    {!u.outlets || u.outlets.length === 0 ? (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Store className="h-3.5 w-3.5 text-accent shrink-0" />
+                        <span className="font-medium">All outlets</span>
+                      </div>
+                    ) : (
+                      assignedOutlets.slice(0, 3).map((o) => (
+                        <div key={o.id} className="flex items-center gap-2 text-xs">
+                          <Store className="h-3.5 w-3.5 text-accent shrink-0" />
+                          <span className="font-medium truncate">{o.name}</span>
+                        </div>
+                      ))
+                    )}
+                    {assignedOutlets.length > 3 && (
+                      <p className="text-[10px] text-muted-foreground pl-5">
+                        +{assignedOutlets.length - 3} more
+                      </p>
+                    )}
+                  </div>
+                  {u.isActive ? (
+                    <Badge className="bg-success/15 text-success hover:bg-success/15 border-success/20 shrink-0">
+                      Active
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground shrink-0">
+                      Inactive
+                    </Badge>
+                  )}
+                </div>
+              </Card>
+            );
+          })
+        )}
+
+        {!isUsersLoading && filtered.length === 0 && (
           <div className="sm:col-span-2 lg:col-span-3 text-center py-12">
             <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
             <p className="text-muted-foreground text-sm">
@@ -371,7 +397,7 @@ export default function UserManagement() {
             <DialogDescription>
               {editingId
                 ? "Update this user's details, role or outlet access."
-                : "A temporary password will be generated when you save."}
+                : "An invitation email will be sent to the user when you save."}
             </DialogDescription>
           </DialogHeader>
 
@@ -410,6 +436,7 @@ export default function UserManagement() {
                   id="email"
                   type="email"
                   value={form.email}
+                  disabled={!!editingId}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   aria-invalid={!!errors.email}
                 />
@@ -437,7 +464,7 @@ export default function UserManagement() {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((r) => (
+                    {rolesList.map((r) => (
                       <SelectItem key={r.id} value={r.id}>
                         {r.name}
                       </SelectItem>
@@ -487,37 +514,15 @@ export default function UserManagement() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">{editingId ? "Save changes" : "Create user"}</Button>
+              <Button type="submit" disabled={isCreating || isUpdating}>
+                {isCreating || isUpdating
+                  ? "Saving..."
+                  : editingId
+                  ? "Save changes"
+                  : "Create user"}
+              </Button>
             </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Generated password reveal */}
-      <Dialog open={!!generatedPassword} onOpenChange={(o) => !o && setGeneratedPassword(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Temporary password</DialogTitle>
-            <DialogDescription>
-              We've emailed this temporary password to{" "}
-              <span className="font-medium text-foreground">{generatedFor}</span>. You can also copy it below — it won't be shown again.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3 font-mono text-sm">
-            <span className="flex-1 break-all">{generatedPassword}</span>
-            <Button type="button" size="sm" variant="ghost" onClick={copyPassword}>
-              <Copy className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs">
-            <ShieldAlert className="w-4 h-4 text-warning shrink-0 mt-0.5" />
-            <span>
-              The user should change this password on first sign-in via Profile → Change password.
-            </span>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setGeneratedPassword(null)}>Done</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -526,25 +531,20 @@ export default function UserManagement() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmDeactivate?.status === "active" ? "Deactivate user?" : "Reactivate user?"}
+              Deactivate user?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmDeactivate?.status === "active"
-                ? `${confirmDeactivate?.display_name} will no longer be able to sign in to the admin portal.`
-                : `${confirmDeactivate?.display_name} will be able to sign in again.`}
+              {confirmDeactivate?.displayName || `${confirmDeactivate?.firstName} ${confirmDeactivate?.lastName}`} will no longer be able to sign in to the admin portal.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmDeactivate && toggleStatus(confirmDeactivate)}
-              className={
-                confirmDeactivate?.status === "active"
-                  ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  : ""
-              }
+              disabled={isDeactivating}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {confirmDeactivate?.status === "active" ? "Deactivate" : "Reactivate"}
+              {isDeactivating ? "Deactivating..." : "Deactivate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

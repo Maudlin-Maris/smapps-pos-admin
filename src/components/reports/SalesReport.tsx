@@ -4,7 +4,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SalesRecord } from "@/hooks/use-financial-data";
-import { outlets } from "@/data/outlets";
 import {
   Select,
   SelectContent,
@@ -27,6 +26,7 @@ interface SalesReportProps {
   dateRange: { from: Date; to: Date };
   /** When provided, controls cashier filter externally and hides the internal selector. */
   cashierFilter?: string;
+  outlets?: any[];
 }
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
@@ -37,7 +37,7 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
  * Sales Summary — high-level overview only.
  * Item-level and category-level breakdowns live in their own tabs (SalesByItem, SalesByCategory).
  */
-export default function SalesReport({ sales, selectedOutlets, dateRange, cashierFilter }: SalesReportProps) {
+export default function SalesReport({ sales, selectedOutlets, dateRange, cashierFilter, outlets = [] }: SalesReportProps) {
   const [internalCashier, setInternalCashier] = useState<string>("all");
   const isControlled = cashierFilter !== undefined;
   const selectedCashier = isControlled ? (cashierFilter as string) : internalCashier;
