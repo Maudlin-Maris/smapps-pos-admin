@@ -1,36 +1,20 @@
-/**
- * Real API Orders Service — stub endpoints.
- */
+import type { SWRConfiguration } from "swr";
+import { useApi } from "./api-hooks";
+import { createUrlWithParams } from "@/lib/utils";
+import type { POSOrder } from "@/data/posData";
+import { useAuth } from "@/contexts/AuthContext";
 
-import { apiRequest } from "../http";
-import { ok, err } from "../types";
-import type { OrdersService, OrderRecord } from "../mock/orders.types";
-
-export const realOrdersService: OrdersService = {
-  async list(outletId?) {
-    try {
-      const q = outletId ? `?outletId=${outletId}` : "";
-      return ok(await apiRequest<OrderRecord[]>(`/api/orders${q}`));
-    } catch (e: any) { return err(e?.message || "Failed to load orders"); }
+export const useGetOrders = (
+  params?: {
+    outletId?: string;
+    search?: string;
+    paymentFilter?: string;
   },
-  async getById(id) {
-    try {
-      return ok(await apiRequest<OrderRecord>(`/api/orders/${id}`));
-    } catch (e: any) { return err(e?.message || "Order not found"); }
-  },
-  async create(body) {
-    try {
-      return ok(await apiRequest<OrderRecord>("/api/orders", { method: "POST", body }));
-    } catch (e: any) { return err(e?.message || "Failed to create order"); }
-  },
-  async update(id, body) {
-    try {
-      return ok(await apiRequest<OrderRecord>(`/api/orders/${id}`, { method: "PATCH", body }));
-    } catch (e: any) { return err(e?.message || "Failed to update order"); }
-  },
-  async addPayment(orderId, payment) {
-    try {
-      return ok(await apiRequest<OrderRecord>(`/api/orders/${orderId}/payments`, { method: "POST", body: payment }));
-    } catch (e: any) { return err(e?.message || "Failed to add payment"); }
-  },
+  options?: SWRConfiguration,
+) => {
+  const { isLoggedIn } = useAuth();
+  const url = isLoggedIn
+    ? createUrlWithParams("/api/orders", params)
+    : null;
+  return useApi<POSOrder[]>(url, options);
 };

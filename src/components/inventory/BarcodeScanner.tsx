@@ -109,6 +109,7 @@ export default function BarcodeScanner({ value, onChange, placeholder = "Scan or
           <Input
             ref={inputRef}
             value={value}
+            data-testid="sku-input"
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             className="pl-9"

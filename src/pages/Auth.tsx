@@ -153,6 +153,7 @@ export default function Auth() {
                 type="email"
                 required
                 value={email}
+                data-testid="email-input"
                 onChange={(e) => {
                   setEmail(e.target.value);
                   if (formError) setFormError(null);
@@ -190,6 +191,7 @@ export default function Auth() {
                   type={showPassword ? "text" : "password"}
                   required
                   value={password}
+                  data-testid="password-input"
                   onChange={(e) => {
                     setPassword(e.target.value);
                     if (formError) setFormError(null);
@@ -234,6 +236,7 @@ export default function Auth() {
 
             <Button
               type="submit"
+              data-testid="signin-button"
               disabled={submitting || !email || !password}
               className={cn(
                 "w-full h-11 rounded-[10px] font-semibold text-[15px]",

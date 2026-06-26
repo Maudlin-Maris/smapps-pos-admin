@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -41,6 +41,7 @@ import {
   useCreateMeasuringUnit,
   useUpdateMeasuringUnit,
   useDeleteMeasuringUnit,
+  useGetMeasuringUnits,
 } from "@/services/api/inventory/unit";
 
 interface Props {
@@ -53,6 +54,24 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
   const [editing, setEditing] = useState<MeasuringUnit | null>(null);
   const [form, setForm] = useState({ name: "", abbreviation: "" });
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: unitsRes } = useGetMeasuringUnits({
+    search: debouncedSearch.trim() || undefined,
+    page: 1,
+    per_page: 100,
+  });
+
+  const apiUnits = useMemo<MeasuringUnit[]>(() => {
+    return unitsRes?.data || [];
+  }, [unitsRes]);
 
   const createUnitMutation = useCreateMeasuringUnit();
   const updateUnitMutation = useUpdateMeasuringUnit();
@@ -109,9 +128,7 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
     }
   };
 
-  const filtered = units.filter((u) =>
-    u.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = apiUnits;
 
   return (
     <div className="space-y-4">

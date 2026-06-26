@@ -143,4 +143,9 @@ export const API_ENDPOINTS = {
   // Terminals
   TERMINALS: "/api/admin/terminals",
   SINGLE_TERMINAL: (id: string | number) => `/api/admin/terminals/${id}`,
+
+  // Service Bookings
+  SERVICE_BOOKINGS: "/api/admin/service-bookings",
+  SINGLE_SERVICE_BOOKING: (id: string | number) => `/api/admin/service-bookings/${id}`,
 } as const;
+

@@ -40,4 +40,5 @@ export interface UpdateCashierPayload {
 export interface CashierQueryParams {
   search?: string;
   status?: "active" | "suspended" | "all";
+  [key: string]: string | undefined;
 }

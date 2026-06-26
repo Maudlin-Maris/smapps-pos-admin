@@ -203,6 +203,9 @@ export const useGetInventorySnapshots = (
     outletId?: string;
     page?: number;
     per_page?: number;
+    search?: string;
+    categoryId?: string;
+    varianceOnly?: boolean;
   },
   options?: SWRConfiguration,
 ) => {

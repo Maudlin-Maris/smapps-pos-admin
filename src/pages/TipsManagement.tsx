@@ -58,7 +58,7 @@ export default function TipsManagement() {
   } | null>(null);
 
   const { data: outletsRes, isLoading: isLoadingOutlets } = useGetOutlets();
-  const outlets = outletsRes?.data || [];
+  const outlets = outletsRes || [];
 
   const { data: tipsData, isLoading: isLoadingTips, mutate: mutateTips } = useGetTips({
     outletId: outletId === "all" ? undefined : outletId,

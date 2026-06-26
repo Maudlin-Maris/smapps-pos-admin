@@ -32,13 +32,25 @@ export default function TerminalManagement() {
   const { hasPermission } = useAuth();
   const { toast } = useToast();
 
-  const { data: terminalsList = [], isLoading: isTerminalsLoading, mutate } = useGetTerminals();
-  const { data: outletsResponse } = useGetOutlets();
-  const posOutlets = outletsResponse || [];
-
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TerminalRecord | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: terminalsList = [], isLoading: isTerminalsLoading, mutate } = useGetTerminals({
+    search: debouncedSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+  const { data: outletsResponse } = useGetOutlets();
+  const posOutlets = outletsResponse || [];
 
   // Register form
   const [formName, setFormName] = useState("");
@@ -70,14 +82,7 @@ export default function TerminalManagement() {
     return <Navigate to="/" replace />;
   }
 
-  const filtered = terminalsList.filter((t) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      t.name.toLowerCase().includes(q) ||
-      (t.deviceFingerprint || "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = terminalsList;
 
   const openRegister = () => {
     setFormName("");

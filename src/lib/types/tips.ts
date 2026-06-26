@@ -33,6 +33,7 @@ export interface TipsQueryParams {
   outletId?: string;
   page?: number;
   per_page?: number;
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface TipsResponse {
@@ -59,6 +60,7 @@ export interface TipsPayoutsQueryParams {
   status?: string;
   page?: number;
   per_page?: number;
+  [key: string]: string | number | boolean | undefined;
 }
 
 export interface TipsPayoutsResponse {
@@ -95,6 +97,11 @@ export interface SendTipsPayoutOtpResponse {
 
 export interface ReverseTipsPayoutPayload {
   reason: string;
+}
+
+export interface ConfirmTipsPayoutResponse {
+  message?: string;
+  payout?: TipsPayoutRecord;
 }
 
 export type PayoutMethod = "cash" | "transfer" | "payroll";

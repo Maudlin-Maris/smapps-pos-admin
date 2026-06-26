@@ -6,15 +6,46 @@ export interface PromoBundleItem {
   name?: string;
 }
 
-export interface ApiPromoBundle {
-  id: string;
-  outletId: string;
-  name: string;
-  description?: string;
-  price: number;
-  status: "active" | "inactive";
-  items: PromoBundleItem[];
+export interface APIPromoBundle {
+  id:                string;
+  name:              string;
+  description:       string;
+  outletId:          string;
+  pricingType:       string;
+  pricingValue:      number;
+  originalPrice:     number;
+  bundlePrice:       number;
+  savingsPercentage: number;
+  status:            string;
+  startDate:         null;
+  endDate:           null;
+  image:             null;
+  imageUrl:          null;
+  items:             Item[];
 }
+
+export interface Item {
+  id:          string;
+  productId:   string;
+  productName: string;
+  variantId:   null | string;
+  variantName: null | string;
+  quantity:    number;
+  slotPrice:   number;
+  swappable:   boolean;
+  sortOrder:   number;
+  swapOptions: APISwapOption[];
+}
+
+export interface APISwapOption {
+  id:          string;
+  productId:   string;
+  productName: string;
+  variantId:   null | string;
+  variantName: null | string;
+  upcharge:    number;
+}
+
 
 export interface CreatePromoBundlePayload {
   outletId: string;
@@ -99,5 +130,8 @@ export interface POSProduct {
   inStock: boolean;
   outletId: string;
 }
+
+export type ApiPromoBundle = APIPromoBundle;
+
 
 

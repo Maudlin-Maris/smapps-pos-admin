@@ -1,4 +1,4 @@
-import { Pagination } from "./paginated-response";
+import { Meta } from "./paginated-response";
 
 export interface ApiModifier {
   id: string;
@@ -21,7 +21,7 @@ export interface ApiModifierGroup {
 
 export interface ModifierGroupsListResponse {
   data: ApiModifierGroup[];
-  meta: Pagination;
+  meta: Meta;
 }
 
 export interface CreateModifierGroupPayload {

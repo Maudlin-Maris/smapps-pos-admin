@@ -21,6 +21,7 @@ export const useGetTransfers = (
     page?: number;
     per_page?: number;
     status?: TransferStatus;
+    search?: string;
   },
   options?: SWRConfiguration,
 ) => {

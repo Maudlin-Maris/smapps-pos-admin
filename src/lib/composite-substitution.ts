@@ -17,7 +17,18 @@
 
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import type { CompositeComponent } from "@/components/inventory/CompositeItemForm";
-import type { SubstituteGroup } from "@/data/substituteGroups";
+
+export interface SubstituteGroupItem {
+  inventoryItemId: string;
+  priority: number;
+  conversionRatio: number;
+}
+
+export interface SubstituteGroup {
+  id: string;
+  name: string;
+  items: SubstituteGroupItem[];
+}
 
 export type SubstituteMode = "strict" | "auto" | "manual_approval";
 

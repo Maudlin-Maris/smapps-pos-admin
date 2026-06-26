@@ -18,8 +18,17 @@ import type { UpdateItemResponse } from "@/lib/types/update-item-response";
 import type { CopyItemsToOutletPayload, CloneItemPayload } from "@/lib/types/catalog-item-ops";
 import type { ImportCatalogPayload, ImportCatalogResponse, ImportCatalogPreviewResponse } from "@/lib/types/catalog-import";
 
+
 export const useGetItems = (
-  params?: { outletId?: string },
+  params?: {
+    outletId?: string,
+    categoryId?: string
+    itemType?: string
+    status?: string
+    search?: string
+    page?: number
+    per_page?: number
+  },
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();

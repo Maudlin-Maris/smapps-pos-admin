@@ -129,10 +129,10 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
         setParseErrors(res.errors || []);
         const items = (res.items || []).map((item) => ({
           ...item,
-          id: item.id || crypto.randomUUID(),
+          id: (item as any).id || crypto.randomUUID(),
           variants: (item.variants || []).map((v) => ({
             ...v,
-            id: v.id || crypto.randomUUID(),
+            id: (v as any).id || crypto.randomUUID(),
           })),
         })) as unknown as MenuItem[];
         setParsedItems(items);

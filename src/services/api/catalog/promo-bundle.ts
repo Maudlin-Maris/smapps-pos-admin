@@ -16,7 +16,7 @@ import type {
 } from "@/lib/types/promo-bundle";
 
 export const useGetPromoBundles = (
-  params?: { outletId?: string },
+  params?: { outletId?: string; search?: string },
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();

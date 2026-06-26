@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatNaira } from "@/lib/currency";
+import { useGetCustomers } from "@/services/api/customers";
 import {
   loyaltyCustomers, loyaltyRewards, tierConfig, calculatePointsEarned,
   type LoyaltyCustomer, type LoyaltyReward, type LoyaltyRedemption,
@@ -27,6 +28,7 @@ type PanelView = "search" | "profile" | "rewards" | "register";
 export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, onClearRedemption, currentRedemption }: Props) {
   const [view, setView] = useState<PanelView>(currentRedemption ? "profile" : "search");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<LoyaltyCustomer | null>(
     currentRedemption ? loyaltyCustomers.find(c => c.id === currentRedemption.customerId) || null : null
   );
@@ -37,15 +39,37 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
 
-  const filteredCustomers = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    return loyaltyCustomers.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.phone.includes(q) ||
-      c.email.toLowerCase().includes(q)
-    );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const { data: customersRes } = useGetCustomers({
+    search: debouncedSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
+  const filteredCustomers = useMemo<LoyaltyCustomer[]>(() => {
+    if (!debouncedSearch.trim()) return [];
+    if (!customersRes?.data) return [];
+    return (customersRes.data as any[]).map((c) => ({
+      id: c.id,
+      name: `${c.firstName} ${c.lastName}`,
+      phone: c.phone || "",
+      email: c.email || "",
+      points: c.points || 0,
+      loyaltyTier: c.loyaltyTier || "bronze",
+      totalSpent: c.totalSpent || 0,
+      visitCount: c.visitCount || 0,
+      lastVisit: c.lastVisitAt ? new Date(c.lastVisitAt) : null,
+      notes: c.notes || "",
+      tags: c.tags || [],
+      createdAt: c.createdAt ? new Date(c.createdAt) : new Date(),
+    }));
+  }, [customersRes, debouncedSearch]);
 
   const availableRewards = useMemo(() => {
     if (!selectedCustomer) return [];

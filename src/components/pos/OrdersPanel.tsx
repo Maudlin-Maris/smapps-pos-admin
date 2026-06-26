@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { useGetOrders } from "@/services/api/orders";
 import { tierConfig } from "@/data/loyaltyData";
 import AddItemsToOrderContent from "./AddItemsToOrderContent";
 import { formatNaira } from "@/lib/currency";
@@ -54,18 +55,36 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
   const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder, acceptTransfer, rejectTransfer, voidOrder, changeOrderLocation } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { data: apiOrders } = useGetOrders({
+    outletId: currentOutlet?.id || undefined,
+    search: debouncedSearch.trim() || undefined,
+    paymentFilter: paymentFilter !== "all" ? paymentFilter : undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
+  const displayOrders = apiOrders || orders;
+
   // Keep selectedOrder synced with live orders data (for merge/edit updates)
   useEffect(() => {
     if (selectedOrder) {
-      const updated = orders.find(o => o.id === selectedOrder.id);
+      const updated = displayOrders.find(o => o.id === selectedOrder.id);
       if (updated && updated !== selectedOrder) setSelectedOrder(updated);
       else if (!updated) setSelectedOrder(null);
     }
-  }, [orders]);
+  }, [displayOrders]);
 
   const [showPayInline, setShowPayInline] = useState(false);
   const [showMergeInline, setShowMergeInline] = useState(false);
@@ -81,14 +100,14 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
   const hasKitchenStatuses = features?.hasMenu || features?.hasDineIn;
 
   // Compute groups
-  const myOrders = useMemo(() => orders.filter(o => o.cashierId === cashierId), [orders, cashierId]);
-  const transferredOrders = useMemo(() => orders.filter(o => o.transferredToCashierId === cashierId && o.cashierId !== cashierId), [orders, cashierId]);
-  const queuedOrders = useMemo(() => orders.filter(o => o.status === "open" && o.cashierId !== cashierId && o.transferredToCashierId !== cashierId), [orders, cashierId]);
+  const myOrders = useMemo(() => displayOrders.filter(o => o.cashierId === cashierId), [displayOrders, cashierId]);
+  const transferredOrders = useMemo(() => displayOrders.filter(o => o.transferredToCashierId === cashierId && o.cashierId !== cashierId), [displayOrders, cashierId]);
+  const queuedOrders = useMemo(() => displayOrders.filter(o => o.status === "open" && o.cashierId !== cashierId && o.transferredToCashierId !== cashierId), [displayOrders, cashierId]);
 
   // Location summaries — only locations with orders
   const locationSummaries = useMemo<LocationSummary[]>(() => {
     const map = new Map<string, { orderCount: number; totalValue: number; totalPaid: number; cashierIds: Set<string> }>();
-    orders.forEach(o => {
+    displayOrders.forEach(o => {
       const loc = o.locationName || "No Location";
       if (!map.has(loc)) map.set(loc, { orderCount: 0, totalValue: 0, totalPaid: 0, cashierIds: new Set() });
       const entry = map.get(loc)!;
@@ -113,13 +132,13 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
         paymentStatus,
       };
     }).sort((a, b) => b.totalValue - a.totalValue);
-  }, [orders]);
+  }, [displayOrders]);
 
   const groupCounts: Record<OrderGroup, number> = {
     my_orders: myOrders.length,
     transferred: transferredOrders.length,
     queued: queuedOrders.length,
-    all: orders.length,
+    all: displayOrders.length,
     by_location: locationSummaries.length,
   };
 
@@ -131,33 +150,17 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
       case "queued": return queuedOrders;
       case "by_location":
         if (selectedLocationName) {
-          return orders.filter(o => (o.locationName || "No Location") === selectedLocationName);
+          return displayOrders.filter(o => (o.locationName || "No Location") === selectedLocationName);
         }
         return [];
-      case "all": return orders;
+      case "all": return displayOrders;
     }
-  }, [group, myOrders, transferredOrders, queuedOrders, orders, selectedLocationName]);
+  }, [group, myOrders, transferredOrders, queuedOrders, displayOrders, selectedLocationName]);
 
-  // Apply search + payment filter
+  // Apply search + payment filter - now delegated to SWR/API hook
   const filtered = useMemo(() => {
-    let list = baseList;
-    // Payment filter
-    if (paymentFilter === "paid") {
-      list = list.filter(o => o.status === "paid");
-    } else if (paymentFilter === "unpaid") {
-      list = list.filter(o => o.paidAmount === 0 && o.status !== "paid" && o.status !== "voided");
-    } else if (paymentFilter === "incomplete") {
-      list = list.filter(o => o.paidAmount > 0 && o.paidAmount < o.totalAmount && o.status !== "paid");
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      list = list.filter(o =>
-        o.orderNumber.toLowerCase().includes(q) ||
-        (o.customerName && o.customerName.toLowerCase().includes(q))
-      );
-    }
-    return list;
-  }, [baseList, searchQuery, paymentFilter]);
+    return baseList;
+  }, [baseList]);
 
   const handleAddItemsToOrder = (orderId: string) => {
     if (cart.length === 0) return;

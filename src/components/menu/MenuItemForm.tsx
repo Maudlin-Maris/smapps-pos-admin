@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,9 +43,11 @@ import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, Popov
 import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/lib/types/outlet";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useGetModifierGroups } from "@/services/api/catalog/modifier-group";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 interface Modifier {
   id: string;
@@ -68,6 +70,8 @@ import { defaultCategories as defaultInventoryCategories } from "@/components/in
 import type { ComponentSubstituteConfig } from "@/lib/composite-substitution";
 import ComponentSubstituteEditor from "@/components/inventory/ComponentSubstituteEditor";
 import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
+import { api } from "@/services/api/base";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
   { name: "Hour", abbreviation: "hr" },
@@ -179,7 +183,7 @@ interface MenuItemFormProps {
   categories: Category[];
   item?: MenuItem | null;
   isSaving: boolean;
-  onSave: (item: MenuItem, targetOutletIds: string[]) => void;
+  onSave: (item: MenuItem, targetOutletIds: string[], onSuccess?: () => void, onError?: () => void) => void;
   mode?: "add" | "edit" | "clone";
   businessType?: BusinessTypeId;
   outlets: Outlet[];
@@ -316,13 +320,46 @@ function FormGroup({
 }
 
 
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, isSaving, mode = "add", businessType, outlets, currentOutletId, inventoryItems = [] }: MenuItemFormProps) {
+export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, isSaving, mode = "add", businessType, outlets, currentOutletId, inventoryItems: propInventoryItems = [] }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
-  const { data: subGroupsRes } = useGetSubstituteGroups({ per_page: 1000 });
-  const allSubGroups = subGroupsRes?.data || [];
-  const subGroups = allSubGroups.filter(
-    (g) => !currentOutletId || !g.outletId || g.outletId === currentOutletId
-  );
+  const { data: subGroupsRes } = useGetSubstituteGroups({
+    outletId: currentOutletId || undefined,
+    per_page: DEFAULT_PAGE_SIZE,
+  });
+  const [subGroupsCache, setSubGroupsCache] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (subGroupsRes?.data) {
+      setSubGroupsCache((prev) => {
+        const next = { ...prev };
+        subGroupsRes.data.forEach((g) => {
+          next[g.id] = g;
+        });
+        return next;
+      });
+    }
+  }, [subGroupsRes]);
+
+  const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
+
+  useEffect(() => {
+    if (open && ingredients.length > 0) {
+      ingredients.forEach((g) => {
+        (g.substituteGroupIds || []).forEach(async (id) => {
+          try {
+            const { data } = await api.get(API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(id));
+            if (data) {
+              setSubGroupsCache((prev) => ({ ...prev, [id]: data }));
+            }
+          } catch (e) { }
+        });
+      });
+    }
+  }, [open, ingredients]);
+
+  const subGroups = useMemo(() => {
+    return Object.values(subGroupsCache);
+  }, [subGroupsCache]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -342,7 +379,6 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [trackInventory, setTrackInventory] = useState(false);
   const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
   const [linkedInventoryItemId, setLinkedInventoryItemId] = useState<string>("");
-  const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
   /** Pricing strategy — Toast-inspired:
@@ -367,13 +403,41 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [modifierPickerOpen, setModifierPickerOpen] = useState(false);
 
-  const { data: modifierGroupsRes } = useGetModifierGroups({ per_page: 1000 });
+  const [modifierSearch, setModifierSearch] = useState("");
+  const { data: modifierGroupsRes } = useGetModifierGroups({
+    search: modifierSearch || undefined,
+    per_page: DEFAULT_PAGE_SIZE,
+  });
+  const [modifierGroupsCache, setModifierGroupsCache] = useState<Record<string, ModifierGroup>>({});
 
   useEffect(() => {
-    if (open && modifierGroupsRes?.data) {
+    if (modifierGroupsRes?.data) {
+      setModifierGroupsCache((prev) => {
+        const next = { ...prev };
+        (modifierGroupsRes.data as unknown as ModifierGroup[]).forEach((g) => {
+          next[g.id] = g;
+        });
+        return next;
+      });
       setModifierGroups(modifierGroupsRes.data as unknown as ModifierGroup[]);
     }
-  }, [open, modifierGroupsRes]);
+  }, [modifierGroupsRes]);
+
+  // Load attached modifier groups on-demand into cache
+  useEffect(() => {
+    if (open && item?.modifierGroupIds) {
+      item.modifierGroupIds.forEach(async (id) => {
+        try {
+          const { data } = await api.get(API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id));
+          if (data) {
+            setModifierGroupsCache((prev) => ({ ...prev, [id]: data }));
+          }
+        } catch (e) {
+          console.error("Failed to fetch modifier group", id, e);
+        }
+      });
+    }
+  }, [open, item?.modifierGroupIds]);
 
   // Derive business type from the outlet selected inside the form so the
   // add-ons / modifiers section appears even when the page-level outlet
@@ -388,26 +452,123 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
 
-  // Filter inventory items to the outlets currently selected on the form so
-  // users only link to/recipe from inventory that actually exists at those
-  // outlets. Falls back to all items when no outlet has been selected yet.
-  const availableInventory = selectedOutletIds.length
-    ? inventoryItems.filter((i) => selectedOutletIds.includes(i.outletId))
-    : inventoryItems;
+  const [inventorySearch, setInventorySearch] = useState("");
+
+  const { data: searchInventoryRes } = useGetInventoryItems(
+    open ? {
+      search: inventorySearch.trim() || undefined,
+      per_page: DEFAULT_PAGE_SIZE,
+      outletId: selectedOutletIds.length === 1 ? selectedOutletIds[0] : undefined,
+    } : undefined
+  );
+
+  const searchInventoryItems = searchInventoryRes?.data || [];
+
+  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (searchInventoryItems.length > 0) {
+      setInventoryCache((prev) => {
+        const next = { ...prev };
+        searchInventoryItems.forEach((i) => {
+          next[i.id] = i;
+        });
+        return next;
+      });
+    }
+  }, [searchInventoryItems]);
+
+  useEffect(() => {
+    if (propInventoryItems && propInventoryItems.length > 0) {
+      setInventoryCache((prev) => {
+        const next = { ...prev };
+        propInventoryItems.forEach((i) => {
+          next[i.id] = i;
+        });
+        return next;
+      });
+    }
+  }, [propInventoryItems]);
+
+  // Load missing item details on demand
+  useEffect(() => {
+    if (open) {
+      if (linkedInventoryItemId && !inventoryCache[linkedInventoryItemId]) {
+        api.get(API_ENDPOINTS.SINGLE_INVENTORY(linkedInventoryItemId)).then(({ data }) => {
+          if (data) {
+            setInventoryCache(prev => ({ ...prev, [linkedInventoryItemId]: data }));
+          }
+        }).catch(() => { });
+      }
+      ingredients.forEach((g) => {
+        if (g.inventoryItemId && !inventoryCache[g.inventoryItemId]) {
+          api.get(API_ENDPOINTS.SINGLE_INVENTORY(g.inventoryItemId)).then(({ data }) => {
+            if (data) {
+              setInventoryCache(prev => ({ ...prev, [g.inventoryItemId]: data }));
+            }
+          }).catch(() => { });
+        }
+      });
+    }
+  }, [open, linkedInventoryItemId, ingredients, inventoryCache]);
+
+  useEffect(() => {
+    setInventorySearch("");
+  }, [linkPickerOpen, ingredientPickerOpenIdx]);
+
+  const availableInventory = useMemo(() => {
+    const list = searchInventoryItems;
+    if (selectedOutletIds.length > 0) {
+      return list.filter((i) => selectedOutletIds.includes(i.outletId));
+    }
+    return list;
+  }, [selectedOutletIds, searchInventoryItems]);
+
+  const resolvedInventoryItems = useMemo<InventoryItem[]>(() => {
+    const cached: InventoryItem[] = Object.values(inventoryCache).map((i: any) => ({
+      id: i.id,
+      name: i.name || "",
+      description: i.description || "",
+      sku: i.sku || "",
+      stock: i.quantity ?? i.stock ?? 0,
+      costPrice: i.costPrice ?? 0,
+      sellPrice: i.sellPrice ?? 0,
+      pricingMethod: i.pricingMethod ?? "markup",
+      pricingValue: i.pricingValue ?? 30,
+      status: i.status ?? "good",
+      minStock: i.minStock ?? 0,
+      categoryId: i.categoryId ?? "",
+      unitId: i.unitId ?? "",
+      outletId: i.outletId ?? "",
+      conversions: i.conversions || [],
+      batchNumber: i.batchNumber ?? "",
+      expiryDate: i.expiryDate ?? "",
+      batches: i.batches ?? [],
+    }));
+    const result = [...cached];
+    propInventoryItems.forEach(item => {
+      if (!result.some(r => r.id === item.id)) {
+        result.push(item);
+      }
+    });
+    return result;
+  }, [inventoryCache, propInventoryItems]);
+
+  const inventoryItems = resolvedInventoryItems;
 
   useEffect(() => {
     if (open) {
       if (item) {
         setItemType(item.itemType ?? "simple");
-        setName(item.name);
-        setDescription(item.description);
+        setName(item.name ?? "");
+        setDescription(item.description ?? "");
         setPrice(item.price.toString());
         setQuantity(item.quantity?.toString() ?? "");
         setSalePrice(item.salePrice?.toString() ?? "");
         setSalePeriodStart(item.salePeriodStart ?? null);
         setSalePeriodEnd(item.salePeriodEnd ?? null);
         setShowSale(item.salePrice !== null);
-        setSku(item.sku);
+        setSku(item.sku ?? "");
         setIsActive(item.status === "active");
         setImages(item.images ?? []);
         setVariants(item.variants ?? []);
@@ -607,21 +768,40 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const isOpenPrice = pricingStrategy === "open";
     const isVariantPriced = !isService && pricingStrategy === "variant";
     const hasVariants = !isService && variants.length > 0;
-    if (!name.trim() || !selectedCatId) return;
+    if (!name.trim() || !selectedCatId) {
+      console.warn("handleSave Validation Failed: name or selectedCatId is missing", { name, selectedCatId });
+      return;
+    }
     // Price requirements depend on strategy.
     if (!isOpenPrice) {
       if (isVariantPriced) {
-        if (variants.length === 0) return;
-        if (variants.some((v) => !v.name.trim() || !v.price)) return;
+        if (variants.length === 0) {
+          console.warn("handleSave Validation Failed: isVariantPriced but variants length is 0");
+          return;
+        }
+        if (variants.some((v) => !v.name.trim() || !v.price)) {
+          console.warn("handleSave Validation Failed: variant name or price is invalid", variants);
+          return;
+        }
       } else if (!hasVariants && !price) {
+        console.warn("handleSave Validation Failed: no variants and price is missing", { price });
         return;
       }
     }
-    if (hasVariants && variants.some((v) => !v.name.trim())) return;
-    if (selectedOutletIds.length === 0) return;
+    if (hasVariants && variants.some((v) => !v.name.trim())) {
+      console.warn("handleSave Validation Failed: hasVariants but some variant name is empty", variants);
+      return;
+    }
+    if (selectedOutletIds.length === 0) {
+      console.warn("handleSave Validation Failed: selectedOutletIds is empty", selectedOutletIds);
+      return;
+    }
     if (isComposite) {
       const valid = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
-      if (valid.length === 0) return;
+      if (valid.length === 0) {
+        console.warn("handleSave Validation Failed: isComposite but ingredients are invalid", ingredients);
+        return;
+      }
     }
     const cat = categories.find((c) => c.id === selectedCatId);
     const basePrice = isOpenPrice
@@ -653,7 +833,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       salePrice: suppressSale ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
       salePeriodStart: suppressSale ? null : (showSale ? salePeriodStart : null),
       salePeriodEnd: suppressSale ? null : (showSale ? salePeriodEnd : null),
-      sku: item?.sku || autoSku,
+      sku: sku.trim() || autoSku,
       status: isActive ? "active" : "inactive",
       images: isService ? [] : images,
       variants: isService ? [] : finalVariants,
@@ -662,15 +842,16 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         // (which renders extras grouped by category) keeps working without
         // changes. Manual extras keep their own category. Available for both
         // simple items and services (e.g. add-on services for salons).
-        const fromGroups: MenuExtra[] = modifierGroups
-          .filter((g) => modifierGroupIds.includes(g.id))
+        const fromGroups: MenuExtra[] = modifierGroupIds
+          .map((id) => modifierGroupsCache[id] || modifierGroups.find((x) => x.id === id))
+          .filter((g): g is ModifierGroup => !!g)
           .flatMap((g) =>
             g.modifiers.map((m) => ({
               id: `${g.id}:${m.id}`,
               name: m.name,
               price: m.price,
               category: g.name,
-            })),
+            }))
           );
         const manual = extras.filter((e) => !fromGroups.some((f) => f.id === e.id));
         return [...fromGroups, ...manual];
@@ -693,8 +874,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       pricingValue: pricingStrategy === "base" && (itemType === "composite" || (itemType === "simple" && !!costPrice))
         ? parseFloat(menuPricingValue) || 0
         : undefined,
-    }, selectedOutletIds);
-    onOpenChange(false);
+    }, selectedOutletIds, () => { onOpenChange(false); },);
+
   };
 
   const formTitle = mode === "clone" ? "Clone Catalog Item" : mode === "edit" ? "Edit Catalog Item" : "Add Catalog Item";
@@ -725,7 +906,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     value={selectedOutletIds[0] ?? ""}
                     onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
                   >
-                    <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select outlet" /></SelectTrigger>
+                    <SelectTrigger data-testid="outlet-select-trigger" className="mt-1 h-9"><SelectValue placeholder="Select outlet" /></SelectTrigger>
                     <SelectContent>
                       {outlets.map((o) => (
                         <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
@@ -768,7 +949,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
               <div>
                 <Label htmlFor="item-name" className="text-xs">Item Name *</Label>
-                <Input id="item-name" className="mt-1 h-9" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
+                <Input id="item-name" data-testid="item-name-input" className="mt-1 h-9" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -784,7 +965,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     onValueChange={(v) => setSelectedCatId(v)}
                     disabled={itemType === "simple" && !!linkedInventoryItemId}
                   >
-                    <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectTrigger data-testid="category-select-trigger" className="mt-1 h-9"><SelectValue placeholder="Select category" /></SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
                     </SelectContent>
@@ -802,7 +983,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     onValueChange={setSellingUnit}
                     disabled={itemType === "simple" && !!linkedInventoryItemId}
                   >
-                    <SelectTrigger className="mt-1 h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectTrigger data-testid="unit-select-trigger" className="mt-1 h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
                     <SelectContent>
                       {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
                         <SelectItem key={u.abbreviation} value={u.abbreviation}>
@@ -847,6 +1028,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           type="button"
                           variant="outline"
                           role="combobox"
+                          data-testid="link-inventory-trigger"
                           className="w-full justify-between font-normal h-9 text-sm mt-1"
                         >
                           {linkedInventoryItemId
@@ -858,37 +1040,78 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Search by name or SKU..." className="h-9" />
-                          <CommandList>
-                            <CommandEmpty>No inventory items found.</CommandEmpty>
-                            <CommandGroup>
-                              {linkedInventoryItemId && (
-                                <CommandItem
-                                  value="__clear__"
-                                  onSelect={() => { setLinkedInventoryItemId(""); setLinkPickerOpen(false); }}
-                                >
-                                  <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                                  <span className="text-muted-foreground">Clear link</span>
-                                </CommandItem>
-                              )}
-                              {availableInventory.map((inv) => (
-                                <CommandItem
-                                  key={inv.id}
-                                  value={`${inv.name} ${inv.sku}`}
-                                  onSelect={() => { handleLinkInventory(inv.id); setLinkPickerOpen(false); }}
-                                >
-                                  <Check className={cn("h-3.5 w-3.5 mr-2", linkedInventoryItemId === inv.id ? "opacity-100" : "opacity-0")} />
-                                  <div className="flex-1 min-w-0">
-                                    <div className="text-sm truncate">{inv.name}</div>
-                                    <div className="text-[11px] text-muted-foreground truncate">{inv.sku} · stock {inv.stock}</div>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
+                      <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0 h-[300px] flex flex-col"
+                      >
+                        <div className="flex flex-col overflow-hidden rounded-md bg-popover text-popover-foreground pointer-events-auto">
+                          <div className="flex items-center border-b px-3">
+                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                            <input
+                              placeholder="Search by name or SKU..."
+                              className="flex h-9 w-full rounded-md bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                              value={inventorySearch}
+                              onChange={(e) => setInventorySearch(e.target.value)}
+                            />
+                          </div>
+
+                          <div className=" pointer-events-auto p-1 min-h-0 overflow-y-auto">
+                            {availableInventory.length === 0 && !linkedInventoryItemId ? (
+                              <div className="py-6 text-center text-sm text-muted-foreground">
+                                No inventory items found.
+                              </div>
+                            ) : (
+                              <div className="space-y-0.5">
+                                {linkedInventoryItemId && (
+                                  <button
+                                    type="button"
+                                    className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground text-left"
+                                    onClick={() => {
+                                      setLinkedInventoryItemId("");
+                                      setLinkPickerOpen(false);
+                                    }}
+                                  >
+                                    <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                                    <span className="text-muted-foreground">Clear link</span>
+                                  </button>
+                                )}
+
+                                {availableInventory.map((inv) => {
+                                  const isSelected = linkedInventoryItemId === inv.id;
+                                  return (
+                                    <button
+                                      key={inv.id}
+                                      type="button"
+                                      data-testid={`inventory-option-${inv.id}`}
+                                      className={cn(
+                                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors text-left",
+                                        isSelected
+                                          ? "bg-accent text-accent-foreground"
+                                          : "hover:bg-accent hover:text-accent-foreground"
+                                      )}
+                                      onClick={() => {
+                                        handleLinkInventory(inv.id);
+                                        setLinkPickerOpen(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "h-3.5 w-3.5 mr-2",
+                                          isSelected ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="text-sm truncate">{inv.name}</div>
+                                        <div className="text-[11px] text-muted-foreground truncate">
+                                          {inv.sku} · stock {inv.stock}
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -916,6 +1139,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                         className={cn("mt-1 h-9 text-sm", isLinked && "bg-muted/50")}
                         type="number"
                         min="0"
+                        data-testid="quantity-input"
                         value={quantity}
                         onChange={(e) => setQuantity(e.target.value)}
                         placeholder="0"
@@ -1070,8 +1294,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                <Command>
-                                  <CommandInput placeholder="Search inventory..." className="h-9" />
+                                <Command shouldFilter={false}>
+                                  <CommandInput
+                                    placeholder="Search inventory..."
+                                    className="h-9"
+                                    value={inventorySearch}
+                                    onValueChange={setInventorySearch}
+                                  />
                                   <CommandList>
                                     <CommandEmpty>No items found.</CommandEmpty>
                                     <CommandGroup>
@@ -1254,6 +1483,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           <button
                             key={opt.id}
                             type="button"
+                            data-testid={`pricing-strategy-${opt.id}`}
                             onClick={() => {
                               setPricingStrategy(opt.id);
                               if (opt.id === "open") {
@@ -1466,6 +1696,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                   min={0}
                                   step="0.01"
                                   className="h-9"
+                                  data-testid="sell-price-input"
                                   value={price}
                                   onChange={(e) => setPrice(e.target.value)}
                                   placeholder="0.00"
@@ -1566,6 +1797,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                   min={0}
                                   step="0.01"
                                   className="h-9"
+                                  data-testid="sell-price-input"
                                   value={price}
                                   onChange={(e) => setPrice(e.target.value)}
                                   placeholder="0.00"
@@ -1592,7 +1824,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       return (
                         <div>
                           <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
-                          <Input id="item-price-nv" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
+                          <Input id="item-price-nv" data-testid="sell-price-input" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
                         </div>
                       );
                     })()}
@@ -1608,6 +1840,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           <div key={v.id} className="grid grid-cols-[1fr,140px,32px] gap-2 items-center">
                             <Input
                               className="h-9 text-sm"
+                              data-testid={`variant-name-input-${idx}`}
                               value={v.name}
                               onChange={(e) => updateVariant(v.id, { ...v, name: e.target.value })}
                               placeholder={idx === 0 ? "e.g. Small" : "Variant name"}
@@ -1617,6 +1850,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                               type="number"
                               min="0"
                               step="0.01"
+                              data-testid={`variant-price-input-${idx}`}
                               value={v.price || ""}
                               onChange={(e) => updateVariant(v.id, { ...v, price: parseFloat(e.target.value) || 0 })}
                               placeholder="0.00"
@@ -1694,7 +1928,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             <FormGroup>
               <Accordion type="single" collapsible defaultValue={extras.length > 0 || modifierGroupIds.length > 0 ? "extras" : undefined}>
                 <AccordionItem value="extras" className="border-b-0">
-                  <AccordionTrigger className="py-2 hover:no-underline">
+                  <AccordionTrigger data-testid="addons-accordion-trigger" className="py-2 hover:no-underline">
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <ListPlus className="h-3.5 w-3.5" />
                       <span>Add-ons</span>
@@ -1715,13 +1949,19 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                         </Label>
                         <Popover open={modifierPickerOpen} onOpenChange={setModifierPickerOpen}>
                           <PopoverTrigger asChild>
-                            <Button type="button" variant="outline" size="sm" className="h-7 text-xs">
+                            <Button type="button" data-testid="attach-modifier-group-button" variant="outline" size="sm" className="h-7 text-xs">
                               <Plus className="h-3.5 w-3.5 mr-1" /> Attach group
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-72 p-0" align="end">
-                            <Command>
-                              <CommandInput placeholder="Search modifier groups..." className="h-9" />
+                            <Command shouldFilter={false}>
+                              <CommandInput
+                                placeholder="Search modifier groups..."
+                                data-testid="search-modifier-groups-input"
+                                className="h-9"
+                                value={modifierSearch}
+                                onValueChange={setModifierSearch}
+                              />
                               <CommandList>
                                 <CommandEmpty>No modifier groups. Create one in Admin.</CommandEmpty>
                                 <CommandGroup>
@@ -1760,7 +2000,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
                           {modifierGroupIds.map((id) => {
-                            const g = modifierGroups.find((x) => x.id === id);
+                            const g = modifierGroupsCache[id] || modifierGroups.find((x) => x.id === id);
                             if (!g) return null;
                             return (
                               <Badge key={id} variant="secondary" className="gap-1 pr-1 text-[11px]">
@@ -1890,6 +2130,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         <SheetFooter className="px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
+            data-testid="submit-item-button"
             onClick={handleSave}
             disabled={(() => {
               if (isSaving) return true;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -58,20 +58,31 @@ export default function DepartmentManagerDialog({
   outletName,
   onUpdated,
 }: DepartmentManagerDialogProps) {
-  const { data: categories = [], isLoading: isLoadingCats } = useGetOutletCatalogCategories(outletId);
-  const { data: departments = [], isLoading: isLoadingDepts, mutate: mutateDepts } = useGetOutletDepartments(outletId);
-
-  const { trigger: triggerCreate, isMutating: isCreating } = useCreateOutletDepartment(outletId);
-  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateOutletDepartment(outletId);
-  const { trigger: triggerAssignCategories, isMutating: isAssigning } = useUpdateOutletDepartmentCategories(outletId);
-  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteOutletDepartment(outletId);
-
   const [selectedDept, setSelectedDept] = useState<DepartmentRecord | null>(null);
   const [addingDept, setAddingDept] = useState(false);
   const [editingDept, setEditingDept] = useState<DepartmentRecord | null>(null);
   const [deptName, setDeptName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<DepartmentRecord | null>(null);
   const [menuSearch, setMenuSearch] = useState("");
+  const [debouncedMenuSearch, setDebouncedMenuSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedMenuSearch(menuSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [menuSearch]);
+
+  const { data: categories = [], isLoading: isLoadingCats } = useGetOutletCatalogCategories(
+    outletId,
+    { search: debouncedMenuSearch.trim() || undefined }
+  );
+  const { data: departments = [], isLoading: isLoadingDepts, mutate: mutateDepts } = useGetOutletDepartments(outletId);
+
+  const { trigger: triggerCreate, isMutating: isCreating } = useCreateOutletDepartment(outletId);
+  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateOutletDepartment(outletId);
+  const { trigger: triggerAssignCategories, isMutating: isAssigning } = useUpdateOutletDepartmentCategories(outletId);
+  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteOutletDepartment(outletId);
 
   const handleAddDept = async () => {
     if (!deptName.trim()) {
@@ -141,12 +152,7 @@ export default function DepartmentManagerDialog({
     ? departments.find((d) => d.id === selectedDept.id) || null
     : null;
 
-  // Filter categories by search
-  const filteredCategories = menuSearch
-    ? categories.filter((cat) =>
-        cat.name.toLowerCase().includes(menuSearch.toLowerCase())
-      )
-    : categories;
+  const filteredCategories = categories;
 
   return (
     <>

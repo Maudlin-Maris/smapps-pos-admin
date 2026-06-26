@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -35,11 +35,13 @@ import { formatNaira } from "@/lib/currency";
 import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
 import ComponentSubstituteEditor from "./ComponentSubstituteEditor";
 import { getProducibleWithSubstitutes, type ComponentSubstituteConfig } from "@/lib/composite-substitution";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 import {
   useCreateComposite,
   useUpdateComposite,
   useDeleteComposite,
+  useGetComposites,
 } from "@/services/api/inventory/composite";
 
 export type ComponentRole = "primary" | "secondary";
@@ -112,7 +114,42 @@ export default function CompositeItemForm({ composites, onMutate, inventoryItems
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [search, setSearch] = useState("");
-  const { data: subGroupsRes } = useGetSubstituteGroups({ page: 1, per_page: 100 });
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: compositesRes } = useGetComposites({
+    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+    search: debouncedSearch.trim() || undefined,
+    page: 1,
+    per_page: 100,
+  });
+
+  const apiComposites = useMemo<CompositeItem[]>(() => {
+    if (!compositesRes?.data) return [];
+    return compositesRes.data.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: "",
+      components: c.components.map((comp) => ({
+        inventoryItemId: comp.inventoryItemId,
+        quantity: comp.quantity,
+        role: comp.role,
+      })),
+      outletId: c.outletId,
+      sellPrice: c.sellPrice,
+    }));
+  }, [compositesRes]);
+
+  const { data: subGroupsRes } = useGetSubstituteGroups({
+    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+    per_page: DEFAULT_PAGE_SIZE,
+  });
   const allGroups = subGroupsRes?.data ?? [];
   const groups = useMemo(
     () => allGroups.filter((g) => !selectedOutletId || g.outletId === selectedOutletId),
@@ -341,9 +378,7 @@ export default function CompositeItemForm({ composites, onMutate, inventoryItems
     ? getItemName(producibleInfo.limitingId)
     : "";
 
-  const filtered = composites.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = apiComposites;
 
   const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
 

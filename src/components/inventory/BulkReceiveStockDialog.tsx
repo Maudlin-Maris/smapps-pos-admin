@@ -28,6 +28,8 @@ import { BATCH_EXPIRY_BUSINESS_TYPES } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { useGetOutlets } from "@/services/api/outlets";
 import { useBulkReceiveInventory } from "@/services/api/inventory/live-inventory";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import type { BusinessTypeId } from "@/data/businessTypes";
 import type { StockReceivePricing, PricingMethod, AdjustmentType } from "./StockAdjustmentHistory";
 
@@ -91,28 +93,73 @@ export default function BulkReceiveStockDialog({
   const isRetail = outlet ? RETAIL_BUSINESS_TYPES.includes(outlet.businessType) : false;
   const isBatchTracked = outlet ? BATCH_EXPIRY_BUSINESS_TYPES.includes(outlet.businessType) : false;
 
-  const outletItems = useMemo(
-    () => items.filter(i => i.outletId === effectiveOutletId),
-    [items, effectiveOutletId]
+  const { data: searchItemsRes } = useGetInventoryItems(
+    open && effectiveOutletId ? {
+      outletId: effectiveOutletId,
+      search: search.trim() || undefined,
+      per_page: DEFAULT_PAGE_SIZE,
+    } : undefined
   );
+
+  const outletItems = useMemo<InventoryItem[]>(() => {
+    if (!searchItemsRes?.data) return [];
+    return searchItemsRes.data.map((apiItem) => {
+      const fullItem = items.find(x => x.id === apiItem.id || x.sku === apiItem.sku);
+      return {
+        id: apiItem.id,
+        name: apiItem.name || fullItem?.name || "",
+        description: fullItem?.description || "",
+        sku: apiItem.sku || fullItem?.sku || "",
+        categoryId: apiItem.categoryId || fullItem?.categoryId || "1",
+        unitId: apiItem.unitId || fullItem?.unitId || "5",
+        stock: apiItem.stock ?? apiItem.quantity ?? fullItem?.stock ?? 0,
+        minStock: fullItem?.minStock ?? 0,
+        costPrice: apiItem.costPrice ?? fullItem?.costPrice ?? 0,
+        sellPrice: fullItem?.sellPrice ?? 0,
+        pricingMethod: fullItem?.pricingMethod ?? "markup",
+        pricingValue: fullItem?.pricingValue ?? 30,
+        status: fullItem?.status ?? "good",
+        conversions: fullItem?.conversions ?? [
+          { id: Math.random().toString(), fromQuantity: 1, toQuantity: 1, toUnitId: apiItem.unitId || "5", sellable: true, sellPrice: fullItem?.sellPrice ?? 0 }
+        ],
+        outletId: apiItem.outletId || fullItem?.outletId || effectiveOutletId,
+        batchNumber: fullItem?.batchNumber ?? "",
+        expiryDate: fullItem?.expiryDate ?? "",
+        batches: fullItem?.batches ?? [],
+      };
+    });
+  }, [searchItemsRes, items, effectiveOutletId]);
 
   // Initialize line items when dialog opens or active outlet changes
   useEffect(() => {
     if (open) {
-      setLineItems(outletItems.map(item => ({
-        itemId: item.id,
-        selected: false,
-        quantity: 0,
-        costPrice: item.costPrice,
-        expiryDate: "",
-        pricingMethod: "markup" as PricingMethod,
-        pricingValue: 30,
-        sellPrice: Math.round(item.costPrice * 1.3 * 100) / 100,
-        expanded: false,
-      })));
-      setSearch("");
+      setLineItems([]);
       setReason("");
       setSyncToCatalog(true);
+    }
+  }, [open, effectiveOutletId]);
+
+  useEffect(() => {
+    if (open && outletItems.length > 0) {
+      setLineItems((prev) => {
+        const next = [...prev];
+        outletItems.forEach((item) => {
+          if (!next.some((li) => li.itemId === item.id)) {
+            next.push({
+              itemId: item.id,
+              selected: false,
+              quantity: 0,
+              costPrice: item.costPrice ?? 0,
+              expiryDate: "",
+              pricingMethod: "markup" as PricingMethod,
+              pricingValue: 30,
+              sellPrice: Math.round((item.costPrice ?? 0) * 1.3 * 100) / 100,
+              expanded: false,
+            });
+          }
+        });
+        return next;
+      });
     }
   }, [open, outletItems]);
 
@@ -120,6 +167,7 @@ export default function BulkReceiveStockDialog({
   useEffect(() => {
     if (open) {
       setActiveOutletId(outletId && outletId !== "all" ? outletId : (outlets[0]?.id ?? ""));
+      setSearch("");
     }
   }, [open, outletId]);
 
@@ -136,11 +184,8 @@ export default function BulkReceiveStockDialog({
   };
 
   const filteredItems = useMemo(() => {
-    const q = search.toLowerCase();
-    return outletItems.filter(item =>
-      item.name.toLowerCase().includes(q) || item.sku.toLowerCase().includes(q)
-    );
-  }, [outletItems, search]);
+    return outletItems;
+  }, [outletItems]);
 
   const selectedLines = lineItems.filter(li => li.selected && li.quantity > 0);
   const totalItems = selectedLines.length;

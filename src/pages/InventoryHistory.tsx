@@ -60,6 +60,9 @@ import {
   useDeleteReconciliation,
 } from "@/services/api/inventory/reconciliations";
 import { formatNaira } from "@/lib/currency";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import { api } from "@/services/api/base";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
 
 // Inline category list (mirrors InventoryCategoryManager seed)
 const CATEGORIES = [
@@ -83,7 +86,7 @@ const reconStatusColor: Record<ReconciliationStatus, string> = {
 
 export default function InventoryHistory() {
   const { data: outlets = [] } = useGetOutlets();
-  const { data: categoriesResponse } = useGetInventoryCategories({ page: 1, per_page: 100 });
+  const { data: categoriesResponse } = useGetInventoryCategories({ page: 1, per_page: DEFAULT_PAGE_SIZE });
   const categories = useMemo(() => {
     return categoriesResponse?.data || CATEGORIES;
   }, [categoriesResponse]);
@@ -101,6 +104,9 @@ export default function InventoryHistory() {
   const [toDate, setToDate] = useState(today);
   const [varianceOnly, setVarianceOnly] = useState(false);
 
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPerPage, setHistoryPerPage] = useState(DEFAULT_PAGE_SIZE);
+
   const { data: reconsResponse, isLoading: isReconsLoading, mutate: mutateRecons } = useGetReconciliations({
     outletId: locationId === "all" ? undefined : locationId,
   });
@@ -108,14 +114,52 @@ export default function InventoryHistory() {
   const { data: inventoryResponse, mutate: mutateInventory } = useGetInventoryItems({
     outletId: locationId === "all" ? undefined : locationId,
     categoryId: categoryId === "all" ? undefined : categoryId,
-    per_page: 1000,
+    per_page: DEFAULT_PAGE_SIZE,
   });
+
+  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (inventoryResponse?.data) {
+      setInventoryCache((prev) => {
+        const next = { ...prev };
+        inventoryResponse.data.forEach((i) => {
+          next[i.id] = i;
+        });
+        return next;
+      });
+    }
+  }, [inventoryResponse]);
 
   const { data: snapshotsResponse, isLoading: isSnapshotsLoading, mutate: mutateSnapshots } = useGetInventorySnapshots({
     date: toDate,
     outletId: locationId === "all" ? undefined : locationId,
-    per_page: 1000,
+    page: historyPage,
+    per_page: historyPerPage,
+    search: search.trim() || undefined,
+    categoryId: categoryId === "all" ? undefined : categoryId,
+    varianceOnly: varianceOnly || undefined,
   });
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [locationId, categoryId, search, fromDate, toDate, varianceOnly]);
+
+  // Load missing item details for snapshots on-demand
+  useEffect(() => {
+    if (snapshotsResponse?.data) {
+      snapshotsResponse.data.forEach(async (snap) => {
+        if (!inventoryCache[snap.inventoryItemId]) {
+          try {
+            const { data } = await api.get(API_ENDPOINTS.SINGLE_INVENTORY(snap.inventoryItemId));
+            if (data) {
+              setInventoryCache(prev => ({ ...prev, [snap.inventoryItemId]: data }));
+            }
+          } catch (e) {}
+        }
+      });
+    }
+  }, [snapshotsResponse, inventoryCache]);
 
   const { data: summaryResponse, mutate: mutateSummary } = useGetInventorySnapshotsSummary({
     date: toDate,
@@ -161,7 +205,7 @@ export default function InventoryHistory() {
     
     const items = snapshotsResponse.data;
     const mapped = items.map((snap) => {
-      const item = inventoryResponse?.data?.find((i) => i.id === snap.inventoryItemId);
+      const item = inventoryCache[snap.inventoryItemId] || inventoryResponse?.data?.find((i) => i.id === snap.inventoryItemId);
       const sku = item?.sku ?? "SKU-N/A";
       const catId = item?.categoryId ?? "1";
       const unit = "unit";
@@ -197,16 +241,8 @@ export default function InventoryHistory() {
       };
     });
     
-    return mapped
-      .filter((s) => {
-        if (categoryId !== "all" && s.categoryId !== categoryId) return false;
-        if (varianceOnly && s.varianceQty === 0) return false;
-        if (!search.trim()) return true;
-        const q = search.toLowerCase();
-        return s.itemName.toLowerCase().includes(q) || s.sku.toLowerCase().includes(q);
-      })
-      .sort((a, b) => b.date.localeCompare(a.date) || a.itemName.localeCompare(b.itemName));
-  }, [snapshotsResponse, inventoryResponse, locationId, categoryId, varianceOnly, search, today, outlets]);
+    return mapped.sort((a, b) => b.date.localeCompare(a.date) || a.itemName.localeCompare(b.itemName));
+  }, [snapshotsResponse, inventoryResponse, inventoryCache, locationId, today, outlets]);
 
   const reconciliations = useMemo(() => {
     return (reconsResponse?.data || [])
@@ -214,7 +250,7 @@ export default function InventoryHistory() {
   }, [reconsResponse]);
 
   const variance = useMemo(() => {
-    const countedSnapshots = snapshots.filter((s) => s.varianceQty !== 0).length;
+    const countedSnapshots = summaryResponse?.varianceCount ?? 0;
     
     const pendingReconciliations = reconciliations.filter(
       (r) => r.status === "DRAFT" || r.status === "IN_REVIEW"
@@ -232,7 +268,7 @@ export default function InventoryHistory() {
       pendingReconciliations,
       totalVarianceCost,
     };
-  }, [snapshots, reconciliations, summaryResponse]);
+  }, [summaryResponse, reconciliations]);
 
   const handleGenerateToday = async () => {
     try {
@@ -365,7 +401,20 @@ export default function InventoryHistory() {
             Loading stock history...
           </Card>
         ) : (
-          <HistoryTable snapshots={snapshots} onDrill={setDrillSnap} outlets={outlets} />
+          <HistoryTable
+            snapshots={snapshots}
+            onDrill={setDrillSnap}
+            outlets={outlets}
+            page={historyPage}
+            onPageChange={setHistoryPage}
+            perPage={historyPerPage}
+            onPerPageChange={(v) => {
+              setHistoryPerPage(v);
+              setHistoryPage(1);
+            }}
+            totalPages={snapshotsResponse?.meta?.last_page ?? 1}
+            totalItems={snapshotsResponse?.meta?.total ?? snapshots.length}
+          />
         )
       )}
 
@@ -503,13 +552,27 @@ function ThNum({ label }: { label: string }) {
 }
 
 // ── History table ──
-function HistoryTable({ snapshots, onDrill, outlets = [] }:
-  { snapshots: DailyInventorySnapshot[]; onDrill: (s: DailyInventorySnapshot) => void; outlets?: Outlet[] }) {
-  const {
-    page, setPage, perPage, setPerPage, totalPages,
-    paginatedItems, totalItems, pageSizeOptions,
-  } = usePagination(snapshots, 20);
-
+function HistoryTable({
+  snapshots,
+  onDrill,
+  outlets = [],
+  page,
+  onPageChange,
+  perPage,
+  onPerPageChange,
+  totalPages,
+  totalItems,
+}: {
+  snapshots: DailyInventorySnapshot[];
+  onDrill: (s: DailyInventorySnapshot) => void;
+  outlets?: Outlet[];
+  page: number;
+  onPageChange: (p: number) => void;
+  perPage: number;
+  onPerPageChange: (pp: number) => void;
+  totalPages: number;
+  totalItems: number;
+}) {
   if (!snapshots.length) {
     return <Card className="p-8 text-center text-muted-foreground">No snapshots match these filters.</Card>;
   }
@@ -522,9 +585,9 @@ function HistoryTable({ snapshots, onDrill, outlets = [] }:
           totalPages={totalPages}
           perPage={perPage}
           totalItems={totalItems}
-          pageSizeOptions={pageSizeOptions}
-          onPageChange={setPage}
-          onPerPageChange={setPerPage}
+          pageSizeOptions={[5, 10, 20, 50]}
+          onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
         />
       </div>
       <div className="overflow-x-auto">
@@ -550,7 +613,7 @@ function HistoryTable({ snapshots, onDrill, outlets = [] }:
             </tr>
           </thead>
           <tbody>
-            {paginatedItems.map((s) => {
+            {snapshots.map((s) => {
               const outletName = outlets.find((o) => o.id === s.outletId)?.name ?? s.outletId;
               const hasVar = s.varianceQty !== 0;
               return (
@@ -594,9 +657,9 @@ function HistoryTable({ snapshots, onDrill, outlets = [] }:
           totalPages={totalPages}
           perPage={perPage}
           totalItems={totalItems}
-          pageSizeOptions={pageSizeOptions}
-          onPageChange={setPage}
-          onPerPageChange={setPerPage}
+          pageSizeOptions={[5, 10, 20, 50]}
+          onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
         />
       </div>
     </Card>
@@ -744,12 +807,19 @@ function VarianceReview({ snapshots, onDrill, outlets = [] }:
 // ── Drill-down dialog ──
 function MovementDrillDialog({ snap, onClose, outlets = [] }:
   { snap: DailyInventorySnapshot | null; onClose: () => void; outlets?: Outlet[] }) {
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [snap]);
+
   const { data: movementsResponse, isLoading } = useGetInventoryMovements(
     snap
       ? {
           outletId: snap.outletId,
           inventoryItemId: snap.inventoryItemId,
-          per_page: 100,
+          page,
+          per_page: DEFAULT_PAGE_SIZE,
         }
       : undefined
   );
@@ -766,6 +836,9 @@ function MovementDrillDialog({ snap, onClose, outlets = [] }:
       source: "api",
     }));
   }, [movementsResponse, snap]);
+
+  const total = (movementsResponse as any)?.meta?.total ?? movements.length;
+  const totalPages = (movementsResponse as any)?.meta?.last_page ?? 1;
 
   return (
     <Dialog open={!!snap} onOpenChange={(o) => !o && onClose()}>
@@ -792,35 +865,50 @@ function MovementDrillDialog({ snap, onClose, outlets = [] }:
                 Loading movements...
               </div>
             ) : (
-              <div className="max-h-[420px] overflow-auto border rounded-lg">
-                <table className="w-full text-xs">
-                  <thead className="bg-muted/50 border-b">
-                    <tr>
-                      <th className="text-left p-2">Time</th>
-                      <th className="text-left p-2">Type</th>
-                      <th className="text-right p-2">Qty</th>
-                      <th className="text-right p-2">Unit Cost</th>
-                      <th className="text-left p-2">Reference</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {movements.length === 0 && (
-                      <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No movements recorded for this day.</td></tr>
-                    )}
-                    {movements.map((m, i) => (
-                      <tr key={i} className="border-b">
-                        <td className="p-2 font-mono">{m.ts.slice(11, 16)}</td>
-                        <td className="p-2"><Badge variant="secondary" className="text-[10px]">{m.type}</Badge></td>
-                        <td className={cn("p-2 text-right font-medium", m.quantity < 0 ? "text-destructive" : "text-success")}>
-                          {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
-                        </td>
-                        <td className="p-2 text-right">{formatNaira(m.unitCost)}</td>
-                        <td className="p-2 text-muted-foreground">{m.reference ?? (m.source === "synthetic" ? "—" : "")}{m.notes ? ` · ${m.notes}` : ""}</td>
+              <>
+                <div className="max-h-[420px] overflow-auto border rounded-lg">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50 border-b">
+                      <tr>
+                        <th className="text-left p-2">Time</th>
+                        <th className="text-left p-2">Type</th>
+                        <th className="text-right p-2">Qty</th>
+                        <th className="text-right p-2">Unit Cost</th>
+                        <th className="text-left p-2">Reference</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {movements.length === 0 && (
+                        <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No movements recorded for this day.</td></tr>
+                      )}
+                      {movements.map((m, i) => (
+                        <tr key={i} className="border-b">
+                          <td className="p-2 font-mono">{m.ts.slice(11, 16)}</td>
+                          <td className="p-2"><Badge variant="secondary" className="text-[10px]">{m.type}</Badge></td>
+                          <td className={cn("p-2 text-right font-medium", m.quantity < 0 ? "text-destructive" : "text-success")}>
+                            {m.quantity > 0 ? `+${m.quantity}` : m.quantity}
+                          </td>
+                          <td className="p-2 text-right">{formatNaira(m.unitCost)}</td>
+                          <td className="p-2 text-muted-foreground">{m.reference ?? (m.source === "synthetic" ? "—" : "")}{m.notes ? ` · ${m.notes}` : ""}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {totalPages > 1 && (
+                  <div className="p-2 border-t mt-2">
+                    <PaginationControls
+                      page={page}
+                      totalPages={totalPages}
+                      perPage={DEFAULT_PAGE_SIZE}
+                      totalItems={total}
+                      pageSizeOptions={[20]}
+                      onPageChange={setPage}
+                      onPerPageChange={() => {}}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -873,8 +961,16 @@ function StockCountDialog({
   const [filter, setFilter] = useState<CountFilter>("all");
   const [search, setSearch] = useState("");
 
+  const [countPage, setCountPage] = useState(1);
+  const [countPerPage, setCountPerPage] = useState(DEFAULT_PAGE_SIZE);
+
   const { data: countInventoryRes } = useGetInventoryItems(
-    open && outletId ? { outletId, per_page: 1000 } : undefined
+    open && outletId && !isContinue ? {
+      outletId,
+      page: countPage,
+      per_page: countPerPage,
+      search: search.trim() || undefined,
+    } : undefined
   );
 
   // Initialize when opened
@@ -905,6 +1001,8 @@ function StockCountDialog({
     }
     setFilter("all");
     setSearch("");
+    setCountPage(1);
+    setCountPerPage(DEFAULT_PAGE_SIZE);
   }, [session]);
 
   // Available snapshots for new sessions; locked once draft exists
@@ -970,22 +1068,21 @@ function StockCountDialog({
 
   const totals = useMemo(() => {
     let counted = 0, skipped = 0;
-    for (const s of snapshots) {
-      const e = counts[s.id];
-      if (!e) continue;
+    for (const key of Object.keys(counts)) {
+      const e = counts[key];
       if (e.skipped) skipped += 1;
       else if (e.actualQty !== "" && !isNaN(Number(e.actualQty))) counted += 1;
     }
-    const total = snapshots.length;
+    const total = isContinue ? snapshots.length : (countInventoryRes?.meta?.total ?? 0);
     const pending = Math.max(0, total - counted - skipped);
     const pct = total > 0 ? Math.round((counted / total) * 100) : 0;
     return { total, counted, skipped, pending, pct };
-  }, [snapshots, counts]);
+  }, [snapshots, counts, isContinue, countInventoryRes]);
 
   const filteredSnapshots = useMemo(() => {
     const term = search.trim().toLowerCase();
     return snapshots.filter((s) => {
-      if (term && !`${s.itemName} ${s.sku}`.toLowerCase().includes(term)) return false;
+      if (isContinue && term && !`${s.itemName} ${s.sku}`.toLowerCase().includes(term)) return false;
       const e = counts[s.id];
       const isCounted = !!e && !e.skipped && e.actualQty !== "" && !isNaN(Number(e.actualQty));
       const isSkipped = !!e?.skipped;
@@ -997,27 +1094,57 @@ function StockCountDialog({
       if (filter === "variance" && !hasVariance) return false;
       return true;
     });
-  }, [snapshots, counts, filter, search]);
+  }, [snapshots, counts, filter, search, isContinue]);
+
+  const totalItemsCount = isContinue ? filteredSnapshots.length : (countInventoryRes?.meta?.total ?? 0);
+  const totalPagesCount = isContinue ? Math.max(1, Math.ceil(filteredSnapshots.length / countPerPage)) : (countInventoryRes?.meta?.last_page ?? 1);
+  const safeCountPage = Math.min(countPage, totalPagesCount);
+
+  const paginatedSnapshots = useMemo(() => {
+    if (!isContinue) return filteredSnapshots;
+    const start = (safeCountPage - 1) * countPerPage;
+    return filteredSnapshots.slice(start, start + countPerPage);
+  }, [filteredSnapshots, isContinue, safeCountPage, countPerPage]);
+
+  useEffect(() => {
+    setCountPage(1);
+  }, [filter, search]);
 
   const setCount = (snapshotId: string, patch: Partial<LocalCount>) => {
     setCounts((c) => ({ ...c, [snapshotId]: { actualQty: "", skipped: false, ...c[snapshotId], ...patch } }));
   };
 
-  const collectCounts = () =>
-    snapshots.map((s) => {
-      const e = counts[s.id];
-      if (!e) return { snapshotId: s.id, actualQty: undefined };
-      if (e.skipped) return { snapshotId: s.id, skipped: true };
+  const collectCounts = () => {
+    if (isContinue) {
+      return snapshots.map((s) => {
+        const e = counts[s.id];
+        if (!e) return { snapshotId: s.id, actualQty: undefined };
+        if (e.skipped) return { snapshotId: s.id, skipped: true };
+        if (e.actualQty === "" || isNaN(Number(e.actualQty))) {
+          return { snapshotId: s.id, actualQty: undefined };
+        }
+        return {
+          snapshotId: s.id,
+          actualQty: Number(e.actualQty),
+          reasonCode: e.reasonCode,
+          reasonNote: e.reasonNote,
+        };
+      });
+    }
+    return Object.keys(counts).map((id) => {
+      const e = counts[id];
+      if (e.skipped) return { snapshotId: id, skipped: true };
       if (e.actualQty === "" || isNaN(Number(e.actualQty))) {
-        return { snapshotId: s.id, actualQty: undefined };
+        return { snapshotId: id, actualQty: undefined };
       }
       return {
-        snapshotId: s.id,
+        snapshotId: id,
         actualQty: Number(e.actualQty),
         reasonCode: e.reasonCode,
         reasonNote: e.reasonNote,
       };
     });
+  };
 
   const handleSaveDraft = async () => {
     try {
@@ -1118,7 +1245,7 @@ function StockCountDialog({
             </div>
             <div className="flex gap-1 bg-muted p-1 rounded-md text-xs overflow-x-auto">
               {([
-                { k: "all", l: `All (${snapshots.length})` },
+                { k: "all", l: `All (${totals.total})` },
                 { k: "pending", l: `Pending (${totals.pending})` },
                 { k: "counted", l: `Counted (${totals.counted})` },
                 { k: "skipped", l: `Skipped (${totals.skipped})` },
@@ -1154,14 +1281,14 @@ function StockCountDialog({
               </tr>
             </thead>
             <tbody>
-              {filteredSnapshots.length === 0 && (
+              {paginatedSnapshots.length === 0 && (
                 <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">
                   {snapshots.length === 0
                     ? "No items at this outlet for the selected date."
                     : "No items match this filter."}
                 </td></tr>
               )}
-              {filteredSnapshots.map((s) => {
+              {paginatedSnapshots.map((s) => {
                 const entry = counts[s.id] ?? { actualQty: "", skipped: false } as LocalCount;
                 const actual = Number(entry.actualQty);
                 const hasVal = !entry.skipped && entry.actualQty !== "" && !isNaN(actual);
@@ -1239,6 +1366,22 @@ function StockCountDialog({
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination controls */}
+        <div className="px-4 py-2 border-t bg-muted/30">
+          <PaginationControls
+            page={safeCountPage}
+            totalPages={totalPagesCount}
+            perPage={countPerPage}
+            totalItems={totalItemsCount}
+            pageSizeOptions={[5, 10, 20, 50]}
+            onPageChange={setCountPage}
+            onPerPageChange={(v) => {
+              setCountPerPage(v);
+              setCountPage(1);
+            }}
+          />
         </div>
 
         <div className="px-4 sm:px-6 py-3 border-t">

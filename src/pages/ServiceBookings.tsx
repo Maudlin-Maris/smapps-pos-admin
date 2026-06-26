@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import { Plus, Search, Calendar, Clock, User, Phone, Pencil, Trash2, CheckCircle
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useGetOutlets } from "@/services/api/outlets";
+import { useGetServiceBookings } from "@/services/api/bookings";
 
 interface Appointment {
   id: string;
@@ -80,14 +81,25 @@ export default function ServiceBookings() {
   const serviceOutlets = outlets.filter(o => ["salon", "barber"].includes(o.businessType));
   const isAllOutlets = selectedOutletId === "all";
 
-  const filtered = appointments
-    .filter(a => isAllOutlets || a.outletId === selectedOutletId)
-    .filter(a => filterStatus === "all" || a.status === filterStatus)
-    .filter(a =>
-      a.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      a.serviceName.toLowerCase().includes(search.toLowerCase()) ||
-      a.staffName.toLowerCase().includes(search.toLowerCase())
-    );
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: apiAppointments } = useGetServiceBookings({
+    outletId: selectedOutletId !== "all" ? selectedOutletId : undefined,
+    status: filterStatus !== "all" ? filterStatus : undefined,
+    search: debouncedSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
+  const displayAppointments = apiAppointments || appointments;
+
+  const filtered = displayAppointments;
 
   // Group by date
   const grouped = filtered.reduce((acc, apt) => {

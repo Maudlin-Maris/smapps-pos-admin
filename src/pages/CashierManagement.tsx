@@ -28,6 +28,7 @@ import {
 import CashierFormDialog, {
   type CashierFormData,
 } from "@/components/cashiers/CashierFormDialog";
+import type { UpdateCashierPayload } from "@/lib/types/cashiers";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/use-pagination";
 import { ResuablePagination } from "@/components/ui/reusable-pagination";
@@ -94,7 +95,6 @@ interface PinRevealState {
 }
 
 export default function CashierManagement() {
-  const { data: cashiersList = [], isLoading, mutate } = useGetCashiers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
   const [editingCashier, setEditingCashier] = useState<CashierRecord | null>(null);
@@ -104,8 +104,23 @@ export default function CashierManagement() {
   const [reactivateTarget, setReactivateTarget] = useState<CashierRecord | null>(null);
   const [pinReveal, setPinReveal] = useState<PinRevealState | null>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | CashierStatus>("all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: cashiersList = [], isLoading, mutate } = useGetCashiers({
+    search: debouncedSearch.trim() || undefined,
+    status: statusFilter !== "all" ? statusFilter : undefined,
+  }, {
+    keepPreviousData: true,
+  });
 
   const { trigger: createCashier, isMutating: isCreating } = useCreateCashier({
     onSuccess: (result) => {
@@ -177,13 +192,23 @@ export default function CashierManagement() {
   };
 
   const handleSubmit = async (data: CashierFormData) => {
+    const payload: UpdateCashierPayload = {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phone,
+      assignments: data.assignments.map((a) => ({
+        outletId: a.outletId,
+        departments: a.departments.map((d) => d.id),
+      })),
+    };
     if (dialogMode === "add") {
       try {
-        await createCashier(data);
+        await createCashier(payload);
       } catch (e) {}
     } else if (editingCashier) {
       try {
-        await updateCashier(data);
+        await updateCashier(payload);
         toast.success(`Cashier ${data.firstName} ${data.lastName} updated`);
       } catch (e) {}
     }
@@ -221,16 +246,7 @@ export default function CashierManagement() {
     }
   };
 
-  const filtered = cashiersList.filter((c) => {
-    const q = search.toLowerCase();
-    const matchesSearch = !q ||
-      c.data.firstName.toLowerCase().includes(q) ||
-      c.data.lastName.toLowerCase().includes(q) ||
-      c.data.email.toLowerCase().includes(q) ||
-      c.data.assignments.some((a) => a.outletName.toLowerCase().includes(q));
-    const matchesStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filtered = cashiersList;
 
   const {
     page, setPage, perPage, setPerPage, totalPages,

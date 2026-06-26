@@ -125,7 +125,7 @@ export default function CategoryManager({
       <Card className="p-4 lg:col-span-1">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-heading font-semibold text-sm">Categories</h3>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={openAddCategory}>
+          <Button data-testid="add-category-button" variant="ghost" size="icon" className="h-7 w-7" onClick={openAddCategory}>
             <Plus className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -157,10 +157,11 @@ export default function CategoryManager({
                 {cat.name}
               </button>
               <div className="hidden group-hover:flex items-center gap-0.5 pr-1">
-                <button onClick={() => openEditCategory(cat)} className="p-1 rounded hover:bg-muted text-muted-foreground">
+                <button data-testid={`edit-category-${cat.name.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => openEditCategory(cat)} className="p-1 rounded hover:bg-muted text-muted-foreground">
                   <Edit className="h-3 w-3" />
                 </button>
                 <button
+                  data-testid={`delete-category-${cat.name.toLowerCase().replace(/\s+/g, "-")}`}
                   onClick={() => { setDeleteTarget(cat.id); setDeleteConfirmOpen(true); }}
                   className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                 >
@@ -195,6 +196,7 @@ export default function CategoryManager({
               <Label htmlFor="cat-name">Category Name</Label>
               <Input
                 id="cat-name"
+                data-testid="category-name-input"
                 value={catName}
                 onChange={(e) => setCatName(e.target.value)}
                 placeholder="e.g. Food & Beverages"
@@ -205,7 +207,7 @@ export default function CategoryManager({
           </div>
           <SheetFooter className="px-6 py-4 border-t">
             <Button variant="outline" onClick={() => setCatDialogOpen(false)} disabled={isCreating || isUpdating}>Cancel</Button>
-            <Button onClick={saveCategory} disabled={!catName.trim()} isLoading={isCreating || isUpdating}>
+            <Button data-testid="save-category-button" onClick={saveCategory} disabled={!catName.trim()} isLoading={isCreating || isUpdating}>
               Save
             </Button>
           </SheetFooter>
@@ -223,7 +225,7 @@ export default function CategoryManager({
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={isDeleting}>Cancel</Button>
-            <Button variant="destructive" onClick={confirmDelete} isLoading={isDeleting}>
+            <Button data-testid="confirm-delete-category-button" variant="destructive" onClick={confirmDelete} isLoading={isDeleting}>
               Delete
             </Button>
           </DialogFooter>

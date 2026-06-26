@@ -1,4 +1,4 @@
-import { useMemo, useState, Fragment } from "react";
+import { useMemo, useState, Fragment, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import type { MeasuringUnit } from "./MeasuringUnitManager";
 import { useGetOutlets } from "@/services/api/outlets";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
 
 interface Props {
   inventoryItems: InventoryItem[];
@@ -49,8 +50,53 @@ export default function ProfitabilityView({
 }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const { data: outlets = [] } = useGetOutlets();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: searchItemsResponse } = useGetInventoryItems({
+    search: debouncedSearch.trim() || undefined,
+    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+    per_page: 100,
+  });
+
+  const apiItems = useMemo<InventoryItem[]>(() => {
+    if (!searchItemsResponse?.data) return [];
+    return searchItemsResponse.data.map((item) => {
+      const fullItem = inventoryItems.find((x) => x.id === item.id || x.sku === item.sku);
+      const stock = item.stock ?? item.quantity ?? fullItem?.stock ?? 0;
+      const minStock = fullItem?.minStock ?? 0;
+      return {
+        id: item.id,
+        name: item.name || fullItem?.name || "",
+        sku: item.sku || fullItem?.sku || "",
+        description: fullItem?.description || "",
+        costPrice: item.costPrice ?? fullItem?.costPrice ?? 0,
+        sellPrice: fullItem?.sellPrice ?? 0,
+        stock: stock,
+        minStock: minStock,
+        status: stock <= minStock * 0.3 ? "critical" : stock <= minStock ? "low" : "good",
+        categoryId: item.categoryId || fullItem?.categoryId || "",
+        unitId: item.unitId || fullItem?.unitId || "",
+        outletId: item.outletId || fullItem?.outletId || "",
+        conversions: fullItem?.conversions || [],
+        pricingMethod: fullItem?.pricingMethod ?? "markup",
+        pricingValue: fullItem?.pricingValue ?? 30,
+        batchNumber: fullItem?.batchNumber ?? "",
+        expiryDate: fullItem?.expiryDate ?? "",
+        batches: fullItem?.batches ?? [],
+      };
+    });
+  }, [searchItemsResponse, inventoryItems]);
+
+  const displayItems = debouncedSearch ? apiItems : inventoryItems;
 
   const isAll = selectedOutletId === "all";
   const visibleOutlets = isAll ? outlets : outlets.filter((o) => o.id === selectedOutletId);
@@ -58,15 +104,15 @@ export default function ProfitabilityView({
   const result = useMemo(
     () =>
       computeProfitability({
-        inventoryItems,
+        inventoryItems: displayItems,
         composites,
         outletOverheadDefaults,
       }),
-    [inventoryItems, composites, outletOverheadDefaults]
+    [displayItems, composites, outletOverheadDefaults]
   );
 
   const rows = useMemo(() => {
-    return inventoryItems
+    return displayItems
       .map((it) => {
         const r = result.rawMaterials[it.id];
         const unit = units.find((u) => u.id === it.unitId);
@@ -76,13 +122,8 @@ export default function ProfitabilityView({
           ...r,
         };
       })
-      .filter((row) =>
-        search.trim()
-          ? row.item.name.toLowerCase().includes(search.toLowerCase().trim())
-          : true
-      )
       .sort((a, b) => b.totalContribution - a.totalContribution);
-  }, [inventoryItems, units, result, search]);
+  }, [displayItems, units, result]);
 
   const totalProfitPotential = rows.reduce((s, r) => s + r.totalContribution, 0);
   const recipesPriced = Object.values(result.recipes).filter((r) => r.profit !== undefined).length;

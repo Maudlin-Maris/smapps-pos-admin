@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useGetSalesByItemReport } from "@/services/api/reports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,7 @@ interface Props {
 
 export default function SalesByItem({ sales, selectedOutlets, dateRange, cashierFilter }: Props) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [dailyOpen, setDailyOpen] = useState<{ name: string; qty: number; revenue: number } | null>(null);
 
   const filteredSales = useMemo(
@@ -69,15 +71,25 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
     [sales, selectedOutlets, dateRange, cashierFilter]
   );
 
-  const allItems = useMemo(() => aggregateItems(selectedOutlets), [selectedOutlets]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: apiSalesByItem } = useGetSalesByItemReport({
+    outletIds: selectedOutlets,
+    search: debouncedSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
+  const allItems = apiSalesByItem || [];
 
   const visibleItems = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return allItems;
-    return allItems.filter(
-      (i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q)
-    );
-  }, [allItems, search]);
+    return allItems;
+  }, [allItems]);
 
   const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
 

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { useGetOutletLocations } from "@/services/api/outlets";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type OrderType, type PaymentMethod, posLocations, getOrderTypesForBusiness, type POSDiscount, type AppliedFee } from "@/data/posData";
 import { getOutletDiscountTipConfig } from "@/data/outletDiscountTips";
@@ -35,6 +36,20 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
+  const [debouncedLocationSearch, setDebouncedLocationSearch] = useState("");
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLocationSearch(locationSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [locationSearch]);
+
+  const { data: apiLocations } = useGetOutletLocations(
+    currentOutlet?.id,
+    { search: debouncedLocationSearch.trim() || undefined },
+    { keepPreviousData: true }
+  );
   const [customerFirstName, setCustomerFirstName] = useState("");
   const [customerLastName, setCustomerLastName] = useState("");
   const customerName = [customerFirstName.trim(), customerLastName.trim()].filter(Boolean).join(" ");
@@ -74,7 +89,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const businessType = currentOutlet ? getBusinessType(currentOutlet.businessType) : null;
   const allowedOrderTypes = allowedTypes;
-  const outletLocations = currentOutlet ? posLocations.filter(l => l.outletId === currentOutlet.id) : [];
+  const outletLocations = apiLocations || (currentOutlet ? posLocations.filter(l => l.outletId === currentOutlet.id) : []);
   const showLocationPicker = features?.hasDineIn && selectedOrderType === "dine_in";
 
   const notesPlaceholder = useMemo(() => {
@@ -388,9 +403,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             </div>
 
             {showLocationPicker && outletLocations.length > 0 && (() => {
-              const filtered = locationSearch
-                ? outletLocations.filter(l => l.name.toLowerCase().includes(locationSearch.toLowerCase()))
-                : outletLocations;
+              const filtered = outletLocations;
               return (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

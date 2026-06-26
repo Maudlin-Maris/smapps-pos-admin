@@ -53,12 +53,23 @@ export default function UserManagement() {
   const { user: currentUser, hasPermission } = useAuth();
   const { toast } = useToast();
 
-  const { data: usersList = [], isLoading: isUsersLoading, mutate } = useGetUsers();
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: usersList = [], isLoading: isUsersLoading, mutate } = useGetUsers({
+    search: debouncedSearch.trim() || undefined,
+  });
   const { data: rolesList = [] } = useGetRoles();
   const { data: outletsResponse } = useGetOutlets();
   const outlets = outletsResponse || [];
 
-  const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -108,14 +119,7 @@ export default function UserManagement() {
     return <Navigate to="/" replace />;
   }
 
-  const filtered = usersList.filter((u) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      (u.displayName || `${u.firstName} ${u.lastName}`).toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q)
-    );
-  });
+  const filtered = usersList;
 
   const openCreate = () => {
     setEditingId(null);

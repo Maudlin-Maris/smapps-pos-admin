@@ -1,19 +1,53 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Package, Trash2, Pencil, Gift, Tag, ArrowRightLeft, ChevronDown, ChevronRight, X, Loader2 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Plus,
+  Search,
+  Package,
+  Trash2,
+  Pencil,
+  Gift,
+  Tag,
+  ArrowRightLeft,
+  ChevronDown,
+  ChevronRight,
+  X,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/currency";
-import { type PromoBundle, type BundleItem, type BundlePricingType, type POSProduct } from "@/lib/types/promo-bundle";
+import {
+  type PromoBundle,
+  type BundleItem,
+  type BundlePricingType,
+  type POSProduct,
+} from "@/lib/types/promo-bundle";
 import { useGetItems } from "@/services/api/catalog/item";
 
 import { useGetOutlets } from "@/services/api/outlets";
@@ -24,43 +58,75 @@ import {
   useUpdateBundleStatus,
   useUpdatePromoBundle,
 } from "@/services/api/catalog/promo-bundle";
-import type { ApiPromoBundle } from "@/lib/types/promo-bundle";
+import type { APIPromoBundle } from "@/lib/types/promo-bundle";
 import type { Outlet } from "@/lib/types/outlet";
 
 export default function PromoBundleManagement() {
   const [selectedOutlet, setSelectedOutlet] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [editingBundle, setEditingBundle] = useState<PromoBundle | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data: outletsData, isLoading: isOutletsLoading } = useGetOutlets();
   const outlets = outletsData || [];
 
-  const { data: listData, isLoading: isBundlesLoading, mutate } = useGetPromoBundles(
-    selectedOutlet !== "all" ? { outletId: selectedOutlet } : undefined
-  );
+  const queryParams = useMemo(() => {
+    const params: { outletId?: string; search?: string } = {};
+    if (selectedOutlet !== "all") {
+      params.outletId = selectedOutlet;
+    }
+    if (debouncedSearch.trim()) {
+      params.search = debouncedSearch.trim();
+    }
+    return params;
+  }, [selectedOutlet, debouncedSearch]);
 
-  const { trigger: triggerCreate, isMutating: isCreatingBundle } = useCreatePromoBundle();
-  const { trigger: triggerUpdate, isMutating: isUpdatingBundle } = useUpdatePromoBundle(editingBundle?.id);
+  const {
+    data: listData,
+    isLoading: isBundlesLoading,
+    mutate,
+  } = useGetPromoBundles(queryParams);
 
-  const mapApiBundleToLocal = (apiBundle: ApiPromoBundle): PromoBundle => {
+  const { trigger: triggerCreate, isMutating: isCreatingBundle } =
+    useCreatePromoBundle();
+  const { trigger: triggerUpdate, isMutating: isUpdatingBundle } =
+    useUpdatePromoBundle(editingBundle?.id);
+
+  const mapApiBundleToLocal = (apiBundle: APIPromoBundle): PromoBundle => {
     return {
       id: apiBundle.id,
       name: apiBundle.name,
       description: apiBundle.description || "",
       outletId: apiBundle.outletId,
       items: apiBundle.items.map((i) => ({
-        productId: i.catalogItemId,
-        productName: i.name || "Item",
+        productId: i.productId,
+        productName: i.productName || "Item",
         quantity: i.quantity,
-        swappable: false,
-        swapOptions: [],
+        variantId: i.variantId || undefined,
+        variantName: i.variantName || undefined,
+        swappable: i.swappable || false,
+        swapOptions: i.swapOptions
+          ? i.swapOptions.map((opt) => ({
+              productId: opt.productId,
+              productName: opt.productName,
+              variantId: opt.variantId || undefined,
+              variantName: opt.variantName || undefined,
+            }))
+          : [],
       })),
-      pricingType: "fixed",
-      pricingValue: apiBundle.price,
-      originalPrice: apiBundle.price,
-      bundlePrice: apiBundle.price,
-      status: apiBundle.status,
+      pricingType: (apiBundle.pricingType as BundlePricingType) || "fixed",
+      pricingValue: apiBundle.pricingValue || 0,
+      originalPrice: apiBundle.originalPrice || 0,
+      bundlePrice: apiBundle.bundlePrice || 0,
+      status: apiBundle.status === "inactive" ? "inactive" : "active",
     };
   };
 
@@ -68,13 +134,7 @@ export default function PromoBundleManagement() {
     return (listData?.data || []).map(mapApiBundleToLocal);
   }, [listData]);
 
-  const filtered = useMemo(() => {
-    return bundles.filter(b => {
-      if (selectedOutlet !== "all" && b.outletId !== selectedOutlet) return false;
-      if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return false;
-      return true;
-    });
-  }, [bundles, selectedOutlet, search]);
+  const filtered = bundles;
 
   const handleSave = async (bundle: PromoBundle) => {
     const isEdit = editingBundle && !editingBundle.id.startsWith("bundle-");
@@ -106,7 +166,8 @@ export default function PromoBundleManagement() {
     }
   };
 
-  const isLoading = isBundlesLoading || isOutletsLoading;
+  const isInitialLoading = isOutletsLoading || (isBundlesLoading && !listData);
+  const isLoading = isInitialLoading;
 
   return (
     <div className="space-y-6">
@@ -120,7 +181,13 @@ export default function PromoBundleManagement() {
             Create product bundles and sell them at a discounted package price
           </p>
         </div>
-        <Button onClick={() => { setIsCreating(true); setEditingBundle(null); }} disabled={isLoading}>
+        <Button
+          onClick={() => {
+            setIsCreating(true);
+            setEditingBundle(null);
+          }}
+          disabled={isLoading}
+        >
           <Plus className="w-4 h-4 mr-1" /> Create Bundle
         </Button>
       </div>
@@ -128,33 +195,51 @@ export default function PromoBundleManagement() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search bundles..." className="pl-10" disabled={isLoading} />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search bundles..."
+            className="pl-10"
+            disabled={isLoading}
+          />
         </div>
-        <Select value={selectedOutlet} onValueChange={setSelectedOutlet} disabled={isLoading}>
+        <Select
+          value={selectedOutlet}
+          onValueChange={setSelectedOutlet}
+          disabled={isLoading}
+        >
           <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="All Outlets" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Outlets</SelectItem>
-            {outlets.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+            {outlets.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {isLoading ? (
+      {isInitialLoading ? (
         <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-dashed rounded-lg">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
-          <p className="text-sm text-muted-foreground">Loading promo bundles...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading promo bundles...
+          </p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
           <Package className="w-12 h-12 mb-3 opacity-30" />
           <p className="font-medium">No bundles found</p>
-          <p className="text-sm mt-1">Create your first promo bundle to get started</p>
+          <p className="text-sm mt-1">
+            Create your first promo bundle to get started
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(bundle => (
+          {filtered.map((bundle) => (
             <PromoBundleCard
               key={bundle.id}
               bundle={bundle}
@@ -170,7 +255,10 @@ export default function PromoBundleManagement() {
         open={isCreating || !!editingBundle}
         bundle={editingBundle}
         isSaving={isCreatingBundle || isUpdatingBundle}
-        onClose={() => { setIsCreating(false); setEditingBundle(null); }}
+        onClose={() => {
+          setIsCreating(false);
+          setEditingBundle(null);
+        }}
         onSave={handleSave}
       />
     </div>
@@ -185,14 +273,28 @@ interface PromoBundleCardProps {
   onRefresh: () => void;
 }
 
-function PromoBundleCard({ bundle, outlets, onEdit, onRefresh }: PromoBundleCardProps) {
-  const { trigger: triggerDelete, isMutating: isDeleting } = useDeletePromoBundle(bundle.id);
-  const { trigger: triggerUpdateStatus, isMutating: isUpdatingStatus } = useUpdateBundleStatus(bundle.id);
+function PromoBundleCard({
+  bundle,
+  outlets,
+  onEdit,
+  onRefresh,
+}: PromoBundleCardProps) {
+  const { trigger: triggerDelete, isMutating: isDeleting } =
+    useDeletePromoBundle(bundle.id);
+  const { trigger: triggerUpdateStatus, isMutating: isUpdatingStatus } =
+    useUpdateBundleStatus(bundle.id);
 
-  const outlet = outlets.find(o => o.id === bundle.outletId);
+  console.log({ bundle });
+
+  const outlet = outlets.find((o) => o.id === bundle.outletId);
   const savings = bundle.originalPrice - bundle.bundlePrice;
-  const savingsPercent = bundle.originalPrice > 0 ? Math.round((savings / bundle.originalPrice) * 100) : 0;
-  const swappableCount = bundle.items.filter(i => i.swappable && i.swapOptions && i.swapOptions.length > 0).length;
+  const savingsPercent =
+    bundle.originalPrice > 0
+      ? Math.round((savings / bundle.originalPrice) * 100)
+      : 0;
+  const swappableCount = bundle.items.filter(
+    (i) => i.swappable && i.swapOptions && i.swapOptions.length > 0,
+  ).length;
 
   const handleDelete = async () => {
     try {
@@ -226,36 +328,62 @@ function PromoBundleCard({ bundle, outlets, onEdit, onRefresh }: PromoBundleCard
       )}
       {bundle.status === "inactive" && (
         <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center">
-          <Badge variant="secondary" className="text-sm">Inactive</Badge>
+          <Badge variant="secondary" className="text-sm">
+            Inactive
+          </Badge>
         </div>
       )}
       <CardContent className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div>
             <h3 className="font-semibold text-foreground">{bundle.name}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">{outlet?.name}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {outlet?.name}
+            </p>
           </div>
           <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(bundle)} disabled={isCardMutating}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => onEdit(bundle)}
+              disabled={isCardMutating}
+            >
               <Pencil className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete} disabled={isCardMutating}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
+              onClick={handleDelete}
+              disabled={isCardMutating}
+            >
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
         </div>
 
-        <p className="text-sm text-muted-foreground mb-3">{bundle.description}</p>
+        <p className="text-sm text-muted-foreground mb-3">
+          {bundle.description}
+        </p>
 
         <div className="space-y-1.5 mb-3">
           {bundle.items.map((item, idx) => (
             <div key={idx} className="flex items-center gap-2 text-sm">
-              <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">{item.quantity}</span>
+              <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                {item.quantity}
+              </span>
               <span className="text-foreground">{item.productName}</span>
-              {item.variantName && <span className="text-muted-foreground text-xs">({item.variantName})</span>}
-              {item.swappable && item.swapOptions && item.swapOptions.length > 0 && (
-                <ArrowRightLeft className="w-3 h-3 text-primary/60" />
+              {item.variantName && (
+                <span className="text-muted-foreground text-xs">
+                  ({item.variantName})
+                </span>
               )}
+              {item.swappable &&
+                item.swapOptions &&
+                item.swapOptions.length > 0 && (
+                  <ArrowRightLeft className="w-3 h-3 text-primary/60" />
+                )}
             </div>
           ))}
         </div>
@@ -269,15 +397,26 @@ function PromoBundleCard({ bundle, outlets, onEdit, onRefresh }: PromoBundleCard
 
         <div className="flex items-end justify-between pt-3 border-t border-border">
           <div>
-            <p className="text-xs text-muted-foreground line-through">{formatNaira(bundle.originalPrice)}</p>
-            <p className="text-lg font-bold text-foreground">{formatNaira(bundle.bundlePrice)}</p>
+            <p className="text-xs text-muted-foreground line-through">
+              {formatNaira(bundle.originalPrice)}
+            </p>
+            <p className="text-lg font-bold text-foreground">
+              {formatNaira(bundle.bundlePrice)}
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/20">
+            <Badge
+              variant="outline"
+              className="text-xs bg-green-500/10 text-green-600 border-green-500/20"
+            >
               <Tag className="w-3 h-3 mr-1" />
               Save {savingsPercent}%
             </Badge>
-            <Switch checked={bundle.status === "active"} onCheckedChange={handleToggleStatus} disabled={isCardMutating} />
+            <Switch
+              checked={bundle.status === "active"}
+              onCheckedChange={handleToggleStatus}
+              disabled={isCardMutating}
+            />
           </div>
         </div>
       </CardContent>
@@ -294,7 +433,13 @@ interface BundleFormDialogProps {
   onSave: (bundle: PromoBundle) => void;
 }
 
-function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFormDialogProps) {
+function BundleFormDialog({
+  open,
+  bundle,
+  isSaving,
+  onClose,
+  onSave,
+}: BundleFormDialogProps) {
   const isEdit = !!bundle;
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -303,16 +448,46 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
   const [pricingType, setPricingType] = useState<BundlePricingType>("fixed");
   const [pricingValue, setPricingValue] = useState<number>(0);
   const [productSearch, setProductSearch] = useState("");
+  const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
   const [expandedSwapIdx, setExpandedSwapIdx] = useState<number | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
+  const [debouncedSwapSearch, setDebouncedSwapSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedProductSearch(productSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [productSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSwapSearch(swapSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [swapSearch]);
 
   const { data: outletsData } = useGetOutlets();
   const outlets = outletsData || [];
 
   const { data: itemsResponse } = useGetItems();
+
+  const { data: searchItemsResponse } = useGetItems({
+    outletId: outletId || undefined,
+    search: debouncedProductSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
+  const { data: swapItemsResponse } = useGetItems({
+    outletId: outletId || undefined,
+    search: debouncedSwapSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
   const posProducts = useMemo<POSProduct[]>(() => {
     if (!itemsResponse?.data) return [];
-    return itemsResponse.data.map(item => ({
+    return itemsResponse.data.map((item) => ({
       id: item.id,
       name: item.name,
       price: item.price,
@@ -321,7 +496,11 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
       image: item.images?.[0],
       barcode: item.sku,
       variants: [],
-      inStock: item.status === "active" || item.status === "good" || item.status === "available" || true,
+      inStock:
+        item.status === "active" ||
+        item.status === "good" ||
+        item.status === "available" ||
+        true,
       outletId: item.outletId,
     }));
   }, [itemsResponse]);
@@ -333,7 +512,12 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
         setName(bundle.name);
         setDescription(bundle.description);
         setOutletId(bundle.outletId);
-        setItems(bundle.items.map(i => ({ ...i, swapOptions: i.swapOptions ? [...i.swapOptions] : [] })));
+        setItems(
+          bundle.items.map((i) => ({
+            ...i,
+            swapOptions: i.swapOptions ? [...i.swapOptions] : [],
+          })),
+        );
         setPricingType(bundle.pricingType);
         setPricingValue(bundle.pricingValue);
       } else {
@@ -351,31 +535,58 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
   };
 
   // Available products for selected outlet
-  const availableProducts = useMemo(() => {
-    const prods = posProducts.filter(p => p.outletId === outletId && p.inStock);
-    if (productSearch) return prods.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()));
-    return prods;
-  }, [outletId, productSearch]);
+  const availableProducts = useMemo<POSProduct[]>(() => {
+    if (!searchItemsResponse?.data) return [];
+    return searchItemsResponse.data
+      .filter((item) => {
+        const inStock = item.status === "active" || item.status === "good" || item.status === "available" || true;
+        return item.outletId === outletId && inStock;
+      })
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        categoryId: item.category,
+        subcategoryId: item.subcategory,
+        image: item.images?.[0],
+        barcode: item.sku,
+        variants: [],
+        inStock: true,
+        outletId: item.outletId,
+      }));
+  }, [searchItemsResponse, outletId]);
 
   // Swap candidate products for the expanded item
-  const swapCandidateProducts = useMemo(() => {
-    if (expandedSwapIdx === null) return [];
+  const swapCandidateProducts = useMemo<POSProduct[]>(() => {
+    if (expandedSwapIdx === null || !swapItemsResponse?.data) return [];
     const item = items[expandedSwapIdx];
     if (!item) return [];
-    const prods = posProducts.filter(p =>
-      p.outletId === outletId &&
-      p.inStock &&
-      p.id !== item.productId // exclude the default item itself
-    );
-    if (swapSearch) return prods.filter(p => p.name.toLowerCase().includes(swapSearch.toLowerCase()));
-    return prods;
-  }, [outletId, expandedSwapIdx, items, swapSearch]);
+    return swapItemsResponse.data
+      .filter((p) => {
+        const inStock = p.status === "active" || p.status === "good" || p.status === "available" || true;
+        return p.outletId === outletId && inStock && p.id !== item.productId;
+      })
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        categoryId: p.category,
+        subcategoryId: p.subcategory,
+        image: p.images?.[0],
+        barcode: p.sku,
+        variants: [],
+        inStock: true,
+        outletId: p.outletId,
+      }));
+  }, [swapItemsResponse, outletId, expandedSwapIdx, items]);
 
   const originalPrice = useMemo(() => {
     return items.reduce((sum, item) => {
-      const prod = posProducts.find(p => p.id === item.productId);
+      const prod = posProducts.find((p) => p.id === item.productId);
       if (!prod) return sum;
-      const variant = item.variantId ? prod.variants?.find(v => v.id === item.variantId) : undefined;
+      const variant = item.variantId
+        ? prod.variants?.find((v) => v.id === item.variantId)
+        : undefined;
       const price = variant?.price ?? prod.price;
       return sum + price * item.quantity;
     }, 0);
@@ -387,88 +598,141 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
   }, [pricingType, pricingValue, originalPrice]);
 
   const addProduct = (product: POSProduct) => {
-    const existing = items.find(i => i.productId === product.id && !i.variantId);
+    const existing = items.find(
+      (i) => i.productId === product.id && !i.variantId,
+    );
     if (existing) {
-      setItems(prev => prev.map(i => i === existing ? { ...i, quantity: i.quantity + 1 } : i));
+      setItems((prev) =>
+        prev.map((i) =>
+          i === existing ? { ...i, quantity: i.quantity + 1 } : i,
+        ),
+      );
     } else {
-      setItems(prev => [...prev, {
-        productId: product.id,
-        productName: product.name,
-        quantity: 1,
-        swappable: false,
-        swapOptions: [],
-      }]);
+      setItems((prev) => [
+        ...prev,
+        {
+          productId: product.id,
+          productName: product.name,
+          quantity: 1,
+          swappable: false,
+          swapOptions: [],
+        },
+      ]);
     }
     setProductSearch("");
   };
 
-  const addVariant = (product: POSProduct, variantId: string, variantName: string) => {
-    const existing = items.find(i => i.productId === product.id && i.variantId === variantId);
+  const addVariant = (
+    product: POSProduct,
+    variantId: string,
+    variantName: string,
+  ) => {
+    const existing = items.find(
+      (i) => i.productId === product.id && i.variantId === variantId,
+    );
     if (existing) {
-      setItems(prev => prev.map(i => i === existing ? { ...i, quantity: i.quantity + 1 } : i));
+      setItems((prev) =>
+        prev.map((i) =>
+          i === existing ? { ...i, quantity: i.quantity + 1 } : i,
+        ),
+      );
     } else {
-      setItems(prev => [...prev, {
-        productId: product.id,
-        productName: product.name,
-        quantity: 1,
-        variantId,
-        variantName,
-        swappable: false,
-        swapOptions: [],
-      }]);
+      setItems((prev) => [
+        ...prev,
+        {
+          productId: product.id,
+          productName: product.name,
+          quantity: 1,
+          variantId,
+          variantName,
+          swappable: false,
+          swapOptions: [],
+        },
+      ]);
     }
     setProductSearch("");
   };
 
   const removeItem = (idx: number) => {
-    setItems(prev => prev.filter((_, i) => i !== idx));
+    setItems((prev) => prev.filter((_, i) => i !== idx));
     if (expandedSwapIdx === idx) setExpandedSwapIdx(null);
   };
 
   const updateItemQuantity = (idx: number, qty: number) => {
     if (qty < 1) return removeItem(idx);
-    setItems(prev => prev.map((item, i) => i === idx ? { ...item, quantity: qty } : item));
+    setItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, quantity: qty } : item)),
+    );
   };
 
   const toggleSwappable = (idx: number) => {
-    setItems(prev => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const newSwappable = !item.swappable;
-      return { ...item, swappable: newSwappable, swapOptions: newSwappable ? (item.swapOptions || []) : [] };
-    }));
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        const newSwappable = !item.swappable;
+        return {
+          ...item,
+          swappable: newSwappable,
+          swapOptions: newSwappable ? item.swapOptions || [] : [],
+        };
+      }),
+    );
   };
 
-  const addSwapOption = (idx: number, product: POSProduct, variantId?: string, variantName?: string) => {
-    setItems(prev => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const options = item.swapOptions || [];
-      const exists = options.some(o => o.productId === product.id && o.variantId === variantId);
-      if (exists) return item;
-      return {
-        ...item,
-        swapOptions: [...options, {
-          productId: product.id,
-          productName: product.name,
-          variantId,
-          variantName,
-        }],
-      };
-    }));
+  const addSwapOption = (
+    idx: number,
+    product: POSProduct,
+    variantId?: string,
+    variantName?: string,
+  ) => {
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        const options = item.swapOptions || [];
+        const exists = options.some(
+          (o) => o.productId === product.id && o.variantId === variantId,
+        );
+        if (exists) return item;
+        return {
+          ...item,
+          swapOptions: [
+            ...options,
+            {
+              productId: product.id,
+              productName: product.name,
+              variantId,
+              variantName,
+            },
+          ],
+        };
+      }),
+    );
     setSwapSearch("");
   };
 
   const removeSwapOption = (itemIdx: number, optIdx: number) => {
-    setItems(prev => prev.map((item, i) => {
-      if (i !== itemIdx) return item;
-      return { ...item, swapOptions: (item.swapOptions || []).filter((_, j) => j !== optIdx) };
-    }));
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== itemIdx) return item;
+        return {
+          ...item,
+          swapOptions: (item.swapOptions || []).filter((_, j) => j !== optIdx),
+        };
+      }),
+    );
   };
 
   const handleSave = () => {
     if (!name.trim()) return toast.error("Bundle name is required");
-    if (items.length < 2) return toast.error("Add at least 2 items to create a bundle");
-    if (pricingType === "fixed" && pricingValue <= 0) return toast.error("Set a bundle price");
-    if (pricingType === "percentage_discount" && (pricingValue <= 0 || pricingValue > 100)) return toast.error("Discount must be between 1-100%");
+    if (items.length < 2)
+      return toast.error("Add at least 2 items to create a bundle");
+    if (pricingType === "fixed" && pricingValue <= 0)
+      return toast.error("Set a bundle price");
+    if (
+      pricingType === "percentage_discount" &&
+      (pricingValue <= 0 || pricingValue > 100)
+    )
+      return toast.error("Discount must be between 1-100%");
 
     onSave({
       id: bundle?.id || `bundle-${Date.now()}`,
@@ -488,10 +752,17 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
 
   return (
     <Sheet open={open} onOpenChange={(o) => !isSaving && handleOpenChange(o)}>
-      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+      <SheetContent
+        side="right"
+        className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10"
+      >
         <SheetHeader className="flex-shrink-0 p-4 sm:p-6 pb-0">
-          <SheetTitle>{isEdit ? "Edit Bundle" : "Create Promo Bundle"}</SheetTitle>
-          <SheetDescription>Group products together and sell at a package price</SheetDescription>
+          <SheetTitle>
+            {isEdit ? "Edit Bundle" : "Create Promo Bundle"}
+          </SheetTitle>
+          <SheetDescription>
+            Group products together and sell at a package price
+          </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -500,21 +771,45 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Bundle Name *</Label>
-                <Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Burger Combo Meal" disabled={isSaving} />
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Burger Combo Meal"
+                  disabled={isSaving}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Outlet *</Label>
-                <Select value={outletId} onValueChange={v => { setOutletId(v); setItems([]); }} disabled={isSaving}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={outletId}
+                  onValueChange={(v) => {
+                    setOutletId(v);
+                    setItems([]);
+                  }}
+                  disabled={isSaving}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {outlets.map(o => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                    {outlets.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
-              <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Describe what's in this bundle..." rows={2} disabled={isSaving} />
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe what's in this bundle..."
+                rows={2}
+                disabled={isSaving}
+              />
             </div>
 
             {/* Bundle Items with Modifier Groups */}
@@ -522,41 +817,82 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
               <div>
                 <Label className="text-base font-semibold">Combo Slots</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Add items and configure which alternatives cashiers can swap in at the POS
+                  Add items and configure which alternatives cashiers can swap
+                  in at the POS
                 </p>
               </div>
 
               {items.length > 0 && (
                 <div className="space-y-2">
                   {items.map((item, idx) => {
-                    const prod = posProducts.find(p => p.id === item.productId);
-                    const variant = item.variantId ? prod?.variants?.find(v => v.id === item.variantId) : undefined;
+                    const prod = posProducts.find(
+                      (p) => p.id === item.productId,
+                    );
+                    const variant = item.variantId
+                      ? prod?.variants?.find((v) => v.id === item.variantId)
+                      : undefined;
                     const price = variant?.price ?? prod?.price ?? 0;
                     const isExpanded = expandedSwapIdx === idx;
                     const swapCount = item.swapOptions?.length || 0;
 
                     return (
-                      <div key={idx} className="rounded-lg border border-border overflow-hidden">
+                      <div
+                        key={idx}
+                        className="rounded-lg border border-border overflow-hidden"
+                      >
                         {/* Item row */}
                         <div className="flex items-center gap-3 p-3 bg-muted/40">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-foreground truncate">
                               {item.productName}
-                              {item.variantName && <span className="text-muted-foreground font-normal"> · {item.variantName}</span>}
+                              {item.variantName && (
+                                <span className="text-muted-foreground font-normal">
+                                  {" "}
+                                  · {item.variantName}
+                                </span>
+                              )}
                             </p>
-                            <p className="text-xs text-muted-foreground">{formatNaira(price)} each</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatNaira(price)} each
+                            </p>
                           </div>
                           <div className="flex items-center gap-1">
-                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity - 1)} disabled={isSaving}>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() =>
+                                updateItemQuantity(idx, item.quantity - 1)
+                              }
+                              disabled={isSaving}
+                            >
                               <span className="text-sm">−</span>
                             </Button>
-                            <span className="text-sm font-semibold w-6 text-center">{item.quantity}</span>
-                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => updateItemQuantity(idx, item.quantity + 1)} disabled={isSaving}>
+                            <span className="text-sm font-semibold w-6 text-center">
+                              {item.quantity}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() =>
+                                updateItemQuantity(idx, item.quantity + 1)
+                              }
+                              disabled={isSaving}
+                            >
                               <span className="text-sm">+</span>
                             </Button>
                           </div>
-                          <p className="text-sm font-semibold w-20 text-right">{formatNaira(price * item.quantity)}</p>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeItem(idx)} disabled={isSaving}>
+                          <p className="text-sm font-semibold w-20 text-right">
+                            {formatNaira(price * item.quantity)}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive"
+                            onClick={() => removeItem(idx)}
+                            disabled={isSaving}
+                          >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
@@ -571,9 +907,14 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
                                 className="scale-[0.85]"
                                 disabled={isSaving}
                               />
-                              <span className="text-xs font-medium text-foreground">Allow swap</span>
+                              <span className="text-xs font-medium text-foreground">
+                                Allow swap
+                              </span>
                               {item.swappable && swapCount > 0 && (
-                                <Badge variant="secondary" className="text-[10px] h-5">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] h-5"
+                                >
                                   {swapCount} option{swapCount !== 1 ? "s" : ""}
                                 </Badge>
                               )}
@@ -591,7 +932,11 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
                               >
                                 <ArrowRightLeft className="w-3 h-3" />
                                 {isExpanded ? "Close" : "Configure"}
-                                {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                {isExpanded ? (
+                                  <ChevronDown className="w-3 h-3" />
+                                ) : (
+                                  <ChevronRight className="w-3 h-3" />
+                                )}
                               </Button>
                             )}
                           </div>
@@ -602,24 +947,33 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
                               {/* Current swap options */}
                               {(item.swapOptions || []).length > 0 && (
                                 <div className="flex flex-wrap gap-1.5">
-                                  {(item.swapOptions || []).map((opt, optIdx) => (
-                                    <div
-                                      key={optIdx}
-                                      className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
-                                    >
-                                      <span className="text-xs text-foreground">
-                                        {opt.productName}
-                                        {opt.variantName && <span className="text-muted-foreground"> · {opt.variantName}</span>}
-                                      </span>
-                                      <button
-                                        disabled={isSaving}
-                                        onClick={() => removeSwapOption(idx, optIdx)}
-                                        className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                                  {(item.swapOptions || []).map(
+                                    (opt, optIdx) => (
+                                      <div
+                                        key={optIdx}
+                                        className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 pl-2.5 pr-1 py-1"
                                       >
-                                        <X className="w-2.5 h-2.5 text-muted-foreground" />
-                                      </button>
-                                    </div>
-                                  ))}
+                                        <span className="text-xs text-foreground">
+                                          {opt.productName}
+                                          {opt.variantName && (
+                                            <span className="text-muted-foreground">
+                                              {" "}
+                                              · {opt.variantName}
+                                            </span>
+                                          )}
+                                        </span>
+                                        <button
+                                          disabled={isSaving}
+                                          onClick={() =>
+                                            removeSwapOption(idx, optIdx)
+                                          }
+                                          className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-destructive/20 transition-colors"
+                                        >
+                                          <X className="w-2.5 h-2.5 text-muted-foreground" />
+                                        </button>
+                                      </div>
+                                    ),
+                                  )}
                                 </div>
                               )}
 
@@ -628,55 +982,103 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
                                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                                 <Input
                                   value={swapSearch}
-                                  onChange={e => setSwapSearch(e.target.value)}
+                                  onChange={(e) =>
+                                    setSwapSearch(e.target.value)
+                                  }
                                   placeholder="Search products to add as swap option..."
                                   className="pl-8 h-8 text-sm"
                                   disabled={isSaving}
                                 />
                               </div>
-                              {swapSearch && swapCandidateProducts.length > 0 && (
-                                <div className="border border-border rounded-lg max-h-36 overflow-y-auto bg-popover">
-                                  {swapCandidateProducts.slice(0, 12).map(product => (
-                                    <div key={product.id}>
-                                      {product.variants && product.variants.length > 0 ? (
-                                        product.variants.map(v => {
-                                          const alreadyAdded = (item.swapOptions || []).some(o => o.productId === product.id && o.variantId === v.id);
-                                          return (
-                                            <button
-                                              key={v.id}
-                                              disabled={alreadyAdded || isSaving}
-                                              className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
-                                              onClick={() => addSwapOption(idx, product, v.id, v.name)}
-                                            >
-                                              <span className="text-foreground">
-                                                {product.name} · <span className="text-muted-foreground">{v.name}</span>
-                                              </span>
-                                              <span className="text-muted-foreground">{formatNaira(v.price)}</span>
-                                            </button>
-                                          );
-                                        })
-                                      ) : (
-                                        (() => {
-                                          const alreadyAdded = (item.swapOptions || []).some(o => o.productId === product.id && !o.variantId);
-                                          return (
-                                            <button
-                                              disabled={alreadyAdded || isSaving}
-                                              className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
-                                              onClick={() => addSwapOption(idx, product)}
-                                            >
-                                              <span className="text-foreground">{product.name}</span>
-                                              <span className="text-muted-foreground">{formatNaira(product.price)}</span>
-                                            </button>
-                                          );
-                                        })()
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {swapSearch && swapCandidateProducts.length === 0 && (
-                                <p className="text-xs text-muted-foreground text-center py-2">No matching products found</p>
-                              )}
+                              {swapSearch &&
+                                swapCandidateProducts.length > 0 && (
+                                  <div className="border border-border rounded-lg max-h-36 overflow-y-auto bg-popover">
+                                    {swapCandidateProducts
+                                      .slice(0, 12)
+                                      .map((product) => (
+                                        <div key={product.id}>
+                                          {product.variants &&
+                                          product.variants.length > 0
+                                            ? product.variants.map((v) => {
+                                                const alreadyAdded = (
+                                                  item.swapOptions || []
+                                                ).some(
+                                                  (o) =>
+                                                    o.productId ===
+                                                      product.id &&
+                                                    o.variantId === v.id,
+                                                );
+                                                return (
+                                                  <button
+                                                    key={v.id}
+                                                    disabled={
+                                                      alreadyAdded || isSaving
+                                                    }
+                                                    className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
+                                                    onClick={() =>
+                                                      addSwapOption(
+                                                        idx,
+                                                        product,
+                                                        v.id,
+                                                        v.name,
+                                                      )
+                                                    }
+                                                  >
+                                                    <span className="text-foreground">
+                                                      {product.name} ·{" "}
+                                                      <span className="text-muted-foreground">
+                                                        {v.name}
+                                                      </span>
+                                                    </span>
+                                                    <span className="text-muted-foreground">
+                                                      {formatNaira(v.price)}
+                                                    </span>
+                                                  </button>
+                                                );
+                                              })
+                                            : (() => {
+                                                const alreadyAdded = (
+                                                  item.swapOptions || []
+                                                ).some(
+                                                  (o) =>
+                                                    o.productId ===
+                                                      product.id &&
+                                                    !o.variantId,
+                                                );
+                                                return (
+                                                  <button
+                                                    disabled={
+                                                      alreadyAdded || isSaving
+                                                    }
+                                                    className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
+                                                    onClick={() =>
+                                                      addSwapOption(
+                                                        idx,
+                                                        product,
+                                                      )
+                                                    }
+                                                  >
+                                                    <span className="text-foreground">
+                                                      {product.name}
+                                                    </span>
+                                                    <span className="text-muted-foreground">
+                                                      {formatNaira(
+                                                        product.price,
+                                                      )}
+                                                    </span>
+                                                  </button>
+                                                );
+                                              })()}
+                                        </div>
+                                      ))}
+                                  </div>
+                                )}
+                              {swapSearch &&
+                                swapCandidateProducts.length === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-2">
+                                    No matching products found
+                                  </p>
+                                )}
                             </div>
                           )}
                         </div>
@@ -692,26 +1094,37 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     value={productSearch}
-                    onChange={e => setProductSearch(e.target.value)}
-                    placeholder={outletId ? "Search products to add..." : "Select an outlet first"}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    placeholder={
+                      outletId
+                        ? "Search products to add..."
+                        : "Select an outlet first"
+                    }
                     className="pl-10"
                     disabled={!outletId || isSaving}
                   />
                 </div>
                 {productSearch && availableProducts.length > 0 && (
                   <div className="border border-border rounded-lg max-h-48 overflow-y-auto bg-popover">
-                    {availableProducts.slice(0, 15).map(product => (
+                    {availableProducts.slice(0, 15).map((product) => (
                       <div key={product.id}>
                         {product.variants && product.variants.length > 0 ? (
-                          product.variants.map(v => (
+                          product.variants.map((v) => (
                             <button
                               key={v.id}
                               className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent text-left text-sm transition-colors"
                               onClick={() => addVariant(product, v.id, v.name)}
                               disabled={isSaving}
                             >
-                              <span className="text-foreground">{product.name} · <span className="text-muted-foreground">{v.name}</span></span>
-                              <span className="text-muted-foreground">{formatNaira(v.price)}</span>
+                              <span className="text-foreground">
+                                {product.name} ·{" "}
+                                <span className="text-muted-foreground">
+                                  {v.name}
+                                </span>
+                              </span>
+                              <span className="text-muted-foreground">
+                                {formatNaira(v.price)}
+                              </span>
                             </button>
                           ))
                         ) : (
@@ -720,8 +1133,12 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
                             onClick={() => addProduct(product)}
                             disabled={isSaving}
                           >
-                            <span className="text-foreground">{product.name}</span>
-                            <span className="text-muted-foreground">{formatNaira(product.price)}</span>
+                            <span className="text-foreground">
+                              {product.name}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {formatNaira(product.price)}
+                            </span>
                           </button>
                         )}
                       </div>
@@ -737,23 +1154,41 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Pricing Method</Label>
-                  <Select value={pricingType} onValueChange={v => setPricingType(v as BundlePricingType)} disabled={isSaving}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={pricingType}
+                    onValueChange={(v) =>
+                      setPricingType(v as BundlePricingType)
+                    }
+                    disabled={isSaving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="fixed">Fixed Price</SelectItem>
-                      <SelectItem value="percentage_discount">Percentage Discount</SelectItem>
+                      <SelectItem value="percentage_discount">
+                        Percentage Discount
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{pricingType === "fixed" ? "Bundle Price (₦)" : "Discount (%)"}</Label>
+                  <Label>
+                    {pricingType === "fixed"
+                      ? "Bundle Price (₦)"
+                      : "Discount (%)"}
+                  </Label>
                   <Input
                     type="number"
                     value={pricingValue || ""}
-                    onChange={e => setPricingValue(Number(e.target.value))}
-                    placeholder={pricingType === "fixed" ? "e.g. 7500" : "e.g. 15"}
+                    onChange={(e) => setPricingValue(Number(e.target.value))}
+                    placeholder={
+                      pricingType === "fixed" ? "e.g. 7500" : "e.g. 15"
+                    }
                     min={0}
-                    max={pricingType === "percentage_discount" ? 100 : undefined}
+                    max={
+                      pricingType === "percentage_discount" ? 100 : undefined
+                    }
                     disabled={isSaving}
                   />
                 </div>
@@ -764,18 +1199,33 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
                 <div className="rounded-lg bg-muted/50 border border-border p-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Items Total</span>
-                    <span className="text-foreground">{formatNaira(originalPrice)}</span>
+                    <span className="text-foreground">
+                      {formatNaira(originalPrice)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {pricingType === "fixed" ? "Bundle Price" : `${pricingValue}% Discount`}
+                      {pricingType === "fixed"
+                        ? "Bundle Price"
+                        : `${pricingValue}% Discount`}
                     </span>
-                    <span className="text-foreground font-semibold">{formatNaira(bundlePrice)}</span>
+                    <span className="text-foreground font-semibold">
+                      {formatNaira(bundlePrice)}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm pt-2 border-t border-border">
-                    <span className="text-green-600 font-medium">Customer Saves</span>
+                    <span className="text-green-600 font-medium">
+                      Customer Saves
+                    </span>
                     <span className="text-green-600 font-semibold">
-                      {formatNaira(originalPrice - bundlePrice)} ({originalPrice > 0 ? Math.round(((originalPrice - bundlePrice) / originalPrice) * 100) : 0}%)
+                      {formatNaira(originalPrice - bundlePrice)} (
+                      {originalPrice > 0
+                        ? Math.round(
+                            ((originalPrice - bundlePrice) / originalPrice) *
+                              100,
+                          )
+                        : 0}
+                      %)
                     </span>
                   </div>
                 </div>
@@ -785,8 +1235,21 @@ function BundleFormDialog({ open, bundle, isSaving, onClose, onSave }: BundleFor
         </div>
 
         <div className="flex-shrink-0 p-4 sm:p-6 pt-3 border-t border-border flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto" disabled={isSaving}>Cancel</Button>
-          <Button onClick={handleSave} className="w-full sm:w-auto" isLoading={isSaving}>{isEdit ? "Update Bundle" : "Create Bundle"}</Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto"
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            className="w-full sm:w-auto"
+            isLoading={isSaving}
+          >
+            {isEdit ? "Update Bundle" : "Create Bundle"}
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

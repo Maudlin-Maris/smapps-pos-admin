@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { usePOS } from "@/contexts/POSContext";
+import { useGetItems } from "@/services/api/catalog/item";
 import { posProducts, posCategories, type POSProduct } from "@/data/posData";
 import { promoBundles, type PromoBundle } from "@/data/promoBundles";
 import { formatNaira } from "@/lib/currency";
@@ -48,6 +49,23 @@ export default function ProductGrid() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: itemsResponse } = useGetItems({
+    outletId: currentOutlet?.id || undefined,
+    categoryId: selectedCategory && selectedCategory !== "__bundles__" ? selectedCategory : undefined,
+    search: debouncedSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
   const [dialogUnitId, setDialogUnitId] = useState<string | undefined>(undefined);
   const [openPriceProduct, setOpenPriceProduct] = useState<POSProduct | null>(null);
@@ -177,25 +195,31 @@ export default function ProductGrid() {
   const showBundlesTab = outletBundles.length > 0;
   const isBundlesTab = selectedCategory === "__bundles__";
 
-  // Filter products for current outlet
-  const products = isBundlesTab ? [] : posProducts.filter(p => {
-    if (currentOutlet && p.outletId !== currentOutlet.id) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        p.name.toLowerCase().includes(q) ||
-        p.barcode?.includes(search) ||
-        p.sellableUnits?.some(u =>
-          u.name.toLowerCase().includes(q) ||
-          u.shortLabel?.toLowerCase().includes(q) ||
-          u.barcode === search
-        )
-      );
+  // Filter products for current outlet - now delegated to SWR/API hook
+  const products = useMemo<POSProduct[]>(() => {
+    if (isBundlesTab) return [];
+    if (!itemsResponse?.data) return [];
+    let list = itemsResponse.data;
+    if (selectedSubcategory) {
+      list = list.filter(item => item.subcategory === selectedSubcategory);
     }
-    if (!selectedCategory) return true;
-    if (selectedSubcategory) return p.categoryId === selectedCategory && p.subcategoryId === selectedSubcategory;
-    return p.categoryId === selectedCategory;
-  });
+    return list.map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      categoryId: item.category,
+      subcategoryId: item.subcategory,
+      image: item.images?.[0],
+      barcode: item.sku,
+      variants: [],
+      inStock:
+        item.status === "active" ||
+        item.status === "good" ||
+        item.status === "available" ||
+        true,
+      outletId: item.outletId,
+    }));
+  }, [itemsResponse, isBundlesTab, selectedSubcategory]);
 
   const currentCategory = outletCategories.find(c => c.id === selectedCategory);
 

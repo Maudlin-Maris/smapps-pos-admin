@@ -14,15 +14,60 @@ import type { LoyaltyRewardRecord } from "@/lib/types/loyalty-reward-record";
 import type { LoyaltyRewardsResponse } from "@/lib/types/loyalty-rewards-response";
 import type { LoyaltyActivityResponse } from "@/lib/types/loyalty-activity-response";
 import type { LoyaltyOutletPerformanceResponse } from "@/lib/types/loyalty-outlet-performance-response";
-import type { LoyaltyOverviewResponse } from "@/lib/types/loyalty-overview-response";
 import type { LoyaltySettingsResponse } from "@/lib/types/loyalty-settings-response";
-import type { LoyaltyTierBreakdownResponse } from "@/lib/types/loyalty-outlet-performance-response"; // Wait, let's keep tier breakdown response inline if needed, or define it here
-import type { UpdateLoyaltyRewardPayload } from "@/lib/types/update-loyalty-reward-payload";
-import type { UpdateLoyaltySettingsPayload } from "@/lib/types/update-loyalty-settings-payload";
-import type { UpdateMemberPointsPayload } from "@/lib/types/update-member-points-payload";
-import type { UpdateMemberPointsResponse } from "@/lib/types/update-member-points-response";
-import type { UpdateProgramEnabledPayload } from "@/lib/types/update-program-enabled-payload";
-import type { UpdateProgramEnabledResponse } from "@/lib/types/update-program-enabled-response";
+export interface LoyaltyOverviewResponse {
+  totalMembers: number;
+  pointsIssued: number;
+  pointsRedeemed: number;
+}
+
+export interface LoyaltyTierBreakdownRecord {
+  tier: string;
+  members: number;
+  percentage: number;
+}
+
+export interface LoyaltyTierBreakdownResponse {
+  data: LoyaltyTierBreakdownRecord[];
+}
+
+export interface UpdateLoyaltyRewardPayload {
+  name?: string;
+  pointsCost?: number;
+  discountType?: "percentage" | "fixed" | "free_item";
+  discountValue?: number;
+  freeItemId?: string;
+  freeItemQuantity?: number;
+  isActive?: boolean;
+  outletIds?: string[];
+}
+
+import type { TierConfig } from "@/lib/types/loyalty-settings-response";
+
+export interface UpdateLoyaltySettingsPayload {
+  programEnabled?: boolean;
+  pointsPerCurrency?: number;
+  currencyPerPoint?: number;
+  tierConfigs?: TierConfig[];
+}
+
+export interface UpdateMemberPointsPayload {
+  pointsChange: number;
+  reason?: string;
+}
+
+export interface UpdateMemberPointsResponse {
+  message: string;
+  points: number;
+}
+
+export interface UpdateProgramEnabledPayload {
+  enabled: boolean;
+}
+
+export interface UpdateProgramEnabledResponse {
+  enabled: boolean;
+}
 
 export const useGetLoyaltyOverview = (
   params?: {

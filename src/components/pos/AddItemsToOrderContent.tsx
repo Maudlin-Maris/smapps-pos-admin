@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePOS } from "@/contexts/POSContext";
 import { posProducts, posCategories, type POSProduct, type POSCartItem } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
+import { useGetItems } from "@/services/api/catalog/item";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,23 +24,50 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
   const [view, setView] = useState<View>("order");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
   const [pendingItems, setPendingItems] = useState<POSCartItem[]>([]);
   const [editingItem, setEditingItem] = useState<{ item: POSCartItem; product: POSProduct } | null>(null);
   const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: itemsResponse } = useGetItems({
+    outletId: currentOutlet?.id || undefined,
+    categoryId: selectedCategory || undefined,
+    search: debouncedSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
   const order = orders.find(o => o.id === orderId);
 
   const outletCategories = posCategories.filter(c => !c.outletId || c.outletId === currentOutlet?.id);
 
-  const products = useMemo(() => {
-    return posProducts.filter(p => {
-      if (currentOutlet && p.outletId !== currentOutlet.id) return false;
-      if (search) return p.name.toLowerCase().includes(search.toLowerCase()) || p.barcode?.includes(search);
-      if (!selectedCategory) return true;
-      return p.categoryId === selectedCategory;
-    });
-  }, [currentOutlet, search, selectedCategory]);
+  const products = useMemo<POSProduct[]>(() => {
+    if (!itemsResponse?.data) return [];
+    return itemsResponse.data.map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      categoryId: item.category,
+      subcategoryId: item.subcategory,
+      image: item.images?.[0],
+      barcode: item.sku,
+      variants: [],
+      inStock:
+        item.status === "active" ||
+        item.status === "good" ||
+        item.status === "available" ||
+        true,
+      outletId: item.outletId,
+    }));
+  }, [itemsResponse]);
 
   const handleProductClick = (product: POSProduct) => {
     if ((product.variants && product.variants.length > 0) || (product.extras && product.extras.length > 0)) {

@@ -8,6 +8,8 @@ export interface InventoryListItem {
   costPrice: number;
   categoryId?: string;
   unitId?: string;
+  outletId?: string;
+  stock?: number;
 }
 
 export interface InventoryListResponse {

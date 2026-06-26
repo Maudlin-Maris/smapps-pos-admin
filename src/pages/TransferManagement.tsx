@@ -31,6 +31,9 @@ import {
 } from "lucide-react";
 import { useGetOutlets } from "@/services/api/outlets";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
+import { api } from "@/services/api/base";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { useGetInventoryLocations, useGetInventoryMovements } from "@/services/api/inventory/live-inventory";
 import {
   useGetTransfers,
@@ -54,7 +57,7 @@ import {
 // ─────────────────────────────────────────────────────────────────────────────
 // Hooks
 // ─────────────────────────────────────────────────────────────────────────────
-function useTransfers(params?: { status?: TransferStatus; page?: number; per_page?: number }) {
+function useTransfers(params?: { status?: TransferStatus; page?: number; per_page?: number; search?: string }) {
   const { data: response, isLoading, mutate } = useGetTransfers(params);
   const transfers = useMemo(() => response?.data || [], [response]);
   return { transfers, isLoading, mutate };
@@ -81,28 +84,31 @@ function LocationChip({ loc }: { loc: TransferLocation }) {
 // LIST screen
 // ─────────────────────────────────────────────────────────────────────────────
 function TransferList() {
-  const { transfers, isLoading } = useTransfers();
-  const nav = useNavigate();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TransferStatus>("all");
 
-  const filtered = transfers.filter((t) => {
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      t.reference.toLowerCase().includes(q) ||
-      t.source.name.toLowerCase().includes(q) ||
-      t.destination.name.toLowerCase().includes(q) ||
-      t.items.some((i) => i.itemName.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q))
-    );
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { transfers: countTransfers } = useTransfers();
+  const { transfers, isLoading } = useTransfers({
+    status: statusFilter !== "all" ? statusFilter : undefined,
+    search: debouncedSearch.trim() || undefined,
   });
+  const nav = useNavigate();
+
+  const filtered = transfers;
 
   const counts = {
-    active: transfers.filter((t) => ACTIVE_STATUSES.includes(t.status)).length,
-    drafts: transfers.filter((t) => t.status === "DRAFT").length,
-    received: transfers.filter((t) => t.status === "RECEIVED").length,
-    pendingMine: transfers.filter((t) => t.status === "PENDING_APPROVAL").length,
+    active: countTransfers.filter((t) => ACTIVE_STATUSES.includes(t.status)).length,
+    drafts: countTransfers.filter((t) => t.status === "DRAFT").length,
+    received: countTransfers.filter((t) => t.status === "RECEIVED").length,
+    pendingMine: countTransfers.filter((t) => t.status === "PENDING_APPROVAL").length,
   };
 
   if (isLoading) {
@@ -311,11 +317,8 @@ function TransferCreate() {
 
   // Fetch live inventory items for destination outlet
   const { data: destInventoryRes } = useGetInventoryItems(
-    destId ? { outletId: destId, per_page: 1000 } : undefined
+    destId ? { outletId: destId, per_page: DEFAULT_PAGE_SIZE } : undefined
   );
-
-  // Fetch transfers to compute live reserved quantities
-  const { transfers: allTransfers } = useTransfers();
 
   const allSourceItems = useMemo(() => {
     if (!sourceInventoryRes?.data) return [];
@@ -330,18 +333,59 @@ function TransferCreate() {
     }));
   }, [sourceInventoryRes]);
 
+  const [destInventoryCache, setDestInventoryCache] = useState<Record<string, any>>({});
+
   const allDestItems = useMemo(() => {
-    if (!destInventoryRes?.data) return [];
-    return destInventoryRes.data.map((i) => ({
+    return Object.values(destInventoryCache).map((i: any) => ({
       id: i.id,
       name: i.name,
       sku: i.sku,
-      stock: i.quantity,
-      unitCost: i.costPrice,
+      stock: i.quantity ?? i.stock ?? 0,
+      unitCost: i.costPrice ?? 0,
       minStock: 0,
       unit: "unit",
     }));
+  }, [destInventoryCache]);
+
+  useEffect(() => {
+    if (destInventoryRes?.data) {
+      setDestInventoryCache((prev) => {
+        const next = { ...prev };
+        destInventoryRes.data.forEach((item) => {
+          next[item.id] = item;
+          if (item.sku) next[item.sku] = item;
+        });
+        return next;
+      });
+    }
   }, [destInventoryRes]);
+
+  useEffect(() => {
+    if (destId) {
+      lines.forEach(async (line) => {
+        const sourceItem = allSourceItems.find(x => x.id === line.itemId);
+        const sku = sourceItem?.sku || "";
+        if (!destInventoryCache[line.itemId] && (!sku || !destInventoryCache[sku])) {
+          try {
+            const { data: res } = await api.get(API_ENDPOINTS.INVENTORY, {
+              params: { outletId: destId, search: sku || line.itemId }
+            });
+            const found = res?.data?.[0];
+            if (found) {
+              setDestInventoryCache(prev => ({
+                ...prev,
+                [found.id]: found,
+                [found.sku]: found
+              }));
+            }
+          } catch (e) {}
+        }
+      });
+    }
+  }, [lines, destId, allSourceItems, destInventoryCache]);
+
+  // Fetch transfers to compute live reserved quantities
+  const { transfers: allTransfers } = useTransfers();
 
   const getLiveReservedQty = (outletId: string, itemId: string) => {
     let reserved = 0;
@@ -1306,6 +1350,9 @@ function ActionDialog({
   const [carrier, setCarrier] = useState("");
   const [tracking, setTracking] = useState("");
 
+  const [sourceStockCache, setSourceStockCache] = useState<Record<string, number>>({});
+  const fetchedItemsRef = useRef<Set<string>>(new Set());
+
   const { trigger: triggerApprove, isMutating: isApproving } = useApproveTransfer();
   const { trigger: triggerReject, isMutating: isRejecting } = useRejectTransfer();
   const { trigger: triggerDispatch, isMutating: isDispatching } = useDispatchTransfer();
@@ -1316,9 +1363,67 @@ function ActionDialog({
 
   const { data: sourceInventoryRes } = useGetInventoryItems(
     (kind === "dispatch" || kind === "approve") && transfer?.source?.id
-      ? { outletId: transfer.source.id, per_page: 1000 }
+      ? { outletId: transfer.source.id, per_page: DEFAULT_PAGE_SIZE }
       : undefined
   );
+
+  // Sync fetched source inventory data into sourceStockCache
+  useEffect(() => {
+    if (sourceInventoryRes?.data) {
+      setSourceStockCache((prev) => {
+        const next = { ...prev };
+        sourceInventoryRes.data.forEach((i) => {
+          next[i.id] = i.quantity;
+          if (i.sku) next[i.sku] = i.quantity;
+        });
+        return next;
+      });
+    }
+  }, [sourceInventoryRes]);
+
+  // Reset fetched items when transfer changes or dialog kind changes
+  useEffect(() => {
+    fetchedItemsRef.current = new Set();
+    setSourceStockCache({});
+  }, [transfer.id, kind]);
+
+  // Dynamically fetch missing items in transfer.items
+  useEffect(() => {
+    if ((kind === "dispatch" || kind === "approve") && transfer?.source?.id) {
+      transfer.items.forEach(async (it) => {
+        const sku = it.sku || "";
+        const itemId = it.inventoryItemId;
+
+        const hasCache = sourceStockCache[itemId] !== undefined || (sku && sourceStockCache[sku] !== undefined);
+        if (hasCache || fetchedItemsRef.current.has(itemId)) {
+          return;
+        }
+
+        fetchedItemsRef.current.add(itemId);
+        try {
+          const { data: res } = await api.get(API_ENDPOINTS.INVENTORY, {
+            params: { outletId: transfer.source.id, search: sku || itemId }
+          });
+          const found = res?.data?.[0];
+          if (found) {
+            setSourceStockCache((prev) => ({
+              ...prev,
+              [found.id]: found.quantity,
+              ...(found.sku ? { [found.sku]: found.quantity } : {})
+            }));
+          } else {
+            setSourceStockCache((prev) => ({
+              ...prev,
+              [itemId]: 0,
+              ...(sku ? { [sku]: 0 } : {})
+            }));
+          }
+        } catch (e) {
+          fetchedItemsRef.current.delete(itemId);
+        }
+      });
+    }
+  }, [kind, transfer.id, transfer.items, transfer.source.id, sourceStockCache]);
 
   useEffect(() => {
     if (!kind) return;
@@ -1417,7 +1522,7 @@ function ActionDialog({
                     {kind === "dispatch" && <>
                       <td className="p-2 text-right">{it.approvedQty}</td>
                       <td className="p-2 text-right">
-                        {sourceInventoryRes?.data?.find(x => x.id === it.inventoryItemId || x.sku === it.sku)?.quantity ?? 0}
+                        {sourceStockCache[it.inventoryItemId] ?? (it.sku ? sourceStockCache[it.sku] : undefined) ?? 0}
                       </td>
                       <td className="p-2 text-right">
                         <Input type="number" min={0} max={it.approvedQty}

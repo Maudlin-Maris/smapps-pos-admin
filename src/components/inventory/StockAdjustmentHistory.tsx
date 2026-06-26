@@ -508,30 +508,43 @@ interface HistoryProps {
   adjustments: StockAdjustment[];
   inventoryItems: InventoryItem[];
   units: MeasuringUnit[];
+  page: number;
+  onPageChange: (p: number) => void;
+  perPage: number;
+  onPerPageChange: (pp: number) => void;
+  totalPages: number;
+  totalItems: number;
+  search: string;
+  onSearchChange: (s: string) => void;
+  filterType: string;
+  onFilterTypeChange: (t: string) => void;
+  filterItem: string;
+  onFilterItemChange: (i: string) => void;
 }
 
-export default function StockAdjustmentHistory({ adjustments, inventoryItems, units }: HistoryProps) {
-  const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
-  const [filterItem, setFilterItem] = useState<string>("all");
-
+export default function StockAdjustmentHistory({
+  adjustments,
+  inventoryItems,
+  units,
+  page,
+  onPageChange,
+  perPage,
+  onPerPageChange,
+  totalPages,
+  totalItems,
+  search,
+  onSearchChange,
+  filterType,
+  onFilterTypeChange,
+  filterItem,
+  onFilterItemChange,
+}: HistoryProps) {
   const getItemName = (id: string) => inventoryItems.find((i) => i.id === id)?.name || "Deleted Item";
   const getItemUnit = (id: string) => {
     const item = inventoryItems.find((i) => i.id === id);
     if (!item) return "";
     return units.find((u) => u.id === item.unitId)?.abbreviation || "";
   };
-
-  const filtered = adjustments
-    .filter((a) => {
-      const name = getItemName(a.inventoryItemId);
-      return name.toLowerCase().includes(search.toLowerCase()) || a.reason.toLowerCase().includes(search.toLowerCase());
-    })
-    .filter((a) => filterType === "all" || a.type === filterType)
-    .filter((a) => filterItem === "all" || a.inventoryItemId === filterItem)
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-  const { page, setPage, perPage, setPerPage, totalPages, paginatedItems, totalItems, pageSizeOptions } = usePagination(filtered);
 
   const isPositive = (type: AdjustmentType) => type === "add" || type === "returned";
 
@@ -540,9 +553,9 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search adjustments..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Search adjustments..." value={search} onChange={(e) => onSearchChange(e.target.value)} className="pl-9" />
         </div>
-        <Select value={filterItem} onValueChange={setFilterItem}>
+        <Select value={filterItem} onValueChange={onFilterItemChange}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="All Items" />
           </SelectTrigger>
@@ -553,7 +566,7 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
             ))}
           </SelectContent>
         </Select>
-        <Select value={filterType} onValueChange={setFilterType}>
+        <Select value={filterType} onValueChange={onFilterTypeChange}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
@@ -568,7 +581,7 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
         </Select>
       </div>
 
-      {filtered.length === 0 ? (
+      {adjustments.length === 0 ? (
         <div className="text-center py-12">
           <History className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">No adjustment history yet</p>
@@ -581,12 +594,12 @@ export default function StockAdjustmentHistory({ adjustments, inventoryItems, un
           totalPages={totalPages}
           perPage={perPage}
           totalItems={totalItems}
-          pageSizeOptions={pageSizeOptions}
-          onPageChange={setPage}
-          onPerPageChange={setPerPage}
+          pageSizeOptions={[5, 10, 20, 50]}
+          onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
         />
         <div className="grid gap-2">
-          {paginatedItems.map((adj) => (
+          {adjustments.map((adj) => (
             <Card key={adj.id} className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">

@@ -44,6 +44,9 @@ import ProfitabilityView from "@/components/inventory/ProfitabilityView";
 import { computeProfitability } from "@/lib/profitability";
 import { useCompositesStore } from "@/hooks/use-composites-store";
 import SubstituteGroupManager from "@/components/inventory/SubstituteGroupManager";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import { api } from "@/services/api/base";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
 
 const defaultItems: InventoryItem[] = [];
 
@@ -117,7 +120,6 @@ const sampleMenuItems: MenuItemOption[] = [
 export default function InventoryManagement() {
   const [tab, setTab] = useState<Tab>("stock");
   
-  // Search, filter, and page states for server-side operations in the stock items list tab
   const [stockPage, setStockPage] = useState(1);
   const [stockPerPage, setStockPerPage] = useState(15);
   const [stockSearch, setStockSearch] = useState("");
@@ -125,16 +127,26 @@ export default function InventoryManagement() {
   
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
 
+  const [adjustmentsPage, setAdjustmentsPage] = useState(1);
+  const [adjustmentsPerPage, setAdjustmentsPerPage] = useState(DEFAULT_PAGE_SIZE);
+  const [adjustmentsSearch, setAdjustmentsSearch] = useState("");
+  const [adjustmentsFilterType, setAdjustmentsFilterType] = useState<string>("all");
+  const [adjustmentsFilterItem, setAdjustmentsFilterItem] = useState<string>("all");
+
+  useEffect(() => {
+    setAdjustmentsPage(1);
+  }, [selectedOutletId, adjustmentsSearch, adjustmentsFilterType, adjustmentsFilterItem]);
+
   const { data: outletsRes } = useGetOutlets();
   const outlets = useMemo(() => outletsRes || [], [outletsRes]);
 
-  const { data: unitsRes, mutate: mutateUnits } = useGetMeasuringUnits({ page: 1, per_page: 100 });
+  const { data: unitsRes, mutate: mutateUnits } = useGetMeasuringUnits({ page: 1, per_page: DEFAULT_PAGE_SIZE });
   const units = useMemo(() => unitsRes?.data || defaultUnits, [unitsRes]);
 
   const { data: compositesRes, mutate: mutateComposites } = useGetComposites({
     outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
     page: 1,
-    per_page: 100,
+    per_page: DEFAULT_PAGE_SIZE,
   });
 
   const composites = useMemo<CompositeItem[]>(() => {
@@ -167,13 +179,11 @@ export default function InventoryManagement() {
 
   const isAllOutlets = selectedOutletId === "all";
 
-  // Category SWR hook
   const { data: categoriesResponse, mutate: mutateCategories } = useGetInventoryCategories({
     page: 1,
-    per_page: 100,
+    per_page: DEFAULT_PAGE_SIZE,
   });
 
-  // Fetch only the paginated items for the stock table
   const { data: itemsResponse, isLoading: isItemsLoading, mutate: mutateItems } = useGetInventoryItems({
     page: stockPage,
     per_page: stockPerPage,
@@ -182,16 +192,60 @@ export default function InventoryManagement() {
     outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
   });
 
-  // Fetch all items (up to 1000) for tabs that require global calculations (profitability, composite, substitutes, adjustments)
   const { data: allItemsResponse, mutate: mutateAllItems } = useGetInventoryItems({
-    per_page: 20,
+    per_page: DEFAULT_PAGE_SIZE,
     outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
   });
 
   const { data: adjustmentsResponse, isLoading: isAdjustmentsLoading, mutate: mutateAdjustments } = useGetInventoryAdjustments({
-    per_page: 1000,
+    page: adjustmentsPage,
+    per_page: adjustmentsPerPage,
     outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
-  });
+    search: adjustmentsSearch.trim() || undefined,
+    type: adjustmentsFilterType === "all" ? undefined : adjustmentsFilterType,
+    inventoryItemId: adjustmentsFilterItem === "all" ? undefined : adjustmentsFilterItem,
+  } as any);
+
+  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (itemsResponse?.data) {
+      setInventoryCache((prev) => {
+        const next = { ...prev };
+        itemsResponse.data.forEach((i) => {
+          next[i.id] = i;
+        });
+        return next;
+      });
+    }
+  }, [itemsResponse]);
+
+  useEffect(() => {
+    if (allItemsResponse?.data) {
+      setInventoryCache((prev) => {
+        const next = { ...prev };
+        allItemsResponse.data.forEach((i) => {
+          next[i.id] = i;
+        });
+        return next;
+      });
+    }
+  }, [allItemsResponse]);
+
+  useEffect(() => {
+    if (adjustmentsResponse?.data) {
+      adjustmentsResponse.data.forEach(async (a: any) => {
+        if (!inventoryCache[a.inventoryItemId]) {
+          try {
+            const { data } = await api.get(API_ENDPOINTS.SINGLE_INVENTORY(a.inventoryItemId));
+            if (data) {
+              setInventoryCache(prev => ({ ...prev, [a.inventoryItemId]: data }));
+            }
+          } catch (e) {}
+        }
+      });
+    }
+  }, [adjustmentsResponse, inventoryCache]);
 
   const createItemMutation = useCreateInventoryItem();
   const adjustMutation = useAdjustInventoryItem();
@@ -231,9 +285,8 @@ export default function InventoryManagement() {
   }, [itemsResponse]);
 
   const allItems = useMemo<InventoryItem[]>(() => {
-    if (!allItemsResponse?.data) return [];
-    return allItemsResponse.data.map(mapApiItemToInventoryItem);
-  }, [allItemsResponse]);
+    return Object.values(inventoryCache).map(mapApiItemToInventoryItem);
+  }, [inventoryCache]);
 
   const outletItems = allItems;
 
@@ -628,7 +681,23 @@ export default function InventoryManagement() {
             Loading adjustments...
           </Card>
         ) : (
-          <StockAdjustmentHistory adjustments={outletAdjustments} inventoryItems={outletItems} units={units} />
+          <StockAdjustmentHistory
+            adjustments={outletAdjustments}
+            inventoryItems={outletItems}
+            units={units}
+            page={adjustmentsPage}
+            onPageChange={setAdjustmentsPage}
+            perPage={adjustmentsPerPage}
+            onPerPageChange={setAdjustmentsPerPage}
+            totalPages={adjustmentsResponse?.meta?.last_page ?? 1}
+            totalItems={adjustmentsResponse?.meta?.total ?? outletAdjustments.length}
+            search={adjustmentsSearch}
+            onSearchChange={setAdjustmentsSearch}
+            filterType={adjustmentsFilterType}
+            onFilterTypeChange={setAdjustmentsFilterType}
+            filterItem={adjustmentsFilterItem}
+            onFilterItemChange={setAdjustmentsFilterItem}
+          />
         )
       )}
       {tab === "categories" && (

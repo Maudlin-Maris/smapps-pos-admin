@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useGetTransactions } from "@/services/api/transactions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -97,25 +98,30 @@ const rowsPerPageOptions = ["5", "10", "20", "50"];
 
 export function TransactionsTable({ transactions }: TransactionsTableProps) {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
 
   const perPage = parseInt(rowsPerPage);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: apiTransactions } = useGetTransactions({
+    search: debouncedSearch.trim() || undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
+  const displayTransactions = search.trim() ? (apiTransactions || []) : transactions;
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return transactions;
-    const q = search.toLowerCase();
-    return transactions.filter(
-      (t) =>
-        t.orderId.toLowerCase().includes(q) ||
-        t.customerPhone.toLowerCase().includes(q) ||
-        t.cashier.toLowerCase().includes(q) ||
-        t.location.toLowerCase().includes(q) ||
-        t.payments.some((p) => p.method.toLowerCase().includes(q)) ||
-        t.orderStatus.toLowerCase().includes(q) ||
-        t.paymentStatus.toLowerCase().includes(q)
-    );
-  }, [transactions, search]);
+    return displayTransactions;
+  }, [displayTransactions]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, totalPages);

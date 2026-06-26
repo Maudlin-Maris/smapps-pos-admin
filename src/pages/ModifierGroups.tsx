@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Pencil, Trash2, Search, Layers, ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -30,11 +30,18 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { formatNaira } from "@/lib/currency";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import { api } from "@/services/api/base";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 import {
   useGetModifierGroups,
@@ -79,8 +86,70 @@ export default function ModifierGroups() {
   const [draft, setDraft] = useState<DraftGroup>(emptyDraft);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
-  const inventory = inventoryResponse?.data || [];
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [openPickerIdx, setOpenPickerIdx] = useState<number | null>(null);
+
+  const { data: searchInventoryRes } = useGetInventoryItems(
+    editorOpen ? {
+      search: inventorySearch.trim() || undefined,
+      per_page: DEFAULT_PAGE_SIZE,
+    } : undefined
+  );
+
+  const searchInventory = searchInventoryRes?.data || [];
+
+  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (searchInventory.length > 0) {
+      setInventoryCache((prev) => {
+        const next = { ...prev };
+        searchInventory.forEach((item) => {
+          next[item.id] = item;
+        });
+        return next;
+      });
+    }
+  }, [searchInventory]);
+
+  // Load single item on demand when a modifier has a linked inventory item
+  useEffect(() => {
+    if (editorOpen) {
+      draft.modifiers.forEach((m) => {
+        if (m.linkedInventoryItemId && !inventoryCache[m.linkedInventoryItemId]) {
+          api.get(API_ENDPOINTS.SINGLE_INVENTORY(m.linkedInventoryItemId)).then(({ data }) => {
+            if (data) {
+              setInventoryCache(prev => ({ ...prev, [m.linkedInventoryItemId]: data }));
+            }
+          }).catch(() => {});
+        }
+      });
+    }
+  }, [editorOpen, draft.modifiers, inventoryCache]);
+
+  const resolvedInventory = useMemo(() => {
+    return Object.values(inventoryCache);
+  }, [inventoryCache]);
+
+  const inventory = resolvedInventory;
+
+  useEffect(() => {
+    setInventorySearch("");
+  }, [openPickerIdx]);
+
+  const { data: inventoryResponse } = useGetInventoryItems({ per_page: DEFAULT_PAGE_SIZE });
+
+  useEffect(() => {
+    if (inventoryResponse?.data) {
+      setInventoryCache((prev) => {
+        const next = { ...prev };
+        inventoryResponse.data.forEach((item) => {
+          next[item.id] = item;
+        });
+        return next;
+      });
+    }
+  }, [inventoryResponse]);
 
   const { data: listData, isLoading, mutate } = useGetModifierGroups({
     page: currentPage,
@@ -405,26 +474,62 @@ export default function ModifierGroups() {
                       onChange={(e) => updateModifier(idx, { price: Number(e.target.value) })}
                     />
                     <div className="col-span-3">
-                      <Select
-                        value={m.linkedInventoryItemId ?? "none"}
-                        onValueChange={(v) =>
-                          updateModifier(idx, {
-                            linkedInventoryItemId: v === "none" ? undefined : v,
-                          })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Link inventory" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No link</SelectItem>
-                          {inventory.map((i) => (
-                            <SelectItem key={i.id} value={i.id}>
-                              {i.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover open={openPickerIdx === idx} onOpenChange={(open) => setOpenPickerIdx(open ? idx : null)}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            role="combobox"
+                            className="w-full justify-between font-normal text-xs px-2 h-9 truncate"
+                          >
+                            {m.linkedInventoryItemId
+                              ? resolvedInventory.find((i) => i.id === m.linkedInventoryItemId)?.name ?? "Linked"
+                              : "Link inventory"}
+                            <ChevronsUpDown className="h-3 w-3 opacity-50 shrink-0 ml-1" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput
+                              placeholder="Search inventory..."
+                              className="h-8 text-xs"
+                              value={inventorySearch}
+                              onValueChange={setInventorySearch}
+                            />
+                            <CommandList>
+                              <CommandEmpty>No items found.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem
+                                  value="none"
+                                  onSelect={() => {
+                                    updateModifier(idx, { linkedInventoryItemId: undefined });
+                                    setOpenPickerIdx(null);
+                                  }}
+                                >
+                                  <Check className={cn("h-3.5 w-3.5 mr-2", !m.linkedInventoryItemId ? "opacity-100" : "opacity-0")} />
+                                  No link
+                                </CommandItem>
+                                {resolvedInventory.map((i) => (
+                                  <CommandItem
+                                    key={i.id}
+                                    value={`${i.name} ${i.sku}`}
+                                    onSelect={() => {
+                                      updateModifier(idx, { linkedInventoryItemId: i.id });
+                                      setOpenPickerIdx(null);
+                                    }}
+                                  >
+                                    <Check className={cn("h-3.5 w-3.5 mr-2", m.linkedInventoryItemId === i.id ? "opacity-100" : "opacity-0")} />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-xs truncate">{i.name}</div>
+                                      <div className="text-[10px] text-muted-foreground truncate">{i.sku}</div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <Button
                       size="icon"

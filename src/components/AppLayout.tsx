@@ -159,6 +159,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <RouterNavLink
                     key={item.path}
                     to={item.path}
+                    data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
                     onClick={() => setSidebarOpen(false)}
                     title={collapsed ? item.title : undefined}
                     className={cn(

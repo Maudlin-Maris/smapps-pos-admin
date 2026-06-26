@@ -24,12 +24,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer, Package, ChefHat, Sparkles, DollarSign } from "lucide-react";
+import { Search, Edit, Trash2, Copy, ChevronLeft, ChevronRight, Tag, PackageCheck, Camera, Printer, Package, ChefHat, Sparkles, DollarSign, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatNaira } from "@/lib/currency";
 import type { MenuItem } from "./MenuItemForm";
 import type { Outlet } from "@/lib/types/outlet";
 import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { cn } from "@/lib/utils";
 
 interface MenuListProps {
   items: MenuItem[];
@@ -40,17 +41,57 @@ interface MenuListProps {
   showOutlet?: boolean;
   readOnly?: boolean;
   outlets?: Outlet[];
+
+  // API pagination/search/loading props
+  search: string;
+  onSearchChange: (search: string) => void;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  rowsPerPage: number;
+  onRowsPerPageChange: (rows: number) => void;
+  totalItems: number;
+  totalPages: number;
+  isLoading?: boolean;
 }
 
-export default function MenuList({ items, selectedSubcategory, onEdit, onDelete, onClone, showOutlet = false, readOnly = false, outlets = [] }: MenuListProps) {
-  const [search, setSearch] = useState("");
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
+export default function MenuList({
+  items,
+  selectedSubcategory,
+  onEdit,
+  onDelete,
+  onClone,
+  showOutlet = false,
+  readOnly = false,
+  outlets = [],
+  search,
+  onSearchChange,
+  currentPage,
+  onPageChange,
+  rowsPerPage,
+  onRowsPerPageChange,
+  totalItems,
+  totalPages,
+  isLoading = false,
+}: MenuListProps) {
+  const [localSearch, setLocalSearch] = useState(search);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [selectedForPrint, setSelectedForPrint] = useState<Set<string>>(new Set());
   const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<any>(null);
+
+  // Sync localSearch when search prop changes
+  useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  // Debounced search query propagation
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      onSearchChange(localSearch);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [localSearch, onSearchChange]);
 
   // External barcode scanner listener
   const bufferRef = useRef("");
@@ -61,7 +102,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
     if (document.activeElement && document.activeElement !== inputRef.current &&
       (document.activeElement as HTMLElement).tagName === "INPUT") return;
     if (e.key === "Enter" && bufferRef.current.length >= 4) {
-      setSearch(bufferRef.current);
+      setLocalSearch(bufferRef.current);
       bufferRef.current = "";
       toast.success("Barcode scanned!");
       e.preventDefault();
@@ -92,7 +133,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 150 } },
           (decodedText: string) => {
-            setSearch(decodedText);
+            setLocalSearch(decodedText);
             toast.success("Barcode scanned!");
             scanner.stop().catch(() => { });
             setCameraOpen(false);
@@ -120,25 +161,6 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
     if (!outletId) return "—";
     return outlets.find((o) => o.id === outletId)?.name ?? "—";
   };
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return items.filter(
-      (item) =>
-        (!selectedSubcategory || item.category === selectedSubcategory) &&
-        (item.name.toLowerCase().includes(q) ||
-          item.sku.toLowerCase().includes(q) ||
-          item.category.toLowerCase().includes(q) ||
-          item.variants.some((v) => v.sku.toLowerCase().includes(q)))
-    );
-  }, [items, selectedSubcategory, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
-  const safePage = Math.min(currentPage, totalPages);
-  const startIdx = (safePage - 1) * rowsPerPage;
-  const pageItems = filtered.slice(startIdx, startIdx + rowsPerPage);
-
-  useMemo(() => setCurrentPage(1), [search, selectedSubcategory, rowsPerPage]);
 
   const colCount = 10 + (showOutlet ? 1 : 0) + (readOnly ? 0 : 1);
 
@@ -232,8 +254,8 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
           <Input
             ref={inputRef}
             placeholder="Search by name, SKU, category, or scan barcode..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-9 pr-10"
           />
           <Button
@@ -252,7 +274,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
             <Printer className="h-4 w-4" /> Print Barcodes
           </Button>
           <span className="text-xs text-muted-foreground whitespace-nowrap">Rows</span>
-          <Select value={String(rowsPerPage)} onValueChange={(v) => setRowsPerPage(Number(v))}>
+          <Select value={String(rowsPerPage)} onValueChange={(v) => onRowsPerPageChange(Number(v))}>
             <SelectTrigger className="w-[70px] h-9"><SelectValue /></SelectTrigger>
             <SelectContent>
               {[5, 10, 20, 50].map((n) => (<SelectItem key={n} value={String(n)}>{n}</SelectItem>))}
@@ -261,8 +283,13 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
         </div>
       </div>
 
-      <Card>
-        <div className="overflow-x-auto">
+      <Card className="relative overflow-hidden">
+        {isLoading && (
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center z-10 transition-opacity">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
+        <div className={cn("overflow-x-auto", isLoading && "opacity-50 pointer-events-none")}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -281,7 +308,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pageItems.map((item) => {
+              {items.map((item) => {
                 const hasVariants = item.variants?.length > 0;
 
                 if (hasVariants) {
@@ -438,7 +465,7 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
                   </TableRow>
                 );
               })}
-              {pageItems.length === 0 && (
+              {items.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={colCount} className="text-center py-8 text-muted-foreground text-sm">No menu items found</TableCell>
                 </TableRow>
@@ -448,12 +475,12 @@ export default function MenuList({ items, selectedSubcategory, onEdit, onDelete,
         </div>
 
         <ResuablePagination
-          currentPage={safePage}
+          currentPage={currentPage}
           totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={filtered.length}
+          onPageChange={onPageChange}
+          totalItems={totalItems}
           rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={setRowsPerPage}
+          onRowsPerPageChange={onRowsPerPageChange}
         />
       </Card>
 

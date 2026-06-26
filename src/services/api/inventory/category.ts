@@ -20,6 +20,7 @@ export const useGetInventoryCategories = (
     outletId?: string;
     page?: number;
     per_page?: number;
+    search?: string;
   },
   options?: SWRConfiguration,
 ) => {

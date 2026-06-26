@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, ArrowRight, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import type { MenuItem } from "./MenuItemForm";
 import type { Outlet } from "@/lib/types/outlet";
+import { useGetItems } from "@/services/api/catalog/item";
 
 interface PriceOverride {
   basePrice?: number;
@@ -51,26 +52,61 @@ export default function CopyMenuDialog({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [targetOutletId, setTargetOutletId] = useState("");
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [priceOverrides, setPriceOverrides] = useState<Record<string, PriceOverride>>({});
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: searchItemsResponse } = useGetItems({
+    outletId: currentOutletId || undefined,
+    search: debouncedSearch.trim() || undefined,
+    per_page: 100,
+  });
+
+  const displayItems = useMemo<MenuItem[]>(() => {
+    if (!debouncedSearch.trim()) return items;
+    if (!searchItemsResponse?.data) return [];
+    return searchItemsResponse.data.map((item) => {
+      const fullItem = items.find((x) => x.id === item.id || x.sku === item.sku);
+      return {
+        id: item.id,
+        name: item.name || fullItem?.name || "",
+        description: item.description || fullItem?.description || "",
+        category: item.category || fullItem?.category || "",
+        subcategory: item.subcategory || fullItem?.subcategory || "",
+        price: item.price ?? fullItem?.price ?? 0,
+        quantity: fullItem?.quantity ?? 0,
+        salePrice: fullItem?.salePrice ?? null,
+        salePeriodStart: fullItem?.salePeriodStart ?? null,
+        salePeriodEnd: fullItem?.salePeriodEnd ?? null,
+        sku: item.sku || fullItem?.sku || "",
+        status: (item.status === "active" || item.status === "good" || item.status === "available" ? "active" : "inactive") as "active" | "inactive",
+        images: item.images || (item.images?.[0] ? [item.images[0]] : []) || fullItem?.images || [],
+        variants: fullItem?.variants || [],
+        extras: fullItem?.extras || [],
+        trackInventory: fullItem?.trackInventory ?? false,
+        outletId: item.outletId || fullItem?.outletId || undefined,
+        itemType: fullItem?.itemType || "simple",
+        linkedInventoryItemId: fullItem?.linkedInventoryItemId || undefined,
+        ingredients: fullItem?.ingredients || [],
+        modifierGroupIds: fullItem?.modifierGroupIds || [],
+      };
+    });
+  }, [searchItemsResponse, items, debouncedSearch]);
 
   const availableOutlets = useMemo(
     () => outlets.filter((o) => o.id !== currentOutletId),
     [outlets, currentOutletId]
   );
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return items;
-    const q = search.toLowerCase();
-    return items.filter(
-      (i) =>
-        i.name.toLowerCase().includes(q) ||
-        i.category.toLowerCase().includes(q) ||
-        i.subcategory.toLowerCase().includes(q) ||
-        i.sku.toLowerCase().includes(q)
-    );
-  }, [items, search]);
+  const filtered = displayItems;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);

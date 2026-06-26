@@ -28,8 +28,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { formatNaira } from "@/lib/currency";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
-import type { SubstituteGroup } from "@/data/substituteGroups";
-import type { ComponentSubstitute, ComponentSubstituteConfig, SubstituteMode } from "@/lib/composite-substitution";
+import type { SubstituteGroup, ComponentSubstitute, ComponentSubstituteConfig, SubstituteMode } from "@/lib/composite-substitution";
 
 interface Props {
   /** Original inventory item id (the component's primary). */

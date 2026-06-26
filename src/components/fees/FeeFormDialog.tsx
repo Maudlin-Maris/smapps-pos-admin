@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export interface FeeFormData {
-  id?: number;
+  id?: string;
   outletId: string;
   name: string;
   serviceOption: "all" | "dine_in" | "takeaway";

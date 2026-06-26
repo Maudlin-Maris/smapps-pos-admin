@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useGetTransactions } from "@/services/api/transactions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -77,6 +78,7 @@ function flattenForExport(txn: Transaction) {
 export default function ReportTransactions({ selectedOutlets, dateRange, cashierFilter }: ReportTransactionsProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialReportTransactions);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [internalCashier, setInternalCashier] = useState("all");
   const isCashierControlled = cashierFilter !== undefined;
   const selectedCashier = isCashierControlled ? (cashierFilter as string) : internalCashier;
@@ -86,15 +88,32 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: apiTransactions } = useGetTransactions({
+    search: debouncedSearch.trim() || undefined,
+    cashier: selectedCashier !== "all" ? selectedCashier : undefined,
+    paymentMethod: selectedPaymentMethod !== "all" ? selectedPaymentMethod : undefined,
+  }, {
+    keepPreviousData: true,
+  });
+
+  const displayTransactions = apiTransactions || transactions;
+
   const perPage = parseInt(rowsPerPage);
 
   const outletFiltered = useMemo(() => {
     const locationNames = selectedOutlets.map((id) => outletLocationMap[id]).filter(Boolean);
     if (locationNames.length === 0 || locationNames.length === Object.keys(outletLocationMap).length) {
-      return transactions;
+      return displayTransactions;
     }
-    return transactions.filter((t) => locationNames.includes(t.location));
-  }, [selectedOutlets, transactions]);
+    return displayTransactions.filter((t) => locationNames.includes(t.location));
+  }, [selectedOutlets, displayTransactions]);
 
   const availableCashiers = useMemo(() => {
     return [...new Set(outletFiltered.map((t) => t.cashier))].sort();
@@ -105,28 +124,8 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
   }, [outletFiltered]);
 
   const filtered = useMemo(() => {
-    let result = outletFiltered;
-    if (selectedCashier !== "all") {
-      result = result.filter((t) => t.cashier === selectedCashier);
-    }
-    if (selectedPaymentMethod !== "all") {
-      result = result.filter((t) => t.payments.some((p) => p.method === selectedPaymentMethod));
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (t) =>
-          t.orderId.toLowerCase().includes(q) ||
-          t.customerPhone.toLowerCase().includes(q) ||
-          t.cashier.toLowerCase().includes(q) ||
-          t.location.toLowerCase().includes(q) ||
-          t.payments.some((p) => p.method.toLowerCase().includes(q)) ||
-          t.orderStatus.toLowerCase().includes(q) ||
-          t.paymentStatus.toLowerCase().includes(q)
-      );
-    }
-    return result;
-  }, [outletFiltered, selectedCashier, selectedPaymentMethod, search]);
+    return outletFiltered;
+  }, [outletFiltered]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const currentPage = Math.min(page, totalPages);

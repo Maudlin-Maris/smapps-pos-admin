@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/select";
 import { Plus, Copy, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import CategoryManager, { type Category } from "@/components/menu/CategoryManager";
+import CategoryManager, {
+  type Category,
+} from "@/components/menu/CategoryManager";
 import MenuItemForm, { type MenuItem } from "@/components/menu/MenuItemForm";
 import MenuList from "@/components/menu/MenuList";
 import CopyMenuDialog from "@/components/menu/CopyMenuDialog";
@@ -23,13 +25,18 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
-import { upsertCompositeFromMenu, removeCompositesForMenu } from "@/hooks/use-composites-store";
-import type { CompositeItem, CompositeComponent } from "@/components/inventory/CompositeItemForm";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import {
+  upsertCompositeFromMenu,
+  removeCompositesForMenu,
+} from "@/hooks/use-composites-store";
+import type {
+  CompositeItem,
+  CompositeComponent,
+} from "@/components/inventory/CompositeItemForm";
 
 import { useGetOutlets } from "@/services/api/outlets";
-import {
-  useGetCategories,
-} from "@/services/api/catalog/category";
+import { useGetCategories } from "@/services/api/catalog/category";
 import {
   useGetItems,
   useCreateItem,
@@ -39,9 +46,16 @@ import {
   useCloneItem,
   useImportCatalog,
 } from "@/services/api/catalog/item";
+import { useAuth } from "@/contexts/AuthContext";
+import { useApi } from "@/services/api/api-hooks";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
+import { createUrlWithParams } from "@/lib/utils";
+import type { CatalogItemsListResponse } from "@/lib/types/catalog-items-list-response";
 
 export default function MenuManagement() {
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(
+    null,
+  );
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [formMode, setFormMode] = useState<"add" | "edit" | "clone">("add");
@@ -51,10 +65,21 @@ export default function MenuManagement() {
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedSubcategory, selectedOutletId, rowsPerPage]);
+
   const { data: outletsData, isLoading: isOutletsLoading } = useGetOutlets();
   const outlets = outletsData || [];
 
-  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
+  const { data: inventoryResponse } = useGetInventoryItems({
+    per_page: DEFAULT_PAGE_SIZE,
+  });
   const inventoryItems = useMemo(() => {
     if (!inventoryResponse?.data) return [];
     return inventoryResponse.data.map((i: any) => ({
@@ -67,6 +92,8 @@ export default function MenuManagement() {
       unitId: i.unitId ?? "",
       outletId: i.outletId ?? "",
       conversions: i.conversions || [],
+      minStock: i.minStock ?? 0,
+      status: i.status ?? "good",
     }));
   }, [inventoryResponse]);
 
@@ -79,34 +106,84 @@ export default function MenuManagement() {
     reachedLastPage: categoriesReachedLastPage,
     mutate: mutateCategories,
   } = useGetCategories(
-    selectedOutletId !== "all" ? { outletId: selectedOutletId } : undefined
+    selectedOutletId !== "all" ? { outletId: selectedOutletId } : undefined,
   );
+  // console.log({categoriesData})
   const categories = useMemo(() => {
-    return categoriesData ? categoriesData.flatMap((page) => page.data) : [];
+    if (!categoriesData) return [];
+    const all = categoriesData.flatMap((page) => page.data);
+    const seen = new Set();
+    // return all.filter((c) => {
+    //   if (seen.has(c.id)) return false;
+    //   seen.add(c.id);
+    //   return true;
+    // });
+    return all;
   }, [categoriesData]);
 
-  const { data: itemsData, isLoading: isItemsLoading, mutate: mutateItems } = useGetItems(
-    selectedOutletId !== "all" ? { outletId: selectedOutletId } : undefined
+  const { isLoggedIn } = useAuth();
+
+  const selectedCategoryId = useMemo(() => {
+    if (!selectedSubcategory) return undefined;
+    return categories.find((c) => c.name === selectedSubcategory)?.id;
+  }, [selectedSubcategory, categories]);
+
+  const {
+    data: itemsData,
+    isLoading: isItemsLoading,
+    isValidating: isItemsValidating,
+    mutate: mutateItems,
+  } = useGetItems(
+    {
+      page: currentPage,
+      per_page: rowsPerPage,
+      ...(selectedOutletId !== "all" ? { outletId: selectedOutletId } : {}),
+      ...(selectedCategoryId ? { categoryId: selectedCategoryId } : {}),
+      ...(search ? { search } : {}),
+    },
+    { keepPreviousData: true },
   );
   const menuItems = (itemsData?.data || []) as unknown as MenuItem[];
 
-  const { trigger: triggerCreateItem, isMutating: isCreatingItem } = useCreateItem();
-  const { trigger: triggerUpdateItem, isMutating: isUpdatingItem } = useUpdateItem(editingItem?.id);
-  const { trigger: triggerDeleteItem, isMutating: isDeletingItem } = useDeleteItem(deletingId ?? undefined);
-  const { trigger: triggerCopyItems, isMutating: isCopyingItems } = useCopyItemsToOutlet();
-  const { trigger: triggerCloneItem, isMutating: isCloningItems } = useCloneItem(editingItem?.id);
-  const { trigger: triggerImport, isMutating: isImporting } = useImportCatalog();
+  const { data: copyItemsData } = useApi<CatalogItemsListResponse>(
+    isLoggedIn && copyDialogOpen && selectedOutletId !== "all"
+      ? createUrlWithParams(API_ENDPOINTS.ITEMS, {
+          outletId: selectedOutletId,
+          per_page: 1000,
+        })
+      : null,
+  );
+  const copyItems = useMemo(() => {
+    return (copyItemsData?.data || []) as unknown as MenuItem[];
+  }, [copyItemsData]);
 
-  const isMutating = isCreatingItem || isUpdatingItem || isDeletingItem || isCopyingItems || isCloningItems || isImporting;
-  const isLoading = isOutletsLoading || isCategoriesLoading || isItemsLoading;
+  const { trigger: triggerCreateItem, isMutating: isCreatingItem } =
+    useCreateItem();
+  const { trigger: triggerUpdateItem, isMutating: isUpdatingItem } =
+    useUpdateItem(editingItem?.id);
+  const { trigger: triggerDeleteItem, isMutating: isDeletingItem } =
+    useDeleteItem(deletingId ?? undefined);
+  const { trigger: triggerCopyItems, isMutating: isCopyingItems } =
+    useCopyItemsToOutlet();
+  const { trigger: triggerCloneItem, isMutating: isCloningItems } =
+    useCloneItem(editingItem?.id);
+  const { trigger: triggerImport, isMutating: isImporting } =
+    useImportCatalog();
+
+  const isMutating =
+    isCreatingItem ||
+    isUpdatingItem ||
+    isDeletingItem ||
+    isCopyingItems ||
+    isCloningItems ||
+    isImporting;
+  const isInitialLoading =
+    isOutletsLoading || isCategoriesLoading || (isItemsLoading && !itemsData);
 
   const isAllOutlets = selectedOutletId === "all";
   const currentOutlet = outlets.find((o) => o.id === selectedOutletId);
 
-  const outletItems = useMemo(
-    () => isAllOutlets ? menuItems : menuItems.filter((m) => m.outletId === selectedOutletId),
-    [menuItems, selectedOutletId, isAllOutlets]
-  );
+  const outletItems = menuItems;
 
   const syncCompositeForMenuItem = (item: MenuItem, outletId: string) => {
     if (item.itemType !== "composite") {
@@ -131,25 +208,36 @@ export default function MenuManagement() {
       components,
       outletId,
       sellPrice: item.price || undefined,
-      pricingMethod: item.pricingMethod === "markup" || item.pricingMethod === "margin" || item.pricingMethod === "fixed"
-        ? item.pricingMethod
-        : undefined,
+      pricingMethod:
+        item.pricingMethod === "markup" ||
+        item.pricingMethod === "margin" ||
+        item.pricingMethod === "fixed"
+          ? item.pricingMethod
+          : undefined,
       pricingValue: item.pricingValue,
     };
     upsertCompositeFromMenu(composite);
   };
 
-  const handleSave = async (item: MenuItem, targetOutletIds: string[]) => {
+  const handleSave = async (
+    item: MenuItem,
+    targetOutletIds: string[],
+    onSuccess?: () => void,
+    onError?: () => void,
+  ) => {
     try {
       const primaryOutletId = targetOutletIds[0] ?? selectedOutletId;
       const additionalOutlets = targetOutletIds.slice(1);
 
       if (formMode === "clone" && editingItem) {
-        await triggerCloneItem({
-          name: item.name,
-          outletId: primaryOutletId,
-          sku: item.sku || null,
-        });
+        await triggerCloneItem(
+          {
+            name: item.name,
+            outletId: primaryOutletId,
+            sku: item.sku || null,
+          },
+          { onSuccess, onError },
+        );
         toast.success("Menu item cloned successfully");
         mutateItems();
         setEditingItem(null);
@@ -168,8 +256,16 @@ export default function MenuManagement() {
           price: item.price,
           quantity: item.quantity,
           salePrice: item.salePrice,
-          salePeriodStart: item.salePeriodStart ? (item.salePeriodStart instanceof Date ? item.salePeriodStart.toISOString().split("T")[0] : String(item.salePeriodStart).split("T")[0]) : null,
-          salePeriodEnd: item.salePeriodEnd ? (item.salePeriodEnd instanceof Date ? item.salePeriodEnd.toISOString().split("T")[0] : String(item.salePeriodEnd).split("T")[0]) : null,
+          salePeriodStart: item.salePeriodStart
+            ? item.salePeriodStart instanceof Date
+              ? item.salePeriodStart.toISOString().split("T")[0]
+              : String(item.salePeriodStart).split("T")[0]
+            : null,
+          salePeriodEnd: item.salePeriodEnd
+            ? item.salePeriodEnd instanceof Date
+              ? item.salePeriodEnd.toISOString().split("T")[0]
+              : String(item.salePeriodEnd).split("T")[0]
+            : null,
           sku: isCopy ? "" : item.sku,
           status: item.status,
           itemType: item.itemType || "simple",
@@ -193,8 +289,16 @@ export default function MenuManagement() {
             price: v.price,
             quantity: v.quantity,
             salePrice: v.salePrice,
-            salePeriodStart: v.salePeriodStart ? (v.salePeriodStart instanceof Date ? v.salePeriodStart.toISOString().split("T")[0] : String(v.salePeriodStart).split("T")[0]) : null,
-            salePeriodEnd: v.salePeriodEnd ? (v.salePeriodEnd instanceof Date ? v.salePeriodEnd.toISOString().split("T")[0] : String(v.salePeriodEnd).split("T")[0]) : null,
+            salePeriodStart: v.salePeriodStart
+              ? v.salePeriodStart instanceof Date
+                ? v.salePeriodStart.toISOString().split("T")[0]
+                : String(v.salePeriodStart).split("T")[0]
+              : null,
+            salePeriodEnd: v.salePeriodEnd
+              ? v.salePeriodEnd instanceof Date
+                ? v.salePeriodEnd.toISOString().split("T")[0]
+                : String(v.salePeriodEnd).split("T")[0]
+              : null,
             trackInventory: v.trackInventory,
             sku: isCopy ? "" : v.sku,
             status: v.status,
@@ -205,17 +309,34 @@ export default function MenuManagement() {
       };
 
       if (exists) {
-        await triggerUpdateItem(buildPayload(primaryOutletId));
+        await triggerUpdateItem(buildPayload(primaryOutletId), {
+          onSuccess,
+          onError,
+        });
         for (const oid of additionalOutlets) {
-          await triggerCreateItem(buildPayload(oid, true));
+          await triggerCreateItem(buildPayload(oid, true), {
+            onSuccess,
+            onError,
+          });
         }
         const total = 1 + additionalOutlets.length;
-        toast.success(total > 1 ? `Item updated and copied to ${additionalOutlets.length} more outlets` : "Menu item updated");
+        toast.success(
+          total > 1
+            ? `Item updated and copied to ${additionalOutlets.length} more outlets`
+            : "Menu item updated",
+        );
       } else {
         for (const [idx, oid] of targetOutletIds.entries()) {
-          await triggerCreateItem(buildPayload(oid, idx > 0));
+          await triggerCreateItem(buildPayload(oid, idx > 0), {
+            onSuccess,
+            onError,
+          });
         }
-        toast.success(targetOutletIds.length > 1 ? `Item added to ${targetOutletIds.length} outlets` : "Menu item added");
+        toast.success(
+          targetOutletIds.length > 1
+            ? `Item added to ${targetOutletIds.length} outlets`
+            : "Menu item added",
+        );
       }
 
       if (exists) {
@@ -245,7 +366,11 @@ export default function MenuManagement() {
       ...item,
       name: `${item.name} (Copy)`,
       sku: "",
-      variants: item.variants.map((v) => ({ ...v, id: crypto.randomUUID(), sku: "" })),
+      variants: item.variants.map((v) => ({
+        ...v,
+        id: crypto.randomUUID(),
+        sku: "",
+      })),
     };
     setEditingItem(cloned);
     setFormMode("clone");
@@ -270,7 +395,10 @@ export default function MenuManagement() {
   const handleCopyToOutlet = async (
     itemIds: string[],
     targetOutletId: string,
-    priceOverrides?: Record<string, { basePrice?: number; variantPrices?: Record<string, number> }>
+    priceOverrides?: Record<
+      string,
+      { basePrice?: number; variantPrices?: Record<string, number> }
+    >,
   ) => {
     const targetOutlet = outlets.find((o) => o.id === targetOutletId);
     try {
@@ -291,7 +419,7 @@ export default function MenuManagement() {
       await triggerImport({
         outletId: selectedOutletId,
         skipDuplicateSkus: true,
-        items: items.map(item => ({
+        items: items.map((item) => ({
           name: item.name,
           description: item.description,
           category: item.category,
@@ -303,7 +431,7 @@ export default function MenuManagement() {
           pricingStrategy: item.pricingStrategy || "base",
           costPrice: item.costPrice || null,
           sellingUnit: item.sellingUnit || "pcs",
-          variants: (item.variants || []).map(v => ({
+          variants: (item.variants || []).map((v) => ({
             name: v.name,
             price: v.price,
             sku: v.sku,
@@ -322,18 +450,31 @@ export default function MenuManagement() {
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight">Product Catalog</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage products, services, categories and pricing</p>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">
+            Product Catalog
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage products, services, categories and pricing
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Select value={selectedOutletId} onValueChange={setSelectedOutletId} disabled={isLoading || isMutating}>
-            <SelectTrigger className="w-[180px] h-9">
+          <Select
+            value={selectedOutletId}
+            onValueChange={setSelectedOutletId}
+            disabled={isInitialLoading || isMutating}
+          >
+            <SelectTrigger
+              data-testid="outlet-filter-trigger"
+              className="w-[180px] h-9"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Outlets</SelectItem>
               {outlets.map((o) => (
-                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                <SelectItem key={o.id} value={o.id}>
+                  {o.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -344,7 +485,7 @@ export default function MenuManagement() {
                 variant="outline"
                 className="w-fit gap-1.5"
                 onClick={() => setCopyDialogOpen(true)}
-                disabled={isLoading || isMutating || outletItems.length === 0}
+                disabled={isInitialLoading || isMutating || (itemsData?.meta?.total ?? 0) === 0}
               >
                 <Copy className="h-4 w-4" /> Copy to Outlet
               </Button>
@@ -353,27 +494,34 @@ export default function MenuManagement() {
                 variant="outline"
                 className="w-fit gap-1.5"
                 onClick={() => setImportDialogOpen(true)}
-                disabled={isLoading || isMutating}
+                disabled={isInitialLoading || isMutating}
               >
                 <Upload className="h-4 w-4" /> Import Excel
               </Button>
             </>
           )}
           <Button
+            data-testid="add-item-button"
             size="sm"
             className="w-fit"
-            onClick={() => { setEditingItem(null); setFormMode("add"); setFormOpen(true); }}
-            disabled={isLoading || isMutating}
+            onClick={() => {
+              setEditingItem(null);
+              setFormMode("add");
+              setFormOpen(true);
+            }}
+            disabled={isInitialLoading || isMutating}
           >
             <Plus className="h-4 w-4 mr-1" /> Add Item
           </Button>
         </div>
       </div>
 
-      {isLoading ? (
+      {isInitialLoading ? (
         <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-dashed rounded-lg">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
-          <p className="text-sm text-muted-foreground">Loading catalog items and categories...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading catalog items and categories...
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -381,10 +529,17 @@ export default function MenuManagement() {
             categories={categories}
             selectedSubcategory={selectedSubcategory}
             onSelectSubcategory={setSelectedSubcategory}
-            currentOutletId={selectedOutletId !== "all" ? selectedOutletId : undefined}
+            currentOutletId={
+              selectedOutletId !== "all" ? selectedOutletId : undefined
+            }
             onRefresh={mutateCategories}
             hasMore={!categoriesReachedLastPage}
-            onLoadMore={() => setCategoriesSize(categoriesSize + 1)}
+            onLoadMore={() =>
+              setCategoriesSize((size) => {
+                console.log({ size });
+                return size + 1;
+              })
+            }
             isLoadingMore={isCategoriesValidating}
           />
           <div className="lg:col-span-3">
@@ -392,11 +547,23 @@ export default function MenuManagement() {
               items={outletItems}
               selectedSubcategory={selectedSubcategory}
               onEdit={handleEdit}
-              onDelete={(id) => { setDeletingId(id); setDeleteConfirmOpen(true); }}
+              onDelete={(id) => {
+                setDeletingId(id);
+                setDeleteConfirmOpen(true);
+              }}
               onClone={handleClone}
               showOutlet={isAllOutlets}
               readOnly={isAllOutlets}
               outlets={outlets}
+              search={search}
+              onSearchChange={setSearch}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={setRowsPerPage}
+              totalItems={itemsData?.meta?.total || 0}
+              totalPages={itemsData?.meta?.last_page || 1}
+              isLoading={isItemsLoading || isItemsValidating}
             />
           </div>
         </div>
@@ -404,7 +571,15 @@ export default function MenuManagement() {
 
       <MenuItemForm
         open={formOpen}
-        onOpenChange={(open) => { if (!isMutating) { setFormOpen(open); if (!open) { setEditingItem(null); setFormMode("add"); } } }}
+        onOpenChange={(open) => {
+          if (!isMutating) {
+            setFormOpen(open);
+            if (!open) {
+              setEditingItem(null);
+              setFormMode("add");
+            }
+          }
+        }}
         categories={categories}
         item={editingItem}
         onSave={handleSave}
@@ -416,15 +591,31 @@ export default function MenuManagement() {
         inventoryItems={inventoryItems}
       />
 
-      <Dialog open={deleteConfirmOpen} onOpenChange={(open) => !isMutating && setDeleteConfirmOpen(open)}>
+      <Dialog
+        open={deleteConfirmOpen}
+        onOpenChange={(open) => !isMutating && setDeleteConfirmOpen(open)}
+      >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete Menu Item</DialogTitle>
-            <DialogDescription>Are you sure you want to delete this item? This action cannot be undone.</DialogDescription>
+            <DialogDescription>
+              Are you sure you want to delete this item? This action cannot be
+              undone.
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={isMutating}>Cancel</Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm} isLoading={isDeletingItem}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={isMutating}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              isLoading={isDeletingItem}
+            >
               Delete
             </Button>
           </DialogFooter>
@@ -435,7 +626,7 @@ export default function MenuManagement() {
         <CopyMenuDialog
           open={copyDialogOpen}
           onOpenChange={setCopyDialogOpen}
-          items={outletItems}
+          items={copyItems}
           currentOutletId={selectedOutletId}
           currentOutletName={currentOutlet.name}
           outlets={outlets}

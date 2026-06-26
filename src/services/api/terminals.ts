@@ -5,18 +5,22 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useApi, useApiMutation, type APIError } from "./api-hooks";
 import { API_ENDPOINTS } from "./endpoints";
+import { createUrlWithParams } from "@/lib/utils";
 
 import type {
   TerminalRecord as ApiTerminalRecord,
   CreateTerminalPayload,
 } from "@/lib/types/terminals";
 
-export const useGetTerminals = (options?: SWRConfiguration) => {
+export const useGetTerminals = (
+  params?: { search?: string },
+  options?: SWRConfiguration,
+) => {
   const { isLoggedIn } = useAuth();
-  return useApi<ApiTerminalRecord[]>(
-    isLoggedIn ? API_ENDPOINTS.TERMINALS : null,
-    options,
-  );
+  const url = isLoggedIn
+    ? createUrlWithParams(API_ENDPOINTS.TERMINALS, params)
+    : null;
+  return useApi<ApiTerminalRecord[]>(url, options);
 };
 
 export const useCreateTerminal = (
@@ -70,30 +74,4 @@ export const useDeleteTerminal = (
       ...options,
     },
   );
-};
-
-/**
- * Real API Terminals Service — stub endpoints for fallback compatibility.
- */
-import { apiRequest } from "../http";
-import { ok, err } from "../types";
-import type { TerminalRecord, TerminalsService } from "../mock/terminals.types";
-
-export const realTerminalsService: TerminalsService = {
-  async list() {
-    try {
-      return ok(await apiRequest<TerminalRecord[]>("/api/terminals"));
-    } catch (e: any) { return err(e?.message || "Failed to load terminals"); }
-  },
-  async register(body) {
-    try {
-      return ok(await apiRequest<TerminalRecord>("/api/terminals", { method: "POST", body }));
-    } catch (e: any) { return err(e?.message || "Failed to register terminal"); }
-  },
-  async revoke(id) {
-    try {
-      await apiRequest<void>(`/api/terminals/${id}`, { method: "DELETE" });
-      return ok(undefined);
-    } catch (e: any) { return err(e?.message || "Failed to revoke terminal"); }
-  },
 };

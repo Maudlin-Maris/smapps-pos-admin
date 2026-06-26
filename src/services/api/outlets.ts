@@ -14,6 +14,7 @@ import type { UpdateOutletStatusResponse } from "@/lib/types/update-outlet-statu
 import { useApi, useApiMutation, type APIError } from "./api-hooks";
 import { API_ENDPOINTS } from "./endpoints";
 import { api } from "./base";
+import { createUrlWithParams } from "@/lib/utils";
 
 // Outlet sub-resources types
 import type { CatalogCategory } from "@/lib/types/catalog-category";
@@ -128,13 +129,14 @@ export const useUpdateOutletStatus = (
 // --- Catalog Categories ---
 export const useGetOutletCatalogCategories = (
   outletId: number | string | undefined,
+  params?: { search?: string },
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();
-  return useApi<CatalogCategory[]>(
-    isLoggedIn && outletId ? API_ENDPOINTS.OUTLET_CATALOG_CATEGORIES(outletId) : null,
-    options,
-  );
+  const url = isLoggedIn && outletId
+    ? createUrlWithParams(API_ENDPOINTS.OUTLET_CATALOG_CATEGORIES(outletId), params)
+    : null;
+  return useApi<CatalogCategory[]>(url, options);
 };
 
 // --- Departments ---
@@ -487,13 +489,14 @@ export const useDeleteOutletFee = (
 // --- Locations ---
 export const useGetOutletLocations = (
   outletId: number | string | undefined,
+  params?: { search?: string },
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();
-  return useApi<LocationRecord[]>(
-    isLoggedIn && outletId ? API_ENDPOINTS.OUTLET_LOCATIONS(outletId) : null,
-    options,
-  );
+  const url = isLoggedIn && outletId
+    ? createUrlWithParams(API_ENDPOINTS.OUTLET_LOCATIONS(outletId), params)
+    : null;
+  return useApi<LocationRecord[]>(url, options);
 };
 
 export const useCreateOutletLocation = (
@@ -769,36 +772,4 @@ export const useDeleteOutletTip = (
   );
 };
 
-// --- Legacy Real API Outlets Service for fallback compatibility ---
-import { apiRequest } from "../http";
-import { ok, err } from "../types";
-import type { OutletRecord, OutletsService } from "../mock/outlets.types";
-
-export const realOutletsService: OutletsService = {
-  async list() {
-    try {
-      return ok(await apiRequest<OutletRecord[]>("/api/outlets"));
-    } catch (e: any) { return err(e?.message || "Failed to load outlets"); }
-  },
-  async getById(id) {
-    try {
-      return ok(await apiRequest<OutletRecord>(`/api/outlets/${id}`));
-    } catch (e: any) { return err(e?.message || "Outlet not found"); }
-  },
-  async create(body) {
-    try {
-      return ok(await apiRequest<OutletRecord>("/api/outlets", { method: "POST", body }));
-    } catch (e: any) { return err(e?.message || "Failed to create outlet"); }
-  },
-  async update(id, body) {
-    try {
-      return ok(await apiRequest<OutletRecord>(`/api/outlets/${id}`, { method: "PATCH", body }));
-    } catch (e: any) { return err(e?.message || "Failed to update outlet"); }
-  },
-  async remove(id) {
-    try {
-      await apiRequest<void>(`/api/outlets/${id}`, { method: "DELETE" });
-      return ok(undefined);
-    } catch (e: any) { return err(e?.message || "Failed to delete outlet"); }
-  },
-};
+// Obsolete fallback code referencing deleted mock types has been removed.

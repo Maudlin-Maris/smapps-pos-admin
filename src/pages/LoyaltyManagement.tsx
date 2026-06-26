@@ -42,6 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, Package } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 // API
 import {
@@ -101,16 +102,55 @@ function RewardFormDialog({
     reward?.freeItemQuantity?.toString() ?? "1"
   );
   const [itemPickerOpen, setItemPickerOpen] = useState(false);
+  const [itemSearch, setItemSearch] = useState("");
 
-  // Filter inventory by outlet availability scope
+  const { data: searchItemsRes } = useGetInventoryItems(
+    open && type === "free_item" ? {
+      search: itemSearch.trim() || undefined,
+      per_page: DEFAULT_PAGE_SIZE,
+    } : undefined
+  );
+
+  const searchItems = searchItemsRes?.data || [];
+
+  const [itemsCache, setItemsCache] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (searchItems.length > 0) {
+      setItemsCache((prev) => {
+        const next = { ...prev };
+        searchItems.forEach((item) => {
+          next[item.id] = item;
+        });
+        return next;
+      });
+    }
+  }, [searchItems]);
+
+  useEffect(() => {
+    if (freeItemId && !itemsCache[freeItemId]) {
+      api.get(API_ENDPOINTS.SINGLE_INVENTORY(freeItemId)).then(({ data }) => {
+        if (data) {
+          setItemsCache(prev => ({ ...prev, [freeItemId]: data }));
+        }
+      }).catch(() => {});
+    }
+  }, [freeItemId, itemsCache]);
+
   const availableInventory = useMemo(() => {
     if (availabilityMode === "specific" && selectedOutletIds.length > 0) {
-      return inventoryItems.filter(i => selectedOutletIds.includes(i.outletId));
+      return searchItems.filter(i => selectedOutletIds.includes(i.outletId));
     }
-    return inventoryItems;
-  }, [availabilityMode, selectedOutletIds, inventoryItems]);
+    return searchItems;
+  }, [availabilityMode, selectedOutletIds, searchItems]);
 
-  const selectedItem = freeItemId ? inventoryItems.find(i => i.id === freeItemId) : null;
+  const cachedItem = freeItemId ? itemsCache[freeItemId] : null;
+  const selectedItem = cachedItem ? {
+    id: cachedItem.id,
+    name: cachedItem.name,
+    sku: cachedItem.sku,
+    stock: cachedItem.quantity ?? cachedItem.stock ?? 0,
+  } : null;
 
   const toggleOutlet = (id: string) => {
     setSelectedOutletIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -209,8 +249,12 @@ function RewardFormDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search items by name or SKU…" />
+                    <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Search items by name or SKU…"
+                        value={itemSearch}
+                        onValueChange={setItemSearch}
+                      />
                       <CommandList>
                         <CommandEmpty>
                           {availabilityMode === "specific" && selectedOutletIds.length === 0
@@ -305,7 +349,7 @@ export default function LoyaltyManagement() {
   const { data: outletsResponse, isLoading: isOutletsLoading } = useGetOutlets();
   const outlets = outletsResponse || [];
 
-  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
+  const { data: inventoryResponse } = useGetInventoryItems({ per_page: DEFAULT_PAGE_SIZE });
   const inventoryItems = useMemo(() => {
     if (!inventoryResponse?.data) return [];
     return inventoryResponse.data.map((i: any) => ({
@@ -352,14 +396,18 @@ export default function LoyaltyManagement() {
   const [activityPage, setActivityPage] = useState(1);
   const [activityPerPage, setActivityPerPage] = useState(10);
 
+  // Rewards pagination states
+  const [rewardsPage, setRewardsPage] = useState(1);
+  const [rewardsPerPage, setRewardsPerPage] = useState(DEFAULT_PAGE_SIZE);
+
   // API hooks
   const { data: overviewData, isLoading: isOverviewLoading } = useGetLoyaltyOverview({
     outletId: outletFilter === "all" ? undefined : outletFilter,
   });
 
   const { data: rewardsResponse, isLoading: isRewardsLoading, mutate: mutateRewards } = useGetLoyaltyRewards({
-    page: 1,
-    per_page: 100, // Load all rewards for the card list view
+    page: rewardsPage,
+    per_page: rewardsPerPage,
   });
 
   const { data: activityResponse, isLoading: isActivityLoading, mutate: mutateActivity } = useGetLoyaltyActivity({
@@ -420,6 +468,9 @@ export default function LoyaltyManagement() {
     if (outletFilter === "all") return rewards;
     return rewards.filter(r => r.outletIds.length === 0 || r.outletIds.includes(outletFilter));
   }, [rewards, outletFilter]);
+
+  const rewardsTotal = rewardsResponse?.meta?.total ?? rewards.length;
+  const rewardsTotalPages = rewardsResponse?.meta?.last_page ?? 1;
 
   // Map activity entries
   const activity = useMemo(() => {
@@ -503,7 +554,7 @@ export default function LoyaltyManagement() {
 
   const toggleRewardActive = async (reward: any) => {
     try {
-      await api.patch(API_ENDPOINTS.UPDATE_LOYALTY_REWARD(reward.id), {
+      await api.patch(API_ENDPOINTS.SINGLE_LOYALTY_REWARD(reward.id), {
         isActive: !reward.isActive,
       });
       toast.success(`"${reward.name}" ${!reward.isActive ? "enabled" : "disabled"}`);
@@ -653,7 +704,7 @@ export default function LoyaltyManagement() {
               { label: "Total Members", value: stats.totalMembers.toLocaleString(), icon: Users, accent: "text-accent", sub: "Shared across all outlets" },
               { label: "Points in Circulation", value: stats.totalPoints.toLocaleString(), icon: Star, accent: "text-warning", sub: "Global balance" },
               { label: outletFilter === "all" ? "Total Redemptions" : "Outlet Redemptions", value: stats.totalRedemptions.toLocaleString(), icon: Gift, accent: "text-primary", sub: undefined },
-              { label: "Active Rewards", value: `${stats.activeRewards} / ${rewards.length}`, icon: Zap, accent: "text-success", sub: outletFilter !== "all" ? "Available here" : undefined },
+              { label: "Active Rewards", value: `${stats.activeRewards} / ${rewardsTotal}`, icon: Zap, accent: "text-success", sub: outletFilter !== "all" ? "Available here" : undefined },
             ].map((kpi) => (
               <Card key={kpi.label} className="p-4">
                 <div className="flex items-center gap-3">
@@ -836,6 +887,17 @@ export default function LoyaltyManagement() {
               <Badge variant="outline" className="text-[10px]">+ global rewards</Badge>
             </div>
           )}
+
+          <PaginationControls
+            page={rewardsPage}
+            totalPages={rewardsTotalPages}
+            perPage={rewardsPerPage}
+            totalItems={rewardsTotal}
+            pageSizeOptions={[10, 20, 50]}
+            onPageChange={setRewardsPage}
+            onPerPageChange={(val) => { setRewardsPerPage(val); setRewardsPage(1); }}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {isRewardsLoading ? (
               Array.from({ length: 3 }).map((_, idx) => (

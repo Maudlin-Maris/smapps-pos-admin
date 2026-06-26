@@ -29,6 +29,9 @@ import type { CompositeItem } from "@/components/inventory/CompositeItemForm";
 import { useCompositesStore } from "@/hooks/use-composites-store";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
 import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import { api } from "@/services/api/base";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
 import {
   resolveComponent,
   getViableSubstitutes,
@@ -86,15 +89,8 @@ export interface GateResult {
 
 export function useSubstitutionGate() {
   const [composites] = useCompositesStore([]);
-  const { data: subGroupsResponse } = useGetSubstituteGroups({ per_page: 1000 });
-  const groups = useMemo(() => subGroupsResponse?.data || [], [subGroupsResponse]);
-  const { data: inventoryResponse } = useGetInventoryItems({ per_page: 1000 });
-  const inventory = useMemo(() => {
-    return (inventoryResponse?.data || []).map((item) => ({
-      ...item,
-      stock: item.quantity,
-    })) as unknown as InventoryItem[];
-  }, [inventoryResponse]);
+  const { data: subGroupsResponse } = useGetSubstituteGroups({ per_page: DEFAULT_PAGE_SIZE });
+  const { data: inventoryResponse } = useGetInventoryItems({ per_page: DEFAULT_PAGE_SIZE });
 
   const [pendingRequest, setPendingRequest] = useState<ConsolidatedApprovalRequest | null>(null);
   // Resolver receives a Map<originalItemId, picked-substitute> or null = reject all.
@@ -126,6 +122,54 @@ export function useSubstitutionGate() {
       const composite = findComposite(productName, outletId);
       if (!composite) return { allowed: true, substitutions: [] };
 
+      // Dynamically fetch details of components, substitutes, and substitute groups
+      // that are relevant to this specific composite recipe.
+      const itemIdsToFetch = new Set<string>();
+      const groupIdsToFetch = new Set<string>();
+
+      for (const comp of composite.components) {
+        if (!comp.inventoryItemId) continue;
+        itemIdsToFetch.add(comp.inventoryItemId);
+        if (comp.substitutes) {
+          comp.substitutes.forEach((s) => itemIdsToFetch.add(s.inventoryItemId));
+        }
+        if (comp.substituteGroupIds) {
+          comp.substituteGroupIds.forEach((id) => groupIdsToFetch.add(id));
+        }
+      }
+
+      const fetchedGroups: any[] = [];
+      for (const gid of groupIdsToFetch) {
+        try {
+          const { data } = await api.get(API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(gid));
+          if (data) {
+            fetchedGroups.push(data);
+            if (data.items) {
+              data.items.forEach((item: any) => {
+                if (item.inventoryItemId) itemIdsToFetch.add(item.inventoryItemId);
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch substitute group in gate", gid, e);
+        }
+      }
+
+      const fetchedInventory: InventoryItem[] = [];
+      for (const itemId of itemIdsToFetch) {
+        try {
+          const { data } = await api.get(API_ENDPOINTS.SINGLE_INVENTORY(itemId));
+          if (data) {
+            fetchedInventory.push({
+              ...data,
+              stock: data.quantity ?? 0,
+            } as unknown as InventoryItem);
+          }
+        } catch (e) {
+          console.error("Failed to fetch inventory item in gate", itemId, e);
+        }
+      }
+
       const substitutions: CartSubstitutionRecord[] = [];
       // Per-call scratch holding the manual decisions + their record builders.
       const pendingDecisions: SubstitutionDecision[] = [];
@@ -140,10 +184,15 @@ export function useSubstitutionGate() {
         const requiredBaseQty = comp.quantity || 0;
         if (requiredBaseQty <= 0) continue;
 
-        const res = resolveComponent({ component: comp, requiredBaseQty, inventory, groups });
+        const res = resolveComponent({
+          component: comp,
+          requiredBaseQty,
+          inventory: fetchedInventory,
+          groups: fetchedGroups,
+        });
         if (res.available && !res.primaryShort) continue;
 
-        const original = inventory.find((i) => i.id === comp.inventoryItemId);
+        const original = fetchedInventory.find((i) => i.id === comp.inventoryItemId);
         const originalName = original?.name ?? "Component";
 
         if (!res.available) {
@@ -159,7 +208,7 @@ export function useSubstitutionGate() {
         // Filter to in-stock viable substitutes only — modal NEVER shows OOS items.
         const primaryStock = original?.stock ?? 0;
         const shortfall = Math.max(0, requiredBaseQty - primaryStock);
-        const alternatives = getViableSubstitutes(comp, shortfall, inventory, groups);
+        const alternatives = getViableSubstitutes(comp, shortfall, fetchedInventory, fetchedGroups);
         const proposed =
           alternatives.find((a) => a.inventoryItemId === sub.inventoryItemId) ?? alternatives[0];
         if (!proposed) continue;
@@ -254,7 +303,7 @@ export function useSubstitutionGate() {
 
       return { allowed: true, substitutions };
     },
-    [findComposite, inventory, groups, askForApproval]
+    [findComposite, askForApproval]
   );
 
   /** Approve all decisions with the cashier's chosen picks (per-row). */

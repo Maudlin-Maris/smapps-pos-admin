@@ -20,6 +20,7 @@ export const useGetComposites = (
     outletId?: string;
     page?: number;
     per_page?: number;
+    search?: string;
   },
   options?: SWRConfiguration,
 ) => {

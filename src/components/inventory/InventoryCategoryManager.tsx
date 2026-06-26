@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -7,6 +7,7 @@ import {
   useCreateInventoryCategory,
   useUpdateInventoryCategory,
   useDeleteInventoryCategory,
+  useGetInventoryCategories,
 } from "@/services/api/inventory/category";
 import {
   Sheet,
@@ -50,6 +51,30 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
   const [editing, setEditing] = useState<InventoryCategory | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data: categoriesRes } = useGetInventoryCategories({
+    search: debouncedSearch.trim() || undefined,
+    page: 1,
+    per_page: 100,
+  });
+
+  const apiCategories = useMemo<InventoryCategory[]>(() => {
+    if (!categoriesRes?.data) return [];
+    return categoriesRes.data.map((c) => ({
+      id: c.id,
+      name: c.name,
+      description: c.description || "",
+      itemCount: 0,
+    }));
+  }, [categoriesRes]);
 
   const createCategoryMutation = useCreateInventoryCategory();
   const updateCategoryMutation = useUpdateInventoryCategory();
@@ -107,9 +132,7 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
     }
   };
 
-  const filtered = categories.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = apiCategories;
 
   return (
     <div className="space-y-4">

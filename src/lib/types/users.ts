@@ -37,5 +37,7 @@ export type UpdateUserPayload = {
   outlets?: string[];
 }
 
-
-
+export type UserQueryParams = {
+  search?: string;
+  [key: string]: string | undefined;
+};
