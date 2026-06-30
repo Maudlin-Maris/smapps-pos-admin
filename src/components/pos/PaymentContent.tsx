@@ -573,7 +573,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 <Input
                   type="number"
                   value={customDiscountAmount}
-                  onChange={e => { setCustomDiscountAmount(e.target.value); setSelectedDiscount(null); }}
+                  onChange={e => { setCustomDiscountAmount(e.target.value); setSelectedDiscount(null); setPrefilledDiscountName(undefined); }}
                   placeholder="Custom discount"
                   className="h-9"
                 />
