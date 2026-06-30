@@ -29,7 +29,7 @@ interface Props {
 type Step = "type" | "discount" | "payment" | "split" | "split-choice" | "split-items" | "partial" | "complete";
 
 export default function PaymentContent({ existingOrderId, onClose, onBackToOrder }: Props) {
-  const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
+  const { cartTotal, cart, createOrder, addPayment, updateOrderTotals, orders, currentOutlet } = usePOS();
   const [step, setStep] = useState<Step>(existingOrderId ? "discount" : "type");
   const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
