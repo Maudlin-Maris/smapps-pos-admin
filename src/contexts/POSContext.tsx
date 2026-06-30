@@ -74,6 +74,7 @@ interface POSContextType {
   removeItemFromOrder: (orderId: string, itemId: string) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
+  updateOrderTotals: (orderId: string, updates: { totalAmount: number; tipAmount?: number; discountAmount?: number; discountName?: string; appliedFees?: AppliedFee[]; feesTotal?: number; loyaltyRedemption?: LoyaltyRedemption | null; }) => void;
   voidOrder: (orderId: string) => void;
   transferOrder: (orderId: string, toCashierId: string) => void;
   acceptTransfer: (orderId: string) => void;
