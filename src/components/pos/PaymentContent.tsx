@@ -69,7 +69,15 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [loyaltyRedemption, setLoyaltyRedemption] = useState<LoyaltyRedemption | null>(null);
 
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
-  const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
+  // For existing orders, subtotal = raw items sum (so discount/fees/tip/loyalty can be edited without double counting).
+  // For new orders, subtotal = current cart total.
+  const subtotal = existingOrder
+    ? existingOrder.items.reduce((s, i) => s + i.totalPrice, 0)
+    : cartTotal;
+
+  // Prefilled discount label from the existing order (cleared when cashier edits the discount)
+  const [prefilledDiscountName, setPrefilledDiscountName] = useState<string | undefined>(undefined);
+  const [prefilledFromOrderId, setPrefilledFromOrderId] = useState<string | null>(null);
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const businessType = currentOutlet ? getBusinessType(currentOutlet.businessType) : null;
