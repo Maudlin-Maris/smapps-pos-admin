@@ -13,14 +13,15 @@ interface Props {
   title?: string;
   description?: React.ReactNode;
   codeType?: VoidCodeType;
+  outletId?: string | null;
 }
 
-export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, itemName, title, description, codeType = "item" }: Props) {
+export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, itemName, title, description, codeType = "item", outletId }: Props) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
   const handleSubmit = () => {
-    if (validateVoidCode(codeType, code)) {
+    if (validateVoidCode(codeType, code, outletId)) {
       setCode("");
       setError(false);
       onAuthorized();
