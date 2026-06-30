@@ -685,7 +685,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             </div>
 
             <Button onClick={handleProceedToPayment} className="w-full h-11">
-              {existingOrderId ? `Continue to Payment ${formatNaira(total)}` : (payNow ? `Pay ${formatNaira(total)}` : "Create Order")}
+              {existingOrderId ? `Continue to Payment ${formatNaira(amountToCharge)}` : (payNow ? `Pay ${formatNaira(total)}` : "Create Order")}
             </Button>
           </div>
         </>
