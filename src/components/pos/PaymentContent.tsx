@@ -217,10 +217,24 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     setStep("payment");
   };
 
+  const persistExistingOrderTotals = () => {
+    if (!existingOrderId) return;
+    updateOrderTotals(existingOrderId, {
+      totalAmount: total,
+      tipAmount: tipValue || undefined,
+      discountAmount: discountAmount || undefined,
+      discountName,
+      appliedFees: applicableFees.length > 0 ? applicableFees : undefined,
+      feesTotal: feesTotal || undefined,
+      loyaltyRedemption: loyaltyRedemption || null,
+    });
+  };
+
   const handleFullPayment = () => {
     if (existingOrderId) {
-      addPayment(existingOrderId, { method: resolveKind(paymentMethod), amount: total });
-      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
+      persistExistingOrderTotals();
+      addPayment(existingOrderId, { method: resolveKind(paymentMethod), amount: amountToCharge });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amountToCharge, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
