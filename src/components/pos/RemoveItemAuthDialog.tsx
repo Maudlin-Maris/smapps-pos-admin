@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ShieldAlert } from "lucide-react";
+import { validateVoidCode, type VoidCodeType } from "@/lib/void-codes-store";
 
 interface Props {
   open: boolean;
@@ -11,16 +12,15 @@ interface Props {
   itemName?: string;
   title?: string;
   description?: React.ReactNode;
+  codeType?: VoidCodeType;
 }
 
-const AUTH_CODE = "1234";
-
-export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, itemName, title, description }: Props) {
+export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, itemName, title, description, codeType = "item" }: Props) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
   const handleSubmit = () => {
-    if (code === AUTH_CODE) {
+    if (validateVoidCode(codeType, code)) {
       setCode("");
       setError(false);
       onAuthorized();

@@ -928,6 +928,7 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
           setSelectedOrder(null);
           setVoidAuth(null);
         }}
+        codeType="order"
         title="Void Order"
         description={
           <>Enter 4-digit code to void order <span className="font-semibold text-foreground">{voidAuth?.orderNumber}</span>. This cannot be undone.</>
