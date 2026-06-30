@@ -247,11 +247,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handleSplitPayment = () => {
     if (customAmounts.length === 0) return;
     if (existingOrderId) {
+      persistExistingOrderTotals();
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(existingOrderId, { method: resolveKind(ca.method), amount: amt });
       });
-      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amountToCharge, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
