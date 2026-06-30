@@ -547,7 +547,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets, outletOpen, toggleOutletOpen,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal, removeBundleFromCart, breakBundle, swapBundleItem,
-      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder, acceptTransfer, rejectTransfer, changeOrderLocation,
+      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, updateOrderTotals, voidOrder, transferOrder, acceptTransfer, rejectTransfer, changeOrderLocation,
       orderType, setOrderType,
     }}>
       {children}
