@@ -78,6 +78,7 @@ const coreNavItems: NavItem[] = [
   { title: "Users", path: "/users", icon: UserCog, section: "Administration", permission: "users.manage" },
   { title: "Roles & Permissions", path: "/roles", icon: Shield, section: "Administration", permission: "roles.manage" },
   { title: "Terminals", path: "/terminals", icon: Monitor, section: "Administration", permission: "terminals.manage" },
+  { title: "Void Codes", path: "/void-codes", icon: KeyRound, section: "Administration", permission: "roles.manage" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
