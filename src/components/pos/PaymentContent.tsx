@@ -572,21 +572,33 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 <p className="text-sm font-medium">Apply Discount</p>
               </div>
               <div className="grid grid-cols-2 gap-1.5">
-                {outletDiscounts.map(d => (
-                  <button
-                    key={d.id}
-                    onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); setPrefilledDiscountName(undefined); }}
-                    className={`p-2.5 rounded-lg border text-left transition-all ${
-                      selectedDiscount?.id === d.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <span className="text-xs font-medium block">{d.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {d.type === "percentage" ? `${d.value}% off` : formatNaira(d.value)}
-                    </span>
-                  </button>
-                ))}
+                {outletDiscounts.map(d => {
+                  const isSelected = selectedDiscount?.id === d.id;
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => { setSelectedDiscount(isSelected ? null : d); setCustomDiscountAmount(""); setPrefilledDiscountName(undefined); }}
+                      title={isSelected ? "Tap to remove" : undefined}
+                      className={`relative p-2.5 rounded-lg border text-left transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/30 shadow-sm"
+                          : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      {isSelected && (
+                        <CheckCircle2 className="w-3.5 h-3.5 absolute top-1 right-1 text-primary-foreground" />
+                      )}
+                      <span className="text-xs font-medium block pr-4">{d.name}</span>
+                      <span className={`text-xs ${isSelected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                        {d.type === "percentage" ? `${d.value}% off` : formatNaira(d.value)}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+              {selectedDiscount && (
+                <p className="text-[11px] text-muted-foreground">Tap the highlighted discount again to remove it.</p>
+              )}
 
               <div className="flex gap-2 items-center pt-1">
                 <select
@@ -618,17 +630,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 <p className="text-sm font-medium">Add Tip</p>
               </div>
               <div className="flex gap-1.5">
-                {tipPresets.map(pct => (
-                  <button
-                    key={pct}
-                    onClick={() => { setTipPreset(tipPreset === pct ? null : pct); setTipAmount(""); }}
-                    className={`flex-1 p-2 rounded-lg border text-xs font-medium text-center transition-all ${
-                      tipPreset === pct ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    {pct}%
-                  </button>
-                ))}
+                {tipPresets.map(pct => {
+                  const isSelected = tipPreset === pct;
+                  return (
+                    <button
+                      key={pct}
+                      onClick={() => { setTipPreset(isSelected ? null : pct); setTipAmount(""); }}
+                      title={isSelected ? "Tap to remove" : undefined}
+                      className={`relative flex-1 p-2 rounded-lg border text-xs font-medium text-center transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/30 shadow-sm"
+                          : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      {isSelected && (
+                        <CheckCircle2 className="w-3 h-3 absolute top-1 right-1 text-primary-foreground" />
+                      )}
+                      {pct}%
+                    </button>
+                  );
+                })}
               </div>
               <Input
                 type="number"
