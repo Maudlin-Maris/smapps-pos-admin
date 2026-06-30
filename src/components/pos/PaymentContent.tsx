@@ -548,7 +548,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 {outletDiscounts.map(d => (
                   <button
                     key={d.id}
-                    onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); }}
+                    onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); setPrefilledDiscountName(undefined); }}
                     className={`p-2.5 rounded-lg border text-left transition-all ${
                       selectedDiscount?.id === d.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
                     }`}
