@@ -24,6 +24,7 @@ import {
   UserCog,
   Layers,
   Monitor,
+  KeyRound,
   Coins,
   type LucideIcon,
 } from "lucide-react";
