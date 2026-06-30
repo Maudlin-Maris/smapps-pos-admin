@@ -316,6 +316,18 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const orderItems = existingOrder?.items || cart;
   const remainingAmount = existingOrder ? amountToCharge : total;
 
+  const paidQtyByItem = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!existingOrder) return map;
+    for (const p of existingOrder.payments) {
+      if (!p.paidItems) continue;
+      for (const pi of p.paidItems) {
+        map[pi.itemId] = (map[pi.itemId] || 0) + pi.qty;
+      }
+    }
+    return map;
+  }, [existingOrder]);
+
   const selectedItemsTotal = useMemo(() => {
     return selectedItems.reduce((sum, si) => {
       const item = orderItems.find(i => i.id === si.itemId);
@@ -326,6 +338,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   }, [selectedItems, orderItems]);
 
   const toggleItemSelection = (itemId: string, maxQty: number) => {
+    if (maxQty <= 0) return;
     setSelectedItems(prev => {
       const existing = prev.find(s => s.itemId === itemId);
       if (existing) return prev.filter(s => s.itemId !== itemId);
