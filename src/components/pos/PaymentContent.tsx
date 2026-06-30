@@ -630,17 +630,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 <p className="text-sm font-medium">Add Tip</p>
               </div>
               <div className="flex gap-1.5">
-                {tipPresets.map(pct => (
-                  <button
-                    key={pct}
-                    onClick={() => { setTipPreset(tipPreset === pct ? null : pct); setTipAmount(""); }}
-                    className={`flex-1 p-2 rounded-lg border text-xs font-medium text-center transition-all ${
-                      tipPreset === pct ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
-                    }`}
-                  >
-                    {pct}%
-                  </button>
-                ))}
+                {tipPresets.map(pct => {
+                  const isSelected = tipPreset === pct;
+                  return (
+                    <button
+                      key={pct}
+                      onClick={() => { setTipPreset(isSelected ? null : pct); setTipAmount(""); }}
+                      title={isSelected ? "Tap to remove" : undefined}
+                      className={`relative flex-1 p-2 rounded-lg border text-xs font-medium text-center transition-all ${
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground ring-2 ring-primary/30 shadow-sm"
+                          : "border-border hover:border-primary/30"
+                      }`}
+                    >
+                      {isSelected && (
+                        <CheckCircle2 className="w-3 h-3 absolute top-1 right-1 text-primary-foreground" />
+                      )}
+                      {pct}%
+                    </button>
+                  );
+                })}
               </div>
               <Input
                 type="number"
