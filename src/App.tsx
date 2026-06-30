@@ -32,6 +32,7 @@ import UserManagement from "@/pages/UserManagement";
 import RolesPermissions from "@/pages/RolesPermissions";
 import ModifierGroups from "@/pages/ModifierGroups";
 import TerminalManagement from "@/pages/TerminalManagement";
+import VoidCodeManagement from "@/pages/VoidCodeManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
