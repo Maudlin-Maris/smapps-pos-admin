@@ -302,7 +302,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   };
 
   const orderItems = existingOrder?.items || cart;
-  const remainingAmount = existingOrder ? existingOrder.totalAmount - existingOrder.paidAmount : total;
+  const remainingAmount = existingOrder ? amountToCharge : total;
 
   const selectedItemsTotal = useMemo(() => {
     return selectedItems.reduce((sum, si) => {
