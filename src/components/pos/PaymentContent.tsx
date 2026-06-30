@@ -214,6 +214,18 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       setStep("complete");
       return;
     }
+    if (existingOrderId) {
+      // Persist any cashier-edited discount/tip/fees/loyalty before charging
+      updateOrderTotals(existingOrderId, {
+        totalAmount: total,
+        tipAmount: tipValue || undefined,
+        discountAmount: discountAmount || undefined,
+        discountName,
+        appliedFees: applicableFees.length > 0 ? applicableFees : undefined,
+        feesTotal: feesTotal || undefined,
+        loyaltyRedemption: loyaltyRedemption || null,
+      });
+    }
     setStep("payment");
   };
 
