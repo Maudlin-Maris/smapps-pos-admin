@@ -29,7 +29,7 @@ interface Props {
 type Step = "type" | "discount" | "payment" | "split" | "split-choice" | "split-items" | "partial" | "complete";
 
 export default function PaymentContent({ existingOrderId, onClose, onBackToOrder }: Props) {
-  const { cartTotal, cart, createOrder, addPayment, orders, currentOutlet } = usePOS();
+  const { cartTotal, cart, createOrder, addPayment, updateOrderTotals, orders, currentOutlet } = usePOS();
   const [step, setStep] = useState<Step>(existingOrderId ? "discount" : "type");
   const allowedTypes = currentOutlet ? getOrderTypesForBusiness(currentOutlet.businessType) : [];
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
@@ -69,7 +69,15 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [loyaltyRedemption, setLoyaltyRedemption] = useState<LoyaltyRedemption | null>(null);
 
   const existingOrder = existingOrderId ? orders.find(o => o.id === existingOrderId) : null;
-  const subtotal = existingOrder ? (existingOrder.totalAmount - existingOrder.paidAmount) : cartTotal;
+  // For existing orders, subtotal = raw items sum (so discount/fees/tip/loyalty can be edited without double counting).
+  // For new orders, subtotal = current cart total.
+  const subtotal = existingOrder
+    ? existingOrder.items.reduce((s, i) => s + i.totalPrice, 0)
+    : cartTotal;
+
+  // Prefilled discount label from the existing order (cleared when cashier edits the discount)
+  const [prefilledDiscountName, setPrefilledDiscountName] = useState<string | undefined>(undefined);
+  const [prefilledFromOrderId, setPrefilledFromOrderId] = useState<string | null>(null);
 
   const features = currentOutlet ? getFeatures(currentOutlet.businessType) : null;
   const businessType = currentOutlet ? getBusinessType(currentOutlet.businessType) : null;
@@ -133,7 +141,8 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     return 0;
   }, [selectedDiscount, customDiscountAmount, customDiscountType, subtotal]);
 
-  const discountName = selectedDiscount?.name || (customDiscountAmount ? "Custom Discount" : undefined);
+  const discountName = selectedDiscount?.name
+    || (customDiscountAmount ? (prefilledDiscountName || "Custom Discount") : undefined);
 
   const tipValue = useMemo(() => {
     if (tipPreset !== null) return Math.round(subtotal * tipPreset / 100);
@@ -142,6 +151,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
 
   const loyaltyDiscount = loyaltyRedemption?.discountValue || 0;
   const total = subtotal - discountAmount - loyaltyDiscount + feesTotal + tipValue;
+  const amountToCharge = existingOrder ? Math.max(0, total - existingOrder.paidAmount) : total;
+
+  // Prefill discount, tip, fees, loyalty from the existing order so the cashier sees what was applied
+  useEffect(() => {
+    if (!existingOrder) return;
+    if (prefilledFromOrderId === existingOrder.id) return;
+    if (existingOrder.discountAmount && existingOrder.discountAmount > 0) {
+      setCustomDiscountType("fixed");
+      setCustomDiscountAmount(String(existingOrder.discountAmount));
+      setPrefilledDiscountName(existingOrder.discountName);
+    }
+    if (existingOrder.tipAmount && existingOrder.tipAmount > 0) {
+      setTipAmount(String(existingOrder.tipAmount));
+      setTipPreset(null);
+    }
+    if (existingOrder.loyaltyRedemption) {
+      setLoyaltyRedemption(existingOrder.loyaltyRedemption);
+    }
+    setPrefilledFromOrderId(existingOrder.id);
+  }, [existingOrder, prefilledFromOrderId]);
 
   const reset = () => {
     setStep(existingOrderId ? "discount" : "type");
@@ -185,13 +214,39 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
       setStep("complete");
       return;
     }
+    if (existingOrderId) {
+      // Persist any cashier-edited discount/tip/fees/loyalty before charging
+      updateOrderTotals(existingOrderId, {
+        totalAmount: total,
+        tipAmount: tipValue || undefined,
+        discountAmount: discountAmount || undefined,
+        discountName,
+        appliedFees: applicableFees.length > 0 ? applicableFees : undefined,
+        feesTotal: feesTotal || undefined,
+        loyaltyRedemption: loyaltyRedemption || null,
+      });
+    }
     setStep("payment");
+  };
+
+  const persistExistingOrderTotals = () => {
+    if (!existingOrderId) return;
+    updateOrderTotals(existingOrderId, {
+      totalAmount: total,
+      tipAmount: tipValue || undefined,
+      discountAmount: discountAmount || undefined,
+      discountName,
+      appliedFees: applicableFees.length > 0 ? applicableFees : undefined,
+      feesTotal: feesTotal || undefined,
+      loyaltyRedemption: loyaltyRedemption || null,
+    });
   };
 
   const handleFullPayment = () => {
     if (existingOrderId) {
-      addPayment(existingOrderId, { method: resolveKind(paymentMethod), amount: total });
-      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
+      persistExistingOrderTotals();
+      addPayment(existingOrderId, { method: resolveKind(paymentMethod), amount: amountToCharge });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amountToCharge, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
@@ -204,11 +259,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const handleSplitPayment = () => {
     if (customAmounts.length === 0) return;
     if (existingOrderId) {
+      persistExistingOrderTotals();
       customAmounts.forEach(ca => {
         const amt = parseFloat(ca.amount) || 0;
         if (amt > 0) addPayment(existingOrderId, { method: resolveKind(ca.method), amount: amt });
       });
-      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total, id: existingOrderId });
+      setCompletedOrder({ orderNumber: existingOrder?.orderNumber || "", total: amountToCharge, id: existingOrderId });
     } else {
       const locationName = selectedLocation || undefined;
       const order = createOrder(selectedOrderType, locationName, customerName || undefined, true, tipValue || undefined, discountAmount || undefined, discountName, customerNotes || undefined, applicableFees.length > 0 ? applicableFees : undefined, feesTotal || undefined, loyaltyRedemption || undefined, customerPhone.trim() || undefined);
@@ -258,7 +314,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   };
 
   const orderItems = existingOrder?.items || cart;
-  const remainingAmount = existingOrder ? existingOrder.totalAmount - existingOrder.paidAmount : total;
+  const remainingAmount = existingOrder ? amountToCharge : total;
 
   const selectedItemsTotal = useMemo(() => {
     return selectedItems.reduce((sum, si) => {
@@ -519,7 +575,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 {outletDiscounts.map(d => (
                   <button
                     key={d.id}
-                    onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); }}
+                    onClick={() => { setSelectedDiscount(selectedDiscount?.id === d.id ? null : d); setCustomDiscountAmount(""); setPrefilledDiscountName(undefined); }}
                     className={`p-2.5 rounded-lg border text-left transition-all ${
                       selectedDiscount?.id === d.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/30"
                     }`}
@@ -544,7 +600,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 <Input
                   type="number"
                   value={customDiscountAmount}
-                  onChange={e => { setCustomDiscountAmount(e.target.value); setSelectedDiscount(null); }}
+                  onChange={e => { setCustomDiscountAmount(e.target.value); setSelectedDiscount(null); setPrefilledDiscountName(undefined); }}
                   placeholder="Custom discount"
                   className="h-9"
                 />
@@ -629,7 +685,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             </div>
 
             <Button onClick={handleProceedToPayment} className="w-full h-11">
-              {existingOrderId ? `Continue to Payment ${formatNaira(total)}` : (payNow ? `Pay ${formatNaira(total)}` : "Create Order")}
+              {existingOrderId ? `Continue to Payment ${formatNaira(amountToCharge)}` : (payNow ? `Pay ${formatNaira(total)}` : "Create Order")}
             </Button>
           </div>
         </>
@@ -663,7 +719,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             )}
             <div className="text-center p-4 bg-muted/30 rounded-xl">
               <p className="text-sm text-muted-foreground">Amount Due</p>
-              <p className="text-3xl font-bold text-foreground">{formatNaira(total)}</p>
+              <p className="text-3xl font-bold text-foreground">{formatNaira(amountToCharge)}</p>
+              {existingOrder && existingOrder.paidAmount > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Total {formatNaira(total)} · Already paid {formatNaira(existingOrder.paidAmount)}
+                </p>
+              )}
               {discountAmount > 0 && (
                 <p className="text-xs text-[hsl(var(--success))] mt-1">Discount: -{formatNaira(discountAmount)}</p>
               )}
