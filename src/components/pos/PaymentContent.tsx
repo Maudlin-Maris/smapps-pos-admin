@@ -141,7 +141,8 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
     return 0;
   }, [selectedDiscount, customDiscountAmount, customDiscountType, subtotal]);
 
-  const discountName = selectedDiscount?.name || (customDiscountAmount ? "Custom Discount" : undefined);
+  const discountName = selectedDiscount?.name
+    || (customDiscountAmount ? (prefilledDiscountName || "Custom Discount") : undefined);
 
   const tipValue = useMemo(() => {
     if (tipPreset !== null) return Math.round(subtotal * tipPreset / 100);
@@ -150,6 +151,26 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
 
   const loyaltyDiscount = loyaltyRedemption?.discountValue || 0;
   const total = subtotal - discountAmount - loyaltyDiscount + feesTotal + tipValue;
+  const amountToCharge = existingOrder ? Math.max(0, total - existingOrder.paidAmount) : total;
+
+  // Prefill discount, tip, fees, loyalty from the existing order so the cashier sees what was applied
+  useEffect(() => {
+    if (!existingOrder) return;
+    if (prefilledFromOrderId === existingOrder.id) return;
+    if (existingOrder.discountAmount && existingOrder.discountAmount > 0) {
+      setCustomDiscountType("fixed");
+      setCustomDiscountAmount(String(existingOrder.discountAmount));
+      setPrefilledDiscountName(existingOrder.discountName);
+    }
+    if (existingOrder.tipAmount && existingOrder.tipAmount > 0) {
+      setTipAmount(String(existingOrder.tipAmount));
+      setTipPreset(null);
+    }
+    if (existingOrder.loyaltyRedemption) {
+      setLoyaltyRedemption(existingOrder.loyaltyRedemption);
+    }
+    setPrefilledFromOrderId(existingOrder.id);
+  }, [existingOrder, prefilledFromOrderId]);
 
   const reset = () => {
     setStep(existingOrderId ? "discount" : "type");
