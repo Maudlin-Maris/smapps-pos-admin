@@ -41,7 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User as UserIcon, KeyRound, LogOut } from "lucide-react";
+import { User as UserIcon, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface NavItem {
