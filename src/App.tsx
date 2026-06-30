@@ -77,6 +77,7 @@ const App = () => (
                 <Route path="/users" element={<Protected><UserManagement /></Protected>} />
                 <Route path="/roles" element={<Protected><RolesPermissions /></Protected>} />
                 <Route path="/terminals" element={<Protected><TerminalManagement /></Protected>} />
+                <Route path="/void-codes" element={<Protected><VoidCodeManagement /></Protected>} />
                 <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
 
                 <Route path="*" element={<NotFound />} />
