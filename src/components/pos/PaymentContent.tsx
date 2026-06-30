@@ -968,6 +968,9 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             <ScrollArea className="max-h-48">
               <div className="space-y-2">
                 {orderItems.map(item => {
+                  const paidQty = paidQtyByItem[item.id] || 0;
+                  const remainingQty = Math.max(0, item.quantity - paidQty);
+                  if (remainingQty <= 0) return null;
                   const selected = selectedItems.find(s => s.itemId === item.id);
                   const perUnit = item.unitPrice + item.extras.reduce((s, e) => s + e.price * e.quantity, 0);
                   return (
@@ -979,7 +982,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                     >
                       <Checkbox
                         checked={!!selected}
-                        onCheckedChange={() => toggleItemSelection(item.id, item.quantity)}
+                        onCheckedChange={() => toggleItemSelection(item.id, remainingQty)}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{item.productName}</p>
@@ -991,12 +994,17 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                             +{item.extras.map(e => e.name).join(", ")}
                           </p>
                         )}
+                        {paidQty > 0 && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {paidQty} of {item.quantity} already paid
+                          </p>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-sm font-medium">{formatNaira(perUnit)}</p>
-                        <p className="text-xs text-muted-foreground">×{item.quantity}</p>
+                        <p className="text-xs text-muted-foreground">×{remainingQty}</p>
                       </div>
-                      {selected && item.quantity > 1 && (
+                      {selected && remainingQty > 1 && (
                         <div className="flex items-center gap-0 shrink-0">
                           <Button
                             variant="outline"
@@ -1014,8 +1022,8 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                             variant="outline"
                             size="icon"
                             className="h-7 w-7 rounded-l-none"
-                            onClick={() => updateSelectedItemQty(item.id, Math.min(item.quantity, selected.qty + 1))}
-                            disabled={selected.qty >= item.quantity}
+                            onClick={() => updateSelectedItemQty(item.id, Math.min(remainingQty, selected.qty + 1))}
+                            disabled={selected.qty >= remainingQty}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -1026,6 +1034,7 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                 })}
               </div>
             </ScrollArea>
+
 
             {selectedItemsTotal > 0 && (
               <div className="border-t border-border pt-3 space-y-3">
