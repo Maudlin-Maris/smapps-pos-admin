@@ -719,7 +719,12 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
             )}
             <div className="text-center p-4 bg-muted/30 rounded-xl">
               <p className="text-sm text-muted-foreground">Amount Due</p>
-              <p className="text-3xl font-bold text-foreground">{formatNaira(total)}</p>
+              <p className="text-3xl font-bold text-foreground">{formatNaira(amountToCharge)}</p>
+              {existingOrder && existingOrder.paidAmount > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Total {formatNaira(total)} · Already paid {formatNaira(existingOrder.paidAmount)}
+                </p>
+              )}
               {discountAmount > 0 && (
                 <p className="text-xs text-[hsl(var(--success))] mt-1">Discount: -{formatNaira(discountAmount)}</p>
               )}
