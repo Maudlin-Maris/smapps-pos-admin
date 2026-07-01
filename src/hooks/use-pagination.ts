@@ -1,8 +1,9 @@
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { useState, useMemo } from "react";
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
 
-export function usePagination<T>(items: T[], defaultPerPage = 10) {
+export function usePagination<T>(items: T[], defaultPerPage = DEFAULT_PAGE_SIZE) {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(defaultPerPage);
 

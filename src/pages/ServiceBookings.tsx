@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -81,13 +83,8 @@ export default function ServiceBookings() {
   const serviceOutlets = outlets.filter(o => ["salon", "barber"].includes(o.businessType));
   const isAllOutlets = selectedOutletId === "all";
 
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  const debouncedSearch = useDebouncedValue(search, 300);
+  
 
   const { data: apiAppointments } = useGetServiceBookings({
     outletId: selectedOutletId !== "all" ? selectedOutletId : undefined,
@@ -337,7 +334,7 @@ export default function ServiceBookings() {
               </div>
               <div className="space-y-2">
                 <Label>Duration (min)</Label>
-                <Input type="number" value={form.duration} onChange={e => setForm({ ...form, duration: Number(e.target.value) })} />
+                <NumericInput min={1} precision={0} value={form.duration} onChange={(val) => setForm({ ...form, duration: val || 0 })} />
               </div>
             </div>
             {editing && (

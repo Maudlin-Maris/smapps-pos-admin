@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Info, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import {
   Select,
   SelectContent,
@@ -196,7 +197,7 @@ export default function RawMaterialContribution({
     paginatedItems,
     totalItems,
     pageSizeOptions,
-  } = usePagination(rows, 10);
+  } = usePagination(rows, DEFAULT_PAGE_SIZE);
 
   if (rows.length === 0) {
     return (

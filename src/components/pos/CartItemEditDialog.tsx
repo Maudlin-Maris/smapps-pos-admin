@@ -4,6 +4,7 @@ import { formatNaira } from "@/lib/currency";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, Trash2, Minus, Plus, Package, Pill, DollarSign, StickyNote } from "lucide-react";
@@ -137,7 +138,7 @@ export default function CartItemEditDialog({ item, open, onClose, onSave, onRemo
                 <Label htmlFor="edit-open-price" className="text-xs text-muted-foreground">Price (₦)</Label>
                 <div className="relative mt-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₦</span>
-                  <Input id="edit-open-price" type="number" min="0" step="0.01" value={openPriceValue} onChange={e => setOpenPriceValue(e.target.value)} placeholder="0.00" className="pl-8 text-lg font-semibold h-12" inputMode="decimal" />
+                  <NumericInput id="edit-open-price" min={0} step={0.01} precision={2} value={openPriceValue} onChange={(_, valStr) => setOpenPriceValue(valStr)} placeholder="0.00" className="pl-8 text-lg font-semibold h-12" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-1.5">

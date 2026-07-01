@@ -121,7 +121,7 @@ export default function InventoryManagement() {
   const [tab, setTab] = useState<Tab>("stock");
   
   const [stockPage, setStockPage] = useState(1);
-  const [stockPerPage, setStockPerPage] = useState(15);
+  const [stockPerPage, setStockPerPage] = useState(DEFAULT_PAGE_SIZE);
   const [stockSearch, setStockSearch] = useState("");
   const [stockCategory, setStockCategory] = useState("all");
   

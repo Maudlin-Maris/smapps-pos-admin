@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, User, CalendarRange, Clock, CreditCard } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { outletPaymentSplits, PAYMENT_COLORS, formatCurrency, filterSales, dailySalesShareFor } from "./salesData";
 
@@ -230,9 +231,9 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
   const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
   const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
-  const salesByDatePag = usePagination(salesByDate, 20);
-  const cashierPag = usePagination(salesByCashier, 10);
-  const paymentDailyPag = usePagination(dailyShare.dates, 10);
+  const salesByDatePag = usePagination(salesByDate, DEFAULT_PAGE_SIZE);
+  const cashierPag = usePagination(salesByCashier, DEFAULT_PAGE_SIZE);
+  const paymentDailyPag = usePagination(dailyShare.dates, DEFAULT_PAGE_SIZE);
   const [trendMetric, setTrendMetric] = useState<"sales" | "orders">("sales");
 
   // Chronological trend (oldest -> newest) for the line chart

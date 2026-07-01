@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { useGetSalesByItemReport } from "@/services/api/reports";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,6 +11,7 @@ import { SalesRecord } from "@/hooks/use-financial-data";
 import { CalendarRange, Star, Search, Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePagination } from "@/hooks/use-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { aggregateItems, dailySalesShareFor, filterSales, formatCurrency } from "./salesData";
 
@@ -63,7 +65,7 @@ interface Props {
 
 export default function SalesByItem({ sales, selectedOutlets, dateRange, cashierFilter }: Props) {
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [dailyOpen, setDailyOpen] = useState<{ name: string; qty: number; revenue: number } | null>(null);
 
   const filteredSales = useMemo(
@@ -71,12 +73,7 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
     [sales, selectedOutlets, dateRange, cashierFilter]
   );
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: apiSalesByItem } = useGetSalesByItemReport({
     outletIds: selectedOutlets,
@@ -117,7 +114,7 @@ export default function SalesByItem({ sales, selectedOutlets, dateRange, cashier
   const overallMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
   const topItems = useMemo(() => allItems.slice(0, 5), [allItems]);
 
-  const itemsPag = usePagination(visibleItems, 10);
+  const itemsPag = usePagination(visibleItems, DEFAULT_PAGE_SIZE);
   const topPag = usePagination(topItems, 5);
 
   return (
@@ -324,7 +321,7 @@ function DailyBreakdownTable({
   totalQty: number;
   totalRevenue: number;
 }) {
-  const pag = usePagination(rows, 10);
+  const pag = usePagination(rows, DEFAULT_PAGE_SIZE);
   return (
     <div className="space-y-2">
       <PaginationControls

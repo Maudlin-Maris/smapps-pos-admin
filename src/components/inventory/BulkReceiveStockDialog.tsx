@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -349,26 +350,26 @@ export default function BulkReceiveStockDialog({
                   {/* Quick qty + cost inputs */}
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="w-20">
-                      <Input
-                        type="number"
+                      <NumericInput
                         min={0}
+                        precision={0}
                         placeholder="Qty"
                         value={line.quantity || ""}
-                        onChange={(e) => updateLine(item.id, {
-                          quantity: Number(e.target.value),
-                          selected: Number(e.target.value) > 0 ? true : line.selected,
+                        onChange={(val) => updateLine(item.id, {
+                          quantity: val || 0,
+                          selected: (val || 0) > 0 ? true : line.selected,
                         })}
                         className="h-8 text-sm"
                       />
                     </div>
                     <div className="w-24">
-                      <Input
-                        type="number"
+                      <NumericInput
                         min={0}
-                        step="0.01"
+                        step={0.01}
+                        precision={2}
                         placeholder="Cost"
                         value={line.costPrice || ""}
-                        onChange={(e) => updateLine(item.id, { costPrice: Number(e.target.value) })}
+                        onChange={(val) => updateLine(item.id, { costPrice: val || 0 })}
                         className="h-8 text-sm"
                       />
                     </div>
@@ -416,24 +417,24 @@ export default function BulkReceiveStockDialog({
                           <label className="text-xs font-medium text-muted-foreground">
                             {line.pricingMethod === "fixed" ? "Price" : "%"}
                           </label>
-                          <Input
-                            type="number"
+                           <NumericInput
                             min={0}
-                            step="0.01"
+                            step={0.01}
+                            precision={2}
                             value={line.pricingValue}
-                            onChange={(e) => updateLine(item.id, { pricingValue: Number(e.target.value) })}
+                            onChange={(val) => updateLine(item.id, { pricingValue: val || 0 })}
                             className="h-8 text-sm mt-1"
                           />
                         </div>
                         <div className="w-28">
                           <label className="text-xs font-medium text-muted-foreground">Sell Price</label>
-                          <Input
-                            type="number"
+                           <NumericInput
                             min={0}
-                            step="0.01"
+                            step={0.01}
+                            precision={2}
                             value={line.sellPrice}
-                            onChange={(e) => {
-                              const sp = Number(e.target.value);
+                            onChange={(val) => {
+                              const sp = val || 0;
                               updateLine(item.id, { sellPrice: sp });
                             }}
                             className="h-8 text-sm mt-1"

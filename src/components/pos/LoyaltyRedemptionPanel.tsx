@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ type PanelView = "search" | "profile" | "rewards" | "register";
 export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, onClearRedemption, currentRedemption }: Props) {
   const [view, setView] = useState<PanelView>(currentRedemption ? "profile" : "search");
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
   const [selectedCustomer, setSelectedCustomer] = useState<LoyaltyCustomer | null>(
     currentRedemption ? loyaltyCustomers.find(c => c.id === currentRedemption.customerId) || null : null
   );
@@ -39,12 +40,7 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
   const [regPhone, setRegPhone] = useState("");
   const [regEmail, setRegEmail] = useState("");
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  
 
   const { data: customersRes } = useGetCustomers({
     search: debouncedSearch.trim() || undefined,

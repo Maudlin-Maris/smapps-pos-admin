@@ -43,6 +43,7 @@ import {
   useDeleteMeasuringUnit,
   useGetMeasuringUnits,
 } from "@/services/api/inventory/unit";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 
 interface Props {
   units: MeasuringUnit[];
@@ -54,14 +55,7 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
   const [editing, setEditing] = useState<MeasuringUnit | null>(null);
   const [form, setForm] = useState({ name: "", abbreviation: "" });
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  const debouncedSearch = useDebouncedValue(search, 300);
 
   const { data: unitsRes } = useGetMeasuringUnits({
     search: debouncedSearch.trim() || undefined,
@@ -114,7 +108,9 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
       onMutate();
       setOpen(false);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || "Failed to save unit");
+      toast.error(
+        e.response?.data?.message || e.message || "Failed to save unit",
+      );
     }
   };
 
@@ -124,7 +120,9 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
       toast.success("Unit deleted");
       onMutate();
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || "Failed to delete unit");
+      toast.error(
+        e.response?.data?.message || e.message || "Failed to delete unit",
+      );
     }
   };
 
@@ -134,7 +132,11 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-sm">
-          <Input placeholder="Search units..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input
+            placeholder="Search units..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <Button size="sm" onClick={openNew} className="w-fit">
           <Plus className="h-4 w-4 mr-1" /> Add Unit
@@ -143,33 +145,55 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
 
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {filtered.map((unit) => (
-          <Card key={unit.id} className="p-4 flex items-center justify-between gap-2">
+          <Card
+            key={unit.id}
+            className="p-4 flex items-center justify-between gap-2"
+          >
             <div className="flex items-center gap-3 min-w-0">
               <div className="h-9 w-9 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
                 <Ruler className="h-4 w-4 text-info" />
               </div>
               <div className="min-w-0">
                 <p className="font-medium text-sm truncate">{unit.name}</p>
-                <p className="text-xs text-muted-foreground font-mono">{unit.abbreviation}</p>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {unit.abbreviation}
+                </p>
               </div>
             </div>
             <div className="flex gap-1 shrink-0">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(unit)} disabled={deleteUnitMutation.isMutating}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => openEdit(unit)}
+                disabled={deleteUnitMutation.isMutating}
+              >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(unit.id)} disabled={deleteUnitMutation.isMutating}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive"
+                onClick={() => handleDelete(unit.id)}
+                disabled={deleteUnitMutation.isMutating}
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </Card>
         ))}
         {filtered.length === 0 && (
-          <p className="text-sm text-muted-foreground col-span-full text-center py-8">No units found</p>
+          <p className="text-sm text-muted-foreground col-span-full text-center py-8">
+            No units found
+          </p>
         )}
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetContent
+          side="right"
+          className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10"
+        >
           <SheetHeader className="px-6 pt-6 pb-4">
             <SheetTitle>{editing ? "Edit Unit" : "Add Unit"}</SheetTitle>
           </SheetHeader>
@@ -177,18 +201,39 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Name</label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Kilogram" />
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Kilogram"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Abbreviation</label>
-                <Input value={form.abbreviation} onChange={(e) => setForm({ ...form, abbreviation: e.target.value })} placeholder="e.g. kg" />
+                <Input
+                  value={form.abbreviation}
+                  onChange={(e) =>
+                    setForm({ ...form, abbreviation: e.target.value })
+                  }
+                  placeholder="e.g. kg"
+                />
               </div>
             </div>
           </div>
           <SheetFooter className="px-6 py-4 border-t">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={createUnitMutation.isMutating || updateUnitMutation.isMutating}>
-              {createUnitMutation.isMutating || updateUnitMutation.isMutating ? "Saving..." : editing ? "Update" : "Add"}
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={
+                createUnitMutation.isMutating || updateUnitMutation.isMutating
+              }
+            >
+              {createUnitMutation.isMutating || updateUnitMutation.isMutating
+                ? "Saving..."
+                : editing
+                  ? "Update"
+                  : "Add"}
             </Button>
           </SheetFooter>
         </SheetContent>

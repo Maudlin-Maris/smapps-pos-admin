@@ -10,6 +10,7 @@ export interface BundleItem {
   productId: string;
   productName: string;
   quantity: number;
+  price?: number;
   /** If set, lock to this variant */
   variantId?: string;
   variantName?: string;

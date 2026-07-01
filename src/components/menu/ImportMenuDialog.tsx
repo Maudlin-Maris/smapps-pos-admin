@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Upload, Download, FileSpreadsheet, AlertCircle, Check, Trash2, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -87,6 +88,26 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
   }) => {
     const isEditing = editingCell?.id === itemId && editingCell?.field === field;
     if (isEditing) {
+      if (type === "number") {
+        return (
+          <NumericInput
+            autoFocus
+            precision={2}
+            min={0}
+            defaultValue={value}
+            className={cn("h-7 text-xs px-1.5", className)}
+            onBlur={(e) => {
+              const v = parseFloat(e.target.value) || 0;
+              updateItem(itemId, field, v);
+              setEditingCell(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              if (e.key === "Escape") setEditingCell(null);
+            }}
+          />
+        );
+      }
       return (
         <Input
           autoFocus
@@ -360,9 +381,10 @@ export default function ImportMenuDialog({ open, onOpenChange, onImport }: Impor
                                     )}
                                     <span>—</span>
                                     {isEditingVariantPrice ? (
-                                      <Input
+                                      <NumericInput
                                         autoFocus
-                                        type="number"
+                                        precision={2}
+                                        min={0}
                                         defaultValue={v.price}
                                         className="h-5 text-[11px] px-1 w-14"
                                         onBlur={(e) => { updateVariant(item.id, v.id, "price", parseFloat(e.target.value) || 0); setEditingCell(null); }}

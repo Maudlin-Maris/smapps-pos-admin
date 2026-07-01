@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { usePagination } from "@/hooks/use-pagination";
@@ -114,14 +116,9 @@ export default function CompositeItemForm({ composites, onMutate, inventoryItems
   const [editing, setEditing] = useState<CompositeItem | null>(null);
   const [form, setForm] = useState(emptyForm());
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: compositesRes } = useGetComposites({
     outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
@@ -564,13 +561,13 @@ export default function CompositeItemForm({ composites, onMutate, inventoryItems
                       </Button>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Input
-                        type="number"
+                      <NumericInput
                         className="w-20"
                         value={comp.quantity}
-                        onChange={(e) => updateComponent(i, "quantity", Number(e.target.value))}
+                        onChange={(val) => updateComponent(i, "quantity", val || 0)}
                         min={0}
                         step={0.1}
+                        precision={2}
                         placeholder="Qty"
                       />
                       {comp.inventoryItemId && unitOptions.length > 0 ? (
@@ -694,13 +691,13 @@ export default function CompositeItemForm({ composites, onMutate, inventoryItems
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-muted-foreground shrink-0">Overhead override (₦)</span>
-                  <Input
-                    type="number"
+                  <NumericInput
                     min={0}
-                    step="0.01"
+                    step={0.01}
+                    precision={2}
                     value={form.overheadPerUnit}
-                    onChange={(e) =>
-                      setForm({ ...form, overheadPerUnit: e.target.value === "" ? "" : Number(e.target.value) })
+                    onChange={(val) =>
+                      setForm({ ...form, overheadPerUnit: val === null ? "" : val })
                     }
                     placeholder="Outlet default"
                     className="h-7 max-w-[120px] text-right"
@@ -738,30 +735,30 @@ export default function CompositeItemForm({ composites, onMutate, inventoryItems
                   <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
                     {form.pricingMethod === "fixed" ? "Price" : "%"}
                   </label>
-                  <Input
-                    type="number"
+                  <NumericInput
                     min={0}
-                    step="0.01"
+                    step={0.01}
+                    precision={2}
                     value={form.pricingValue}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
+                    onChange={(val) => {
+                      const val_ = val || 0;
                       const newSell = totalCost > 0
-                        ? Math.round(calcCompositeSellPrice(totalCost, form.pricingMethod, val) * 100) / 100
+                        ? Math.round(calcCompositeSellPrice(totalCost, form.pricingMethod, val_) * 100) / 100
                         : sellNum;
-                      setForm({ ...form, pricingValue: val, sellPrice: newSell });
+                      setForm({ ...form, pricingValue: val_, sellPrice: newSell });
                     }}
                     className="h-9"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
-                  <Input
-                    type="number"
+                  <NumericInput
                     min={0}
-                    step="0.01"
+                    step={0.01}
+                    precision={2}
                     value={form.sellPrice}
-                    onChange={(e) =>
-                      setForm({ ...form, sellPrice: e.target.value === "" ? "" : Number(e.target.value) })
+                    onChange={(val) =>
+                      setForm({ ...form, sellPrice: val === null ? "" : val })
                     }
                     className="h-9"
                   />

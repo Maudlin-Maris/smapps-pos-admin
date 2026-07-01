@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -85,13 +86,12 @@ export default function MenuList({
     setLocalSearch(search);
   }, [search]);
 
+  const debouncedSearch = useDebouncedValue(localSearch, 300);
+
   // Debounced search query propagation
   useEffect(() => {
-    const handler = setTimeout(() => {
-      onSearchChange(localSearch);
-    }, 300);
-    return () => clearTimeout(handler);
-  }, [localSearch, onSearchChange]);
+    onSearchChange(debouncedSearch);
+  }, [debouncedSearch, onSearchChange]);
 
   // External barcode scanner listener
   const bufferRef = useRef("");

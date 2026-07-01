@@ -1,8 +1,10 @@
 import { useMemo, useState, Fragment, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronDown, ChevronUp, TrendingUp, Info, Settings2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,16 +52,11 @@ export default function ProfitabilityView({
 }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [showSettings, setShowSettings] = useState(false);
   const { data: outlets = [] } = useGetOutlets();
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: searchItemsResponse } = useGetInventoryItems({
     search: debouncedSearch.trim() || undefined,
@@ -198,15 +195,15 @@ export default function ProfitabilityView({
               {visibleOutlets.map((o) => (
                 <div key={o.id} className="space-y-1">
                   <label className="text-xs font-medium">{o.name}</label>
-                  <Input
-                    type="number"
+                  <NumericInput
                     min={0}
-                    step="0.01"
+                    step={0.01}
+                    precision={2}
                     value={outletOverheadDefaults[o.id] ?? ""}
-                    onChange={(e) =>
+                    onChange={(val) =>
                       setOutletOverheadDefaults({
                         ...outletOverheadDefaults,
-                        [o.id]: e.target.value === "" ? 0 : Number(e.target.value),
+                        [o.id]: val || 0,
                       })
                     }
                     placeholder="0.00"

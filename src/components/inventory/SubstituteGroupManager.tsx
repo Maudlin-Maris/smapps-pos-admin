@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -69,7 +71,7 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
   const [logsPage, setLogsPage] = useState(1);
   const { data: logsResponse, isLoading: isLogsLoading } = useGetSubstitutionLogs({
     page: logsPage,
-    per_page: 10,
+    per_page: DEFAULT_PAGE_SIZE,
     outletId: selectedOutletId || undefined,
   });
 
@@ -425,13 +427,13 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
                           </p>
                         </TooltipContent>
                       </Tooltip>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
+                      <NumericInput
+                        step={0.01}
+                        min={0.01}
+                        precision={2}
                         value={it.conversionRatio}
-                        onChange={(e) =>
-                          updateRatio(it.inventoryItemId, Math.max(0.01, Number(e.target.value) || 1))
+                        onChange={(val) =>
+                          updateRatio(it.inventoryItemId, Math.max(0.01, val || 1))
                         }
                         className="h-7 w-16 text-xs px-2"
                       />

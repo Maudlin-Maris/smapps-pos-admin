@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -51,14 +52,9 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
   const [editing, setEditing] = useState<InventoryCategory | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: categoriesRes } = useGetInventoryCategories({
     search: debouncedSearch.trim() || undefined,

@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import {
   Sheet,
   SheetContent,
@@ -52,17 +54,12 @@ export default function CopyMenuDialog({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [targetOutletId, setTargetOutletId] = useState("");
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [page, setPage] = useState(1);
   const [priceOverrides, setPriceOverrides] = useState<Record<string, PriceOverride>>({});
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: searchItemsResponse } = useGetItems({
     outletId: currentOutletId || undefined,
@@ -316,12 +313,12 @@ export default function CopyMenuDialog({
                       </div>
                       {!hasVariants && (
                         <div className="shrink-0 w-24">
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                           <NumericInput
+                            step={0.01}
+                            min={0}
+                            precision={2}
                             value={getDisplayPrice(item)}
-                            onChange={(e) => setBasePrice(item.id, parseFloat(e.target.value) || 0)}
+                            onChange={(val) => setBasePrice(item.id, val || 0)}
                             className="h-8 text-sm text-right"
                           />
                         </div>
@@ -341,13 +338,13 @@ export default function CopyMenuDialog({
                               <p className="text-[10px] text-muted-foreground">SKU: {v.sku || "—"}</p>
                             </div>
                             <div className="shrink-0 w-24">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
+                               <NumericInput
+                                step={0.01}
+                                min={0}
+                                precision={2}
                                 value={getVariantDisplayPrice(item.id, v.id, v.price)}
-                                onChange={(e) =>
-                                  setVariantPrice(item.id, v.id, parseFloat(e.target.value) || 0)
+                                onChange={(val) =>
+                                  setVariantPrice(item.id, v.id, val || 0)
                                 }
                                 className="h-7 text-xs text-right"
                               />

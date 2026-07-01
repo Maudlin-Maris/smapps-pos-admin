@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatNaira } from "@/lib/currency";
 import { KpiCard } from "@/components/KpiCard";
@@ -43,9 +44,9 @@ export default function TipsManagement() {
   const [staffId, setStaffId] = useState<string>("all");
 
   const [tipsPage, setTipsPage] = useState(1);
-  const [tipsPerPage, setTipsPerPage] = useState(10);
+  const [tipsPerPage, setTipsPerPage] = useState(DEFAULT_PAGE_SIZE);
   const [payoutsPage, setPayoutsPage] = useState(1);
-  const [payoutsPerPage, setPayoutsPerPage] = useState(10);
+  const [payoutsPerPage, setPayoutsPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   const [payoutCtx, setPayoutCtx] = useState<{
     staffId: string;

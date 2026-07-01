@@ -5,6 +5,7 @@ import {
 } from "@/components/ui/dialog";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -200,7 +201,7 @@ export default function FeeFormDialog({
                   <FormItem>
                     <FormLabel>Value (%)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="e.g. 7.5" step="0.01" {...field} />
+                      <NumericInput placeholder="e.g. 7.5" step={0.01} precision={2} {...field} />
                     </FormControl>
                     <FormDescription className="text-xs">
                       Percentage of the order total
@@ -225,7 +226,7 @@ export default function FeeFormDialog({
                     <FormItem>
                       <FormLabel>Order Peg (Threshold)</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="e.g. 2000" {...field} />
+                        <NumericInput placeholder="e.g. 2000" precision={2} min={0} {...field} />
                       </FormControl>
                       <FormDescription className="text-xs">
                         Order amount threshold that determines which fee applies
@@ -243,7 +244,7 @@ export default function FeeFormDialog({
                       <FormItem>
                         <FormLabel>Below Peg Fee</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="e.g. 500" {...field} />
+                          <NumericInput placeholder="e.g. 500" precision={2} min={0} {...field} />
                         </FormControl>
                         <FormDescription className="text-xs">
                           Fee when order &lt; peg
@@ -260,7 +261,7 @@ export default function FeeFormDialog({
                       <FormItem>
                         <FormLabel>At/Above Peg Fee</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="e.g. 1000" {...field} />
+                          <NumericInput placeholder="e.g. 1000" precision={2} min={0} {...field} />
                         </FormControl>
                         <FormDescription className="text-xs">
                           Fee when order ≥ peg

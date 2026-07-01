@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { usePOS } from "@/contexts/POSContext";
 import { formatNaira } from "@/lib/currency";
@@ -44,7 +45,7 @@ export function StartShiftDialog({ open, onClose }: { open: boolean; onClose: ()
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="opening-cash" className="text-xs font-medium">Opening Cash in Drawer</Label>
-            <Input id="opening-cash" type="number" min="0" placeholder="0.00" value={openingCash} onChange={e => setOpeningCash(e.target.value)} className="h-9" />
+            <NumericInput id="opening-cash" min={0} precision={2} placeholder="0.00" value={openingCash} onChange={(_, valStr) => setOpeningCash(valStr)} className="h-9" />
             <p className="text-[11px] text-muted-foreground">Enter the amount of cash you're starting with</p>
           </div>
         </div>
@@ -175,7 +176,7 @@ export function CloseShiftDialog({ open, onClose }: { open: boolean; onClose: ()
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="closing-cash" className="text-xs font-medium">Actual Closing Cash</Label>
-              <Input id="closing-cash" type="number" min="0" placeholder="0.00" value={closingCash} onChange={e => setClosingCash(e.target.value)} className="h-9" />
+              <NumericInput id="closing-cash" min={0} precision={2} placeholder="0.00" value={closingCash} onChange={(_, valStr) => setClosingCash(valStr)} className="h-9" />
             </div>
             {closingCash && (
               <div className={`flex justify-between text-sm font-medium ${cashVariance === 0 ? "text-primary" : cashVariance > 0 ? "text-primary" : "text-destructive"}`}>

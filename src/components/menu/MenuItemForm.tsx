@@ -1,12 +1,22 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -22,10 +32,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ImagePlus, X, Plus, Trash2, CalendarIcon, PackageCheck, Store, Check, Package, ChefHat, Sparkles, Link2, ChevronsUpDown, Search, Info, Tag, Layers, KeyRound, FileText, Image as ImageIcon, DollarSign, ListPlus, MapPin, Barcode, Lock, TrendingUp, Pencil, Check as CheckIcon, Loader2 } from "lucide-react";
+import {
+  ImagePlus,
+  X,
+  Plus,
+  Trash2,
+  CalendarIcon,
+  PackageCheck,
+  Store,
+  Check,
+  Package,
+  ChefHat,
+  Sparkles,
+  Link2,
+  ChevronsUpDown,
+  Search,
+  Info,
+  Tag,
+  Layers,
+  KeyRound,
+  FileText,
+  Image as ImageIcon,
+  DollarSign,
+  ListPlus,
+  MapPin,
+  Barcode,
+  Lock,
+  TrendingUp,
+  Pencil,
+  Check as CheckIcon,
+  Loader2,
+} from "lucide-react";
 import type { PricingMethod } from "@/components/inventory/StockAdjustmentHistory";
 
-function calcMenuSellPrice(costPrice: number, method: PricingMethod, value: number): number {
+function calcMenuSellPrice(
+  costPrice: number,
+  method: PricingMethod,
+  value: number,
+): number {
   if (method === "fixed") return value;
   if (method === "markup") return costPrice * (1 + value / 100);
   if (method === "margin") {
@@ -39,12 +83,29 @@ import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
 import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 import { getFeatures, type BusinessTypeId } from "@/data/businessTypes";
-import { Popover as OutletPopover, PopoverContent as OutletPopoverContent, PopoverTrigger as OutletPopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover as OutletPopover,
+  PopoverContent as OutletPopoverContent,
+  PopoverTrigger as OutletPopoverTrigger,
+} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/lib/types/outlet";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useGetModifierGroups } from "@/services/api/catalog/modifier-group";
 import { useGetInventoryItems } from "@/services/api/inventory/item";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
@@ -72,6 +133,8 @@ import ComponentSubstituteEditor from "@/components/inventory/ComponentSubstitut
 import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
 import { api } from "@/services/api/base";
 import { API_ENDPOINTS } from "@/services/api/endpoints";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { InventoryItemPicker } from "@/components/inventory/InventoryItemPicker";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
   { name: "Hour", abbreviation: "hr" },
@@ -183,7 +246,12 @@ interface MenuItemFormProps {
   categories: Category[];
   item?: MenuItem | null;
   isSaving: boolean;
-  onSave: (item: MenuItem, targetOutletIds: string[], onSuccess?: () => void, onError?: () => void) => void;
+  onSave: (
+    item: MenuItem,
+    targetOutletIds: string[],
+    onSuccess?: () => void,
+    onError?: () => void,
+  ) => void;
   mode?: "add" | "edit" | "clone";
   businessType?: BusinessTypeId;
   outlets: Outlet[];
@@ -194,68 +262,130 @@ interface MenuItemFormProps {
   inventoryItems?: InventoryItem[];
 }
 
-function DatePickerField({ label, value, onChange }: { label: string; value: Date | null; onChange: (d: Date | null) => void }) {
+function DatePickerField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: Date | null;
+  onChange: (d: Date | null) => void;
+}) {
   return (
     <div>
       <Label className="text-xs">{label}</Label>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal h-9 text-xs", !value && "text-muted-foreground")}>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full mt-1 justify-start text-left font-normal h-9 text-xs",
+              !value && "text-muted-foreground",
+            )}
+          >
             <CalendarIcon className="mr-2 h-3.5 w-3.5" />
             {value ? format(value, "PPP") : "Pick date"}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar mode="single" selected={value ?? undefined} onSelect={(d) => onChange(d ?? null)} initialFocus className="p-3 pointer-events-auto" />
+          <Calendar
+            mode="single"
+            selected={value ?? undefined}
+            onSelect={(d) => onChange(d ?? null)}
+            initialFocus
+            className="p-3 pointer-events-auto"
+          />
         </PopoverContent>
       </Popover>
     </div>
   );
 }
 
-function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onChange: (v: MenuVariant) => void; onRemove: () => void }) {
+function VariantRow({
+  variant,
+  onChange,
+  onRemove,
+}: {
+  variant: MenuVariant;
+  onChange: (v: MenuVariant) => void;
+  onRemove: () => void;
+}) {
   const [showSale, setShowSale] = useState(!!(variant.salePrice !== null));
 
   return (
     <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/30">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">Variant</Label>
-        <button onClick={onRemove} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+        <button
+          onClick={onRemove}
+          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+        >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div>
           <Label className="text-xs">Name *</Label>
-          <Input className="mt-1 h-9 text-sm" value={variant.name} onChange={(e) => onChange({ ...variant, name: e.target.value })} placeholder="e.g. Large" />
+          <Input
+            className="mt-1 h-9 text-sm"
+            value={variant.name}
+            onChange={(e) => onChange({ ...variant, name: e.target.value })}
+            placeholder="e.g. Large"
+          />
         </div>
         <div className="flex items-center gap-2 self-end pb-1">
-          <Switch checked={variant.status === "active"} onCheckedChange={(v) => onChange({ ...variant, status: v ? "active" : "inactive" })} />
-          <Label className="text-xs text-muted-foreground">{variant.status === "active" ? "Active" : "Inactive"}</Label>
+          <Switch
+            checked={variant.status === "active"}
+            onCheckedChange={(v) =>
+              onChange({ ...variant, status: v ? "active" : "inactive" })
+            }
+          />
+          <Label className="text-xs text-muted-foreground">
+            {variant.status === "active" ? "Active" : "Inactive"}
+          </Label>
         </div>
         <div>
           <Label className="text-xs">Price *</Label>
-          <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={variant.price || ""} onChange={(e) => onChange({ ...variant, price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+          <NumericInput
+            className="mt-1 h-9 text-sm"
+            min={0}
+            step={0.01}
+            precision={2}
+            value={variant.price || 0}
+            onChange={(val) =>
+              onChange({ ...variant, price: val || 0 })
+            }
+            placeholder="0.00"
+          />
         </div>
         <div className="col-span-2 sm:col-span-3">
           <Label className="text-xs">SKU / Barcode</Label>
           <div className="mt-1">
-            <BarcodeScanner value={variant.sku} onChange={(val) => onChange({ ...variant, sku: val })} placeholder="Scan or enter barcode/SKU" />
+            <BarcodeScanner
+              value={variant.sku}
+              onChange={(val) => onChange({ ...variant, sku: val })}
+              placeholder="Scan or enter barcode/SKU"
+            />
           </div>
         </div>
         <div>
           <Label className="text-xs">Quantity</Label>
-          <Input
+          <NumericInput
             className="mt-1 h-9 text-sm"
-            type="number"
-            min="0"
-            value={variant.quantity || ""}
-            onChange={(e) => onChange({ ...variant, quantity: parseInt(e.target.value) || 0 })}
+            min={0}
+            precision={0}
+            step={1}
+            value={variant.quantity || 0}
+            onChange={(val) =>
+              onChange({ ...variant, quantity: val || 0 })
+            }
             placeholder="0"
             disabled={variant.trackInventory}
           />
           {variant.trackInventory && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">Managed by inventory</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Managed by inventory
+            </p>
           )}
         </div>
       </div>
@@ -267,11 +397,25 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
           />
           <div className="flex items-center gap-1">
             <PackageCheck className="h-3.5 w-3.5 text-muted-foreground" />
-            <Label className="text-xs text-muted-foreground">Track from Inventory</Label>
+            <Label className="text-xs text-muted-foreground">
+              Track from Inventory
+            </Label>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) onChange({ ...variant, salePrice: null, salePeriodStart: null, salePeriodEnd: null }); }} />
+          <Switch
+            checked={showSale}
+            onCheckedChange={(v) => {
+              setShowSale(v);
+              if (!v)
+                onChange({
+                  ...variant,
+                  salePrice: null,
+                  salePeriodStart: null,
+                  salePeriodEnd: null,
+                });
+            }}
+          />
           <Label className="text-xs text-muted-foreground">On Sale</Label>
         </div>
       </div>
@@ -279,10 +423,31 @@ function VariantRow({ variant, onChange, onRemove }: { variant: MenuVariant; onC
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs">Sale Price</Label>
-            <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={variant.salePrice ?? ""} onChange={(e) => onChange({ ...variant, salePrice: parseFloat(e.target.value) || null })} placeholder="0.00" />
+            <NumericInput
+              className="mt-1 h-9 text-sm"
+              min={0}
+              step={0.01}
+              precision={2}
+              value={variant.salePrice ?? null}
+              onChange={(val) =>
+                onChange({
+                  ...variant,
+                  salePrice: val,
+                })
+              }
+              placeholder="0.00"
+            />
           </div>
-          <DatePickerField label="Sale Start" value={variant.salePeriodStart} onChange={(d) => onChange({ ...variant, salePeriodStart: d })} />
-          <DatePickerField label="Sale End" value={variant.salePeriodEnd} onChange={(d) => onChange({ ...variant, salePeriodEnd: d })} />
+          <DatePickerField
+            label="Sale Start"
+            value={variant.salePeriodStart}
+            onChange={(d) => onChange({ ...variant, salePeriodStart: d })}
+          />
+          <DatePickerField
+            label="Sale End"
+            value={variant.salePeriodEnd}
+            onChange={(d) => onChange({ ...variant, salePeriodEnd: d })}
+          />
         </div>
       )}
     </div>
@@ -311,7 +476,9 @@ function FormGroup({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             {title}
           </h3>
-          {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
+          {hint && (
+            <span className="text-[11px] text-muted-foreground">{hint}</span>
+          )}
         </div>
       )}
       <div className="space-y-3">{children}</div>
@@ -319,8 +486,19 @@ function FormGroup({
   );
 }
 
-
-export default function MenuItemForm({ open, onOpenChange, categories, item, onSave, isSaving, mode = "add", businessType, outlets, currentOutletId, inventoryItems: propInventoryItems = [] }: MenuItemFormProps) {
+export default function MenuItemForm({
+  open,
+  onOpenChange,
+  categories,
+  item,
+  onSave,
+  isSaving,
+  mode = "add",
+  businessType,
+  outlets,
+  currentOutletId,
+  inventoryItems: propInventoryItems = [],
+}: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
   const { data: subGroupsRes } = useGetSubstituteGroups({
     outletId: currentOutletId || undefined,
@@ -347,11 +525,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       ingredients.forEach((g) => {
         (g.substituteGroupIds || []).forEach(async (id) => {
           try {
-            const { data } = await api.get(API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(id));
+            const { data } = await api.get(
+              API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(id),
+            );
             if (data) {
               setSubGroupsCache((prev) => ({ ...prev, [id]: data }));
             }
-          } catch (e) { }
+          } catch (e) {}
         });
       });
     }
@@ -365,7 +545,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [selectedCatId, setSelectedCatId] = useState("");
   const [subcategory, setSubcategory] = useState("");
   const [price, setPrice] = useState("");
-  const [isLinkedSellPriceEditable, setIsLinkedSellPriceEditable] = useState(false);
+  const [isLinkedSellPriceEditable, setIsLinkedSellPriceEditable] =
+    useState(false);
   const [quantity, setQuantity] = useState("");
   const [salePrice, setSalePrice] = useState("");
   const [salePeriodStart, setSalePeriodStart] = useState<Date | null>(null);
@@ -378,15 +559,18 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [extras, setExtras] = useState<MenuExtra[]>([]);
   const [trackInventory, setTrackInventory] = useState(false);
   const [selectedOutletIds, setSelectedOutletIds] = useState<string[]>([]);
-  const [linkedInventoryItemId, setLinkedInventoryItemId] = useState<string>("");
-  const [linkPickerOpen, setLinkPickerOpen] = useState(false);
-  const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<number | null>(null);
+  const [linkedInventoryItemId, setLinkedInventoryItemId] =
+    useState<string>("");
+  const [ingredientPickerOpenIdx, setIngredientPickerOpenIdx] = useState<
+    number | null
+  >(null);
   /** Pricing strategy — Toast-inspired:
    *  - "base":    single price, optional per-variant overrides
    *  - "variant": price comes from each variant (no base price)
    *  - "open":    price entered at checkout (POS prompt) */
   type PricingStrategy = "base" | "variant" | "open";
-  const [pricingStrategy, setPricingStrategy] = useState<PricingStrategy>("base");
+  const [pricingStrategy, setPricingStrategy] =
+    useState<PricingStrategy>("base");
   /** Simple items only: when not linked to inventory, lets the admin opt in
    *  to also create a matching inventory record using the barcode + qty
    *  entered here. Purely a UI flag — parent decides what to do with it. */
@@ -396,7 +580,8 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const [sellingUnit, setSellingUnit] = useState<string>("pcs");
   /** Simple-item cost & markup state (used when not linked to inventory). */
   const [costPrice, setCostPrice] = useState<string>("");
-  const [menuPricingMethod, setMenuPricingMethod] = useState<PricingMethod>("markup");
+  const [menuPricingMethod, setMenuPricingMethod] =
+    useState<PricingMethod>("markup");
   const [menuPricingValue, setMenuPricingValue] = useState<string>("30");
   /** Reusable modifier groups attached to this item. */
   const [modifierGroupIds, setModifierGroupIds] = useState<string[]>([]);
@@ -408,7 +593,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     search: modifierSearch || undefined,
     per_page: DEFAULT_PAGE_SIZE,
   });
-  const [modifierGroupsCache, setModifierGroupsCache] = useState<Record<string, ModifierGroup>>({});
+  const [modifierGroupsCache, setModifierGroupsCache] = useState<
+    Record<string, ModifierGroup>
+  >({});
 
   useEffect(() => {
     if (modifierGroupsRes?.data) {
@@ -428,7 +615,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     if (open && item?.modifierGroupIds) {
       item.modifierGroupIds.forEach(async (id) => {
         try {
-          const { data } = await api.get(API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id));
+          const { data } = await api.get(
+            API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id),
+          );
           if (data) {
             setModifierGroupsCache((prev) => ({ ...prev, [id]: data }));
           }
@@ -445,21 +634,34 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   const effectiveBusinessType: BusinessTypeId | undefined =
     businessType ??
     (selectedOutletIds.length
-      ? (outlets.find((o) => o.id === selectedOutletIds[0])?.businessType as BusinessTypeId | undefined)
+      ? (outlets.find((o) => o.id === selectedOutletIds[0])?.businessType as
+          | BusinessTypeId
+          | undefined)
       : undefined);
-  const features = effectiveBusinessType ? getFeatures(effectiveBusinessType) : null;
+  const features = effectiveBusinessType
+    ? getFeatures(effectiveBusinessType)
+    : null;
 
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
 
   const [inventorySearch, setInventorySearch] = useState("");
 
-  const { data: searchInventoryRes } = useGetInventoryItems(
-    open ? {
-      search: inventorySearch.trim() || undefined,
-      per_page: DEFAULT_PAGE_SIZE,
-      outletId: selectedOutletIds.length === 1 ? selectedOutletIds[0] : undefined,
-    } : undefined
+  const debouncedInventorySearch = useDebouncedValue(inventorySearch, 500);
+
+  const {
+    data: searchInventoryRes,
+    isLoading: isSearchInventoryLoading,
+    isValidating: isSearchInventoryValidating,
+  } = useGetInventoryItems(
+    open
+      ? {
+          search: debouncedInventorySearch.trim() || undefined,
+          per_page: DEFAULT_PAGE_SIZE,
+          outletId:
+            selectedOutletIds.length === 1 ? selectedOutletIds[0] : undefined,
+        }
+      : undefined,
   );
 
   const searchInventoryItems = searchInventoryRes?.data || [];
@@ -494,19 +696,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   useEffect(() => {
     if (open) {
       if (linkedInventoryItemId && !inventoryCache[linkedInventoryItemId]) {
-        api.get(API_ENDPOINTS.SINGLE_INVENTORY(linkedInventoryItemId)).then(({ data }) => {
-          if (data) {
-            setInventoryCache(prev => ({ ...prev, [linkedInventoryItemId]: data }));
-          }
-        }).catch(() => { });
+        api
+          .get(API_ENDPOINTS.SINGLE_INVENTORY(linkedInventoryItemId))
+          .then(({ data }) => {
+            if (data) {
+              setInventoryCache((prev) => ({
+                ...prev,
+                [linkedInventoryItemId]: data,
+              }));
+            }
+          })
+          .catch(() => {});
       }
       ingredients.forEach((g) => {
         if (g.inventoryItemId && !inventoryCache[g.inventoryItemId]) {
-          api.get(API_ENDPOINTS.SINGLE_INVENTORY(g.inventoryItemId)).then(({ data }) => {
-            if (data) {
-              setInventoryCache(prev => ({ ...prev, [g.inventoryItemId]: data }));
-            }
-          }).catch(() => { });
+          api
+            .get(API_ENDPOINTS.SINGLE_INVENTORY(g.inventoryItemId))
+            .then(({ data }) => {
+              if (data) {
+                setInventoryCache((prev) => ({
+                  ...prev,
+                  [g.inventoryItemId]: data,
+                }));
+              }
+            })
+            .catch(() => {});
         }
       });
     }
@@ -514,7 +728,7 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
   useEffect(() => {
     setInventorySearch("");
-  }, [linkPickerOpen, ingredientPickerOpenIdx]);
+  }, [ingredientPickerOpenIdx]);
 
   const availableInventory = useMemo(() => {
     const list = searchInventoryItems;
@@ -525,29 +739,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
   }, [selectedOutletIds, searchInventoryItems]);
 
   const resolvedInventoryItems = useMemo<InventoryItem[]>(() => {
-    const cached: InventoryItem[] = Object.values(inventoryCache).map((i: any) => ({
-      id: i.id,
-      name: i.name || "",
-      description: i.description || "",
-      sku: i.sku || "",
-      stock: i.quantity ?? i.stock ?? 0,
-      costPrice: i.costPrice ?? 0,
-      sellPrice: i.sellPrice ?? 0,
-      pricingMethod: i.pricingMethod ?? "markup",
-      pricingValue: i.pricingValue ?? 30,
-      status: i.status ?? "good",
-      minStock: i.minStock ?? 0,
-      categoryId: i.categoryId ?? "",
-      unitId: i.unitId ?? "",
-      outletId: i.outletId ?? "",
-      conversions: i.conversions || [],
-      batchNumber: i.batchNumber ?? "",
-      expiryDate: i.expiryDate ?? "",
-      batches: i.batches ?? [],
-    }));
+    const cached: InventoryItem[] = Object.values(inventoryCache).map(
+      (i: any) => ({
+        id: i.id,
+        name: i.name || "",
+        description: i.description || "",
+        sku: i.sku || "",
+        stock: i.quantity ?? i.stock ?? 0,
+        costPrice: i.costPrice ?? 0,
+        sellPrice: i.sellPrice ?? 0,
+        pricingMethod: i.pricingMethod ?? "markup",
+        pricingValue: i.pricingValue ?? 30,
+        status: i.status ?? "good",
+        minStock: i.minStock ?? 0,
+        categoryId: i.categoryId ?? "",
+        unitId: i.unitId ?? "",
+        outletId: i.outletId ?? "",
+        conversions: i.conversions || [],
+        batchNumber: i.batchNumber ?? "",
+        expiryDate: i.expiryDate ?? "",
+        batches: i.batches ?? [],
+      }),
+    );
     const result = [...cached];
-    propInventoryItems.forEach(item => {
-      if (!result.some(r => r.id === item.id)) {
+    propInventoryItems.forEach((item) => {
+      if (!result.some((r) => r.id === item.id)) {
         result.push(item);
       }
     });
@@ -577,29 +793,61 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
         setLinkedInventoryItemId(item.linkedInventoryItemId ?? "");
         setIngredients(item.ingredients ?? []);
         setModifierGroupIds(item.modifierGroupIds ?? []);
-        const cat = categories.find((c) => c.name === item.category || c.subcategories.some((s) => s.name === item.subcategory));
+        const cat = categories.find(
+          (c) =>
+            c.name === item.category ||
+            c.subcategories.some((s) => s.name === item.subcategory),
+        );
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
-        setSelectedOutletIds(item.outletId ? [item.outletId] : (currentOutletId ? [currentOutletId] : []));
+        setSelectedOutletIds(
+          item.outletId
+            ? [item.outletId]
+            : currentOutletId
+              ? [currentOutletId]
+              : [],
+        );
         // Infer pricing strategy from saved data
         if (item.pricingStrategy) {
           setPricingStrategy(item.pricingStrategy);
-        } else if ((item.variants?.length ?? 0) > 0 && (!item.price || item.price === 0)) {
+        } else if (
+          (item.variants?.length ?? 0) > 0 &&
+          (!item.price || item.price === 0)
+        ) {
           setPricingStrategy("variant");
         } else {
           setPricingStrategy("base");
         }
-        setSellingUnit(item.sellingUnit ?? ((item.itemType ?? "simple") === "service" ? "hr" : "pcs"));
+        setSellingUnit(
+          item.sellingUnit ??
+            ((item.itemType ?? "simple") === "service" ? "hr" : "pcs"),
+        );
         setCostPrice(item.costPrice != null ? String(item.costPrice) : "");
         setMenuPricingMethod(item.pricingMethod ?? "markup");
-        setMenuPricingValue(item.pricingValue != null ? String(item.pricingValue) : "30");
+        setMenuPricingValue(
+          item.pricingValue != null ? String(item.pricingValue) : "30",
+        );
       } else {
         setItemType("simple");
-        setName(""); setDescription(""); setSelectedCatId(""); setSubcategory("");
-        setPrice(""); setQuantity(""); setSalePrice(""); setSalePeriodStart(null);
-        setSalePeriodEnd(null); setShowSale(false); setSku(""); setIsActive(true);
-        setImages([]); setVariants([]); setExtras([]); setTrackInventory(false);
-        setLinkedInventoryItemId(""); setIngredients([]); setModifierGroupIds([]);
+        setName("");
+        setDescription("");
+        setSelectedCatId("");
+        setSubcategory("");
+        setPrice("");
+        setQuantity("");
+        setSalePrice("");
+        setSalePeriodStart(null);
+        setSalePeriodEnd(null);
+        setShowSale(false);
+        setSku("");
+        setIsActive(true);
+        setImages([]);
+        setVariants([]);
+        setExtras([]);
+        setTrackInventory(false);
+        setLinkedInventoryItemId("");
+        setIngredients([]);
+        setModifierGroupIds([]);
         setSelectedOutletIds(currentOutletId ? [currentOutletId] : []);
         setPricingStrategy("base");
         setAddToInventory(false);
@@ -624,7 +872,9 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       const baseCost = inv.costPrice ?? 0;
       let unitCost = baseCost;
       if (g.unitId && g.unitId !== inv.unitId) {
-        const conv = (inv.conversions || []).find((c) => c.toUnitId === g.unitId);
+        const conv = (inv.conversions || []).find(
+          (c) => c.toUnitId === g.unitId,
+        );
         if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
           unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
         }
@@ -633,9 +883,19 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     }, 0);
     const valNum = parseFloat(menuPricingValue) || 0;
     if (cost <= 0 && menuPricingMethod !== "fixed") return;
-    const newSell = Math.round(calcMenuSellPrice(cost, menuPricingMethod, valNum) * 100) / 100;
+    const newSell =
+      Math.round(calcMenuSellPrice(cost, menuPricingMethod, valNum) * 100) /
+      100;
     setPrice((prev) => (prev === String(newSell) ? prev : String(newSell)));
-  }, [open, itemType, pricingStrategy, ingredients, menuPricingMethod, menuPricingValue, inventoryItems]);
+  }, [
+    open,
+    itemType,
+    pricingStrategy,
+    ingredients,
+    menuPricingMethod,
+    menuPricingValue,
+    inventoryItems,
+  ]);
 
   // When switching item type, clear fields that no longer apply so saved data
   // stays consistent with the chosen type.
@@ -659,12 +919,16 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       // Composite ingredients & track-inventory don't apply
       setIngredients([]);
       setTrackInventory(false);
-      setSellingUnit((prev) => (SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev));
+      setSellingUnit((prev) =>
+        SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev,
+      );
     } else if (next === "composite") {
       // Linked inventory item is a Simple-only concept
       setLinkedInventoryItemId("");
       setTrackInventory(false);
-      setSellingUnit((prev) => (SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev));
+      setSellingUnit((prev) =>
+        SERVICE_UNITS.some((u) => u.abbreviation === prev) ? "pcs" : prev,
+      );
     }
   };
 
@@ -680,29 +944,37 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     setQuantity(String(inv.stock));
     setAddToInventory(false);
     // Sync selling unit from the linked inventory item if available.
-    const linkedUnit = defaultMeasuringUnits.find((u) => u.id === (inv as { unitId?: string }).unitId);
+    const linkedUnit = defaultMeasuringUnits.find(
+      (u) => u.id === (inv as { unitId?: string }).unitId,
+    );
     if (linkedUnit) setSellingUnit(linkedUnit.abbreviation);
     // Sync category from the linked inventory item's category. Match the
     // inventory category name against the catalog categories (case-insensitive,
     // partial) so admins keep a single source of truth.
-    const invCat = defaultInventoryCategories.find((c) => c.id === (inv as { categoryId?: string }).categoryId);
+    const invCat = defaultInventoryCategories.find(
+      (c) => c.id === (inv as { categoryId?: string }).categoryId,
+    );
     if (invCat) {
       const lowerCat = invCat.name.toLowerCase();
       const match =
         categories.find((c) => c.name.toLowerCase() === lowerCat) ??
-        categories.find((c) => lowerCat.includes(c.name.toLowerCase().split(" ")[0])) ??
-        categories.find((c) => c.name.toLowerCase().includes(lowerCat.split(" ")[0]));
+        categories.find((c) =>
+          lowerCat.includes(c.name.toLowerCase().split(" ")[0]),
+        ) ??
+        categories.find((c) =>
+          c.name.toLowerCase().includes(lowerCat.split(" ")[0]),
+        );
       if (match) setSelectedCatId(match.id);
     }
     // Sync cost / sell price / markup from inventory record. Sell price
     // becomes the catalog Price, and the cost+markup pair drives the
     // read-only profit summary shown in the Pricing section.
     setCostPrice(inv.costPrice != null ? String(inv.costPrice) : "");
-    if (inv.sellPrice != null && inv.sellPrice > 0) setPrice(String(inv.sellPrice));
+    if (inv.sellPrice != null && inv.sellPrice > 0)
+      setPrice(String(inv.sellPrice));
     if (inv.pricingMethod) setMenuPricingMethod(inv.pricingMethod);
     if (inv.pricingValue != null) setMenuPricingValue(String(inv.pricingValue));
   };
-
 
   const handleImageUpload = () => {
     if (images.length >= 4) return;
@@ -714,21 +986,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
       const files = (e.target as HTMLInputElement).files;
       if (!files) return;
       const remaining = 4 - images.length;
-      Array.from(files).slice(0, remaining).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          setImages((prev) => prev.length < 4 ? [...prev, ev.target?.result as string] : prev);
-        };
-        reader.readAsDataURL(file);
-      });
+      Array.from(files)
+        .slice(0, remaining)
+        .forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            setImages((prev) =>
+              prev.length < 4 ? [...prev, ev.target?.result as string] : prev,
+            );
+          };
+          reader.readAsDataURL(file);
+        });
     };
     input.click();
   };
 
-  const removeImage = (idx: number) => setImages((prev) => prev.filter((_, i) => i !== idx));
+  const removeImage = (idx: number) =>
+    setImages((prev) => prev.filter((_, i) => i !== idx));
 
   const generateSku = () => {
-    const prefix = name.trim().substring(0, 3).toUpperCase().replace(/[^A-Z]/g, "X") || "ITM";
+    const prefix =
+      name
+        .trim()
+        .substring(0, 3)
+        .toUpperCase()
+        .replace(/[^A-Z]/g, "X") || "ITM";
     const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `${prefix}-${rand}`;
   };
@@ -748,14 +1030,42 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
           sku: "",
           status: isActive ? "active" : "inactive",
         };
-        return [baseVariant, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false, sku: "", status: "active" as const }];
+        return [
+          baseVariant,
+          {
+            id: crypto.randomUUID(),
+            name: "",
+            price: 0,
+            quantity: 0,
+            salePrice: null,
+            salePeriodStart: null,
+            salePeriodEnd: null,
+            trackInventory: false,
+            sku: "",
+            status: "active" as const,
+          },
+        ];
       }
-      return [...prev, { id: crypto.randomUUID(), name: "", price: 0, quantity: 0, salePrice: null, salePeriodStart: null, salePeriodEnd: null, trackInventory: false, sku: "", status: "active" as const }];
+      return [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          name: "",
+          price: 0,
+          quantity: 0,
+          salePrice: null,
+          salePeriodStart: null,
+          salePeriodEnd: null,
+          trackInventory: false,
+          sku: "",
+          status: "active" as const,
+        },
+      ];
     });
   };
 
   const updateVariant = (id: string, updated: MenuVariant) => {
-    setVariants((prev) => prev.map((v) => v.id === id ? updated : v));
+    setVariants((prev) => prev.map((v) => (v.id === id ? updated : v)));
   };
 
   const removeVariant = (id: string) => {
@@ -769,37 +1079,59 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const isVariantPriced = !isService && pricingStrategy === "variant";
     const hasVariants = !isService && variants.length > 0;
     if (!name.trim() || !selectedCatId) {
-      console.warn("handleSave Validation Failed: name or selectedCatId is missing", { name, selectedCatId });
+      console.warn(
+        "handleSave Validation Failed: name or selectedCatId is missing",
+        { name, selectedCatId },
+      );
       return;
     }
     // Price requirements depend on strategy.
     if (!isOpenPrice) {
       if (isVariantPriced) {
         if (variants.length === 0) {
-          console.warn("handleSave Validation Failed: isVariantPriced but variants length is 0");
+          console.warn(
+            "handleSave Validation Failed: isVariantPriced but variants length is 0",
+          );
           return;
         }
         if (variants.some((v) => !v.name.trim() || !v.price)) {
-          console.warn("handleSave Validation Failed: variant name or price is invalid", variants);
+          console.warn(
+            "handleSave Validation Failed: variant name or price is invalid",
+            variants,
+          );
           return;
         }
       } else if (!hasVariants && !price) {
-        console.warn("handleSave Validation Failed: no variants and price is missing", { price });
+        console.warn(
+          "handleSave Validation Failed: no variants and price is missing",
+          { price },
+        );
         return;
       }
     }
     if (hasVariants && variants.some((v) => !v.name.trim())) {
-      console.warn("handleSave Validation Failed: hasVariants but some variant name is empty", variants);
+      console.warn(
+        "handleSave Validation Failed: hasVariants but some variant name is empty",
+        variants,
+      );
       return;
     }
     if (selectedOutletIds.length === 0) {
-      console.warn("handleSave Validation Failed: selectedOutletIds is empty", selectedOutletIds);
+      console.warn(
+        "handleSave Validation Failed: selectedOutletIds is empty",
+        selectedOutletIds,
+      );
       return;
     }
     if (isComposite) {
-      const valid = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
+      const valid = ingredients.filter(
+        (g) => g.inventoryItemId && g.quantity > 0,
+      );
       if (valid.length === 0) {
-        console.warn("handleSave Validation Failed: isComposite but ingredients are invalid", ingredients);
+        console.warn(
+          "handleSave Validation Failed: isComposite but ingredients are invalid",
+          ingredients,
+        );
         return;
       }
     }
@@ -817,99 +1149,160 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
     const autoSku = generateSku();
     const finalVariants = hasVariants
       ? variants.map((v, i) => ({
-        ...v,
-        sku: v.sku || `${autoSku}-V${i + 1}`,
-      }))
+          ...v,
+          sku: v.sku || `${autoSku}-V${i + 1}`,
+        }))
       : variants;
-    const suppressSale = isService || isOpenPrice || isVariantPriced || hasVariants;
-    onSave({
-      id: item?.id ?? crypto.randomUUID(),
-      name: name.trim(),
-      description: description.trim(),
-      category: cat?.name ?? "",
-      subcategory,
-      price: basePrice,
-      quantity: baseQty,
-      salePrice: suppressSale ? null : (showSale && salePrice ? parseFloat(salePrice) : null),
-      salePeriodStart: suppressSale ? null : (showSale ? salePeriodStart : null),
-      salePeriodEnd: suppressSale ? null : (showSale ? salePeriodEnd : null),
-      sku: sku.trim() || autoSku,
-      status: isActive ? "active" : "inactive",
-      images: isService ? [] : images,
-      variants: isService ? [] : finalVariants,
-      extras: (() => {
-        // Flatten attached modifier groups into per-item extras so the POS
-        // (which renders extras grouped by category) keeps working without
-        // changes. Manual extras keep their own category. Available for both
-        // simple items and services (e.g. add-on services for salons).
-        const fromGroups: MenuExtra[] = modifierGroupIds
-          .map((id) => modifierGroupsCache[id] || modifierGroups.find((x) => x.id === id))
-          .filter((g): g is ModifierGroup => !!g)
-          .flatMap((g) =>
-            g.modifiers.map((m) => ({
-              id: `${g.id}:${m.id}`,
-              name: m.name,
-              price: m.price,
-              category: g.name,
-            }))
+    const suppressSale =
+      isService || isOpenPrice || isVariantPriced || hasVariants;
+    onSave(
+      {
+        id: item?.id ?? crypto.randomUUID(),
+        name: name.trim(),
+        description: description.trim(),
+        category: cat?.name ?? "",
+        subcategory,
+        price: basePrice,
+        quantity: baseQty,
+        salePrice: suppressSale
+          ? null
+          : showSale && salePrice
+            ? parseFloat(salePrice)
+            : null,
+        salePeriodStart: suppressSale
+          ? null
+          : showSale
+            ? salePeriodStart
+            : null,
+        salePeriodEnd: suppressSale ? null : showSale ? salePeriodEnd : null,
+        sku: sku.trim() || autoSku,
+        status: isActive ? "active" : "inactive",
+        images: isService ? [] : images,
+        variants: isService ? [] : finalVariants,
+        extras: (() => {
+          // Flatten attached modifier groups into per-item extras so the POS
+          // (which renders extras grouped by category) keeps working without
+          // changes. Manual extras keep their own category. Available for both
+          // simple items and services (e.g. add-on services for salons).
+          const fromGroups: MenuExtra[] = modifierGroupIds
+            .map(
+              (id) =>
+                modifierGroupsCache[id] ||
+                modifierGroups.find((x) => x.id === id),
+            )
+            .filter((g): g is ModifierGroup => !!g)
+            .flatMap((g) =>
+              g.modifiers.map((m) => ({
+                id: `${g.id}:${m.id}`,
+                name: m.name,
+                price: m.price,
+                category: g.name,
+              })),
+            );
+          const manual = extras.filter(
+            (e) => !fromGroups.some((f) => f.id === e.id),
           );
-        const manual = extras.filter((e) => !fromGroups.some((f) => f.id === e.id));
-        return [...fromGroups, ...manual];
-      })(),
-      modifierGroupIds: modifierGroupIds.length ? modifierGroupIds : undefined,
-      trackInventory: isService ? false : (hasVariants ? false : trackInventory),
-      itemType,
-      pricingStrategy: pricingStrategy,
-      linkedInventoryItemId: itemType === "simple" && linkedInventoryItemId ? linkedInventoryItemId : undefined,
-      ingredients: itemType === "composite"
-        ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
-        : undefined,
-      sellingUnit: sellingUnit || undefined,
-      costPrice: itemType === "simple" && pricingStrategy === "base" && costPrice
-        ? parseFloat(costPrice) || undefined
-        : undefined,
-      pricingMethod: pricingStrategy === "base" && (itemType === "composite" || (itemType === "simple" && !!costPrice))
-        ? menuPricingMethod
-        : undefined,
-      pricingValue: pricingStrategy === "base" && (itemType === "composite" || (itemType === "simple" && !!costPrice))
-        ? parseFloat(menuPricingValue) || 0
-        : undefined,
-    }, selectedOutletIds, () => { onOpenChange(false); },);
-
+          return [...fromGroups, ...manual];
+        })(),
+        modifierGroupIds: modifierGroupIds.length
+          ? modifierGroupIds
+          : undefined,
+        trackInventory: isService
+          ? false
+          : hasVariants
+            ? false
+            : trackInventory,
+        itemType,
+        pricingStrategy: pricingStrategy,
+        linkedInventoryItemId:
+          itemType === "simple" && linkedInventoryItemId
+            ? linkedInventoryItemId
+            : undefined,
+        ingredients:
+          itemType === "composite"
+            ? ingredients.filter((g) => g.inventoryItemId && g.quantity > 0)
+            : undefined,
+        sellingUnit: sellingUnit || undefined,
+        costPrice:
+          itemType === "simple" && pricingStrategy === "base" && costPrice
+            ? parseFloat(costPrice) || undefined
+            : undefined,
+        pricingMethod:
+          pricingStrategy === "base" &&
+          (itemType === "composite" || (itemType === "simple" && !!costPrice))
+            ? menuPricingMethod
+            : undefined,
+        pricingValue:
+          pricingStrategy === "base" &&
+          (itemType === "composite" || (itemType === "simple" && !!costPrice))
+            ? parseFloat(menuPricingValue) || 0
+            : undefined,
+      },
+      selectedOutletIds,
+      () => {
+        onOpenChange(false);
+      },
+    );
   };
 
-  const formTitle = mode === "clone" ? "Clone Catalog Item" : mode === "edit" ? "Edit Catalog Item" : "Add Catalog Item";
-  const formDescription = mode === "clone"
-    ? "You're creating a new item based on an existing one. Review and adjust the details before saving."
-    : mode === "edit"
-      ? "Update the details of this catalog item."
-      : "Fill in the details to create a new catalog item.";
-  const submitLabel = mode === "clone" ? "Create Clone" : mode === "edit" ? "Update Item" : "Add Item";
+  const formTitle =
+    mode === "clone"
+      ? "Clone Catalog Item"
+      : mode === "edit"
+        ? "Edit Catalog Item"
+        : "Add Catalog Item";
+  const formDescription =
+    mode === "clone"
+      ? "You're creating a new item based on an existing one. Review and adjust the details before saving."
+      : mode === "edit"
+        ? "Update the details of this catalog item."
+        : "Fill in the details to create a new catalog item.";
+  const submitLabel =
+    mode === "clone"
+      ? "Create Clone"
+      : mode === "edit"
+        ? "Update Item"
+        : "Add Item";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-3xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+      <SheetContent
+        side="right"
+        className="!w-full !max-w-none lg:!max-w-3xl p-0 flex flex-col overflow-hidden [&>button]:z-10"
+      >
         <SheetHeader className="px-6 pt-6 pb-2">
           <SheetTitle>{formTitle}</SheetTitle>
-          <SheetDescription className="text-xs">{formDescription}</SheetDescription>
+          <SheetDescription className="text-xs">
+            {formDescription}
+          </SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-6 pb-6">
-
           <div className="space-y-6">
             {/* DETAILS — outlet, item type, name, category, unit, description.
               Merged into one block to reduce vertical noise. */}
             <FormGroup title="Details">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs flex items-center gap-1.5"><Store className="h-3.5 w-3.5" /> Outlet *</Label>
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <Store className="h-3.5 w-3.5" /> Outlet *
+                  </Label>
                   <Select
                     value={selectedOutletIds[0] ?? ""}
-                    onValueChange={(val) => setSelectedOutletIds(val ? [val] : [])}
+                    onValueChange={(val) =>
+                      setSelectedOutletIds(val ? [val] : [])
+                    }
                   >
-                    <SelectTrigger data-testid="outlet-select-trigger" className="mt-1 h-9"><SelectValue placeholder="Select outlet" /></SelectTrigger>
+                    <SelectTrigger
+                      data-testid="outlet-select-trigger"
+                      className="mt-1 h-9"
+                    >
+                      <SelectValue placeholder="Select outlet" />
+                    </SelectTrigger>
                     <SelectContent>
                       {outlets.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -917,11 +1310,28 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                 <div>
                   <Label className="text-xs">Item Type *</Label>
                   <div className="mt-1 grid grid-cols-3 gap-1.5">
-                    {([
-                      { key: "simple", label: "Simple", desc: "Single stocked product", Icon: Package },
-                      { key: "composite", label: "Composite", desc: "Made from ingredients", Icon: ChefHat },
-                      { key: "service", label: "Service", desc: "Time-based, no stock", Icon: Sparkles },
-                    ] as const).map(({ key, label, desc, Icon }) => {
+                    {(
+                      [
+                        {
+                          key: "simple",
+                          label: "Simple",
+                          desc: "Single stocked product",
+                          Icon: Package,
+                        },
+                        {
+                          key: "composite",
+                          label: "Composite",
+                          desc: "Made from ingredients",
+                          Icon: ChefHat,
+                        },
+                        {
+                          key: "service",
+                          label: "Service",
+                          desc: "Time-based, no stock",
+                          Icon: Sparkles,
+                        },
+                      ] as const
+                    ).map(({ key, label, desc, Icon }) => {
                       const active = itemType === key;
                       return (
                         <button
@@ -932,14 +1342,23 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                             "flex flex-col items-center justify-center gap-0.5 py-1.5 px-1 min-h-[3.25rem] rounded-md border text-xs transition-colors text-center",
                             active
                               ? "border-primary bg-primary/5 text-primary font-medium"
-                              : "border-border text-muted-foreground hover:bg-muted/40"
+                              : "border-border text-muted-foreground hover:bg-muted/40",
                           )}
                         >
                           <div className="flex items-center gap-1.5">
                             <Icon className="h-3.5 w-3.5" />
                             <span>{label}</span>
                           </div>
-                          <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{desc}</span>
+                          <span
+                            className={cn(
+                              "text-[10px] leading-tight",
+                              active
+                                ? "text-primary/80"
+                                : "text-muted-foreground/80",
+                            )}
+                          >
+                            {desc}
+                          </span>
                         </button>
                       );
                     })}
@@ -948,8 +1367,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </div>
 
               <div>
-                <Label htmlFor="item-name" className="text-xs">Item Name *</Label>
-                <Input id="item-name" data-testid="item-name-input" className="mt-1 h-9" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Cappuccino" />
+                <Label htmlFor="item-name" className="text-xs">
+                  Item Name *
+                </Label>
+                <Input
+                  id="item-name"
+                  data-testid="item-name-input"
+                  className="mt-1 h-9"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Cappuccino"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -965,9 +1393,18 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     onValueChange={(v) => setSelectedCatId(v)}
                     disabled={itemType === "simple" && !!linkedInventoryItemId}
                   >
-                    <SelectTrigger data-testid="category-select-trigger" className="mt-1 h-9"><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectTrigger
+                      data-testid="category-select-trigger"
+                      className="mt-1 h-9"
+                    >
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {categories.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -983,9 +1420,17 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     onValueChange={setSellingUnit}
                     disabled={itemType === "simple" && !!linkedInventoryItemId}
                   >
-                    <SelectTrigger data-testid="unit-select-trigger" className="mt-1 h-9"><SelectValue placeholder="Select unit" /></SelectTrigger>
+                    <SelectTrigger
+                      data-testid="unit-select-trigger"
+                      className="mt-1 h-9"
+                    >
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
                     <SelectContent>
-                      {(itemType === "service" ? SERVICE_UNITS : defaultMeasuringUnits).map((u) => (
+                      {(itemType === "service"
+                        ? SERVICE_UNITS
+                        : defaultMeasuringUnits
+                      ).map((u) => (
                         <SelectItem key={u.abbreviation} value={u.abbreviation}>
                           {u.name} ({u.abbreviation})
                         </SelectItem>
@@ -996,486 +1441,678 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </div>
 
               <div>
-                <Label htmlFor="item-desc" className="text-xs">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                <Textarea id="item-desc" className="mt-1" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief description..." />
+                <Label htmlFor="item-desc" className="text-xs">
+                  Description{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <Textarea
+                  id="item-desc"
+                  className="mt-1"
+                  rows={2}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description..."
+                />
               </div>
 
               {variants.length === 0 && (
                 <div className="flex items-center gap-3 pt-1">
                   <Switch checked={isActive} onCheckedChange={setIsActive} />
-                  <Label className="text-xs text-muted-foreground">{isActive ? "Active — visible at POS" : "Inactive — hidden from POS"}</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    {isActive
+                      ? "Active — visible at POS"
+                      : "Inactive — hidden from POS"}
+                  </Label>
                 </div>
               )}
             </FormGroup>
 
             {/* INVENTORY — Simple items only. Combines link, stock/barcode, and
               the "Also add to Inventory" toggle into one compact group. */}
-            {itemType === "simple" && (() => {
-              const linked = linkedInventoryItemId
-                ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
-                : null;
-              const isLinked = !!linked;
-              return (
-                <FormGroup
-                  title="Inventory"
-                  hint={isLinked ? "Linked — synced from inventory" : undefined}
-                >
-                  <div>
-                    <Label className="text-xs">Link to existing inventory item <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <Popover open={linkPickerOpen} onOpenChange={setLinkPickerOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          role="combobox"
-                          data-testid="link-inventory-trigger"
-                          className="w-full justify-between font-normal h-9 text-sm mt-1"
-                        >
-                          {linkedInventoryItemId
-                            ? (() => {
-                              const inv = inventoryItems.find((i) => i.id === linkedInventoryItemId);
-                              return inv ? `${inv.name} · ${inv.sku}` : "Select inventory item...";
-                            })()
-                            : <span className="text-muted-foreground">Search inventory...</span>}
-                          <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-[--radix-popover-trigger-width] p-0 h-[300px] flex flex-col"
-                      >
-                        <div className="flex flex-col overflow-hidden rounded-md bg-popover text-popover-foreground pointer-events-auto">
-                          <div className="flex items-center border-b px-3">
-                            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-                            <input
-                              placeholder="Search by name or SKU..."
-                              className="flex h-9 w-full rounded-md bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                              value={inventorySearch}
-                              onChange={(e) => setInventorySearch(e.target.value)}
-                            />
-                          </div>
-
-                          <div className=" pointer-events-auto p-1 min-h-0 overflow-y-auto">
-                            {availableInventory.length === 0 && !linkedInventoryItemId ? (
-                              <div className="py-6 text-center text-sm text-muted-foreground">
-                                No inventory items found.
-                              </div>
-                            ) : (
-                              <div className="space-y-0.5">
-                                {linkedInventoryItemId && (
-                                  <button
-                                    type="button"
-                                    className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground text-left"
-                                    onClick={() => {
-                                      setLinkedInventoryItemId("");
-                                      setLinkPickerOpen(false);
-                                    }}
-                                  >
-                                    <X className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Clear link</span>
-                                  </button>
-                                )}
-
-                                {availableInventory.map((inv) => {
-                                  const isSelected = linkedInventoryItemId === inv.id;
-                                  return (
-                                    <button
-                                      key={inv.id}
-                                      type="button"
-                                      data-testid={`inventory-option-${inv.id}`}
-                                      className={cn(
-                                        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors text-left",
-                                        isSelected
-                                          ? "bg-accent text-accent-foreground"
-                                          : "hover:bg-accent hover:text-accent-foreground"
-                                      )}
-                                      onClick={() => {
-                                        handleLinkInventory(inv.id);
-                                        setLinkPickerOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "h-3.5 w-3.5 mr-2",
-                                          isSelected ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="text-sm truncate">{inv.name}</div>
-                                        <div className="text-[11px] text-muted-foreground truncate">
-                                          {inv.sku} · stock {inv.stock}
-                                        </div>
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {itemType === "simple" &&
+              (() => {
+                const linked = linkedInventoryItemId
+                  ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
+                  : null;
+                const isLinked = !!linked;
+                return (
+                  <FormGroup
+                    title="Inventory"
+                    hint={
+                      isLinked ? "Linked — synced from inventory" : undefined
+                    }
+                  >
                     <div>
-                      <Label className="text-xs flex items-center gap-1.5">
-                        Barcode / SKU
-                        {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                      <Label className="text-xs">
+                        Link to existing inventory item{" "}
+                        <span className="text-muted-foreground font-normal">
+                          (optional)
+                        </span>
                       </Label>
-                      {isLinked ? (
-                        <Input className="mt-1 h-9 text-sm bg-muted/50" value={sku} readOnly disabled />
-                      ) : (
-                        <div className="mt-1">
-                          <BarcodeScanner value={sku} onChange={setSku} placeholder="Scan or enter barcode" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <Label className="text-xs flex items-center gap-1.5">
-                        Quantity in stock
-                        {isLinked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                      </Label>
-                      <Input
-                        className={cn("mt-1 h-9 text-sm", isLinked && "bg-muted/50")}
-                        type="number"
-                        min="0"
-                        data-testid="quantity-input"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        placeholder="0"
-                        readOnly={isLinked}
-                        disabled={isLinked}
+                      <InventoryItemPicker
+                        selectedId={linkedInventoryItemId}
+                        onSelect={(id) => {
+                          if (id) {
+                            handleLinkInventory(id);
+                          } else {
+                            setLinkedInventoryItemId("");
+                          }
+                        }}
+                        outletId={selectedOutletIds.length === 1 ? selectedOutletIds[0] : undefined}
+                        placeholder="Search by name or SKU..."
+                        triggerPlaceholder="Search inventory..."
+                        triggerClassName="h-9 text-sm mt-1"
+                        data-testid="link-inventory-trigger"
                       />
                     </div>
-                  </div>
 
-                  {!isLinked && (
-                    <div className="flex items-start gap-3 rounded-md bg-muted/40 px-3 py-2">
-                      <Switch
-                        id="add-to-inventory"
-                        checked={addToInventory}
-                        onCheckedChange={setAddToInventory}
-                        className="mt-0.5"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <Label htmlFor="add-to-inventory" className="text-xs cursor-pointer">
-                          Also add this item to Inventory
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs flex items-center gap-1.5">
+                          Barcode / SKU
+                          {isLinked && (
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                          )}
                         </Label>
-                        <p className="text-[11px] text-muted-foreground leading-snug">
-                          Creates a matching inventory record so stock deducts automatically when sold.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </FormGroup>
-              );
-            })()}
-
-            {/* COMPOSITION — Composite items only (shown before Pricing) */}
-            {itemType === "composite" && (() => {
-              // Per-component unit options: base unit + every conversion target.
-              const getCompUnitOptions = (itemId: string) => {
-                const item = inventoryItems.find((i) => i.id === itemId);
-                if (!item) return [] as { id: string; label: string; baseUnitsPer: number }[];
-                const baseUnit = defaultMeasuringUnits.find((u) => u.id === item.unitId);
-                const opts: { id: string; label: string; baseUnitsPer: number }[] = [
-                  {
-                    id: item.unitId,
-                    label: baseUnit ? `${baseUnit.name} (${baseUnit.abbreviation})` : "Base unit",
-                    baseUnitsPer: 1,
-                  },
-                ];
-                (item.conversions || []).forEach((c) => {
-                  if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0) return;
-                  const u = defaultMeasuringUnits.find((x) => x.id === c.toUnitId);
-                  opts.push({
-                    id: c.toUnitId,
-                    label: u ? `${u.name} (${u.abbreviation})` : c.toUnitId,
-                    baseUnitsPer: c.fromQuantity / c.toQuantity,
-                  });
-                });
-                return opts;
-              };
-              const getCompUnitCost = (g: MenuIngredient) => {
-                const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                if (!item) return 0;
-                const baseCost = item.costPrice ?? 0;
-                if (!g.unitId || g.unitId === item.unitId) return baseCost;
-                const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
-                return baseCost * (opt?.baseUnitsPer ?? 1);
-              };
-              const getCompBaseConsumed = (g: MenuIngredient) => {
-                const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                if (!item) return 0;
-                let baseUnitsPer = 1;
-                if (g.unitId && g.unitId !== item.unitId) {
-                  const opt = getCompUnitOptions(g.inventoryItemId).find((o) => o.id === g.unitId);
-                  baseUnitsPer = opt?.baseUnitsPer ?? 1;
-                }
-                return (g.quantity || 0) * baseUnitsPer;
-              };
-              const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
-              const totalMaterialCost = validIngredients.reduce(
-                (s, g) => s + getCompUnitCost(g) * (g.quantity || 0),
-                0
-              );
-              let sellableQty = Infinity;
-              let limitingId: string | undefined;
-              for (const g of validIngredients) {
-                const consumed = getCompBaseConsumed(g);
-                if (consumed <= 0) continue;
-                const item = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                const stock = item?.stock ?? 0;
-                const possible = Math.floor(stock / consumed);
-                if (possible < sellableQty) { sellableQty = possible; limitingId = g.inventoryItemId; }
-              }
-              const hasComponents = sellableQty !== Infinity;
-              const producible = hasComponents ? sellableQty : 0;
-              const limitingName = limitingId ? inventoryItems.find((i) => i.id === limitingId)?.name : "";
-
-              return (
-                <FormGroup>
-                  <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        Composition
-                      </h3>
-                      <TooltipProvider delayDuration={150}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button type="button" className="text-muted-foreground hover:text-foreground transition-colors">
-                              <Info className="h-3.5 w-3.5" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
-                            Composition lists the inventory items (ingredients/raw materials) used to make this item. Each sale automatically deducts the configured quantity from stock, calculates the material cost, and shows how many units you can still produce from current stock.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <span className="text-[11px] text-muted-foreground">Inventory consumed per sale</span>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIngredients((prev) => [...prev, { inventoryItemId: "", quantity: 1, role: "primary" }])}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
-                    </Button>
-                  </div>
-
-                  {ingredients.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
-                      No ingredients yet. Add inventory items that make up this dish.
-                    </p>
-                  )}
-
-                  <div className="space-y-2">
-                    {ingredients.map((g, idx) => {
-                      const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                      const unitOptions = g.inventoryItemId ? getCompUnitOptions(g.inventoryItemId) : [];
-                      const activeUnitId = g.unitId || inv?.unitId || "";
-                      const unitCost = getCompUnitCost(g);
-                      const lineCost = unitCost * (g.quantity || 0);
-                      return (
-                        <div key={idx} className="space-y-2 p-2.5 border rounded-md">
-                          <div className="flex items-center gap-2">
-                            <Popover open={ingredientPickerOpenIdx === idx} onOpenChange={(o) => setIngredientPickerOpenIdx(o ? idx : null)}>
-                              <PopoverTrigger asChild>
-                                <Button type="button" variant="outline" role="combobox" className="justify-between font-normal h-9 text-sm flex-1">
-                                  {inv ? (
-                                    <span className="truncate">{inv.name}</span>
-                                  ) : (
-                                    <span className="text-muted-foreground">Select inventory item...</span>
-                                  )}
-                                  <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                                <Command shouldFilter={false}>
-                                  <CommandInput
-                                    placeholder="Search inventory..."
-                                    className="h-9"
-                                    value={inventorySearch}
-                                    onValueChange={setInventorySearch}
-                                  />
-                                  <CommandList>
-                                    <CommandEmpty>No items found.</CommandEmpty>
-                                    <CommandGroup>
-                                      {availableInventory.map((it) => (
-                                        <CommandItem
-                                          key={it.id}
-                                          value={`${it.name} ${it.sku}`}
-                                          onSelect={() => {
-                                            // Reset unit when item changes so we don't carry stale unitId
-                                            setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, inventoryItemId: it.id, unitId: undefined } : p));
-                                            setIngredientPickerOpenIdx(null);
-                                          }}
-                                        >
-                                          <Check className={cn("h-3.5 w-3.5 mr-2", g.inventoryItemId === it.id ? "opacity-100" : "opacity-0")} />
-                                          <div className="flex-1 min-w-0">
-                                            <div className="text-sm truncate">{it.name}</div>
-                                            <div className="text-[11px] text-muted-foreground truncate">{it.sku}</div>
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                            <button
-                              type="button"
-                              onClick={() => setIngredients((prev) => prev.filter((_, i) => i !== idx))}
-                              className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
-                              aria-label="Remove ingredient"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={g.quantity || ""}
-                              onChange={(e) => {
-                                const v = parseFloat(e.target.value) || 0;
-                                setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, quantity: v } : p));
-                              }}
-                              placeholder="Qty"
-                              className="h-9 text-sm w-20"
+                        {isLinked ? (
+                          <Input
+                            className="mt-1 h-9 text-sm bg-muted/50"
+                            value={sku}
+                            readOnly
+                            disabled
+                          />
+                        ) : (
+                          <div className="mt-1">
+                            <BarcodeScanner
+                              value={sku}
+                              onChange={setSku}
+                              placeholder="Scan or enter barcode"
                             />
-                            {g.inventoryItemId && unitOptions.length > 0 && (
-                              <Select
-                                value={activeUnitId}
-                                onValueChange={(v) => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, unitId: v } : p))}
-                              >
-                                <SelectTrigger className="h-9 w-36">
-                                  <SelectValue placeholder="Unit" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {unitOptions.map((opt) => (
-                                    <SelectItem key={opt.id} value={opt.id}>{opt.label}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-                            {g.inventoryItemId && (
-                              <span className="text-[11px] text-muted-foreground tabular-nums ml-auto">
-                                @ {formatNaira(unitCost)} = <span className="font-medium text-foreground">{formatNaira(lineCost)}</span>
-                              </span>
-                            )}
-                          </div>
-                          {g.inventoryItemId && (
-                            <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1">
-                                <span className="text-[11px] text-muted-foreground">Role</span>
-                                <TooltipProvider delayDuration={150}>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button type="button" className="text-muted-foreground/70 hover:text-foreground" aria-label="What does role mean?">
-                                        <Info className="h-3 w-3" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
-                                      <p className="font-medium mb-1">Primary vs Secondary</p>
-                                      <p><span className="font-medium">Primary</span>: a core ingredient that defines the dish (e.g. the protein or main carb). Used to determine producible quantity.</p>
-                                      <p className="mt-1"><span className="font-medium">Secondary</span>: a supporting ingredient (e.g. seasoning, garnish) that contributes to cost but isn't the main driver of yield.</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button
-                                  type="button"
-                                  variant={(g.role ?? "primary") === "primary" ? "default" : "outline"}
-                                  size="sm"
-                                  className="h-7 text-xs px-2.5"
-                                  onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "primary" } : p))}
-                                >
-                                  Primary
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant={g.role === "secondary" ? "secondary" : "outline"}
-                                  size="sm"
-                                  className="h-7 text-xs px-2.5"
-                                  onClick={() => setIngredients((prev) => prev.map((p, i) => i === idx ? { ...p, role: "secondary" } : p))}
-                                >
-                                  Secondary
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                          {g.inventoryItemId && (
-                            <ComponentSubstituteEditor
-                              originalItemId={g.inventoryItemId}
-                              config={g}
-                              onChange={(next) =>
-                                setIngredients((prev) =>
-                                  prev.map((p, i) => (i === idx ? { ...p, ...next } : p))
-                                )
-                              }
-                              inventoryItems={inventoryItems}
-                              groups={subGroups}
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {validIngredients.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <div className="rounded-md border bg-muted/30 p-2.5">
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Material Cost</div>
-                        <div className="text-sm font-semibold tabular-nums mt-0.5">{formatNaira(totalMaterialCost)}</div>
-                      </div>
-                      <div className={cn(
-                        "rounded-md border p-2.5",
-                        !hasComponents ? "bg-muted/30" :
-                          producible === 0 ? "border-destructive/40 bg-destructive/5" :
-                            producible < 5 ? "border-warning/40 bg-warning/5" :
-                              "border-success/40 bg-success/5"
-                      )}>
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Sellable Qty</div>
-                        <div className={cn(
-                          "text-sm font-semibold tabular-nums mt-0.5",
-                          hasComponents && producible === 0 && "text-destructive"
-                        )}>
-                          {hasComponents ? `${producible} units` : "—"}
-                        </div>
-                        {limitingName && hasComponents && (
-                          <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                            Limited by <span className="font-medium text-foreground">{limitingName}</span>
                           </div>
                         )}
                       </div>
+                      <div>
+                        <Label className="text-xs flex items-center gap-1.5">
+                          Quantity in stock
+                          {isLinked && (
+                            <Lock className="h-3 w-3 text-muted-foreground" />
+                          )}
+                        </Label>
+                        <NumericInput
+                          className={cn(
+                            "mt-1 h-9 text-sm",
+                            isLinked && "bg-muted/50",
+                          )}
+                          min={0}
+                          precision={0}
+                          step={1}
+                          data-testid="quantity-input"
+                          value={quantity}
+                          onChange={(_, valStr) => setQuantity(valStr)}
+                          placeholder="0"
+                          readOnly={isLinked}
+                          disabled={isLinked}
+                        />
+                      </div>
                     </div>
-                  )}
-                </FormGroup>
-              );
-            })()}
+
+                    {!isLinked && (
+                      <div className="flex items-start gap-3 rounded-md bg-muted/40 px-3 py-2">
+                        <Switch
+                          id="add-to-inventory"
+                          checked={addToInventory}
+                          onCheckedChange={setAddToInventory}
+                          className="mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <Label
+                            htmlFor="add-to-inventory"
+                            className="text-xs cursor-pointer"
+                          >
+                            Also add this item to Inventory
+                          </Label>
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            Creates a matching inventory record so stock deducts
+                            automatically when sold.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </FormGroup>
+                );
+              })()}
+
+            {/* COMPOSITION — Composite items only (shown before Pricing) */}
+            {itemType === "composite" &&
+              (() => {
+                // Per-component unit options: base unit + every conversion target.
+                const getCompUnitOptions = (itemId: string) => {
+                  const item = inventoryItems.find((i) => i.id === itemId);
+                  if (!item)
+                    return [] as {
+                      id: string;
+                      label: string;
+                      baseUnitsPer: number;
+                    }[];
+                  const baseUnit = defaultMeasuringUnits.find(
+                    (u) => u.id === item.unitId,
+                  );
+                  const opts: {
+                    id: string;
+                    label: string;
+                    baseUnitsPer: number;
+                  }[] = [
+                    {
+                      id: item.unitId,
+                      label: baseUnit
+                        ? `${baseUnit.name} (${baseUnit.abbreviation})`
+                        : "Base unit",
+                      baseUnitsPer: 1,
+                    },
+                  ];
+                  (item.conversions || []).forEach((c) => {
+                    if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0)
+                      return;
+                    const u = defaultMeasuringUnits.find(
+                      (x) => x.id === c.toUnitId,
+                    );
+                    opts.push({
+                      id: c.toUnitId,
+                      label: u ? `${u.name} (${u.abbreviation})` : c.toUnitId,
+                      baseUnitsPer: c.fromQuantity / c.toQuantity,
+                    });
+                  });
+                  return opts;
+                };
+                const getCompUnitCost = (g: MenuIngredient) => {
+                  const item = inventoryItems.find(
+                    (i) => i.id === g.inventoryItemId,
+                  );
+                  if (!item) return 0;
+                  const baseCost = item.costPrice ?? 0;
+                  if (!g.unitId || g.unitId === item.unitId) return baseCost;
+                  const opt = getCompUnitOptions(g.inventoryItemId).find(
+                    (o) => o.id === g.unitId,
+                  );
+                  return baseCost * (opt?.baseUnitsPer ?? 1);
+                };
+                const getCompBaseConsumed = (g: MenuIngredient) => {
+                  const item = inventoryItems.find(
+                    (i) => i.id === g.inventoryItemId,
+                  );
+                  if (!item) return 0;
+                  let baseUnitsPer = 1;
+                  if (g.unitId && g.unitId !== item.unitId) {
+                    const opt = getCompUnitOptions(g.inventoryItemId).find(
+                      (o) => o.id === g.unitId,
+                    );
+                    baseUnitsPer = opt?.baseUnitsPer ?? 1;
+                  }
+                  return (g.quantity || 0) * baseUnitsPer;
+                };
+                const validIngredients = ingredients.filter(
+                  (g) => g.inventoryItemId && g.quantity > 0,
+                );
+                const totalMaterialCost = validIngredients.reduce(
+                  (s, g) => s + getCompUnitCost(g) * (g.quantity || 0),
+                  0,
+                );
+                let sellableQty = Infinity;
+                let limitingId: string | undefined;
+                for (const g of validIngredients) {
+                  const consumed = getCompBaseConsumed(g);
+                  if (consumed <= 0) continue;
+                  const item = inventoryItems.find(
+                    (i) => i.id === g.inventoryItemId,
+                  );
+                  const stock = item?.stock ?? 0;
+                  const possible = Math.floor(stock / consumed);
+                  if (possible < sellableQty) {
+                    sellableQty = possible;
+                    limitingId = g.inventoryItemId;
+                  }
+                }
+                const hasComponents = sellableQty !== Infinity;
+                const producible = hasComponents ? sellableQty : 0;
+                const limitingName = limitingId
+                  ? inventoryItems.find((i) => i.id === limitingId)?.name
+                  : "";
+
+                return (
+                  <FormGroup>
+                    <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          Composition
+                        </h3>
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              className="max-w-[280px] text-xs leading-relaxed"
+                            >
+                              Composition lists the inventory items
+                              (ingredients/raw materials) used to make this
+                              item. Each sale automatically deducts the
+                              configured quantity from stock, calculates the
+                              material cost, and shows how many units you can
+                              still produce from current stock.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">
+                        Inventory consumed per sale
+                      </span>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setIngredients((prev) => [
+                            ...prev,
+                            {
+                              inventoryItemId: "",
+                              quantity: 1,
+                              role: "primary",
+                            },
+                          ])
+                        }
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Add Ingredient
+                      </Button>
+                    </div>
+
+                    {ingredients.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-4 border border-dashed border-border rounded-md">
+                        No ingredients yet. Add inventory items that make up
+                        this dish.
+                      </p>
+                    )}
+
+                    <div className="space-y-2">
+                      {ingredients.map((g, idx) => {
+                        const inv = inventoryItems.find(
+                          (i) => i.id === g.inventoryItemId,
+                        );
+                        const unitOptions = g.inventoryItemId
+                          ? getCompUnitOptions(g.inventoryItemId)
+                          : [];
+                        const activeUnitId = g.unitId || inv?.unitId || "";
+                        const unitCost = getCompUnitCost(g);
+                        const lineCost = unitCost * (g.quantity || 0);
+                        return (
+                          <div
+                            key={idx}
+                            className="space-y-2 p-2.5 border rounded-md"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Popover
+                                open={ingredientPickerOpenIdx === idx}
+                                onOpenChange={(o) =>
+                                  setIngredientPickerOpenIdx(o ? idx : null)
+                                }
+                              >
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    role="combobox"
+                                    className="justify-between font-normal h-9 text-sm flex-1"
+                                  >
+                                    {inv ? (
+                                      <span className="truncate">
+                                        {inv.name}
+                                      </span>
+                                    ) : (
+                                      <span className="text-muted-foreground">
+                                        Select inventory item...
+                                      </span>
+                                    )}
+                                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                  className="w-[--radix-popover-trigger-width] p-0"
+                                  align="start"
+                                >
+                                  <Command shouldFilter={false}>
+                                    <CommandInput
+                                      placeholder="Search inventory..."
+                                      className="h-9"
+                                      value={inventorySearch}
+                                      onValueChange={setInventorySearch}
+                                    />
+                                    <CommandList>
+                                      <CommandEmpty>
+                                        No items found.
+                                      </CommandEmpty>
+                                      <CommandGroup>
+                                        {availableInventory.map((it) => (
+                                          <CommandItem
+                                            key={it.id}
+                                            value={`${it.name} ${it.sku}`}
+                                            onSelect={() => {
+                                              // Reset unit when item changes so we don't carry stale unitId
+                                              setIngredients((prev) =>
+                                                prev.map((p, i) =>
+                                                  i === idx
+                                                    ? {
+                                                        ...p,
+                                                        inventoryItemId: it.id,
+                                                        unitId: undefined,
+                                                      }
+                                                    : p,
+                                                ),
+                                              );
+                                              setIngredientPickerOpenIdx(null);
+                                            }}
+                                          >
+                                            <Check
+                                              className={cn(
+                                                "h-3.5 w-3.5 mr-2",
+                                                g.inventoryItemId === it.id
+                                                  ? "opacity-100"
+                                                  : "opacity-0",
+                                              )}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                              <div className="text-sm truncate">
+                                                {it.name}
+                                              </div>
+                                              <div className="text-[11px] text-muted-foreground truncate">
+                                                {it.sku}
+                                              </div>
+                                            </div>
+                                          </CommandItem>
+                                        ))}
+                                      </CommandGroup>
+                                    </CommandList>
+                                  </Command>
+                                </PopoverContent>
+                              </Popover>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setIngredients((prev) =>
+                                    prev.filter((_, i) => i !== idx),
+                                  )
+                                }
+                                className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0"
+                                aria-label="Remove ingredient"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <NumericInput
+                                min={0}
+                                step={0.01}
+                                precision={2}
+                                value={g.quantity || 0}
+                                onChange={(val) => {
+                                  const v = val || 0;
+                                  setIngredients((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx ? { ...p, quantity: v } : p,
+                                    ),
+                                  );
+                                }}
+                                placeholder="Qty"
+                                className="h-9 text-sm w-20"
+                              />
+                              {g.inventoryItemId && unitOptions.length > 0 && (
+                                <Select
+                                  value={activeUnitId}
+                                  onValueChange={(v) =>
+                                    setIngredients((prev) =>
+                                      prev.map((p, i) =>
+                                        i === idx ? { ...p, unitId: v } : p,
+                                      ),
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger className="h-9 w-36">
+                                    <SelectValue placeholder="Unit" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {unitOptions.map((opt) => (
+                                      <SelectItem key={opt.id} value={opt.id}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              {g.inventoryItemId && (
+                                <span className="text-[11px] text-muted-foreground tabular-nums ml-auto">
+                                  @ {formatNaira(unitCost)} ={" "}
+                                  <span className="font-medium text-foreground">
+                                    {formatNaira(lineCost)}
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+                            {g.inventoryItemId && (
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[11px] text-muted-foreground">
+                                    Role
+                                  </span>
+                                  <TooltipProvider delayDuration={150}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type="button"
+                                          className="text-muted-foreground/70 hover:text-foreground"
+                                          aria-label="What does role mean?"
+                                        >
+                                          <Info className="h-3 w-3" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent
+                                        side="top"
+                                        className="max-w-[260px] text-xs leading-relaxed"
+                                      >
+                                        <p className="font-medium mb-1">
+                                          Primary vs Secondary
+                                        </p>
+                                        <p>
+                                          <span className="font-medium">
+                                            Primary
+                                          </span>
+                                          : a core ingredient that defines the
+                                          dish (e.g. the protein or main carb).
+                                          Used to determine producible quantity.
+                                        </p>
+                                        <p className="mt-1">
+                                          <span className="font-medium">
+                                            Secondary
+                                          </span>
+                                          : a supporting ingredient (e.g.
+                                          seasoning, garnish) that contributes
+                                          to cost but isn't the main driver of
+                                          yield.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      (g.role ?? "primary") === "primary"
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    size="sm"
+                                    className="h-7 text-xs px-2.5"
+                                    onClick={() =>
+                                      setIngredients((prev) =>
+                                        prev.map((p, i) =>
+                                          i === idx
+                                            ? { ...p, role: "primary" }
+                                            : p,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    Primary
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      g.role === "secondary"
+                                        ? "secondary"
+                                        : "outline"
+                                    }
+                                    size="sm"
+                                    className="h-7 text-xs px-2.5"
+                                    onClick={() =>
+                                      setIngredients((prev) =>
+                                        prev.map((p, i) =>
+                                          i === idx
+                                            ? { ...p, role: "secondary" }
+                                            : p,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    Secondary
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                            {g.inventoryItemId && (
+                              <ComponentSubstituteEditor
+                                originalItemId={g.inventoryItemId}
+                                config={g}
+                                onChange={(next) =>
+                                  setIngredients((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx ? { ...p, ...next } : p,
+                                    ),
+                                  )
+                                }
+                                inventoryItems={inventoryItems}
+                                groups={subGroups}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {validIngredients.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div className="rounded-md border bg-muted/30 p-2.5">
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            Material Cost
+                          </div>
+                          <div className="text-sm font-semibold tabular-nums mt-0.5">
+                            {formatNaira(totalMaterialCost)}
+                          </div>
+                        </div>
+                        <div
+                          className={cn(
+                            "rounded-md border p-2.5",
+                            !hasComponents
+                              ? "bg-muted/30"
+                              : producible === 0
+                                ? "border-destructive/40 bg-destructive/5"
+                                : producible < 5
+                                  ? "border-warning/40 bg-warning/5"
+                                  : "border-success/40 bg-success/5",
+                          )}
+                        >
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            Sellable Qty
+                          </div>
+                          <div
+                            className={cn(
+                              "text-sm font-semibold tabular-nums mt-0.5",
+                              hasComponents &&
+                                producible === 0 &&
+                                "text-destructive",
+                            )}
+                          >
+                            {hasComponents ? `${producible} units` : "—"}
+                          </div>
+                          {limitingName && hasComponents && (
+                            <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                              Limited by{" "}
+                              <span className="font-medium text-foreground">
+                                {limitingName}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </FormGroup>
+                );
+              })()}
 
             {/* PRICING */}
             <FormGroup title="Pricing">
               {(() => {
-                const strategyOptions = itemType === "service"
-                  ? ([
-                    { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
-                    { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
-                  ] as const)
-                  : ([
-                    { id: "base", label: "Base Price", desc: "One fixed price", icon: Tag },
-                    { id: "variant", label: "Variants", desc: "Sizes or options", icon: Layers },
-                    { id: "open", label: "Open Price", desc: "Set at checkout", icon: KeyRound },
-                  ] as const);
+                const strategyOptions =
+                  itemType === "service"
+                    ? ([
+                        {
+                          id: "base",
+                          label: "Base Price",
+                          desc: "One fixed price",
+                          icon: Tag,
+                        },
+                        {
+                          id: "open",
+                          label: "Open Price",
+                          desc: "Set at checkout",
+                          icon: KeyRound,
+                        },
+                      ] as const)
+                    : ([
+                        {
+                          id: "base",
+                          label: "Base Price",
+                          desc: "One fixed price",
+                          icon: Tag,
+                        },
+                        {
+                          id: "variant",
+                          label: "Variants",
+                          desc: "Sizes or options",
+                          icon: Layers,
+                        },
+                        {
+                          id: "open",
+                          label: "Open Price",
+                          desc: "Set at checkout",
+                          icon: KeyRound,
+                        },
+                      ] as const);
                 return (
                   <>
-                    <div className={cn("grid gap-2", itemType === "service" ? "grid-cols-2" : "grid-cols-3")}>
+                    <div
+                      className={cn(
+                        "grid gap-2",
+                        itemType === "service" ? "grid-cols-2" : "grid-cols-3",
+                      )}
+                    >
                       {strategyOptions.map((opt) => {
                         const Icon = opt.icon;
                         const active = pricingStrategy === opt.id;
@@ -1493,7 +2130,10 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                 setSalePeriodStart(null);
                                 setSalePeriodEnd(null);
                               }
-                              if (opt.id === "variant" && variants.length === 0) {
+                              if (
+                                opt.id === "variant" &&
+                                variants.length === 0
+                              ) {
                                 addVariant();
                               }
                               if (opt.id !== "variant") {
@@ -1511,366 +2151,587 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                               <Icon className="h-3.5 w-3.5" />
                               <span>{opt.label}</span>
                             </div>
-                            <span className={cn("text-[10px] leading-tight", active ? "text-primary/80" : "text-muted-foreground/80")}>{opt.desc}</span>
+                            <span
+                              className={cn(
+                                "text-[10px] leading-tight",
+                                active
+                                  ? "text-primary/80"
+                                  : "text-muted-foreground/80",
+                              )}
+                            >
+                              {opt.desc}
+                            </span>
                           </button>
                         );
                       })}
                     </div>
 
-                    {pricingStrategy === "base" && (() => {
-                      const isSimple = itemType === "simple";
-                      const linkedInv = isSimple && linkedInventoryItemId
-                        ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
-                        : null;
+                    {pricingStrategy === "base" &&
+                      (() => {
+                        const isSimple = itemType === "simple";
+                        const linkedInv =
+                          isSimple && linkedInventoryItemId
+                            ? inventoryItems.find(
+                                (i) => i.id === linkedInventoryItemId,
+                              )
+                            : null;
 
-                      // LINKED → read-only summary sourced from inventory record
-                      if (linkedInv) {
-                        const cost = linkedInv.costPrice ?? 0;
-                        const sell = linkedInv.sellPrice ?? (parseFloat(price) || 0);
-                        const profit = sell - cost;
-                        const markupPct = cost > 0 ? (profit / cost) * 100 : 0;
-                        const methodLabel =
-                          linkedInv.pricingMethod === "margin" ? "Margin"
-                            : linkedInv.pricingMethod === "fixed" ? "Fixed"
-                              : "Markup";
-                        return (
-                          <div className="space-y-2">
-                            <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-                              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                                <Lock className="h-3 w-3" /> Synced from inventory
-                              </div>
-                              <div className="grid grid-cols-3 gap-3 text-sm">
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Cost / unit</p>
-                                  <p className="font-medium tabular-nums">₦{cost.toFixed(2)}</p>
+                        // LINKED → read-only summary sourced from inventory record
+                        if (linkedInv) {
+                          const cost = linkedInv.costPrice ?? 0;
+                          const sell =
+                            linkedInv.sellPrice ?? (parseFloat(price) || 0);
+                          const profit = sell - cost;
+                          const markupPct =
+                            cost > 0 ? (profit / cost) * 100 : 0;
+                          const methodLabel =
+                            linkedInv.pricingMethod === "margin"
+                              ? "Margin"
+                              : linkedInv.pricingMethod === "fixed"
+                                ? "Fixed"
+                                : "Markup";
+                          return (
+                            <div className="space-y-2">
+                              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                                  <Lock className="h-3 w-3" /> Synced from
+                                  inventory
                                 </div>
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{methodLabel}{linkedInv.pricingMethod !== "fixed" ? " %" : ""}</p>
-                                  <p className="font-medium tabular-nums">
-                                    {linkedInv.pricingValue != null
-                                      ? (linkedInv.pricingMethod === "fixed"
-                                        ? `₦${Number(linkedInv.pricingValue).toFixed(2)}`
-                                        : `${Number(linkedInv.pricingValue).toFixed(1)}%`)
-                                      : `${markupPct.toFixed(1)}%`}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell Price</p>
-                                  <div className="flex items-center gap-1">
-                                    {isLinkedSellPriceEditable ? (
-                                      <>
-                                        <span className="font-medium tabular-nums text-primary">₦</span>
-                                        <Input
-                                          type="number"
-                                          min="0"
-                                          step="0.01"
-                                          autoFocus
-                                          value={price}
-                                          onChange={(e) => setPrice(e.target.value)}
-                                          onBlur={() => setIsLinkedSellPriceEditable(false)}
-                                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setIsLinkedSellPriceEditable(false); }}
-                                          className="h-auto border-0 bg-transparent p-0 font-medium tabular-nums text-primary text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                                          aria-label="Sell price"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={() => setIsLinkedSellPriceEditable(false)}
-                                          className="text-primary hover:text-primary/80 transition-colors"
-                                          aria-label="Done editing sell price"
-                                        >
-                                          <CheckIcon className="h-3.5 w-3.5" />
-                                        </button>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <p className="font-medium tabular-nums text-primary">₦{sell.toFixed(2)}</p>
-                                        <button
-                                          type="button"
-                                          onClick={() => setIsLinkedSellPriceEditable(true)}
-                                          className="text-muted-foreground hover:text-primary transition-colors"
-                                          aria-label="Edit sell price"
-                                          title="Edit sell price"
-                                        >
-                                          <Pencil className="h-3 w-3" />
-                                        </button>
-                                      </>
-                                    )}
+                                <div className="grid grid-cols-3 gap-3 text-sm">
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      Cost / unit
+                                    </p>
+                                    <p className="font-medium tabular-nums">
+                                      ₦{cost.toFixed(2)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      {methodLabel}
+                                      {linkedInv.pricingMethod !== "fixed"
+                                        ? " %"
+                                        : ""}
+                                    </p>
+                                    <p className="font-medium tabular-nums">
+                                      {linkedInv.pricingValue != null
+                                        ? linkedInv.pricingMethod === "fixed"
+                                          ? `₦${Number(linkedInv.pricingValue).toFixed(2)}`
+                                          : `${Number(linkedInv.pricingValue).toFixed(1)}%`
+                                        : `${markupPct.toFixed(1)}%`}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                      Sell Price
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                      {isLinkedSellPriceEditable ? (
+                                        <>
+                                          <span className="font-medium tabular-nums text-primary">
+                                            ₦
+                                          </span>
+                                          <NumericInput
+                                            min={0}
+                                            step={0.01}
+                                            precision={2}
+                                            autoFocus
+                                            value={price}
+                                            onChange={(_, valStr) =>
+                                              setPrice(valStr)
+                                            }
+                                            onBlur={() =>
+                                              setIsLinkedSellPriceEditable(
+                                                false,
+                                              )
+                                            }
+                                            onKeyDown={(e) => {
+                                              if (
+                                                e.key === "Enter" ||
+                                                e.key === "Escape"
+                                              )
+                                                setIsLinkedSellPriceEditable(
+                                                  false,
+                                                );
+                                            }}
+                                            className="h-auto border-0 bg-transparent p-0 font-medium tabular-nums text-primary text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                                            aria-label="Sell price"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setIsLinkedSellPriceEditable(
+                                                false,
+                                              )
+                                            }
+                                            className="text-primary hover:text-primary/80 transition-colors"
+                                            aria-label="Done editing sell price"
+                                          >
+                                            <CheckIcon className="h-3.5 w-3.5" />
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <p className="font-medium tabular-nums text-primary">
+                                            ₦{sell.toFixed(2)}
+                                          </p>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setIsLinkedSellPriceEditable(true)
+                                            }
+                                            className="text-muted-foreground hover:text-primary transition-colors"
+                                            aria-label="Edit sell price"
+                                            title="Edit sell price"
+                                          >
+                                            <Pencil className="h-3 w-3" />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
+                                {cost > 0 && sell > 0 && (
+                                  <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-border/60">
+                                    <TrendingUp
+                                      className={cn(
+                                        "h-3.5 w-3.5",
+                                        profit >= 0
+                                          ? "text-success"
+                                          : "text-destructive",
+                                      )}
+                                    />
+                                    <span
+                                      className={cn(
+                                        "font-medium",
+                                        profit >= 0
+                                          ? "text-success"
+                                          : "text-destructive",
+                                      )}
+                                    >
+                                      ₦{profit.toFixed(2)}/unit profit
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      ({markupPct.toFixed(1)}% markup)
+                                    </span>
+                                  </div>
+                                )}
                               </div>
+                            </div>
+                          );
+                        }
+
+                        // SIMPLE (not linked) → editable cost + sell price & markup
+                        if (isSimple) {
+                          const cost = parseFloat(costPrice) || 0;
+                          const sell = parseFloat(price) || 0;
+                          const profit = sell - cost;
+                          return (
+                            <div className="space-y-3">
+                              <div>
+                                <Label
+                                  htmlFor="item-cost-nv"
+                                  className="text-xs"
+                                >
+                                  Cost Price / unit
+                                </Label>
+                                <NumericInput
+                                  id="item-cost-nv"
+                                  className="mt-1 h-9"
+                                  min={0}
+                                  step={0.01}
+                                  precision={2}
+                                  value={costPrice}
+                                  onChange={(_, valStr) => {
+                                    setCostPrice(valStr);
+                                    const cpNum = parseFloat(valStr) || 0;
+                                    const valNum =
+                                      parseFloat(menuPricingValue) || 0;
+                                    if (cpNum > 0) {
+                                      const newSell =
+                                        Math.round(
+                                          calcMenuSellPrice(
+                                            cpNum,
+                                            menuPricingMethod,
+                                            valNum,
+                                          ) * 100,
+                                        ) / 100;
+                                      setPrice(String(newSell));
+                                    }
+                                  }}
+                                  placeholder="0.00"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-1">
+                                  Optional — enables markup-based sell pricing.
+                                </p>
+                              </div>
+
+                              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    Pricing
+                                  </label>
+                                  <Select
+                                    value={menuPricingMethod}
+                                    onValueChange={(v) => {
+                                      const method = v as PricingMethod;
+                                      setMenuPricingMethod(method);
+                                      const cpNum = parseFloat(costPrice) || 0;
+                                      const valNum =
+                                        parseFloat(menuPricingValue) || 0;
+                                      if (cpNum > 0) {
+                                        const newSell =
+                                          Math.round(
+                                            calcMenuSellPrice(
+                                              cpNum,
+                                              method,
+                                              valNum,
+                                            ) * 100,
+                                          ) / 100;
+                                        setPrice(String(newSell));
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="markup">
+                                        Markup %
+                                      </SelectItem>
+                                      <SelectItem value="margin">
+                                        Margin %
+                                      </SelectItem>
+                                      <SelectItem value="fixed">
+                                        Fixed Price
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    {menuPricingMethod === "fixed"
+                                      ? "Price"
+                                      : "%"}
+                                  </label>
+                                  <NumericInput
+                                    min={0}
+                                    step={0.01}
+                                    precision={2}
+                                    className="h-9"
+                                    value={menuPricingValue}
+                                    onChange={(_, valStr) => {
+                                      setMenuPricingValue(valStr);
+                                      const cpNum = parseFloat(costPrice) || 0;
+                                      const valNum = parseFloat(valStr) || 0;
+                                      if (cpNum > 0) {
+                                        const newSell =
+                                          Math.round(
+                                            calcMenuSellPrice(
+                                              cpNum,
+                                              menuPricingMethod,
+                                              valNum,
+                                            ) * 100,
+                                          ) / 100;
+                                        setPrice(String(newSell));
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    Sell Price (₦) *
+                                  </label>
+                                  <NumericInput
+                                    min={0}
+                                    step={0.01}
+                                    precision={2}
+                                    className="h-9"
+                                    data-testid="sell-price-input"
+                                    value={price}
+                                    onChange={(_, valStr) => setPrice(valStr)}
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+
                               {cost > 0 && sell > 0 && (
-                                <div className="flex items-center gap-1.5 text-xs pt-1 border-t border-border/60">
-                                  <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
-                                  <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <TrendingUp
+                                    className={cn(
+                                      "h-3.5 w-3.5",
+                                      profit >= 0
+                                        ? "text-success"
+                                        : "text-destructive",
+                                    )}
+                                  />
+                                  <span
+                                    className={cn(
+                                      "font-medium",
+                                      profit >= 0
+                                        ? "text-success"
+                                        : "text-destructive",
+                                    )}
+                                  >
                                     ₦{profit.toFixed(2)}/unit profit
                                   </span>
-                                  <span className="text-muted-foreground">({markupPct.toFixed(1)}% markup)</span>
+                                  <span className="text-muted-foreground">
+                                    ({((profit / cost) * 100).toFixed(1)}%
+                                    markup)
+                                  </span>
                                 </div>
                               )}
                             </div>
-                          </div>
-                        );
-                      }
+                          );
+                        }
 
-                      // SIMPLE (not linked) → editable cost + sell price & markup
-                      if (isSimple) {
-                        const cost = parseFloat(costPrice) || 0;
-                        const sell = parseFloat(price) || 0;
-                        const profit = sell - cost;
-                        return (
-                          <div className="space-y-3">
-                            <div>
-                              <Label htmlFor="item-cost-nv" className="text-xs">Cost Price / unit</Label>
-                              <Input
-                                id="item-cost-nv"
-                                className="mt-1 h-9"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={costPrice}
-                                onChange={(e) => {
-                                  const cp = e.target.value;
-                                  setCostPrice(cp);
-                                  const cpNum = parseFloat(cp) || 0;
-                                  const valNum = parseFloat(menuPricingValue) || 0;
-                                  if (cpNum > 0) {
-                                    const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
-                                    setPrice(String(newSell));
-                                  }
-                                }}
-                                placeholder="0.00"
-                              />
-                              <p className="text-[10px] text-muted-foreground mt-1">Optional — enables markup-based sell pricing.</p>
-                            </div>
-
-                            <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
-                                <Select
-                                  value={menuPricingMethod}
-                                  onValueChange={(v) => {
-                                    const method = v as PricingMethod;
-                                    setMenuPricingMethod(method);
-                                    const cpNum = parseFloat(costPrice) || 0;
-                                    const valNum = parseFloat(menuPricingValue) || 0;
-                                    if (cpNum > 0) {
-                                      const newSell = Math.round(calcMenuSellPrice(cpNum, method, valNum) * 100) / 100;
-                                      setPrice(String(newSell));
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="markup">Markup %</SelectItem>
-                                    <SelectItem value="margin">Margin %</SelectItem>
-                                    <SelectItem value="fixed">Fixed Price</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                                  {menuPricingMethod === "fixed" ? "Price" : "%"}
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step="0.01"
-                                  className="h-9"
-                                  value={menuPricingValue}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setMenuPricingValue(val);
-                                    const cpNum = parseFloat(costPrice) || 0;
-                                    const valNum = parseFloat(val) || 0;
-                                    if (cpNum > 0) {
-                                      const newSell = Math.round(calcMenuSellPrice(cpNum, menuPricingMethod, valNum) * 100) / 100;
-                                      setPrice(String(newSell));
-                                    }
-                                  }}
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step="0.01"
-                                  className="h-9"
-                                  data-testid="sell-price-input"
-                                  value={price}
-                                  onChange={(e) => setPrice(e.target.value)}
-                                  placeholder="0.00"
-                                />
-                              </div>
-                            </div>
-
-                            {cost > 0 && sell > 0 && (
-                              <div className="flex items-center gap-1.5 text-xs">
-                                <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
-                                <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
-                                  ₦{profit.toFixed(2)}/unit profit
-                                </span>
-                                <span className="text-muted-foreground">
-                                  ({((profit / cost) * 100).toFixed(1)}% markup)
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      // COMPOSITE → cost auto-derived from ingredients (material cost)
-                      if (itemType === "composite") {
-                        const validIngredients = ingredients.filter((g) => g.inventoryItemId && g.quantity > 0);
-                        const cost = validIngredients.reduce((sum, g) => {
-                          const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
-                          if (!inv) return sum;
-                          const baseCost = inv.costPrice ?? 0;
-                          let unitCost = baseCost;
-                          if (g.unitId && g.unitId !== inv.unitId) {
-                            const conv = (inv.conversions || []).find((c) => c.toUnitId === g.unitId);
-                            if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
-                              unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
+                        // COMPOSITE → cost auto-derived from ingredients (material cost)
+                        if (itemType === "composite") {
+                          const validIngredients = ingredients.filter(
+                            (g) => g.inventoryItemId && g.quantity > 0,
+                          );
+                          const cost = validIngredients.reduce((sum, g) => {
+                            const inv = inventoryItems.find(
+                              (i) => i.id === g.inventoryItemId,
+                            );
+                            if (!inv) return sum;
+                            const baseCost = inv.costPrice ?? 0;
+                            let unitCost = baseCost;
+                            if (g.unitId && g.unitId !== inv.unitId) {
+                              const conv = (inv.conversions || []).find(
+                                (c) => c.toUnitId === g.unitId,
+                              );
+                              if (
+                                conv &&
+                                conv.toQuantity > 0 &&
+                                conv.fromQuantity > 0
+                              ) {
+                                unitCost =
+                                  baseCost *
+                                  (conv.fromQuantity / conv.toQuantity);
+                              }
                             }
-                          }
-                          return sum + unitCost * (Number(g.quantity) || 0);
-                        }, 0);
-                        const sell = parseFloat(price) || 0;
-                        const profit = sell - cost;
+                            return sum + unitCost * (Number(g.quantity) || 0);
+                          }, 0);
+                          const sell = parseFloat(price) || 0;
+                          const profit = sell - cost;
+                          return (
+                            <div className="space-y-3">
+                              <div className="rounded-md border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                                  <Lock className="h-3 w-3" /> Material Cost /
+                                  unit
+                                </div>
+                                <div className="text-sm font-semibold tabular-nums">
+                                  {formatNaira(cost)}
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    Pricing
+                                  </label>
+                                  <Select
+                                    value={menuPricingMethod}
+                                    onValueChange={(v) => {
+                                      const method = v as PricingMethod;
+                                      setMenuPricingMethod(method);
+                                      const valNum =
+                                        parseFloat(menuPricingValue) || 0;
+                                      if (cost > 0 || method === "fixed") {
+                                        const newSell =
+                                          Math.round(
+                                            calcMenuSellPrice(
+                                              cost,
+                                              method,
+                                              valNum,
+                                            ) * 100,
+                                          ) / 100;
+                                        setPrice(String(newSell));
+                                      }
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-9">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="markup">
+                                        Markup %
+                                      </SelectItem>
+                                      <SelectItem value="margin">
+                                        Margin %
+                                      </SelectItem>
+                                      <SelectItem value="fixed">
+                                        Fixed Price
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    {menuPricingMethod === "fixed"
+                                      ? "Price"
+                                      : "%"}
+                                  </label>
+                                  <NumericInput
+                                    min={0}
+                                    step={0.01}
+                                    precision={2}
+                                    className="h-9"
+                                    value={menuPricingValue}
+                                    onChange={(_, valStr) => {
+                                      setMenuPricingValue(valStr);
+                                      const valNum = parseFloat(valStr) || 0;
+                                      if (
+                                        cost > 0 ||
+                                        menuPricingMethod === "fixed"
+                                      ) {
+                                        const newSell =
+                                          Math.round(
+                                            calcMenuSellPrice(
+                                              cost,
+                                              menuPricingMethod,
+                                              valNum,
+                                            ) * 100,
+                                          ) / 100;
+                                        setPrice(String(newSell));
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                                    Sell Price (₦) *
+                                  </label>
+                                  <NumericInput
+                                    min={0}
+                                    step={0.01}
+                                    precision={2}
+                                    className="h-9"
+                                    data-testid="sell-price-input"
+                                    value={price}
+                                    onChange={(_, valStr) => setPrice(valStr)}
+                                    placeholder="0.00"
+                                  />
+                                </div>
+                              </div>
+
+                              {cost > 0 && sell > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <TrendingUp
+                                    className={cn(
+                                      "h-3.5 w-3.5",
+                                      profit >= 0
+                                        ? "text-success"
+                                        : "text-destructive",
+                                    )}
+                                  />
+                                  <span
+                                    className={cn(
+                                      "font-medium",
+                                      profit >= 0
+                                        ? "text-success"
+                                        : "text-destructive",
+                                    )}
+                                  >
+                                    ₦{profit.toFixed(2)}/unit profit
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    ({((profit / cost) * 100).toFixed(1)}%
+                                    markup)
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        // SERVICE → original simple Price field
                         return (
-                          <div className="space-y-3">
-                            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 flex items-center justify-between">
-                              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-                                <Lock className="h-3 w-3" /> Material Cost / unit
-                              </div>
-                              <div className="text-sm font-semibold tabular-nums">{formatNaira(cost)}</div>
-                            </div>
-
-                            <div className="grid grid-cols-[1fr_1fr_1fr] gap-2">
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pricing</label>
-                                <Select
-                                  value={menuPricingMethod}
-                                  onValueChange={(v) => {
-                                    const method = v as PricingMethod;
-                                    setMenuPricingMethod(method);
-                                    const valNum = parseFloat(menuPricingValue) || 0;
-                                    if (cost > 0 || method === "fixed") {
-                                      const newSell = Math.round(calcMenuSellPrice(cost, method, valNum) * 100) / 100;
-                                      setPrice(String(newSell));
-                                    }
-                                  }}
-                                >
-                                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="markup">Markup %</SelectItem>
-                                    <SelectItem value="margin">Margin %</SelectItem>
-                                    <SelectItem value="fixed">Fixed Price</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-                                  {menuPricingMethod === "fixed" ? "Price" : "%"}
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step="0.01"
-                                  className="h-9"
-                                  value={menuPricingValue}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setMenuPricingValue(val);
-                                    const valNum = parseFloat(val) || 0;
-                                    if (cost > 0 || menuPricingMethod === "fixed") {
-                                      const newSell = Math.round(calcMenuSellPrice(cost, menuPricingMethod, valNum) * 100) / 100;
-                                      setPrice(String(newSell));
-                                    }
-                                  }}
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦) *</label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  step="0.01"
-                                  className="h-9"
-                                  data-testid="sell-price-input"
-                                  value={price}
-                                  onChange={(e) => setPrice(e.target.value)}
-                                  placeholder="0.00"
-                                />
-                              </div>
-                            </div>
-
-                            {cost > 0 && sell > 0 && (
-                              <div className="flex items-center gap-1.5 text-xs">
-                                <TrendingUp className={cn("h-3.5 w-3.5", profit >= 0 ? "text-success" : "text-destructive")} />
-                                <span className={cn("font-medium", profit >= 0 ? "text-success" : "text-destructive")}>
-                                  ₦{profit.toFixed(2)}/unit profit
-                                </span>
-                                <span className="text-muted-foreground">
-                                  ({((profit / cost) * 100).toFixed(1)}% markup)
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-
-                      // SERVICE → original simple Price field
-                      return (
-                        <div>
-                          <Label htmlFor="item-price-nv" className="text-xs">Price *</Label>
-                          <Input id="item-price-nv" data-testid="sell-price-input" className="mt-1 h-9" type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
-                        </div>
-                      );
-                    })()}
-
-                    {pricingStrategy === "variant" && itemType !== "service" && (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
-                          <span>Variant name</span>
-                          <span>Price</span>
-                          <span />
-                        </div>
-                        {variants.map((v, idx) => (
-                          <div key={v.id} className="grid grid-cols-[1fr,140px,32px] gap-2 items-center">
-                            <Input
-                              className="h-9 text-sm"
-                              data-testid={`variant-name-input-${idx}`}
-                              value={v.name}
-                              onChange={(e) => updateVariant(v.id, { ...v, name: e.target.value })}
-                              placeholder={idx === 0 ? "e.g. Small" : "Variant name"}
-                            />
-                            <Input
-                              className="h-9 text-sm"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              data-testid={`variant-price-input-${idx}`}
-                              value={v.price || ""}
-                              onChange={(e) => updateVariant(v.id, { ...v, price: parseFloat(e.target.value) || 0 })}
+                          <div>
+                            <Label htmlFor="item-price-nv" className="text-xs">
+                              Price *
+                            </Label>
+                            <NumericInput
+                              id="item-price-nv"
+                              data-testid="sell-price-input"
+                              className="mt-1 h-9"
+                              min={0}
+                              step={0.01}
+                              precision={2}
+                              value={price}
+                              onChange={(_, valStr) => setPrice(valStr)}
                               placeholder="0.00"
                             />
-                            <button
-                              type="button"
-                              onClick={() => removeVariant(v.id)}
-                              disabled={variants.length === 1}
-                              className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
-                              aria-label="Remove variant"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
                           </div>
-                        ))}
-                        <Button type="button" variant="outline" size="sm" onClick={addVariant} className="w-full">
-                          <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
-                        </Button>
-                      </div>
-                    )}
+                        );
+                      })()}
+
+                    {pricingStrategy === "variant" &&
+                      itemType !== "service" && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-[1fr,140px,32px] gap-2 px-1 text-[11px] text-muted-foreground">
+                            <span>Variant name</span>
+                            <span>Price</span>
+                            <span />
+                          </div>
+                          {variants.map((v, idx) => (
+                            <div
+                              key={v.id}
+                              className="grid grid-cols-[1fr,140px,32px] gap-2 items-center"
+                            >
+                              <Input
+                                className="h-9 text-sm"
+                                data-testid={`variant-name-input-${idx}`}
+                                value={v.name}
+                                onChange={(e) =>
+                                  updateVariant(v.id, {
+                                    ...v,
+                                    name: e.target.value,
+                                  })
+                                }
+                                placeholder={
+                                  idx === 0 ? "e.g. Small" : "Variant name"
+                                }
+                              />
+                              <NumericInput
+                                className="h-9 text-sm"
+                                min={0}
+                                step={0.01}
+                                precision={2}
+                                data-testid={`variant-price-input-${idx}`}
+                                value={v.price || 0}
+                                onChange={(val) =>
+                                  updateVariant(v.id, {
+                                    ...v,
+                                    price: val || 0,
+                                  })
+                                }
+                                placeholder="0.00"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeVariant(v.id)}
+                                disabled={variants.length === 1}
+                                className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+                                aria-label="Remove variant"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addVariant}
+                            className="w-full"
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" /> Add Variant
+                          </Button>
+                        </div>
+                      )}
 
                     {pricingStrategy === "open" && (
                       <p className="text-xs text-muted-foreground">
@@ -1881,17 +2742,43 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                     {pricingStrategy === "base" && (
                       <div className="space-y-3 pt-1">
                         <div className="flex items-center gap-2">
-                          <Switch checked={showSale} onCheckedChange={(v) => { setShowSale(v); if (!v) { setSalePrice(""); setSalePeriodStart(null); setSalePeriodEnd(null); } }} />
+                          <Switch
+                            checked={showSale}
+                            onCheckedChange={(v) => {
+                              setShowSale(v);
+                              if (!v) {
+                                setSalePrice("");
+                                setSalePeriodStart(null);
+                                setSalePeriodEnd(null);
+                              }
+                            }}
+                          />
                           <Label className="text-xs">On Sale</Label>
                         </div>
                         {showSale && (
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div>
                               <Label className="text-xs">Sale Price</Label>
-                              <Input className="mt-1 h-9 text-sm" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0.00" />
+                              <NumericInput
+                                className="mt-1 h-9 text-sm"
+                                min={0}
+                                step={0.01}
+                                precision={2}
+                                value={salePrice}
+                                onChange={(_, valStr) => setSalePrice(valStr)}
+                                placeholder="0.00"
+                              />
                             </div>
-                            <DatePickerField label="Sale Start" value={salePeriodStart} onChange={setSalePeriodStart} />
-                            <DatePickerField label="Sale End" value={salePeriodEnd} onChange={setSalePeriodEnd} />
+                            <DatePickerField
+                              label="Sale Start"
+                              value={salePeriodStart}
+                              onChange={setSalePeriodStart}
+                            />
+                            <DatePickerField
+                              label="Sale End"
+                              value={salePeriodEnd}
+                              onChange={setSalePeriodEnd}
+                            />
                           </div>
                         )}
                       </div>
@@ -1904,18 +2791,34 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
             {/* IMAGES — hidden for Service items. Compact thumbnail row, no
               wrapping section card. */}
             {itemType !== "service" && (
-              <FormGroup title="Images" hint="Up to 4 — first is the POS thumbnail">
+              <FormGroup
+                title="Images"
+                hint="Up to 4 — first is the POS thumbnail"
+              >
                 <div className="flex gap-2 flex-wrap">
                   {images.map((img, idx) => (
-                    <div key={idx} className="relative h-16 w-16 rounded-md border border-border overflow-hidden group">
-                      <img src={img} alt="" className="h-full w-full object-cover" />
-                      <button onClick={() => removeImage(idx)} className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div
+                      key={idx}
+                      className="relative h-16 w-16 rounded-md border border-border overflow-hidden group"
+                    >
+                      <img
+                        src={img}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        onClick={() => removeImage(idx)}
+                        className="absolute top-0.5 right-0.5 bg-background/80 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
                         <X className="h-3 w-3 text-destructive" />
                       </button>
                     </div>
                   ))}
                   {images.length < 4 && (
-                    <button onClick={handleImageUpload} className="h-16 w-16 rounded-md border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-primary transition-colors">
+                    <button
+                      onClick={handleImageUpload}
+                      className="h-16 w-16 rounded-md border-2 border-dashed border-border hover:border-primary/50 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-primary transition-colors"
+                    >
                       <ImagePlus className="h-4 w-4" />
                       <span className="text-[10px]">Add</span>
                     </button>
@@ -1926,15 +2829,31 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
 
             {/* ADD-ONS — optional for all outlets, collapsed by default. */}
             <FormGroup>
-              <Accordion type="single" collapsible defaultValue={extras.length > 0 || modifierGroupIds.length > 0 ? "extras" : undefined}>
+              <Accordion
+                type="single"
+                collapsible
+                defaultValue={
+                  extras.length > 0 || modifierGroupIds.length > 0
+                    ? "extras"
+                    : undefined
+                }
+              >
                 <AccordionItem value="extras" className="border-b-0">
-                  <AccordionTrigger data-testid="addons-accordion-trigger" className="py-2 hover:no-underline">
+                  <AccordionTrigger
+                    data-testid="addons-accordion-trigger"
+                    className="py-2 hover:no-underline"
+                  >
                     <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <ListPlus className="h-3.5 w-3.5" />
                       <span>Add-ons</span>
-                      <span className="font-normal normal-case tracking-normal text-[11px] text-muted-foreground/70">(optional)</span>
+                      <span className="font-normal normal-case tracking-normal text-[11px] text-muted-foreground/70">
+                        (optional)
+                      </span>
                       {extras.length > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] h-5 px-1.5 normal-case font-normal tracking-normal"
+                        >
                           {extras.length}
                         </Badge>
                       )}
@@ -1947,9 +2866,18 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                         <Label className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                           Modifier Groups
                         </Label>
-                        <Popover open={modifierPickerOpen} onOpenChange={setModifierPickerOpen}>
+                        <Popover
+                          open={modifierPickerOpen}
+                          onOpenChange={setModifierPickerOpen}
+                        >
                           <PopoverTrigger asChild>
-                            <Button type="button" data-testid="attach-modifier-group-button" variant="outline" size="sm" className="h-7 text-xs">
+                            <Button
+                              type="button"
+                              data-testid="attach-modifier-group-button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs"
+                            >
                               <Plus className="h-3.5 w-3.5 mr-1" /> Attach group
                             </Button>
                           </PopoverTrigger>
@@ -1963,27 +2891,37 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                 onValueChange={setModifierSearch}
                               />
                               <CommandList>
-                                <CommandEmpty>No modifier groups. Create one in Admin.</CommandEmpty>
+                                <CommandEmpty>
+                                  No modifier groups. Create one in Admin.
+                                </CommandEmpty>
                                 <CommandGroup>
                                   {modifierGroups.map((g) => {
-                                    const checked = modifierGroupIds.includes(g.id);
+                                    const checked = modifierGroupIds.includes(
+                                      g.id,
+                                    );
                                     return (
                                       <CommandItem
                                         key={g.id}
                                         onSelect={() => {
                                           setModifierGroupIds((prev) =>
-                                            checked ? prev.filter((id) => id !== g.id) : [...prev, g.id],
+                                            checked
+                                              ? prev.filter((id) => id !== g.id)
+                                              : [...prev, g.id],
                                           );
                                         }}
                                         className="flex items-center justify-between gap-2"
                                       >
                                         <div className="min-w-0">
-                                          <div className="text-sm truncate">{g.name}</div>
+                                          <div className="text-sm truncate">
+                                            {g.name}
+                                          </div>
                                           <div className="text-[10px] text-muted-foreground truncate">
                                             {g.modifiers.length} options
                                           </div>
                                         </div>
-                                        {checked && <Check className="h-4 w-4 text-primary shrink-0" />}
+                                        {checked && (
+                                          <Check className="h-4 w-4 text-primary shrink-0" />
+                                        )}
                                       </CommandItem>
                                     );
                                   })}
@@ -1995,21 +2933,32 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                       </div>
                       {modifierGroupIds.length === 0 ? (
                         <p className="text-[11px] text-muted-foreground">
-                          Attach reusable groups (e.g. Toppings, Coffee Options) so you don't recreate them per item.
+                          Attach reusable groups (e.g. Toppings, Coffee Options)
+                          so you don't recreate them per item.
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
                           {modifierGroupIds.map((id) => {
-                            const g = modifierGroupsCache[id] || modifierGroups.find((x) => x.id === id);
+                            const g =
+                              modifierGroupsCache[id] ||
+                              modifierGroups.find((x) => x.id === id);
                             if (!g) return null;
                             return (
-                              <Badge key={id} variant="secondary" className="gap-1 pr-1 text-[11px]">
+                              <Badge
+                                key={id}
+                                variant="secondary"
+                                className="gap-1 pr-1 text-[11px]"
+                              >
                                 <span>{g.name}</span>
-                                <span className="text-muted-foreground">· {g.modifiers.length}</span>
+                                <span className="text-muted-foreground">
+                                  · {g.modifiers.length}
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    setModifierGroupIds((prev) => prev.filter((x) => x !== id))
+                                    setModifierGroupIds((prev) =>
+                                      prev.filter((x) => x !== id),
+                                    )
                                   }
                                   className="ml-0.5 rounded hover:bg-destructive/15 p-0.5 text-muted-foreground hover:text-destructive"
                                   aria-label={`Remove ${g.name}`}
@@ -2040,8 +2989,14 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                   <Info className="h-3.5 w-3.5" />
                                 </button>
                               </TooltipTrigger>
-                              <TooltipContent side="top" className="max-w-[260px] text-xs leading-relaxed">
-                                One-off add-ons are extras unique to this item only (e.g. extra cheese, gift wrap). Use Modifier Groups instead if you want to reuse the same add-ons across multiple items.
+                              <TooltipContent
+                                side="top"
+                                className="max-w-[260px] text-xs leading-relaxed"
+                              >
+                                One-off add-ons are extras unique to this item
+                                only (e.g. extra cheese, gift wrap). Use
+                                Modifier Groups instead if you want to reuse the
+                                same add-ons across multiple items.
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -2054,7 +3009,12 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                           onClick={() =>
                             setExtras((prev) => [
                               ...prev,
-                              { id: crypto.randomUUID(), name: "", price: 0, category: "" },
+                              {
+                                id: crypto.randomUUID(),
+                                name: "",
+                                price: 0,
+                                category: "",
+                              },
                             ])
                           }
                         >
@@ -2067,13 +3027,20 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                         </p>
                       )}
                       {extras.map((extra, idx) => (
-                        <div key={extra.id} className="border border-border rounded-md p-3 space-y-2 bg-muted/20">
+                        <div
+                          key={extra.id}
+                          className="border border-border rounded-md p-3 space-y-2 bg-muted/20"
+                        >
                           <div className="flex items-center justify-between">
                             <Label className="text-xs font-medium">
                               Add-on #{idx + 1}
                             </Label>
                             <button
-                              onClick={() => setExtras((prev) => prev.filter((e) => e.id !== extra.id))}
+                              onClick={() =>
+                                setExtras((prev) =>
+                                  prev.filter((e) => e.id !== extra.id),
+                                )
+                              }
                               className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -2086,21 +3053,36 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                 className="mt-1 h-8 text-sm"
                                 value={extra.name}
                                 onChange={(e) =>
-                                  setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, name: e.target.value } : ex))
+                                  setExtras((prev) =>
+                                    prev.map((ex) =>
+                                      ex.id === extra.id
+                                        ? { ...ex, name: e.target.value }
+                                        : ex,
+                                    ),
+                                  )
                                 }
                                 placeholder="e.g. Extra cheese"
                               />
                             </div>
                             <div>
                               <Label className="text-[11px]">Price *</Label>
-                              <Input
+                              <NumericInput
                                 className="mt-1 h-8 text-sm"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={extra.price || ""}
-                                onChange={(e) =>
-                                  setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, price: parseFloat(e.target.value) || 0 } : ex))
+                                min={0}
+                                step={0.01}
+                                precision={2}
+                                value={extra.price || 0}
+                                onChange={(val) =>
+                                  setExtras((prev) =>
+                                    prev.map((ex) =>
+                                      ex.id === extra.id
+                                        ? {
+                                            ...ex,
+                                            price: val || 0,
+                                          }
+                                        : ex,
+                                    ),
+                                  )
                                 }
                                 placeholder="0.00"
                               />
@@ -2111,7 +3093,13 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
                                 className="mt-1 h-8 text-sm"
                                 value={extra.category || ""}
                                 onChange={(e) =>
-                                  setExtras((prev) => prev.map((ex) => ex.id === extra.id ? { ...ex, category: e.target.value } : ex))
+                                  setExtras((prev) =>
+                                    prev.map((ex) =>
+                                      ex.id === extra.id
+                                        ? { ...ex, category: e.target.value }
+                                        : ex,
+                                    ),
+                                  )
                                 }
                                 placeholder="e.g. Toppings"
                               />
@@ -2125,10 +3113,11 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               </Accordion>
             </FormGroup>
           </div>
-
         </div>
         <SheetFooter className="px-6 py-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             data-testid="submit-item-button"
             onClick={handleSave}
@@ -2139,15 +3128,18 @@ export default function MenuItemForm({ open, onOpenChange, categories, item, onS
               if (selectedOutletIds.length === 0) return true;
               if (pricingStrategy === "variant") {
                 if (variants.length === 0) return true;
-                if (variants.some((v) => !v.name.trim() || v.price <= 0)) return true;
+                if (variants.some((v) => !v.name.trim() || v.price <= 0))
+                  return true;
                 return false;
               }
               if (pricingStrategy === "open") return false;
               if (!price) return true;
-              if (variants.length > 0 && variants.some((v) => !v.name.trim())) return true;
+              if (variants.length > 0 && variants.some((v) => !v.name.trim()))
+                return true;
               return false;
-            })()}>
-            {(isSaving) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            })()}
+          >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitLabel}
           </Button>
         </SheetFooter>

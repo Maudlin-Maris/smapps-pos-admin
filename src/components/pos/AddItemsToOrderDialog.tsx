@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { usePOS } from "@/contexts/POSContext";
 import { posProducts, posCategories, type POSProduct, type POSCartItem } from "@/data/posData";
 import { formatNaira } from "@/lib/currency";
@@ -26,7 +27,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
   const [view, setView] = useState<View>("order");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [dialogProduct, setDialogProduct] = useState<POSProduct | null>(null);
   const [pendingItems, setPendingItems] = useState<POSCartItem[]>([]);
   const [editingItem, setEditingItem] = useState<{ item: POSCartItem; product: POSProduct } | null>(null);
@@ -34,12 +35,7 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
   // Auth dialog state for removing existing items
   const [removeAuth, setRemoveAuth] = useState<{ orderId: string; itemId: string; itemName: string } | null>(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: itemsResponse } = useGetItems({
     outletId: currentOutlet?.id || undefined,

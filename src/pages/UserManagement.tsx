@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { useAuth } from "@/contexts/AuthContext";
 import { useGetOutlets } from "@/services/api/outlets";
 import { Button } from "@/components/ui/button";
@@ -54,14 +55,9 @@ export default function UserManagement() {
   const { toast } = useToast();
 
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: usersList = [], isLoading: isUsersLoading, mutate } = useGetUsers({
     search: debouncedSearch.trim() || undefined,

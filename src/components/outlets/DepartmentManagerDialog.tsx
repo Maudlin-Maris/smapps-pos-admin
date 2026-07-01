@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import {
   Dialog,
   DialogContent,
@@ -64,14 +65,9 @@ export default function DepartmentManagerDialog({
   const [deptName, setDeptName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<DepartmentRecord | null>(null);
   const [menuSearch, setMenuSearch] = useState("");
-  const [debouncedMenuSearch, setDebouncedMenuSearch] = useState("");
+  const debouncedMenuSearch = useDebouncedValue(menuSearch, 300);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedMenuSearch(menuSearch);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [menuSearch]);
+  
 
   const { data: categories = [], isLoading: isLoadingCats } = useGetOutletCatalogCategories(
     outletId,

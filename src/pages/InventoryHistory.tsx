@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -1305,13 +1306,14 @@ function StockCountDialog({
                     </td>
                     <td className="p-2 text-right tabular-nums">{s.expectedClosingQty}</td>
                     <td className="p-2">
-                      <Input
-                        type="number" step="0.01" inputMode="decimal"
+                      <NumericInput
+                        step={0.01}
+                        precision={2}
                         className="h-8 text-right tabular-nums"
                         value={entry.actualQty}
                         disabled={entry.skipped}
                         placeholder="—"
-                        onChange={(e) => setCount(s.id, { actualQty: e.target.value, skipped: false })}
+                        onChange={(_, valStr) => setCount(s.id, { actualQty: valStr, skipped: false })}
                       />
                     </td>
                     <td className={cn("p-2 text-right font-medium tabular-nums",

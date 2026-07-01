@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -58,22 +60,59 @@ import {
   useUpdateBundleStatus,
   useUpdatePromoBundle,
 } from "@/services/api/catalog/promo-bundle";
-import type { APIPromoBundle } from "@/lib/types/promo-bundle";
+import type { APIPromoBundle, POSVariant } from "@/lib/types/promo-bundle";
 import type { Outlet } from "@/lib/types/outlet";
+import { Spinner } from "@/components/ui/spinner";
+
+interface ProductSearchRowProps {
+  productName: string;
+  variantName?: string;
+  price: number;
+  disabled?: boolean;
+  onClick: () => void;
+  size?: "xs" | "sm";
+}
+
+function ProductSearchRow({
+  productName,
+  variantName,
+  price,
+  disabled,
+  onClick,
+  size = "sm",
+}: ProductSearchRowProps) {
+  const sizeClasses = size === "xs" ? "py-1.5 text-xs" : "py-2 text-sm";
+
+  return (
+    <button
+      disabled={disabled}
+      className={`group w-full flex items-center justify-between px-3 ${sizeClasses} hover:bg-accent text-left transition-colors disabled:opacity-40`}
+      onClick={onClick}
+    >
+      <span className="text-foreground group-hover:text-accent-foreground font-normal">
+        {productName}
+        {variantName && (
+          <>
+            {" · "}
+            <span className="text-muted-foreground group-hover:text-accent-foreground/80">
+              {variantName}
+            </span>
+          </>
+        )}
+      </span>
+      <span className="text-muted-foreground group-hover:text-accent-foreground/80">
+        {formatNaira(price)}
+      </span>
+    </button>
+  );
+}
 
 export default function PromoBundleManagement() {
   const [selectedOutlet, setSelectedOutlet] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [editingBundle, setEditingBundle] = useState<PromoBundle | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   const { data: outletsData, isLoading: isOutletsLoading } = useGetOutlets();
   const outlets = outletsData || [];
@@ -110,6 +149,7 @@ export default function PromoBundleManagement() {
         productId: i.productId,
         productName: i.productName || "Item",
         quantity: i.quantity,
+        price: i.slotPrice || 0,
         variantId: i.variantId || undefined,
         variantName: i.variantName || undefined,
         swappable: i.swappable || false,
@@ -199,9 +239,14 @@ export default function PromoBundleManagement() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search bundles..."
-            className="pl-10"
+            className="pl-10 pr-10"
             disabled={isLoading}
           />
+          {isBundlesLoading && debouncedSearch.length > 0 && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            </span>
+          )}
         </div>
         <Select
           value={selectedOutlet}
@@ -283,8 +328,6 @@ function PromoBundleCard({
     useDeletePromoBundle(bundle.id);
   const { trigger: triggerUpdateStatus, isMutating: isUpdatingStatus } =
     useUpdateBundleStatus(bundle.id);
-
-  console.log({ bundle });
 
   const outlet = outlets.find((o) => o.id === bundle.outletId);
   const savings = bundle.originalPrice - bundle.bundlePrice;
@@ -448,63 +491,33 @@ function BundleFormDialog({
   const [pricingType, setPricingType] = useState<BundlePricingType>("fixed");
   const [pricingValue, setPricingValue] = useState<number>(0);
   const [productSearch, setProductSearch] = useState("");
-  const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
+  const debouncedProductSearch = useDebouncedValue(productSearch, 300);
   const [expandedSwapIdx, setExpandedSwapIdx] = useState<number | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
-  const [debouncedSwapSearch, setDebouncedSwapSearch] = useState("");
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedProductSearch(productSearch);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [productSearch]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSwapSearch(swapSearch);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [swapSearch]);
+  const debouncedSwapSearch = useDebouncedValue(swapSearch, 300);
 
   const { data: outletsData } = useGetOutlets();
   const outlets = outletsData || [];
+  const { data: searchItemsResponse, isLoading: searchItemsLoading } =
+    useGetItems(
+      {
+        outletId: outletId || undefined,
+        search: debouncedProductSearch.trim() || undefined,
+      },
+      {
+        keepPreviousData: true,
+      },
+    );
 
-  const { data: itemsResponse } = useGetItems();
-
-  const { data: searchItemsResponse } = useGetItems({
-    outletId: outletId || undefined,
-    search: debouncedProductSearch.trim() || undefined,
-  }, {
-    keepPreviousData: true,
-  });
-
-  const { data: swapItemsResponse } = useGetItems({
-    outletId: outletId || undefined,
-    search: debouncedSwapSearch.trim() || undefined,
-  }, {
-    keepPreviousData: true,
-  });
-  const posProducts = useMemo<POSProduct[]>(() => {
-    if (!itemsResponse?.data) return [];
-    return itemsResponse.data.map((item) => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      categoryId: item.category,
-      subcategoryId: item.subcategory,
-      image: item.images?.[0],
-      barcode: item.sku,
-      variants: [],
-      inStock:
-        item.status === "active" ||
-        item.status === "good" ||
-        item.status === "available" ||
-        true,
-      outletId: item.outletId,
-    }));
-  }, [itemsResponse]);
-
+  const { data: swapItemsResponse, isLoading: swapItemsLoading } = useGetItems(
+    {
+      outletId: outletId || undefined,
+      search: debouncedSwapSearch.trim() || undefined,
+    },
+    {
+      keepPreviousData: true,
+    },
+  );
   // Reset form when dialog opens
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
@@ -539,7 +552,11 @@ function BundleFormDialog({
     if (!searchItemsResponse?.data) return [];
     return searchItemsResponse.data
       .filter((item) => {
-        const inStock = item.status === "active" || item.status === "good" || item.status === "available" || true;
+        const inStock =
+          item.status === "active" ||
+          item.status === "good" ||
+          item.status === "available" ||
+          true;
         return item.outletId === outletId && inStock;
       })
       .map((item) => ({
@@ -563,7 +580,11 @@ function BundleFormDialog({
     if (!item) return [];
     return swapItemsResponse.data
       .filter((p) => {
-        const inStock = p.status === "active" || p.status === "good" || p.status === "available" || true;
+        const inStock =
+          p.status === "active" ||
+          p.status === "good" ||
+          p.status === "available" ||
+          true;
         return p.outletId === outletId && inStock && p.id !== item.productId;
       })
       .map((p) => ({
@@ -582,12 +603,7 @@ function BundleFormDialog({
 
   const originalPrice = useMemo(() => {
     return items.reduce((sum, item) => {
-      const prod = posProducts.find((p) => p.id === item.productId);
-      if (!prod) return sum;
-      const variant = item.variantId
-        ? prod.variants?.find((v) => v.id === item.variantId)
-        : undefined;
-      const price = variant?.price ?? prod.price;
+      const price = item.price ?? 0;
       return sum + price * item.quantity;
     }, 0);
   }, [items]);
@@ -613,6 +629,7 @@ function BundleFormDialog({
         {
           productId: product.id,
           productName: product.name,
+          price: product.price,
           quantity: 1,
           swappable: false,
           swapOptions: [],
@@ -622,13 +639,9 @@ function BundleFormDialog({
     setProductSearch("");
   };
 
-  const addVariant = (
-    product: POSProduct,
-    variantId: string,
-    variantName: string,
-  ) => {
+  const addVariant = (product: POSProduct, variant: POSVariant) => {
     const existing = items.find(
-      (i) => i.productId === product.id && i.variantId === variantId,
+      (i) => i.productId === product.id && i.variantId === variant.id,
     );
     if (existing) {
       setItems((prev) =>
@@ -642,9 +655,10 @@ function BundleFormDialog({
         {
           productId: product.id,
           productName: product.name,
+          price: variant.price,
           quantity: 1,
-          variantId,
-          variantName,
+          variantId: variant.id,
+          variantName: variant.name,
           swappable: false,
           swapOptions: [],
         },
@@ -815,7 +829,9 @@ function BundleFormDialog({
             {/* Bundle Items with Modifier Groups */}
             <div className="space-y-3">
               <div>
-                <Label className="text-base font-semibold">Combo Slots</Label>
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  Combo Slots
+                </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Add items and configure which alternatives cashiers can swap
                   in at the POS
@@ -825,13 +841,7 @@ function BundleFormDialog({
               {items.length > 0 && (
                 <div className="space-y-2">
                   {items.map((item, idx) => {
-                    const prod = posProducts.find(
-                      (p) => p.id === item.productId,
-                    );
-                    const variant = item.variantId
-                      ? prod?.variants?.find((v) => v.id === item.variantId)
-                      : undefined;
-                    const price = variant?.price ?? prod?.price ?? 0;
+                    const price = item.price ?? 0;
                     const isExpanded = expandedSwapIdx === idx;
                     const swapCount = item.swapOptions?.length || 0;
 
@@ -986,99 +996,91 @@ function BundleFormDialog({
                                     setSwapSearch(e.target.value)
                                   }
                                   placeholder="Search products to add as swap option..."
-                                  className="pl-8 h-8 text-sm"
+                                  className="pl-8 pr-8 h-8 text-sm"
                                   disabled={isSaving}
                                 />
+                                {swapItemsLoading && (
+                                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                                )}
                               </div>
-                              {swapSearch &&
-                                swapCandidateProducts.length > 0 && (
-                                  <div className="border border-border rounded-lg max-h-36 overflow-y-auto bg-popover">
-                                    {swapCandidateProducts
-                                      .slice(0, 12)
-                                      .map((product) => (
-                                        <div key={product.id}>
-                                          {product.variants &&
-                                          product.variants.length > 0
-                                            ? product.variants.map((v) => {
-                                                const alreadyAdded = (
-                                                  item.swapOptions || []
-                                                ).some(
-                                                  (o) =>
-                                                    o.productId ===
-                                                      product.id &&
-                                                    o.variantId === v.id,
-                                                );
-                                                return (
-                                                  <button
-                                                    key={v.id}
-                                                    disabled={
-                                                      alreadyAdded || isSaving
-                                                    }
-                                                    className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
-                                                    onClick={() =>
-                                                      addSwapOption(
-                                                        idx,
-                                                        product,
-                                                        v.id,
-                                                        v.name,
-                                                      )
-                                                    }
-                                                  >
-                                                    <span className="text-foreground">
-                                                      {product.name} ·{" "}
-                                                      <span className="text-muted-foreground">
-                                                        {v.name}
-                                                      </span>
-                                                    </span>
-                                                    <span className="text-muted-foreground">
-                                                      {formatNaira(v.price)}
-                                                    </span>
-                                                  </button>
-                                                );
-                                              })
-                                            : (() => {
-                                                const alreadyAdded = (
-                                                  item.swapOptions || []
-                                                ).some(
-                                                  (o) =>
-                                                    o.productId ===
-                                                      product.id &&
-                                                    !o.variantId,
-                                                );
-                                                return (
-                                                  <button
-                                                    disabled={
-                                                      alreadyAdded || isSaving
-                                                    }
-                                                    className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-accent text-left text-xs transition-colors disabled:opacity-40"
-                                                    onClick={() =>
-                                                      addSwapOption(
-                                                        idx,
-                                                        product,
-                                                      )
-                                                    }
-                                                  >
-                                                    <span className="text-foreground">
-                                                      {product.name}
-                                                    </span>
-                                                    <span className="text-muted-foreground">
-                                                      {formatNaira(
-                                                        product.price,
-                                                      )}
-                                                    </span>
-                                                  </button>
-                                                );
-                                              })()}
-                                        </div>
-                                      ))}
-                                  </div>
-                                )}
-                              {swapSearch &&
-                                swapCandidateProducts.length === 0 && (
-                                  <p className="text-xs text-muted-foreground text-center py-2">
-                                    No matching products found
-                                  </p>
-                                )}
+                              {swapSearch && (
+                                <>
+                                  {swapCandidateProducts.length > 0 ? (
+                                    <div className="border border-border rounded-lg max-h-36 overflow-y-auto bg-popover">
+                                      {swapCandidateProducts
+                                        .slice(0, 12)
+                                        .map((product) => (
+                                          <div key={product.id}>
+                                            {product.variants &&
+                                            product.variants.length > 0
+                                              ? product.variants.map((v) => {
+                                                  const alreadyAdded = (
+                                                    item.swapOptions || []
+                                                  ).some(
+                                                    (o) =>
+                                                      o.productId ===
+                                                        product.id &&
+                                                      o.variantId === v.id,
+                                                  );
+                                                  return (
+                                                    <ProductSearchRow
+                                                      key={v.id}
+                                                      productName={product.name}
+                                                      variantName={v.name}
+                                                      price={v.price}
+                                                      disabled={
+                                                        alreadyAdded || isSaving
+                                                      }
+                                                      onClick={() =>
+                                                        addSwapOption(
+                                                          idx,
+                                                          product,
+                                                          v.id,
+                                                          v.name,
+                                                        )
+                                                      }
+                                                      size="xs"
+                                                    />
+                                                  );
+                                                })
+                                              : (() => {
+                                                  const alreadyAdded = (
+                                                    item.swapOptions || []
+                                                  ).some(
+                                                    (o) =>
+                                                      o.productId ===
+                                                        product.id &&
+                                                      !o.variantId,
+                                                  );
+                                                  return (
+                                                    <ProductSearchRow
+                                                      productName={product.name}
+                                                      price={product.price}
+                                                      disabled={
+                                                        alreadyAdded || isSaving
+                                                      }
+                                                      onClick={() =>
+                                                        addSwapOption(
+                                                          idx,
+                                                          product,
+                                                        )
+                                                      }
+                                                      size="xs"
+                                                    />
+                                                  );
+                                                })()}
+                                          </div>
+                                        ))}
+                                    </div>
+                                  ) : (
+                                    !swapItemsLoading && (
+                                      <p className="text-xs text-muted-foreground text-center py-2">
+                                        No matching products found
+                                      </p>
+                                    )
+                                  )}
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1100,50 +1102,53 @@ function BundleFormDialog({
                         ? "Search products to add..."
                         : "Select an outlet first"
                     }
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     disabled={!outletId || isSaving}
                   />
+                  {searchItemsLoading && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground">
+                      <Spinner className="w-4 h-4 text-muted-foreground" />
+                    </span>
+                  )}
                 </div>
-                {productSearch && availableProducts.length > 0 && (
-                  <div className="border border-border rounded-lg max-h-48 overflow-y-auto bg-popover">
-                    {availableProducts.slice(0, 15).map((product) => (
-                      <div key={product.id}>
-                        {product.variants && product.variants.length > 0 ? (
-                          product.variants.map((v) => (
-                            <button
-                              key={v.id}
-                              className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent text-left text-sm transition-colors"
-                              onClick={() => addVariant(product, v.id, v.name)}
-                              disabled={isSaving}
-                            >
-                              <span className="text-foreground">
-                                {product.name} ·{" "}
-                                <span className="text-muted-foreground">
-                                  {v.name}
-                                </span>
-                              </span>
-                              <span className="text-muted-foreground">
-                                {formatNaira(v.price)}
-                              </span>
-                            </button>
-                          ))
-                        ) : (
-                          <button
-                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent text-left text-sm transition-colors"
-                            onClick={() => addProduct(product)}
-                            disabled={isSaving}
-                          >
-                            <span className="text-foreground">
-                              {product.name}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {formatNaira(product.price)}
-                            </span>
-                          </button>
-                        )}
+                {productSearch && (
+                  <>
+                    {availableProducts.length > 0 ? (
+                      <div className="border border-border rounded-lg max-h-48 overflow-y-auto bg-popover">
+                        {availableProducts.slice(0, 15).map((product) => (
+                          <div key={product.id}>
+                            {product.variants && product.variants.length > 0 ? (
+                              product.variants.map((v) => (
+                                <ProductSearchRow
+                                  key={v.id}
+                                  productName={product.name}
+                                  variantName={v.name}
+                                  price={v.price}
+                                  disabled={isSaving}
+                                  onClick={() => addVariant(product, v)}
+                                  size="sm"
+                                />
+                              ))
+                            ) : (
+                              <ProductSearchRow
+                                productName={product.name}
+                                price={product.price}
+                                disabled={isSaving}
+                                onClick={() => addProduct(product)}
+                                size="sm"
+                              />
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    ) : (
+                      !searchItemsLoading && (
+                        <div className="border border-border rounded-lg bg-popover p-3 text-center text-sm text-muted-foreground">
+                          No products found.
+                        </div>
+                      )
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1178,10 +1183,9 @@ function BundleFormDialog({
                       ? "Bundle Price (₦)"
                       : "Discount (%)"}
                   </Label>
-                  <Input
-                    type="number"
-                    value={pricingValue || ""}
-                    onChange={(e) => setPricingValue(Number(e.target.value))}
+                  <NumericInput
+                    value={pricingValue || 0}
+                    onChange={(val) => setPricingValue(val || 0)}
                     placeholder={
                       pricingType === "fixed" ? "e.g. 7500" : "e.g. 15"
                     }
@@ -1189,6 +1193,7 @@ function BundleFormDialog({
                     max={
                       pricingType === "percentage_discount" ? 100 : undefined
                     }
+                    precision={pricingType === "fixed" ? 2 : 0}
                     disabled={isSaving}
                   />
                 </div>
@@ -1196,7 +1201,7 @@ function BundleFormDialog({
 
               {/* Price Preview */}
               {items.length >= 2 && (
-                <div className="rounded-lg bg-muted/50 border border-border p-4 space-y-2">
+                <div className="rounded-lg bg-muted/50 border border-border p-4 space-y-2 relative overflow-hidden">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Items Total</span>
                     <span className="text-foreground">

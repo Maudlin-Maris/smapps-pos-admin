@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -402,7 +403,7 @@ export default function PrinterDiscoveryWizard({ outletId, departments, onInstal
             </div>
             <div className="space-y-2">
               <Label>Port</Label>
-              <Input type="number" value={port} onChange={e => setPort(e.target.value)} placeholder="9100" />
+              <NumericInput min={1} precision={0} value={port} onChange={(_, valStr) => setPort(valStr)} placeholder="9100" />
             </div>
           </div>
         )}

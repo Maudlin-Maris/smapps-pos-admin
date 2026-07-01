@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, useRef } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -85,15 +87,10 @@ function LocationChip({ loc }: { loc: TransferLocation }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function TransferList() {
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState<"all" | TransferStatus>("all");
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { transfers: countTransfers } = useTransfers();
   const { transfers, isLoading } = useTransfers({
@@ -284,7 +281,7 @@ function TransferCreate() {
   const [carrier, setCarrier] = useState("");
   const [search, setSearch] = useState("");
   const [pickerPage, setPickerPage] = useState(1);
-  const [pickerPerPage, setPickerPerPage] = useState(10);
+  const [pickerPerPage, setPickerPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   // Keep a merged dictionary of all source inventory items we have fetched or loaded from existing
   const [sourceItemsCache, setSourceItemsCache] = useState<Record<string, {
@@ -874,8 +871,8 @@ function TransferCreate() {
                           </td>
                           <td className="p-2 text-right">{transferable}</td>
                           <td className="p-2 text-right">
-                            <Input type="number" min={1} max={transferable} value={l.qty}
-                              onChange={(e) => updateQty(l.itemId, parseInt(e.target.value) || 0)}
+                            <NumericInput min={1} max={transferable} precision={0} value={l.qty}
+                              onChange={(val) => updateQty(l.itemId, val || 0)}
                               className="h-8 w-20 ml-auto text-right" />
                           </td>
                           <td className="p-2 text-right">
@@ -893,9 +890,9 @@ function TransferCreate() {
                           </td>
                           <td className="p-2 text-right">
                             {l.strategy === "custom" ? (
-                              <Input type="number" min={0} step="0.01" value={l.customCost ?? ""}
+                              <NumericInput min={0} step={0.01} precision={2} value={l.customCost ?? 0}
                                 placeholder="Cost"
-                                onChange={(e) => updateCustomCost(l.itemId, parseFloat(e.target.value) || 0)}
+                                onChange={(val) => updateCustomCost(l.itemId, val || 0)}
                                 className="h-8 w-28 ml-auto text-right" />
                             ) : (
                               <span className="text-muted-foreground">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
@@ -1513,9 +1510,9 @@ function ActionDialog({
                     {kind === "approve" && <>
                       <td className="p-2 text-right">{it.requestedQty}</td>
                       <td className="p-2 text-right">
-                        <Input type="number" min={0} max={it.requestedQty}
+                        <NumericInput min={0} max={it.requestedQty} precision={0}
                           value={approvals[it.id] ?? 0}
-                          onChange={(e) => setApprovals((p) => ({ ...p, [it.id]: parseInt(e.target.value) || 0 }))}
+                          onChange={(val) => setApprovals((p) => ({ ...p, [it.id]: val || 0 }))}
                           className="h-8 w-24 ml-auto text-right" />
                       </td>
                     </>}
@@ -1525,24 +1522,24 @@ function ActionDialog({
                         {sourceStockCache[it.inventoryItemId] ?? (it.sku ? sourceStockCache[it.sku] : undefined) ?? 0}
                       </td>
                       <td className="p-2 text-right">
-                        <Input type="number" min={0} max={it.approvedQty}
+                        <NumericInput min={0} max={it.approvedQty} precision={0}
                           value={dispatches[it.id] ?? 0}
-                          onChange={(e) => setDispatches((p) => ({ ...p, [it.id]: parseInt(e.target.value) || 0 }))}
+                          onChange={(val) => setDispatches((p) => ({ ...p, [it.id]: val || 0 }))}
                           className="h-8 w-24 ml-auto text-right" />
                       </td>
                     </>}
                     {kind === "receive" && <>
                       <td className="p-2 text-right">{it.dispatchedQty}</td>
                       <td className="p-2 text-right">
-                        <Input type="number" min={0} max={it.dispatchedQty - it.receivedQty - it.damagedQty}
+                        <NumericInput min={0} max={it.dispatchedQty - it.receivedQty - it.damagedQty} precision={0}
                           value={receipts[it.id]?.received ?? 0}
-                          onChange={(e) => setReceipts((p) => ({ ...p, [it.id]: { ...p[it.id], received: parseInt(e.target.value) || 0 } }))}
+                          onChange={(val) => setReceipts((p) => ({ ...p, [it.id]: { ...p[it.id], received: val || 0 } }))}
                           className="h-8 w-24 ml-auto text-right" />
                       </td>
                       <td className="p-2 text-right">
-                        <Input type="number" min={0}
+                        <NumericInput min={0} precision={0}
                           value={receipts[it.id]?.damaged ?? 0}
-                          onChange={(e) => setReceipts((p) => ({ ...p, [it.id]: { ...p[it.id], damaged: parseInt(e.target.value) || 0 } }))}
+                          onChange={(val) => setReceipts((p) => ({ ...p, [it.id]: { ...p[it.id], damaged: val || 0 } }))}
                           className="h-8 w-24 ml-auto text-right" />
                       </td>
                     </>}

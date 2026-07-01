@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { useGetTransactions } from "@/services/api/transactions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -78,7 +79,7 @@ function flattenForExport(txn: Transaction) {
 export default function ReportTransactions({ selectedOutlets, dateRange, cashierFilter }: ReportTransactionsProps) {
   const [transactions, setTransactions] = useState<Transaction[]>(initialReportTransactions);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [internalCashier, setInternalCashier] = useState("all");
   const isCashierControlled = cashierFilter !== undefined;
   const selectedCashier = isCashierControlled ? (cashierFilter as string) : internalCashier;
@@ -88,12 +89,7 @@ export default function ReportTransactions({ selectedOutlets, dateRange, cashier
   const [selectedTxn, setSelectedTxn] = useState<Transaction | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: apiTransactions } = useGetTransactions({
     search: debouncedSearch.trim() || undefined,

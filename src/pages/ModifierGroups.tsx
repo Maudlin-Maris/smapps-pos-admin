@@ -1,8 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Pencil, Trash2, Search, Layers, ChevronDown, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  Layers,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -29,19 +38,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { formatNaira } from "@/lib/currency";
-import { useGetInventoryItems } from "@/services/api/inventory/item";
-import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import { ResuablePagination } from "@/components/ui/reusable-pagination";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-import { api } from "@/services/api/base";
-import { API_ENDPOINTS } from "@/services/api/endpoints";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { InventoryItemPicker } from "@/components/inventory/InventoryItemPicker";
 
 import {
   useGetModifierGroups,
@@ -78,7 +87,7 @@ const emptyDraft: DraftGroup = {
 export default function ModifierGroups() {
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(DEFAULT_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -86,72 +95,11 @@ export default function ModifierGroups() {
   const [draft, setDraft] = useState<DraftGroup>(emptyDraft);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const [inventorySearch, setInventorySearch] = useState("");
-  const [openPickerIdx, setOpenPickerIdx] = useState<number | null>(null);
-
-  const { data: searchInventoryRes } = useGetInventoryItems(
-    editorOpen ? {
-      search: inventorySearch.trim() || undefined,
-      per_page: DEFAULT_PAGE_SIZE,
-    } : undefined
-  );
-
-  const searchInventory = searchInventoryRes?.data || [];
-
-  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    if (searchInventory.length > 0) {
-      setInventoryCache((prev) => {
-        const next = { ...prev };
-        searchInventory.forEach((item) => {
-          next[item.id] = item;
-        });
-        return next;
-      });
-    }
-  }, [searchInventory]);
-
-  // Load single item on demand when a modifier has a linked inventory item
-  useEffect(() => {
-    if (editorOpen) {
-      draft.modifiers.forEach((m) => {
-        if (m.linkedInventoryItemId && !inventoryCache[m.linkedInventoryItemId]) {
-          api.get(API_ENDPOINTS.SINGLE_INVENTORY(m.linkedInventoryItemId)).then(({ data }) => {
-            if (data) {
-              setInventoryCache(prev => ({ ...prev, [m.linkedInventoryItemId]: data }));
-            }
-          }).catch(() => {});
-        }
-      });
-    }
-  }, [editorOpen, draft.modifiers, inventoryCache]);
-
-  const resolvedInventory = useMemo(() => {
-    return Object.values(inventoryCache);
-  }, [inventoryCache]);
-
-  const inventory = resolvedInventory;
-
-  useEffect(() => {
-    setInventorySearch("");
-  }, [openPickerIdx]);
-
-  const { data: inventoryResponse } = useGetInventoryItems({ per_page: DEFAULT_PAGE_SIZE });
-
-  useEffect(() => {
-    if (inventoryResponse?.data) {
-      setInventoryCache((prev) => {
-        const next = { ...prev };
-        inventoryResponse.data.forEach((item) => {
-          next[item.id] = item;
-        });
-        return next;
-      });
-    }
-  }, [inventoryResponse]);
-
-  const { data: listData, isLoading, mutate } = useGetModifierGroups({
+  const {
+    data: listData,
+    isLoading,
+    mutate,
+  } = useGetModifierGroups({
     page: currentPage,
     per_page: perPage,
     search: search || undefined,
@@ -161,9 +109,12 @@ export default function ModifierGroups() {
   const totalPages = listData?.meta?.last_page || 1;
   const totalItems = listData?.meta?.total || 0;
 
-  const { trigger: triggerCreate, isMutating: isCreating } = useCreateModifierGroup();
-  const { trigger: triggerUpdate, isMutating: isUpdating } = useUpdateModifierGroup(draft.id);
-  const { trigger: triggerDelete, isMutating: isDeleting } = useDeleteModifierGroup(deleteId ?? undefined);
+  const { trigger: triggerCreate, isMutating: isCreating } =
+    useCreateModifierGroup();
+  const { trigger: triggerUpdate, isMutating: isUpdating } =
+    useUpdateModifierGroup(draft.id);
+  const { trigger: triggerDelete, isMutating: isDeleting } =
+    useDeleteModifierGroup(deleteId ?? undefined);
 
   const openCreate = () => {
     setDraft(emptyDraft);
@@ -200,7 +151,9 @@ export default function ModifierGroups() {
   const updateModifier = (idx: number, patch: Partial<DraftModifier>) => {
     setDraft((d) => ({
       ...d,
-      modifiers: d.modifiers.map((m, i) => (i === idx ? { ...m, ...patch } : m)),
+      modifiers: d.modifiers.map((m, i) =>
+        i === idx ? { ...m, ...patch } : m,
+      ),
     }));
   };
 
@@ -225,7 +178,10 @@ export default function ModifierGroups() {
       return;
     }
     if (draft.maxSelect && draft.minSelect > draft.maxSelect) {
-      toast({ title: "Min selection can't exceed max selection", variant: "destructive" });
+      toast({
+        title: "Min selection can't exceed max selection",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -273,7 +229,9 @@ export default function ModifierGroups() {
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Modifier Groups</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            Modifier Groups
+          </h1>
           <p className="text-sm text-muted-foreground">
             Reusable add-ons and customisations attachable to catalog items.
           </p>
@@ -299,7 +257,9 @@ export default function ModifierGroups() {
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-dashed rounded-lg">
           <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
-          <p className="text-sm text-muted-foreground">Loading modifier groups...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading modifier groups...
+          </p>
         </div>
       ) : groups.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-2 p-12 text-center">
@@ -316,28 +276,40 @@ export default function ModifierGroups() {
               const isOpen = openId === group.id;
               return (
                 <Card key={group.id} className="overflow-hidden">
-                  <Collapsible open={isOpen} onOpenChange={(o) => setOpenId(o ? group.id : null)}>
+                  <Collapsible
+                    open={isOpen}
+                    onOpenChange={(o) => setOpenId(o ? group.id : null)}
+                  >
                     <div className="flex items-center justify-between gap-3 p-4">
                       <CollapsibleTrigger asChild>
                         <button className="flex flex-1 items-center gap-3 text-left">
                           <ChevronDown
-                            className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""
-                              }`}
+                            className={`h-4 w-4 text-muted-foreground transition-transform ${
+                              isOpen ? "rotate-180" : ""
+                            }`}
                           />
                           <div>
                             <div className="font-semibold">{group.name}</div>
                             {group.description && (
-                              <div className="text-xs text-muted-foreground">{group.description}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {group.description}
+                              </div>
                             )}
                           </div>
                         </button>
                       </CollapsibleTrigger>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">{group.modifiers.length} modifiers</Badge>
+                        <Badge variant="secondary">
+                          {group.modifiers.length} modifiers
+                        </Badge>
                         <Badge variant="outline">
                           {group.minSelect}–{group.maxSelect || "∞"}
                         </Badge>
-                        <Button size="icon" variant="ghost" onClick={() => openEdit(group)}>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openEdit(group)}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
@@ -353,7 +325,6 @@ export default function ModifierGroups() {
                       <Separator />
                       <div className="divide-y">
                         {group.modifiers.map((m) => {
-                          const linked = inventory.find((i) => i.id === m.linkedInventoryItemId);
                           return (
                             <div
                               key={m.id}
@@ -361,14 +332,16 @@ export default function ModifierGroups() {
                             >
                               <div>
                                 <div className="font-medium">{m.name}</div>
-                                {linked && (
+                                {m.linkedInventoryItemId && (
                                   <div className="text-xs text-muted-foreground">
-                                    Linked: {linked.name}
+                                    Linked: {m.linkedInventoryItemId}
                                   </div>
                                 )}
                               </div>
                               <div className="text-muted-foreground">
-                                {m.price > 0 ? `+${formatNaira(m.price)}` : "Free"}
+                                {m.price > 0
+                                  ? `+${formatNaira(m.price)}`
+                                  : "Free"}
                               </div>
                             </div>
                           );
@@ -396,7 +369,9 @@ export default function ModifierGroups() {
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{draft.id ? "Edit Modifier Group" : "New Modifier Group"}</DialogTitle>
+            <DialogTitle>
+              {draft.id ? "Edit Modifier Group" : "New Modifier Group"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
@@ -413,7 +388,9 @@ export default function ModifierGroups() {
               <Label>Description</Label>
               <Textarea
                 value={draft.description}
-                onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+                onChange={(e) =>
+                  setDraft({ ...draft, description: e.target.value })
+                }
                 placeholder="Optional internal note"
                 rows={2}
               />
@@ -422,21 +399,25 @@ export default function ModifierGroups() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Min selection</Label>
-                <Input
-                  type="number"
+                <NumericInput
                   min={0}
+                  precision={0}
                   value={draft.minSelect}
-                  onChange={(e) => setDraft({ ...draft, minSelect: Number(e.target.value) })}
+                  onChange={(val) =>
+                    setDraft({ ...draft, minSelect: val || 0 })
+                  }
                 />
                 <p className="text-xs text-muted-foreground">0 = optional</p>
               </div>
               <div className="space-y-2">
                 <Label>Max selection</Label>
-                <Input
-                  type="number"
+                <NumericInput
                   min={0}
+                  precision={0}
                   value={draft.maxSelect}
-                  onChange={(e) => setDraft({ ...draft, maxSelect: Number(e.target.value) })}
+                  onChange={(val) =>
+                    setDraft({ ...draft, maxSelect: val || 0 })
+                  }
                 />
                 <p className="text-xs text-muted-foreground">0 = unlimited</p>
               </div>
@@ -459,77 +440,42 @@ export default function ModifierGroups() {
               )}
               {draft.modifiers.map((m, idx) => (
                 <Card key={m.id || idx} className="space-y-2 p-3">
-                  <div className="grid grid-cols-12 gap-2">
-                    <Input
-                      className="col-span-5"
-                      placeholder="Name (e.g. Extra Cheese)"
-                      value={m.name}
-                      onChange={(e) => updateModifier(idx, { name: e.target.value })}
-                    />
-                    <Input
-                      className="col-span-3"
-                      type="number"
-                      placeholder="Price"
-                      value={m.price}
-                      onChange={(e) => updateModifier(idx, { price: Number(e.target.value) })}
-                    />
-                    <div className="col-span-3">
-                      <Popover open={openPickerIdx === idx} onOpenChange={(open) => setOpenPickerIdx(open ? idx : null)}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            role="combobox"
-                            className="w-full justify-between font-normal text-xs px-2 h-9 truncate"
-                          >
-                            {m.linkedInventoryItemId
-                              ? resolvedInventory.find((i) => i.id === m.linkedInventoryItemId)?.name ?? "Linked"
-                              : "Link inventory"}
-                            <ChevronsUpDown className="h-3 w-3 opacity-50 shrink-0 ml-1" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0" align="start">
-                          <Command shouldFilter={false}>
-                            <CommandInput
-                              placeholder="Search inventory..."
-                              className="h-8 text-xs"
-                              value={inventorySearch}
-                              onValueChange={setInventorySearch}
-                            />
-                            <CommandList>
-                              <CommandEmpty>No items found.</CommandEmpty>
-                              <CommandGroup>
-                                <CommandItem
-                                  value="none"
-                                  onSelect={() => {
-                                    updateModifier(idx, { linkedInventoryItemId: undefined });
-                                    setOpenPickerIdx(null);
-                                  }}
-                                >
-                                  <Check className={cn("h-3.5 w-3.5 mr-2", !m.linkedInventoryItemId ? "opacity-100" : "opacity-0")} />
-                                  No link
-                                </CommandItem>
-                                {resolvedInventory.map((i) => (
-                                  <CommandItem
-                                    key={i.id}
-                                    value={`${i.name} ${i.sku}`}
-                                    onSelect={() => {
-                                      updateModifier(idx, { linkedInventoryItemId: i.id });
-                                      setOpenPickerIdx(null);
-                                    }}
-                                  >
-                                    <Check className={cn("h-3.5 w-3.5 mr-2", m.linkedInventoryItemId === i.id ? "opacity-100" : "opacity-0")} />
-                                    <div className="flex-1 min-w-0">
-                                      <div className="text-xs truncate">{i.name}</div>
-                                      <div className="text-[10px] text-muted-foreground truncate">{i.sku}</div>
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                  <div className="grid grid-cols-12 gap-2 items-end">
+                    <div className="col-span-5 space-y-1">
+                      <Label className="text-xs">Name</Label>
+                      <Input
+                        placeholder="Name (e.g. Extra Cheese)"
+                        value={m.name}
+                        onChange={(e) =>
+                          updateModifier(idx, { name: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">Price</Label>
+                      <NumericInput
+                        placeholder="Price"
+                        value={m.price}
+                        min={0}
+                        step={0.01}
+                        precision={2}
+                        onChange={(val) =>
+                          updateModifier(idx, { price: val || 0 })
+                        }
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-xs">Inventory Item</Label>
+                      <InventoryItemPicker
+                        selectedId={m.linkedInventoryItemId}
+                        onSelect={(id) =>
+                          updateModifier(idx, {
+                            linkedInventoryItemId: id || undefined,
+                          })
+                        }
+                        triggerPlaceholder="Link inventory"
+                        triggerClassName="text-xs px-2"
+                      />
                     </div>
                     <Button
                       size="icon"
@@ -546,7 +492,11 @@ export default function ModifierGroups() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditorOpen(false)} disabled={isCreating || isUpdating}>
+            <Button
+              variant="outline"
+              onClick={() => setEditorOpen(false)}
+              disabled={isCreating || isUpdating}
+            >
               Cancel
             </Button>
             <Button onClick={handleSave} isLoading={isCreating || isUpdating}>
@@ -556,18 +506,26 @@ export default function ModifierGroups() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !isDeleting && !o && setDeleteId(null)}>
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(o) => !isDeleting && !o && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete modifier group?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the group from the modifier library. Items already
-              configured with these modifiers keep their existing add-ons.
+              This will remove the group from the modifier library. Items
+              already configured with these modifiers keep their existing
+              add-ons.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDelete} isLoading={isDeleting}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              isLoading={isDeleting}
+            >
               Delete
             </Button>
           </AlertDialogFooter>

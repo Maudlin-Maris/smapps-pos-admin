@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Tag, Percent, Loader2 } from "lucide-react";
@@ -140,7 +141,7 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Value</Label>
-              <Input type="number" min="0" value={discValue} onChange={(e) => setDiscValue(e.target.value)} placeholder={discType === "percentage" ? "10" : "500"} />
+              <NumericInput min={0} precision={discType === "percentage" ? 0 : 2} value={discValue} onChange={(_, valStr) => setDiscValue(valStr)} placeholder={discType === "percentage" ? "10" : "500"} />
             </div>
             <Button onClick={addDiscount} size="sm" className="h-10" disabled={isCreatingDiscount}>
               {isCreatingDiscount && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
@@ -198,7 +199,7 @@ export default function DiscountTipManagerDialog({ open, onOpenChange, outletId,
           <div className="flex items-end gap-2">
             <div className="space-y-1 flex-1 max-w-[160px]">
               <Label className="text-xs">Percentage</Label>
-              <Input type="number" min="1" max="100" value={tipValue} onChange={(e) => setTipValue(e.target.value)} placeholder="e.g. 10" />
+              <NumericInput min={1} max={100} precision={0} value={tipValue} onChange={(_, valStr) => setTipValue(valStr)} placeholder="e.g. 10" />
             </div>
             <Button onClick={addTip} size="sm" className="h-10" disabled={isCreatingTip}>
               {isCreatingTip && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}

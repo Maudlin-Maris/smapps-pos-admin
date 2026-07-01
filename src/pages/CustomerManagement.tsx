@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -127,7 +128,7 @@ export default function CustomerManagement() {
 
   // Pagination states
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   // API query
   const { data: customersResponse, isLoading: isCustomersLoading, mutate: mutateCustomers } = useGetCustomers({

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { usePOS } from "@/contexts/POSContext";
 import { useGetItems } from "@/services/api/catalog/item";
 import { posProducts, posCategories, type POSProduct } from "@/data/posData";
@@ -49,14 +50,9 @@ export default function ProductGrid() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: itemsResponse } = useGetItems({
     outletId: currentOutlet?.id || undefined,

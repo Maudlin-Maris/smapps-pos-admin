@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -208,13 +209,13 @@ function RewardFormDialog({
             </div>
             <div>
               <Label>Points Cost *</Label>
-              <Input type="number" min="1" value={pointsCost} onChange={(e) => setPointsCost(e.target.value)} placeholder="100" disabled={isSaving} />
+              <NumericInput min={1} precision={0} value={pointsCost} onChange={(_, valStr) => setPointsCost(valStr)} placeholder="100" disabled={isSaving} />
             </div>
           </div>
           {type !== "free_item" && (
             <div>
               <Label>{type === "discount_percentage" ? "Discount %" : "Discount Amount (₦)"}</Label>
-              <Input type="number" min="1" value={value} onChange={(e) => setValue(e.target.value)} placeholder={type === "discount_percentage" ? "10" : "1000"} disabled={isSaving} />
+              <NumericInput min={1} precision={type === "discount_percentage" ? 0 : 2} value={value} onChange={(_, valStr) => setValue(valStr)} placeholder={type === "discount_percentage" ? "10" : "1000"} disabled={isSaving} />
             </div>
           )}
 
@@ -291,11 +292,11 @@ function RewardFormDialog({
               </div>
               <div>
                 <Label>Quantity per Redemption</Label>
-                <Input
-                  type="number"
-                  min="1"
+                 <NumericInput
+                  min={1}
+                  precision={0}
                   value={freeItemQuantity}
-                  onChange={(e) => setFreeItemQuantity(e.target.value)}
+                  onChange={(_, valStr) => setFreeItemQuantity(valStr)}
                   placeholder="1"
                   disabled={isSaving}
                 />
@@ -394,7 +395,7 @@ export default function LoyaltyManagement() {
   const [activitySearch, setActivitySearch] = useState("");
   const [activityType, setActivityType] = useState("all");
   const [activityPage, setActivityPage] = useState(1);
-  const [activityPerPage, setActivityPerPage] = useState(10);
+  const [activityPerPage, setActivityPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   // Rewards pagination states
   const [rewardsPage, setRewardsPage] = useState(1);
@@ -1101,7 +1102,7 @@ export default function LoyaltyManagement() {
                 <div>
                   <Label>Global Base Earn Rate</Label>
                   <div className="flex items-center gap-2 mt-1.5">
-                    <Input type="number" min="1" value={earnRate} onChange={(e) => setEarnRate(e.target.value)} className="w-24" />
+                    <NumericInput min={1} precision={0} value={earnRate} onChange={(_, valStr) => setEarnRate(valStr)} className="w-24" />
                     <span className="text-sm text-muted-foreground">point(s) per ₦100 spent</span>
                   </div>
                 </div>
@@ -1128,12 +1129,12 @@ export default function LoyaltyManagement() {
                     <div key={tier} className="rounded-lg border p-3 text-center space-y-1">
                       <Badge className={cn("text-xs mb-1", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
                       <div className="flex items-center justify-center gap-1">
-                        <Input
-                          type="number"
-                          min="0.5"
-                          step="0.5"
+                        <NumericInput
+                          min={0.5}
+                          step={0.5}
+                          precision={1}
                           value={tierMultipliers[tier]}
-                          onChange={e => setTierMultipliers(prev => ({ ...prev, [tier]: parseFloat(e.target.value) || 1 }))}
+                          onChange={(val) => setTierMultipliers(prev => ({ ...prev, [tier]: val || 1 }))}
                           className="w-16 text-center h-8 text-sm font-bold"
                         />
                         <span className="text-sm text-muted-foreground">×</span>
@@ -1165,14 +1166,14 @@ export default function LoyaltyManagement() {
                     {ov.label && <p className="text-xs text-muted-foreground">{ov.label}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      min="0.5"
-                      step="0.5"
+                    <NumericInput
+                      min={0.5}
+                      step={0.5}
+                      precision={1}
                       value={ov.multiplier}
-                      onChange={e => {
-                        const val = parseFloat(e.target.value) || 1;
-                        setEarnOverrides(prev => prev.map((o, i) => i === idx ? { ...o, multiplier: val } : o));
+                      onChange={(val) => {
+                        const v = val || 1;
+                        setEarnOverrides(prev => prev.map((o, i) => i === idx ? { ...o, multiplier: v } : o));
                       }}
                       className="w-20 text-center"
                     />
@@ -1234,12 +1235,12 @@ export default function LoyaltyManagement() {
                     <div className="flex items-center justify-between py-2">
                       <Badge className={cn("text-xs w-20 justify-center", tierConfig[tier].badgeClass)}>{tierConfig[tier].label}</Badge>
                       <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="100"
+                        <NumericInput
+                          min={0}
+                          step={100}
+                          precision={0}
                           value={tierThresholds[tier]}
-                          onChange={e => setTierThresholds(prev => ({ ...prev, [tier]: parseInt(e.target.value) || 0 }))}
+                          onChange={(val) => setTierThresholds(prev => ({ ...prev, [tier]: val || 0 }))}
                           className={cn("w-28 text-right", errorMsg && "border-destructive focus-visible:ring-destructive")}
                           disabled={tier === "bronze"}
                         />

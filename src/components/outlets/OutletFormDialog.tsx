@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
@@ -233,7 +234,15 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accountNumber">Account Number</Label>
-                <Input id="accountNumber" type="number" placeholder="0000000000" value={form.accountNumber} onChange={(e) => update("accountNumber", e.target.value)} />
+                 <NumericInput
+                  id="accountNumber"
+                  thousandSeparator={false}
+                  allowLeadingZeros
+                  precision={0}
+                  value={form.accountNumber}
+                  onChange={(_, valStr) => update("accountNumber", valStr)}
+                  placeholder="0000000000"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accountName">Account Name</Label>

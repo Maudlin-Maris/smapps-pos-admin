@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { usePOS } from "@/contexts/POSContext";
 import { useGetOutletLocations } from "@/services/api/outlets";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +11,7 @@ import { getFeatures, getBusinessType } from "@/data/businessTypes";
 import { formatNaira } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,14 +38,9 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType>(allowedTypes[0]?.id || "walk_in");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
-  const [debouncedLocationSearch, setDebouncedLocationSearch] = useState("");
+  const debouncedLocationSearch = useDebouncedValue(locationSearch, 300);
   
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedLocationSearch(locationSearch);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [locationSearch]);
+  
 
   const { data: apiLocations } = useGetOutletLocations(
     currentOutlet?.id,
@@ -554,10 +551,11 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                   <option value="fixed">₦ Amount</option>
                   <option value="percentage">% Percent</option>
                 </select>
-                <Input
-                  type="number"
+                <NumericInput
+                  min={0}
+                  precision={customDiscountType === "percentage" ? 0 : 2}
                   value={customDiscountAmount}
-                  onChange={e => { setCustomDiscountAmount(e.target.value); setSelectedDiscount(null); }}
+                  onChange={(_, valStr) => { setCustomDiscountAmount(valStr); setSelectedDiscount(null); }}
                   placeholder="Custom discount"
                   className="h-9"
                 />
@@ -587,10 +585,11 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                   </button>
                 ))}
               </div>
-              <Input
-                type="number"
+              <NumericInput
+                min={0}
+                precision={2}
                 value={tipAmount}
-                onChange={e => { setTipAmount(e.target.value); setTipPreset(null); }}
+                onChange={(_, valStr) => { setTipAmount(valStr); setTipPreset(null); }}
                 placeholder="Custom tip amount (₦)"
                 className="h-9"
               />
@@ -795,13 +794,13 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
                   </select>
                   <div className="relative flex-1">
                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">₦</span>
-                    <Input
-                      type="number"
-                      step="1"
+                    <NumericInput
+                      min={0}
+                      precision={2}
                       value={ca.amount}
-                      onChange={e => {
+                      onChange={(_, valStr) => {
                         const next = [...customAmounts];
-                        next[i] = { ...next[i], amount: e.target.value };
+                        next[i] = { ...next[i], amount: valStr };
                         setCustomAmounts(next);
                       }}
                       placeholder="Amount"
@@ -1017,10 +1016,11 @@ export default function PaymentContent({ existingOrderId, onClose, onBackToOrder
               <label className="text-sm font-medium">Amount to Pay</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg text-muted-foreground font-medium">₦</span>
-                <Input
-                  type="number"
+                <NumericInput
+                  min={0}
+                  precision={2}
                   value={partialAmount}
-                  onChange={e => setPartialAmount(e.target.value)}
+                  onChange={(_, valStr) => setPartialAmount(valStr)}
                   placeholder="Enter amount"
                   className="h-11 text-lg pl-8"
                 />

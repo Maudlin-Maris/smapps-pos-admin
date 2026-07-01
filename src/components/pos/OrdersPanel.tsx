@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { usePOS } from "@/contexts/POSContext";
 import { useGetOrders } from "@/services/api/orders";
 import { tierConfig } from "@/data/loyaltyData";
@@ -55,17 +56,12 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
   const { orders, updateOrderStatus, updateItemStatus, removeItemFromOrder, cart, addItemsToOrder, clearCart, currentCashier, currentOutlet, transferOrder, acceptTransfer, rejectTransfer, voidOrder, changeOrderLocation } = usePOS();
   const [group, setGroup] = useState<OrderGroup>("my_orders");
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(searchQuery, 300);
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
   const [selectedLocationName, setSelectedLocationName] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<POSOrder | null>(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+  
 
   const { data: apiOrders } = useGetOrders({
     outletId: currentOutlet?.id || undefined,

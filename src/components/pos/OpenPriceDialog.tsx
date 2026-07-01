@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Label } from "@/components/ui/label";
 import { formatNaira } from "@/lib/currency";
 import { DollarSign } from "lucide-react";
@@ -53,17 +54,16 @@ export default function OpenPriceDialog({ open, productName, onConfirm, onClose 
             </Label>
             <div className="relative mt-1">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₦</span>
-              <Input
+              <NumericInput
                 ref={inputRef}
                 id="open-price"
-                type="number"
-                min="0"
-                step="0.01"
+                min={0}
+                step={0.01}
+                precision={2}
                 value={value}
-                onChange={e => setValue(e.target.value)}
+                onChange={(_, valStr) => setValue(valStr)}
                 placeholder="0.00"
                 className="pl-8 text-lg font-semibold h-12"
-                inputMode="decimal"
               />
             </div>
             {numericValue > 0 && (

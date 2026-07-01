@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -66,7 +68,7 @@ export default function ExpenseManagement() {
 
   // Pagination states
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   const { data: outletsResponse } = useGetOutlets();
   const outlets = outletsResponse || [];
@@ -348,12 +350,12 @@ export default function ExpenseManagement() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Amount *</label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={form.amount || ""}
-                  onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })}
+                <NumericInput
+                  step={0.01}
+                  min={0}
+                  precision={2}
+                  value={form.amount || 0}
+                  onChange={(val) => setForm({ ...form, amount: val || 0 })}
                   placeholder="0.00"
                   disabled={isSaving}
                 />

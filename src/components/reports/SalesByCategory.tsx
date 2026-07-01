@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { SalesRecord } from "@/hooks/use-financial-data";
 import { CalendarRange, Crown, TrendingUp, Trophy } from "lucide-react";
 import { usePagination } from "@/hooks/use-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import PaginationControls from "@/components/inventory/PaginationControls";
 import { aggregateItems, dailySalesShareFor, filterSales, formatCurrency } from "./salesData";
 
@@ -68,7 +69,7 @@ export default function SalesByCategory({ sales, selectedOutlets, dateRange, cas
     });
   };
 
-  const catPag = usePagination(salesByCategory, 10);
+  const catPag = usePagination(salesByCategory, DEFAULT_PAGE_SIZE);
 
   return (
     <div className="space-y-4 sm:space-y-6">

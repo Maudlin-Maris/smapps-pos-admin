@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +31,7 @@ import CashierFormDialog, {
 } from "@/components/cashiers/CashierFormDialog";
 import type { UpdateCashierPayload } from "@/lib/types/cashiers";
 import { toast } from "sonner";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { usePagination } from "@/hooks/use-pagination";
 import { ResuablePagination } from "@/components/ui/reusable-pagination";
 import {
@@ -104,16 +106,11 @@ export default function CashierManagement() {
   const [reactivateTarget, setReactivateTarget] = useState<CashierRecord | null>(null);
   const [pinReveal, setPinReveal] = useState<PinRevealState | null>(null);
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState<"all" | CashierStatus>("all");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: cashiersList = [], isLoading, mutate } = useGetCashiers({
     search: debouncedSearch.trim() || undefined,
@@ -251,7 +248,7 @@ export default function CashierManagement() {
   const {
     page, setPage, perPage, setPerPage, totalPages,
     paginatedItems, totalItems, pageSizeOptions,
-  } = usePagination(filtered, 10);
+  } = usePagination(filtered, DEFAULT_PAGE_SIZE);
 
   const StatusBadge = ({ status }: { status: CashierStatus }) =>
     status === "active" ? (

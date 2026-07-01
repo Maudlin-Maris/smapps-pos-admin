@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -831,15 +832,16 @@ export default function InventoryItemForm({
                     </PopoverContent>
                   </Popover>
                 </label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <NumericInput
+                  min={0}
+                  step={0.01}
+                  precision={2}
                   value={form.costPrice}
-                  onChange={(e) => {
-                    const cp = Number(e.target.value);
+                  onChange={(val) => {
+                    const cp = val || 0;
                     const method = form.pricingMethod ?? "markup";
-                    const val = form.pricingValue ?? 0;
-                    const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val) * 100) / 100 : form.sellPrice;
+                    const val_ = form.pricingValue ?? 0;
+                    const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val_) * 100) / 100 : form.sellPrice;
                     setForm({ ...form, costPrice: cp, sellPrice: newSell });
                   }}
                   placeholder="0.00"
@@ -892,28 +894,28 @@ export default function InventoryItemForm({
                         <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
                           {form.pricingMethod === "fixed" ? "Price" : "%"}
                         </label>
-                        <Input
-                          type="number"
+                        <NumericInput
                           min={0}
-                          step="0.01"
+                          step={0.01}
+                          precision={2}
                           value={form.pricingValue ?? 0}
-                          onChange={(e) => {
-                            const val = Number(e.target.value);
+                          onChange={(val) => {
+                            const val_ = val || 0;
                             const method = form.pricingMethod ?? "markup";
-                            const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
-                            setForm({ ...form, pricingValue: val, sellPrice: newSell });
+                            const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val_) * 100) / 100 : sell;
+                            setForm({ ...form, pricingValue: val_, sellPrice: newSell });
                           }}
                           className="h-9"
                         />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Sell Price (₦)</label>
-                        <Input
-                          type="number"
+                        <NumericInput
                           min={0}
-                          step="0.01"
+                          step={0.01}
+                          precision={2}
                           value={form.sellPrice ?? 0}
-                          onChange={(e) => setForm({ ...form, sellPrice: Number(e.target.value) })}
+                          onChange={(val) => setForm({ ...form, sellPrice: val || 0 })}
                           className="h-9"
                         />
                       </div>
@@ -958,11 +960,11 @@ export default function InventoryItemForm({
                             {batchStockTotal}
                           </div>
                         ) : (
-                          <Input
-                            type="number"
+                          <NumericInput
                             min={0}
+                            precision={2}
                             value={form.stock}
-                            onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })}
+                            onChange={(val) => setForm({ ...form, stock: val || 0 })}
                           />
                         )}
                       </div>
@@ -980,11 +982,11 @@ export default function InventoryItemForm({
                             </PopoverContent>
                           </Popover>
                         </label>
-                        <Input
-                          type="number"
+                        <NumericInput
                           min={0}
+                          precision={2}
                           value={form.minStock}
-                          onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })}
+                          onChange={(val) => setForm({ ...form, minStock: val || 0 })}
                         />
                       </div>
                     </div>
@@ -1027,11 +1029,11 @@ export default function InventoryItemForm({
                             </div>
                             <div className="space-y-0.5">
                               <label className="text-[9px] font-medium text-muted-foreground uppercase tracking-wide">Qty</label>
-                              <Input
-                                type="number"
+                              <NumericInput
                                 min={0}
+                                precision={2}
                                 value={batch.quantity}
-                                onChange={(e) => updateBatch(idx, { quantity: Number(e.target.value) })}
+                                onChange={(val) => updateBatch(idx, { quantity: val || 0 })}
                                 className="h-7 text-xs"
                               />
                             </div>
@@ -1123,12 +1125,12 @@ export default function InventoryItemForm({
                           <div className="flex items-center gap-2">
                             <div className="flex-1 space-y-1">
                               <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0.01"
+                              <NumericInput
+                                step={0.01}
+                                min={0.01}
+                                precision={2}
                                 value={conv.fromQuantity}
-                                onChange={(e) => updateConversion(idx, { fromQuantity: Number(e.target.value) })}
+                                onChange={(val) => updateConversion(idx, { fromQuantity: val || 0 })}
                                 className="h-8 text-sm"
                               />
                             </div>
@@ -1141,12 +1143,12 @@ export default function InventoryItemForm({
                             <span className="text-sm font-medium text-muted-foreground pt-4">=</span>
                             <div className="flex-1 space-y-1">
                               <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Quantity</label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0.01"
+                              <NumericInput
+                                step={0.01}
+                                min={0.01}
+                                precision={2}
                                 value={conv.toQuantity}
-                                onChange={(e) => updateConversion(idx, { toQuantity: Number(e.target.value) })}
+                                onChange={(val) => updateConversion(idx, { toQuantity: val || 0 })}
                                 className="h-8 text-sm"
                               />
                             </div>
@@ -1203,12 +1205,12 @@ export default function InventoryItemForm({
                                     <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
                                       Sell Price per {toUnit ? toUnit.abbreviation : "sub-unit"} (₦)
                                     </label>
-                                    <Input
-                                      type="number"
+                                    <NumericInput
                                       min={0}
-                                      step="0.01"
+                                      step={0.01}
+                                      precision={2}
                                       value={conv.sellPrice ?? 0}
-                                      onChange={(e) => updateConversion(idx, { sellPrice: Number(e.target.value) })}
+                                      onChange={(val) => updateConversion(idx, { sellPrice: val || 0 })}
                                       className="h-8 text-sm"
                                       placeholder="0.00"
                                     />

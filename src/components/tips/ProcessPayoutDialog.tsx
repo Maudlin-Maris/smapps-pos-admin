@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -170,14 +171,13 @@ export default function ProcessPayoutDialog({
             <div>
               <Label className="text-xs">Amount paid</Label>
               <div className="flex gap-2">
-                <Input
-                  type="number"
+                <NumericInput
                   min={0}
                   max={outstandingAmount}
-                  step="0.01"
+                  step={0.01}
+                  precision={2}
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  inputMode="decimal"
+                  onChange={(_, valStr) => setAmount(valStr)}
                 />
                 <Button
                   type="button"

@@ -67,7 +67,7 @@ export default function MenuManagement() {
 
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -485,7 +485,11 @@ export default function MenuManagement() {
                 variant="outline"
                 className="w-fit gap-1.5"
                 onClick={() => setCopyDialogOpen(true)}
-                disabled={isInitialLoading || isMutating || (itemsData?.meta?.total ?? 0) === 0}
+                disabled={
+                  isInitialLoading ||
+                  isMutating ||
+                  (itemsData?.meta?.total ?? 0) === 0
+                }
               >
                 <Copy className="h-4 w-4" /> Copy to Outlet
               </Button>
@@ -536,7 +540,6 @@ export default function MenuManagement() {
             hasMore={!categoriesReachedLastPage}
             onLoadMore={() =>
               setCategoriesSize((size) => {
-                console.log({ size });
                 return size + 1;
               })
             }

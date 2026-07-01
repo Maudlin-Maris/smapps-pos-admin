@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";;
 import { useGetTransactions } from "@/services/api/transactions";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -98,18 +99,13 @@ const rowsPerPageOptions = ["5", "10", "20", "50"];
 
 export function TransactionsTable({ transactions }: TransactionsTableProps) {
   const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState("10");
 
   const perPage = parseInt(rowsPerPage);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search]);
+  
 
   const { data: apiTransactions } = useGetTransactions({
     search: debouncedSearch.trim() || undefined,

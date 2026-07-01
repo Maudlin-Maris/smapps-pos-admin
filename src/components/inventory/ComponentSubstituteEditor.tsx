@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -241,14 +242,14 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-1 cursor-help">
                         <span className="text-[10px] text-muted-foreground">ratio</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
+                        <NumericInput
+                          step={0.01}
+                          min={0.01}
+                          precision={2}
                           value={s.conversionRatio}
-                          onChange={(e) =>
+                          onChange={(val) =>
                             updateSub(s.inventoryItemId, {
-                              conversionRatio: Math.max(0.01, Number(e.target.value) || 1),
+                              conversionRatio: Math.max(0.01, val || 1),
                             })
                           }
                           className="h-6 w-14 text-[11px] px-1.5"

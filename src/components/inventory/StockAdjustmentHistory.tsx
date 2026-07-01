@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { usePagination } from "@/hooks/use-pagination";
 import PaginationControls from "./PaginationControls";
 import { Input } from "@/components/ui/input";
+import { NumericInput } from "@/components/ui/numeric-input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -343,23 +344,23 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Quantity</label>
-              <Input
-                type="number"
+              <NumericInput
                 min={0}
+                precision={0}
                 value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
+                onChange={(val) => setQuantity(val || 0)}
               />
             </div>
             
             {isAddType && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cost per unit (₦)</label>
-                <Input
-                  type="number"
+                <NumericInput
                   min={0}
-                  step="0.01"
+                  step={0.01}
+                  precision={2}
                   value={batchCostPrice}
-                  onChange={(e) => setBatchCostPrice(Number(e.target.value))}
+                  onChange={(val) => setBatchCostPrice(val || 0)}
                 />
               </div>
             )}
@@ -406,12 +407,12 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
                   <label className="text-xs font-medium text-muted-foreground">
                     {pricingMethod === "markup" ? "Markup %" : pricingMethod === "margin" ? "Margin %" : "Sell Price (₦)"}
                   </label>
-                  <Input
-                    type="number"
+                  <NumericInput
                     min={0}
-                    step="0.01"
+                    step={0.01}
+                    precision={2}
                     value={pricingValue}
-                    onChange={(e) => setPricingValue(Number(e.target.value))}
+                    onChange={(val) => setPricingValue(val || 0)}
                     className="h-9"
                   />
                 </div>
@@ -419,12 +420,12 @@ export function StockAdjustDialog({ open, onOpenChange, item, onAdjust, currentS
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Sell Price (₦)</label>
-                <Input
-                  type="number"
+                <NumericInput
                   min={0}
-                  step="0.01"
+                  step={0.01}
+                  precision={2}
                   value={sellPrice}
-                  onChange={(e) => handleSellPriceDirectChange(Number(e.target.value))}
+                  onChange={(val) => handleSellPriceDirectChange(val || 0)}
                   className="h-9"
                 />
               </div>
