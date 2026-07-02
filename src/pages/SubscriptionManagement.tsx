@@ -247,6 +247,7 @@ const addonIcons: Record<string, LucideIcon> = {
   whatsapp: MessageSquare,
   api: Code2,
   bi: TrendingUp,
+  qrmenu: QrCode,
 };
 
 interface AddonDef {
@@ -258,17 +259,20 @@ interface AddonDef {
   desc: string;
   /** Tier at which the add-on is bundled for free (no longer billable). */
   includedFromTier: 0 | 1 | 2;
+  /** Feature not yet shipped — card shown but not purchasable. */
+  comingSoon?: boolean;
 }
 
 const addons: AddonDef[] = [
   { key: "loyalty",  name: "Loyalty Engine",     icon: addonIcons.loyalty,  price: "₦12,000/mo", active: true,  includedFromTier: 1, desc: "Points, tiers & redemption rules" },
   { key: "kds",      name: "Kitchen Display",    icon: addonIcons.kds,      price: "₦9,000/mo",  active: true,  includedFromTier: 1, desc: "Real-time kitchen station tickets" },
   { key: "bookings", name: "Service Bookings",   icon: addonIcons.bookings, price: "₦8,000/mo",  active: false, includedFromTier: 1, desc: "Appointments for salons & services" },
-  { key: "delivery", name: "Delivery & Dispatch",icon: addonIcons.delivery, price: "₦18,000/mo", active: true,  includedFromTier: 2, desc: "Rider assignment & live tracking" },
-  { key: "online",   name: "Online Ordering",    icon: addonIcons.online,   price: "₦22,000/mo", active: false, includedFromTier: 2, desc: "Branded order-ahead storefront" },
-  { key: "whatsapp", name: "WhatsApp Receipts",  icon: addonIcons.whatsapp, price: "₦6,000/mo",  active: false, includedFromTier: 2, desc: "Auto-send digital receipts" },
-  { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks" },
-  { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI" },
+  { key: "qrmenu",   name: "QR Code Menu",       icon: addonIcons.qrmenu,   price: "₦5,000/mo",  active: false, includedFromTier: 1, desc: "Customers scan a QR to view your catalog on their phone" },
+  { key: "delivery", name: "Delivery & Dispatch",icon: addonIcons.delivery, price: "₦18,000/mo", active: false, includedFromTier: 2, desc: "Rider assignment & live tracking", comingSoon: true },
+  { key: "online",   name: "Online Ordering",    icon: addonIcons.online,   price: "₦22,000/mo", active: false, includedFromTier: 2, desc: "Branded order-ahead storefront", comingSoon: true },
+  { key: "whatsapp", name: "WhatsApp Receipts",  icon: addonIcons.whatsapp, price: "₦6,000/mo",  active: false, includedFromTier: 2, desc: "Auto-send digital receipts", comingSoon: true },
+  { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks", comingSoon: true },
+  { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI", comingSoon: true },
 ];
 
 const comparisonPlans = [
