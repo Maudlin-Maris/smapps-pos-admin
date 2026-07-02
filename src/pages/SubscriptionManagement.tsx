@@ -1026,13 +1026,15 @@ export default function SubscriptionManagement() {
               const Icon = a.icon;
               const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
               const isIncluded = currentTier >= a.includedFromTier;
-              const isActive = isIncluded || activeAddons[a.key];
+              const isComingSoon = !!a.comingSoon;
+              const isActive = !isComingSoon && (isIncluded || activeAddons[a.key]);
               return (
                 <Card
                   key={a.key}
                   className={cn(
                     "p-4 transition-all",
                     isActive && "border-primary/30 bg-primary/[0.02]",
+                    isComingSoon && "opacity-70",
                   )}
                 >
                   <div className="flex items-start justify-between">
@@ -1046,11 +1048,15 @@ export default function SubscriptionManagement() {
                       <div>
                         <p className="text-sm font-semibold">{a.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {isIncluded ? `Included in ${planByTier[a.includedFromTier]}` : a.price}
+                          {isComingSoon ? "Not yet available" : isIncluded ? `Included in ${planByTier[a.includedFromTier]}` : a.price}
                         </p>
                       </div>
                     </div>
-                    {isIncluded ? (
+                    {isComingSoon ? (
+                      <Badge className="text-[10px] h-5 bg-warning/10 text-warning border-warning/20 border" variant="outline">
+                        Coming Soon
+                      </Badge>
+                    ) : isIncluded ? (
                       <Badge className="text-[10px] h-5 bg-info/10 text-info border-info/20 border" variant="outline">
                         Included
                       </Badge>
@@ -1061,17 +1067,28 @@ export default function SubscriptionManagement() {
                     ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">{a.desc}</p>
-                  <Button
-                    size="sm"
-                    variant={isActive ? "outline" : "default"}
-                    className="w-full mt-3"
-                    disabled={isIncluded}
-                    onClick={() =>
-                      setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
-                    }
-                  >
-                    {isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
-                  </Button>
+                  {a.key === "qrmenu" && isActive ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-3"
+                      onClick={() => setQrMenuOpen(true)}
+                    >
+                      <QrCode className="h-3.5 w-3.5" /> View QR Codes
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={isActive ? "outline" : "default"}
+                      className="w-full mt-3"
+                      disabled={isIncluded || isComingSoon}
+                      onClick={() =>
+                        setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
+                      }
+                    >
+                      {isComingSoon ? "Coming Soon" : isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
+                    </Button>
+                  )}
                 </Card>
               );
             })}
