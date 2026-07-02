@@ -1469,6 +1469,148 @@ export default function SubscriptionManagement() {
         targetPlan={planDialogTarget}
         onConfirm={handlePlanChangeConfirm}
       />
+
+      {/* Add Payment Method */}
+      <Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" /> Add payment method
+            </DialogTitle>
+            <DialogDescription>
+              Card details are tokenised — we never store the full number.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="pm-name">Cardholder name</Label>
+              <Input id="pm-name" placeholder="Name on card" value={pmForm.name}
+                onChange={(e) => setPmForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pm-number">Card number</Label>
+              <Input id="pm-number" inputMode="numeric" placeholder="4242 4242 4242 4242" value={pmForm.number}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "").slice(0, 19);
+                  const formatted = raw.replace(/(.{4})/g, "$1 ").trim();
+                  setPmForm((f) => ({ ...f, number: formatted }));
+                }} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pm-exp">Expiry (MM/YY)</Label>
+                <Input id="pm-exp" placeholder="08/27" value={pmForm.exp}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                    setPmForm((f) => ({ ...f, exp: v }));
+                  }} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pm-cvc">CVC</Label>
+                <Input id="pm-cvc" inputMode="numeric" placeholder="123" maxLength={4} value={pmForm.cvc}
+                  onChange={(e) => setPmForm((f) => ({ ...f, cvc: e.target.value.replace(/\D/g, "") }))} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddPaymentOpen(false)}>Cancel</Button>
+            <Button onClick={submitAddPayment}>Add card</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Payment Method */}
+      <AlertDialog open={!!removeTarget} onOpenChange={(o) => !o && setRemoveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {removeTarget?.brand} •••• {removeTarget?.last4}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This card will no longer be charged for subscription renewals. {removeTarget?.default && "Another card will be promoted to default."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemovePm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* QR Code Menu */}
+      <Dialog open={qrMenuOpen} onOpenChange={setQrMenuOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-4 w-4" /> QR Code Menu
+            </DialogTitle>
+            <DialogDescription>
+              Print or display this code. Customers scan it with any phone camera to view your catalog.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Outlet</Label>
+              <select
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={qrOutletId}
+                onChange={(e) => setQrOutletId(e.target.value)}
+              >
+                {posOutlets.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col items-center gap-3 rounded-lg border p-4 bg-muted/20">
+              <img
+                src={qrImageSrc}
+                alt="Menu QR code"
+                className="h-56 w-56 rounded-md bg-white p-2"
+              />
+              <p className="text-xs text-muted-foreground text-center break-all">{qrTargetUrl}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  navigator.clipboard?.writeText(qrTargetUrl);
+                  toast.success("Menu link copied");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => window.open(qrTargetUrl, "_blank")}
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Preview
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = qrImageSrc;
+                  a.download = `menu-qr-${qrOutletId}.png`;
+                  a.target = "_blank";
+                  a.rel = "noopener";
+                  a.click();
+                }}
+              >
+                <Download className="h-3.5 w-3.5" /> Download
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
