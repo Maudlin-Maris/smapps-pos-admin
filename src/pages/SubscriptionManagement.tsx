@@ -745,6 +745,8 @@ export default function SubscriptionManagement() {
   const [cancelFeedback, setCancelFeedback] = useState("");
   const [reactivateOpen, setReactivateOpen] = useState(false);
 
+  const invoicePagination = usePagination(invoiceHistory, 5);
+
   const cancelReasons = [
     "Too expensive",
     "Missing features I need",
