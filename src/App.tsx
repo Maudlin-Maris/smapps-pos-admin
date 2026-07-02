@@ -55,6 +55,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/m/:outletId" element={<PublicMenu />} />
                 <Route path="/" element={<Protected><Dashboard /></Protected>} />
                 <Route path="/profile" element={<Protected><Profile /></Protected>} />
                 <Route path="/menu" element={<Protected><MenuManagement /></Protected>} />
