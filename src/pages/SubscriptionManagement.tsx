@@ -865,10 +865,6 @@ export default function SubscriptionManagement() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <FileText className="h-4 w-4" />
-            Billing Portal
-          </Button>
           <Button size="sm" disabled={!nextUpgrade} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>
             <TrendingUp className="h-4 w-4" />
             Upgrade
