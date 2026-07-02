@@ -738,8 +738,10 @@ export default function SubscriptionManagement() {
   const [qrOutletId, setQrOutletId] = useState<string>(posOutlets[0]?.id ?? "outlet-1");
   const [canceled, setCanceled] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelStep, setCancelStep] = useState<1 | 2>(1);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelFeedback, setCancelFeedback] = useState("");
+  const [reactivateOpen, setReactivateOpen] = useState(false);
 
   const cancelReasons = [
     "Too expensive",
@@ -750,24 +752,36 @@ export default function SubscriptionManagement() {
     "Other",
   ];
 
-  const confirmCancelSubscription = () => {
+  const openCancelFlow = () => {
+    setCancelStep(1);
+    setCancelOpen(true);
+  };
+
+  const proceedToCancelSummary = () => {
     if (!cancelReason) {
       toast.error("Please choose a reason so we can improve.");
       return;
     }
+    setCancelStep(2);
+  };
+
+  const confirmCancelSubscription = () => {
     setCanceled(true);
     setAutoRenew(false);
     setCancelOpen(false);
+    setCancelStep(1);
     toast.success(`Subscription canceled. You'll keep access until ${subscription.renewalDate}.`);
   };
 
-  const reactivateSubscription = () => {
+  const confirmReactivate = () => {
     setCanceled(false);
     setAutoRenew(true);
     setCancelReason("");
     setCancelFeedback("");
-    toast.success("Subscription reactivated. Auto-renew is on.");
+    setReactivateOpen(false);
+    toast.success(`Welcome back! Your ${subscription.plan} plan is active again.`);
   };
+
 
   const detectBrand = (num: string): string => {
     const n = num.replace(/\s/g, "");
