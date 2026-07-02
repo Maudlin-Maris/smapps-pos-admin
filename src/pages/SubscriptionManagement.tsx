@@ -1662,6 +1662,68 @@ export default function SubscriptionManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Subscription */}
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel your {subscription.plan} subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll keep full access until <span className="font-medium text-foreground">{subscription.renewalDate}</span>.
+              After that, your outlets will drop to read-only until you reactivate. Auto-renew will be turned off immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 py-1">
+            <div>
+              <Label className="text-sm font-medium">Why are you canceling?</Label>
+              <RadioGroup
+                value={cancelReason}
+                onValueChange={setCancelReason}
+                className="mt-2 grid gap-2"
+              >
+                {cancelReasons.map((r) => (
+                  <label
+                    key={r}
+                    htmlFor={`cancel-${r}`}
+                    className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer hover:bg-accent/40"
+                  >
+                    <RadioGroupItem id={`cancel-${r}`} value={r} />
+                    <span>{r}</span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cancel-feedback" className="text-sm font-medium">
+                Anything we could do better? <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                id="cancel-feedback"
+                value={cancelFeedback}
+                onChange={(e) => setCancelFeedback(e.target.value)}
+                placeholder="Tell us what would have made you stay…"
+                rows={3}
+              />
+            </div>
+
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              You can reactivate any time before {subscription.renewalDate} and keep all your data, staff, and settings.
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancelSubscription}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel subscription
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
