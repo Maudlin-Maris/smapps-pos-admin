@@ -896,6 +896,11 @@ export default function SubscriptionManagement() {
                       <Badge className={cn("text-[10px] uppercase tracking-wide border", health.cls)}>
                         {health.label}
                       </Badge>
+                      {canceled && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-destructive/40 text-destructive">
+                          Canceled
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Plan ID · sub_8K2J9F · since Oct 2025
