@@ -947,8 +947,8 @@ export default function SubscriptionManagement() {
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Auto-Renew</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <Switch checked={autoRenew} onCheckedChange={setAutoRenew} />
-                  <span className="text-sm font-semibold">{autoRenew ? "On" : "Off"}</span>
+                  <Switch checked={autoRenew && !canceled} onCheckedChange={setAutoRenew} disabled={canceled} />
+                  <span className="text-sm font-semibold">{canceled ? "Off" : autoRenew ? "On" : "Off"}</span>
                 </div>
               </div>
             </div>
