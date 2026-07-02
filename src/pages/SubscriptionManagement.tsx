@@ -964,7 +964,7 @@ export default function SubscriptionManagement() {
                   size="sm"
                   variant="ghost"
                   className="text-destructive hover:text-destructive"
-                  onClick={() => setCancelOpen(true)}
+                  onClick={openCancelFlow}
                 >
                   Cancel Subscription
                 </Button>
