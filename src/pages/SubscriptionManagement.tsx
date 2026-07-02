@@ -1,4 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
+import { usePagination } from "@/hooks/use-pagination";
+import PaginationControls from "@/components/inventory/PaginationControls";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -743,6 +745,17 @@ export default function SubscriptionManagement() {
   const [cancelFeedback, setCancelFeedback] = useState("");
   const [reactivateOpen, setReactivateOpen] = useState(false);
 
+  const {
+    page: invoicePage,
+    setPage: setInvoicePage,
+    perPage: invoicePerPage,
+    setPerPage: setInvoicePerPage,
+    paginatedItems: paginatedInvoices,
+    totalPages: invoiceTotalPages,
+    totalItems: invoiceTotalItems,
+    pageSizeOptions: invoicePageSizeOptions,
+  } = usePagination(invoiceHistory, 5);
+
   const cancelReasons = [
     "Too expensive",
     "Missing features I need",
@@ -1316,7 +1329,7 @@ export default function SubscriptionManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoiceHistory.map((inv) => (
+                {paginatedInvoices.map((inv) => (
                   <TableRow key={inv.id}>
                     <TableCell className="font-mono text-xs">{inv.id}</TableCell>
                     <TableCell className="text-sm">{inv.date}</TableCell>
@@ -1336,6 +1349,17 @@ export default function SubscriptionManagement() {
                 ))}
               </TableBody>
             </Table>
+            <div className="px-5 py-3 border-t border-border">
+              <PaginationControls
+                page={invoicePage}
+                totalPages={invoiceTotalPages}
+                perPage={invoicePerPage}
+                totalItems={invoiceTotalItems}
+                pageSizeOptions={invoicePageSizeOptions}
+                onPageChange={setInvoicePage}
+                onPerPageChange={setInvoicePerPage}
+              />
+            </div>
           </Card>
         </TabsContent>
 
