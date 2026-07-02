@@ -736,6 +736,38 @@ export default function SubscriptionManagement() {
   const [removeTarget, setRemoveTarget] = useState<PaymentMethod | null>(null);
   const [qrMenuOpen, setQrMenuOpen] = useState(false);
   const [qrOutletId, setQrOutletId] = useState<string>(posOutlets[0]?.id ?? "outlet-1");
+  const [canceled, setCanceled] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelFeedback, setCancelFeedback] = useState("");
+
+  const cancelReasons = [
+    "Too expensive",
+    "Missing features I need",
+    "Switching to another provider",
+    "Not using it enough",
+    "Temporary pause",
+    "Other",
+  ];
+
+  const confirmCancelSubscription = () => {
+    if (!cancelReason) {
+      toast.error("Please choose a reason so we can improve.");
+      return;
+    }
+    setCanceled(true);
+    setAutoRenew(false);
+    setCancelOpen(false);
+    toast.success(`Subscription canceled. You'll keep access until ${subscription.renewalDate}.`);
+  };
+
+  const reactivateSubscription = () => {
+    setCanceled(false);
+    setAutoRenew(true);
+    setCancelReason("");
+    setCancelFeedback("");
+    toast.success("Subscription reactivated. Auto-renew is on.");
+  };
 
   const detectBrand = (num: string): string => {
     const n = num.replace(/\s/g, "");
