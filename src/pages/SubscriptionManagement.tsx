@@ -314,7 +314,14 @@ const comparisonPlans = [
     support: "Dedicated CSM",
   },
 ];
-const paymentMethods = [
+interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  exp: string;
+  default: boolean;
+}
+const initialPaymentMethods: PaymentMethod[] = [
   { id: "pm_1", brand: "Visa", last4: "4242", exp: "08/27", default: true },
   { id: "pm_2", brand: "Mastercard", last4: "8801", exp: "12/26", default: false },
 ];
