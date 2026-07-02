@@ -956,7 +956,7 @@ export default function SubscriptionManagement() {
             <div className="flex flex-wrap gap-2 mt-5">
               <Button size="sm" variant="outline" disabled={canceled} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Change Plan</Button>
               {canceled ? (
-                <Button size="sm" variant="outline" onClick={reactivateSubscription}>
+                <Button size="sm" variant="outline" onClick={() => setReactivateOpen(true)}>
                   Reactivate
                 </Button>
               ) : (
