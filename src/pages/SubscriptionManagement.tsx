@@ -728,6 +728,59 @@ export default function SubscriptionManagement() {
     Object.fromEntries(addons.map((a) => [a.key, a.active])),
   );
   const [planDialogTarget, setPlanDialogTarget] = useState<string | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [pmForm, setPmForm] = useState({ brand: "Visa", number: "", exp: "", cvc: "", name: "" });
+  const [removeTarget, setRemoveTarget] = useState<PaymentMethod | null>(null);
+  const [qrMenuOpen, setQrMenuOpen] = useState(false);
+  const [qrOutletId, setQrOutletId] = useState<string>(posOutlets[0]?.id ?? "outlet-1");
+
+  const detectBrand = (num: string): string => {
+    const n = num.replace(/\s/g, "");
+    if (/^4/.test(n)) return "Visa";
+    if (/^(5[1-5]|2[2-7])/.test(n)) return "Mastercard";
+    if (/^3[47]/.test(n)) return "Amex";
+    if (/^6/.test(n)) return "Verve";
+    return "Card";
+  };
+
+  const submitAddPayment = () => {
+    const num = pmForm.number.replace(/\s/g, "");
+    if (num.length < 12) { toast.error("Enter a valid card number"); return; }
+    if (!/^\d{2}\/\d{2}$/.test(pmForm.exp)) { toast.error("Expiry must be MM/YY"); return; }
+    if (pmForm.cvc.length < 3) { toast.error("Enter a valid CVC"); return; }
+    const newPm: PaymentMethod = {
+      id: `pm_${Date.now()}`,
+      brand: detectBrand(num),
+      last4: num.slice(-4),
+      exp: pmForm.exp,
+      default: paymentMethods.length === 0,
+    };
+    setPaymentMethods((prev) => [...prev, newPm]);
+    toast.success(`${newPm.brand} •••• ${newPm.last4} added`);
+    setPmForm({ brand: "Visa", number: "", exp: "", cvc: "", name: "" });
+    setAddPaymentOpen(false);
+  };
+
+  const setDefaultPm = (id: string) => {
+    setPaymentMethods((prev) => prev.map((p) => ({ ...p, default: p.id === id })));
+    toast.success("Default payment method updated");
+  };
+
+  const confirmRemovePm = () => {
+    if (!removeTarget) return;
+    setPaymentMethods((prev) => {
+      const next = prev.filter((p) => p.id !== removeTarget.id);
+      // If we removed the default, promote the first remaining card.
+      if (removeTarget.default && next.length > 0) next[0].default = true;
+      return next;
+    });
+    toast.success(`${removeTarget.brand} •••• ${removeTarget.last4} removed`);
+    setRemoveTarget(null);
+  };
+
+  const qrTargetUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${qrOutletId}`;
+  const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(qrTargetUrl)}`;
   const health = healthMap[subscription.status];
   const HealthIcon = health.icon;
 
