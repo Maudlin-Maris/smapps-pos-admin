@@ -1188,28 +1188,17 @@ export default function SubscriptionManagement() {
                     ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">{a.desc}</p>
-                  {a.key === "qrmenu" && isActive ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full mt-3"
-                      onClick={() => setQrMenuOpen(true)}
-                    >
-                      <QrCode className="h-3.5 w-3.5" /> View QR Codes
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant={isActive ? "outline" : "default"}
-                      className="w-full mt-3"
-                      disabled={isIncluded || isComingSoon}
-                      onClick={() =>
-                        setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
-                      }
-                    >
-                      {isComingSoon ? "Coming Soon" : isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant={isActive ? "outline" : "default"}
+                    className="w-full mt-3"
+                    disabled={isIncluded || isComingSoon}
+                    onClick={() =>
+                      setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
+                    }
+                  >
+                    {isComingSoon ? "Coming Soon" : isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
+                  </Button>
                 </Card>
               );
             })}
