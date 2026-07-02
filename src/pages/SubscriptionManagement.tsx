@@ -57,9 +57,35 @@ import {
   Activity,
   AlertCircle,
   Info,
+  QrCode,
+  MoreVertical,
+  Star,
+  Trash2,
+  Copy,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { posOutlets } from "@/data/posData";
 import { cn } from "@/lib/utils";
 
 /* -------------------------------------------------------------------------- */
@@ -221,6 +247,7 @@ const addonIcons: Record<string, LucideIcon> = {
   whatsapp: MessageSquare,
   api: Code2,
   bi: TrendingUp,
+  qrmenu: QrCode,
 };
 
 interface AddonDef {
@@ -232,17 +259,20 @@ interface AddonDef {
   desc: string;
   /** Tier at which the add-on is bundled for free (no longer billable). */
   includedFromTier: 0 | 1 | 2;
+  /** Feature not yet shipped — card shown but not purchasable. */
+  comingSoon?: boolean;
 }
 
 const addons: AddonDef[] = [
   { key: "loyalty",  name: "Loyalty Engine",     icon: addonIcons.loyalty,  price: "₦12,000/mo", active: true,  includedFromTier: 1, desc: "Points, tiers & redemption rules" },
   { key: "kds",      name: "Kitchen Display",    icon: addonIcons.kds,      price: "₦9,000/mo",  active: true,  includedFromTier: 1, desc: "Real-time kitchen station tickets" },
   { key: "bookings", name: "Service Bookings",   icon: addonIcons.bookings, price: "₦8,000/mo",  active: false, includedFromTier: 1, desc: "Appointments for salons & services" },
-  { key: "delivery", name: "Delivery & Dispatch",icon: addonIcons.delivery, price: "₦18,000/mo", active: true,  includedFromTier: 2, desc: "Rider assignment & live tracking" },
-  { key: "online",   name: "Online Ordering",    icon: addonIcons.online,   price: "₦22,000/mo", active: false, includedFromTier: 2, desc: "Branded order-ahead storefront" },
-  { key: "whatsapp", name: "WhatsApp Receipts",  icon: addonIcons.whatsapp, price: "₦6,000/mo",  active: false, includedFromTier: 2, desc: "Auto-send digital receipts" },
-  { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks" },
-  { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI" },
+  { key: "qrmenu",   name: "QR Code Menu",       icon: addonIcons.qrmenu,   price: "₦5,000/mo",  active: false, includedFromTier: 1, desc: "Customers scan a QR to view your catalog on their phone" },
+  { key: "delivery", name: "Delivery & Dispatch",icon: addonIcons.delivery, price: "₦18,000/mo", active: false, includedFromTier: 2, desc: "Rider assignment & live tracking", comingSoon: true },
+  { key: "online",   name: "Online Ordering",    icon: addonIcons.online,   price: "₦22,000/mo", active: false, includedFromTier: 2, desc: "Branded order-ahead storefront", comingSoon: true },
+  { key: "whatsapp", name: "WhatsApp Receipts",  icon: addonIcons.whatsapp, price: "₦6,000/mo",  active: false, includedFromTier: 2, desc: "Auto-send digital receipts", comingSoon: true },
+  { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks", comingSoon: true },
+  { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI", comingSoon: true },
 ];
 
 const comparisonPlans = [
@@ -284,7 +314,14 @@ const comparisonPlans = [
     support: "Dedicated CSM",
   },
 ];
-const paymentMethods = [
+interface PaymentMethod {
+  id: string;
+  brand: string;
+  last4: string;
+  exp: string;
+  default: boolean;
+}
+const initialPaymentMethods: PaymentMethod[] = [
   { id: "pm_1", brand: "Visa", last4: "4242", exp: "08/27", default: true },
   { id: "pm_2", brand: "Mastercard", last4: "8801", exp: "12/26", default: false },
 ];
@@ -691,6 +728,59 @@ export default function SubscriptionManagement() {
     Object.fromEntries(addons.map((a) => [a.key, a.active])),
   );
   const [planDialogTarget, setPlanDialogTarget] = useState<string | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [pmForm, setPmForm] = useState({ brand: "Visa", number: "", exp: "", cvc: "", name: "" });
+  const [removeTarget, setRemoveTarget] = useState<PaymentMethod | null>(null);
+  const [qrMenuOpen, setQrMenuOpen] = useState(false);
+  const [qrOutletId, setQrOutletId] = useState<string>(posOutlets[0]?.id ?? "outlet-1");
+
+  const detectBrand = (num: string): string => {
+    const n = num.replace(/\s/g, "");
+    if (/^4/.test(n)) return "Visa";
+    if (/^(5[1-5]|2[2-7])/.test(n)) return "Mastercard";
+    if (/^3[47]/.test(n)) return "Amex";
+    if (/^6/.test(n)) return "Verve";
+    return "Card";
+  };
+
+  const submitAddPayment = () => {
+    const num = pmForm.number.replace(/\s/g, "");
+    if (num.length < 12) { toast.error("Enter a valid card number"); return; }
+    if (!/^\d{2}\/\d{2}$/.test(pmForm.exp)) { toast.error("Expiry must be MM/YY"); return; }
+    if (pmForm.cvc.length < 3) { toast.error("Enter a valid CVC"); return; }
+    const newPm: PaymentMethod = {
+      id: `pm_${Date.now()}`,
+      brand: detectBrand(num),
+      last4: num.slice(-4),
+      exp: pmForm.exp,
+      default: paymentMethods.length === 0,
+    };
+    setPaymentMethods((prev) => [...prev, newPm]);
+    toast.success(`${newPm.brand} •••• ${newPm.last4} added`);
+    setPmForm({ brand: "Visa", number: "", exp: "", cvc: "", name: "" });
+    setAddPaymentOpen(false);
+  };
+
+  const setDefaultPm = (id: string) => {
+    setPaymentMethods((prev) => prev.map((p) => ({ ...p, default: p.id === id })));
+    toast.success("Default payment method updated");
+  };
+
+  const confirmRemovePm = () => {
+    if (!removeTarget) return;
+    setPaymentMethods((prev) => {
+      const next = prev.filter((p) => p.id !== removeTarget.id);
+      // If we removed the default, promote the first remaining card.
+      if (removeTarget.default && next.length > 0) next[0].default = true;
+      return next;
+    });
+    toast.success(`${removeTarget.brand} •••• ${removeTarget.last4} removed`);
+    setRemoveTarget(null);
+  };
+
+  const qrTargetUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${qrOutletId}`;
+  const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(qrTargetUrl)}`;
   const health = healthMap[subscription.status];
   const HealthIcon = health.icon;
 
@@ -996,13 +1086,15 @@ export default function SubscriptionManagement() {
               const Icon = a.icon;
               const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
               const isIncluded = currentTier >= a.includedFromTier;
-              const isActive = isIncluded || activeAddons[a.key];
+              const isComingSoon = !!a.comingSoon;
+              const isActive = !isComingSoon && (isIncluded || activeAddons[a.key]);
               return (
                 <Card
                   key={a.key}
                   className={cn(
                     "p-4 transition-all",
                     isActive && "border-primary/30 bg-primary/[0.02]",
+                    isComingSoon && "opacity-70",
                   )}
                 >
                   <div className="flex items-start justify-between">
@@ -1016,11 +1108,15 @@ export default function SubscriptionManagement() {
                       <div>
                         <p className="text-sm font-semibold">{a.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {isIncluded ? `Included in ${planByTier[a.includedFromTier]}` : a.price}
+                          {isComingSoon ? "Not yet available" : isIncluded ? `Included in ${planByTier[a.includedFromTier]}` : a.price}
                         </p>
                       </div>
                     </div>
-                    {isIncluded ? (
+                    {isComingSoon ? (
+                      <Badge className="text-[10px] h-5 bg-warning/10 text-warning border-warning/20 border" variant="outline">
+                        Coming Soon
+                      </Badge>
+                    ) : isIncluded ? (
                       <Badge className="text-[10px] h-5 bg-info/10 text-info border-info/20 border" variant="outline">
                         Included
                       </Badge>
@@ -1031,17 +1127,28 @@ export default function SubscriptionManagement() {
                     ) : null}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">{a.desc}</p>
-                  <Button
-                    size="sm"
-                    variant={isActive ? "outline" : "default"}
-                    className="w-full mt-3"
-                    disabled={isIncluded}
-                    onClick={() =>
-                      setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
-                    }
-                  >
-                    {isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
-                  </Button>
+                  {a.key === "qrmenu" && isActive ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full mt-3"
+                      onClick={() => setQrMenuOpen(true)}
+                    >
+                      <QrCode className="h-3.5 w-3.5" /> View QR Codes
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={isActive ? "outline" : "default"}
+                      className="w-full mt-3"
+                      disabled={isIncluded || isComingSoon}
+                      onClick={() =>
+                        setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
+                      }
+                    >
+                      {isComingSoon ? "Coming Soon" : isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
+                    </Button>
+                  )}
                 </Card>
               );
             })}
@@ -1056,11 +1163,20 @@ export default function SubscriptionManagement() {
             <Card className="p-5 lg:col-span-1">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-heading font-semibold text-sm">Payment Methods</h3>
-                <Button size="sm" variant="ghost" className="h-7 text-xs">
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAddPaymentOpen(true)}>
                   <Plus className="h-3.5 w-3.5" /> Add
                 </Button>
               </div>
               <div className="space-y-2">
+                {paymentMethods.length === 0 && (
+                  <div className="text-center py-6 border border-dashed rounded-lg">
+                    <CreditCard className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground">No payment methods yet</p>
+                    <Button size="sm" variant="outline" className="mt-3" onClick={() => setAddPaymentOpen(true)}>
+                      <Plus className="h-3.5 w-3.5" /> Add card
+                    </Button>
+                  </div>
+                )}
                 {paymentMethods.map((pm) => (
                   <div
                     key={pm.id}
@@ -1079,6 +1195,28 @@ export default function SubscriptionManagement() {
                     {pm.default && (
                       <Badge variant="outline" className="text-[10px] h-4 px-1.5">Default</Badge>
                     )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          disabled={pm.default}
+                          onClick={() => setDefaultPm(pm.id)}
+                        >
+                          <Star className="h-3.5 w-3.5" /> Set as default
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setRemoveTarget(pm)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
               </div>
@@ -1331,6 +1469,148 @@ export default function SubscriptionManagement() {
         targetPlan={planDialogTarget}
         onConfirm={handlePlanChangeConfirm}
       />
+
+      {/* Add Payment Method */}
+      <Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" /> Add payment method
+            </DialogTitle>
+            <DialogDescription>
+              Card details are tokenised — we never store the full number.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="pm-name">Cardholder name</Label>
+              <Input id="pm-name" placeholder="Name on card" value={pmForm.name}
+                onChange={(e) => setPmForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pm-number">Card number</Label>
+              <Input id="pm-number" inputMode="numeric" placeholder="4242 4242 4242 4242" value={pmForm.number}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, "").slice(0, 19);
+                  const formatted = raw.replace(/(.{4})/g, "$1 ").trim();
+                  setPmForm((f) => ({ ...f, number: formatted }));
+                }} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pm-exp">Expiry (MM/YY)</Label>
+                <Input id="pm-exp" placeholder="08/27" value={pmForm.exp}
+                  onChange={(e) => {
+                    let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
+                    setPmForm((f) => ({ ...f, exp: v }));
+                  }} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pm-cvc">CVC</Label>
+                <Input id="pm-cvc" inputMode="numeric" placeholder="123" maxLength={4} value={pmForm.cvc}
+                  onChange={(e) => setPmForm((f) => ({ ...f, cvc: e.target.value.replace(/\D/g, "") }))} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddPaymentOpen(false)}>Cancel</Button>
+            <Button onClick={submitAddPayment}>Add card</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Payment Method */}
+      <AlertDialog open={!!removeTarget} onOpenChange={(o) => !o && setRemoveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {removeTarget?.brand} •••• {removeTarget?.last4}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This card will no longer be charged for subscription renewals. {removeTarget?.default && "Another card will be promoted to default."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRemovePm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* QR Code Menu */}
+      <Dialog open={qrMenuOpen} onOpenChange={setQrMenuOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-4 w-4" /> QR Code Menu
+            </DialogTitle>
+            <DialogDescription>
+              Print or display this code. Customers scan it with any phone camera to view your catalog.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Outlet</Label>
+              <select
+                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={qrOutletId}
+                onChange={(e) => setQrOutletId(e.target.value)}
+              >
+                {posOutlets.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col items-center gap-3 rounded-lg border p-4 bg-muted/20">
+              <img
+                src={qrImageSrc}
+                alt="Menu QR code"
+                className="h-56 w-56 rounded-md bg-white p-2"
+              />
+              <p className="text-xs text-muted-foreground text-center break-all">{qrTargetUrl}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  navigator.clipboard?.writeText(qrTargetUrl);
+                  toast.success("Menu link copied");
+                }}
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => window.open(qrTargetUrl, "_blank")}
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Preview
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = qrImageSrc;
+                  a.download = `menu-qr-${qrOutletId}.png`;
+                  a.target = "_blank";
+                  a.rel = "noopener";
+                  a.click();
+                }}
+              >
+                <Download className="h-3.5 w-3.5" /> Download
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
