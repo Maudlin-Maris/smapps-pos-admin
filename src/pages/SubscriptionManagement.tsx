@@ -1329,7 +1329,7 @@ export default function SubscriptionManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoiceHistory.map((inv) => (
+                {paginatedInvoices.map((inv) => (
                   <TableRow key={inv.id}>
                     <TableCell className="font-mono text-xs">{inv.id}</TableCell>
                     <TableCell className="text-sm">{inv.date}</TableCell>
@@ -1349,6 +1349,17 @@ export default function SubscriptionManagement() {
                 ))}
               </TableBody>
             </Table>
+            <div className="px-5 py-3 border-t border-border">
+              <PaginationControls
+                page={invoicePage}
+                totalPages={invoiceTotalPages}
+                perPage={invoicePerPage}
+                totalItems={invoiceTotalItems}
+                pageSizeOptions={invoicePageSizeOptions}
+                onPageChange={setInvoicePage}
+                onPerPageChange={setInvoicePerPage}
+              />
+            </div>
           </Card>
         </TabsContent>
 
