@@ -57,6 +57,12 @@ import {
   Activity,
   AlertCircle,
   Info,
+  QrCode,
+  MoreVertical,
+  Star,
+  Trash2,
+  Copy,
+  ExternalLink,
   type LucideIcon,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
