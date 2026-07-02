@@ -1163,11 +1163,20 @@ export default function SubscriptionManagement() {
             <Card className="p-5 lg:col-span-1">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-heading font-semibold text-sm">Payment Methods</h3>
-                <Button size="sm" variant="ghost" className="h-7 text-xs">
+                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAddPaymentOpen(true)}>
                   <Plus className="h-3.5 w-3.5" /> Add
                 </Button>
               </div>
               <div className="space-y-2">
+                {paymentMethods.length === 0 && (
+                  <div className="text-center py-6 border border-dashed rounded-lg">
+                    <CreditCard className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground">No payment methods yet</p>
+                    <Button size="sm" variant="outline" className="mt-3" onClick={() => setAddPaymentOpen(true)}>
+                      <Plus className="h-3.5 w-3.5" /> Add card
+                    </Button>
+                  </div>
+                )}
                 {paymentMethods.map((pm) => (
                   <div
                     key={pm.id}
@@ -1186,6 +1195,28 @@ export default function SubscriptionManagement() {
                     {pm.default && (
                       <Badge variant="outline" className="text-[10px] h-4 px-1.5">Default</Badge>
                     )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          disabled={pm.default}
+                          onClick={() => setDefaultPm(pm.id)}
+                        >
+                          <Star className="h-3.5 w-3.5" /> Set as default
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setRemoveTarget(pm)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Remove
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ))}
               </div>
