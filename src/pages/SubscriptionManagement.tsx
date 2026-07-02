@@ -85,6 +85,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { posOutlets } from "@/data/posData";
 import { cn } from "@/lib/utils";
 
@@ -734,6 +736,38 @@ export default function SubscriptionManagement() {
   const [removeTarget, setRemoveTarget] = useState<PaymentMethod | null>(null);
   const [qrMenuOpen, setQrMenuOpen] = useState(false);
   const [qrOutletId, setQrOutletId] = useState<string>(posOutlets[0]?.id ?? "outlet-1");
+  const [canceled, setCanceled] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelFeedback, setCancelFeedback] = useState("");
+
+  const cancelReasons = [
+    "Too expensive",
+    "Missing features I need",
+    "Switching to another provider",
+    "Not using it enough",
+    "Temporary pause",
+    "Other",
+  ];
+
+  const confirmCancelSubscription = () => {
+    if (!cancelReason) {
+      toast.error("Please choose a reason so we can improve.");
+      return;
+    }
+    setCanceled(true);
+    setAutoRenew(false);
+    setCancelOpen(false);
+    toast.success(`Subscription canceled. You'll keep access until ${subscription.renewalDate}.`);
+  };
+
+  const reactivateSubscription = () => {
+    setCanceled(false);
+    setAutoRenew(true);
+    setCancelReason("");
+    setCancelFeedback("");
+    toast.success("Subscription reactivated. Auto-renew is on.");
+  };
 
   const detectBrand = (num: string): string => {
     const n = num.replace(/\s/g, "");
@@ -862,6 +896,11 @@ export default function SubscriptionManagement() {
                       <Badge className={cn("text-[10px] uppercase tracking-wide border", health.cls)}>
                         {health.label}
                       </Badge>
+                      {canceled && (
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-destructive/40 text-destructive">
+                          Canceled
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Plan ID · sub_8K2J9F · since Oct 2025
@@ -901,9 +940,21 @@ export default function SubscriptionManagement() {
             </div>
 
             <div className="flex flex-wrap gap-2 mt-5">
-              <Button size="sm" variant="outline" onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Change Plan</Button>
-              <Button size="sm" variant="ghost">Update Payment</Button>
-              <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">Cancel</Button>
+              <Button size="sm" variant="outline" disabled={canceled} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Change Plan</Button>
+              {canceled ? (
+                <Button size="sm" variant="outline" onClick={reactivateSubscription}>
+                  Reactivate
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setCancelOpen(true)}
+                >
+                  Cancel Subscription
+                </Button>
+              )}
             </div>
           </div>
         </Card>
@@ -1611,6 +1662,68 @@ export default function SubscriptionManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Subscription */}
+      <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <AlertDialogContent className="max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel your {subscription.plan} subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You'll keep full access until <span className="font-medium text-foreground">{subscription.renewalDate}</span>.
+              After that, your outlets will drop to read-only until you reactivate. Auto-renew will be turned off immediately.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 py-1">
+            <div>
+              <Label className="text-sm font-medium">Why are you canceling?</Label>
+              <RadioGroup
+                value={cancelReason}
+                onValueChange={setCancelReason}
+                className="mt-2 grid gap-2"
+              >
+                {cancelReasons.map((r) => (
+                  <label
+                    key={r}
+                    htmlFor={`cancel-${r}`}
+                    className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm cursor-pointer hover:bg-accent/40"
+                  >
+                    <RadioGroupItem id={`cancel-${r}`} value={r} />
+                    <span>{r}</span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="cancel-feedback" className="text-sm font-medium">
+                Anything we could do better? <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                id="cancel-feedback"
+                value={cancelFeedback}
+                onChange={(e) => setCancelFeedback(e.target.value)}
+                placeholder="Tell us what would have made you stay…"
+                rows={3}
+              />
+            </div>
+
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              You can reactivate any time before {subscription.renewalDate} and keep all your data, staff, and settings.
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancelSubscription}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel subscription
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
