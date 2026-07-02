@@ -33,6 +33,7 @@ import RolesPermissions from "@/pages/RolesPermissions";
 import ModifierGroups from "@/pages/ModifierGroups";
 import TerminalManagement from "@/pages/TerminalManagement";
 import VoidCodeManagement from "@/pages/VoidCodeManagement";
+import PublicMenu from "@/pages/PublicMenu";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
