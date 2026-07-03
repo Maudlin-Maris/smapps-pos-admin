@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,19 +27,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Plus, Pencil, Trash2, Layers, ArrowUp, ArrowDown, X, Check, Info, Loader2, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Layers, ArrowUp, ArrowDown, X, Check, Info, Loader2, Calendar, Search } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { InventoryItem } from "./InventoryItemForm";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useGetInventoryItems } from "@/services/api/inventory/item";
 import {
   useCreateSubstituteGroup,
   useUpdateSubstituteGroup,
@@ -51,7 +44,6 @@ import { ResuablePagination } from "@/components/ui/reusable-pagination";
 import type { SubstituteGroupResponse as SubstituteGroup, SubstituteGroupResponseItem as SubstituteGroupItem } from "@/lib/types/substitute-group-response";
 
 interface Props {
-  inventoryItems: InventoryItem[];
   selectedOutletId?: string;
   readOnly?: boolean;
 }
@@ -61,7 +53,13 @@ interface Props {
  * Each group has an ordered list of inventory items + per-item conversion ratio.
  * Composite components reference these groups by id; resolver handles fallback.
  */
-export default function SubstituteGroupManager({ inventoryItems, selectedOutletId, readOnly }: Props) {
+export default function SubstituteGroupManager({ selectedOutletId, readOnly }: Props) {
+  const { data: allInventoryRes } = useGetInventoryItems({
+    outletId: selectedOutletId || undefined,
+    per_page: 1000,
+  });
+  const inventoryItems = allInventoryRes?.data ?? [];
+
   const { data: groupsRes, mutate: mutateGroups } = useGetSubstituteGroups({
     outletId: selectedOutletId || undefined,
   });
@@ -176,9 +174,29 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
     }
   };
 
-  const candidatePool = inventoryItems.filter(
+  const [pickerSearch, setPickerSearch] = useState("");
+  const debouncedPickerSearch = useDebouncedValue(pickerSearch, 500);
+
+  const { data: pickerItemsRes, isLoading: isSearchLoading } = useGetInventoryItems(
+    pickerOpen
+      ? {
+          search: debouncedPickerSearch.trim() || undefined,
+          per_page: DEFAULT_PAGE_SIZE,
+          outletId: selectedOutletId || undefined,
+        }
+      : undefined
+  );
+  const pickerItems = pickerItemsRes?.data || [];
+
+  const candidatePool = pickerItems.filter(
     (i) => !items.some((it) => it.inventoryItemId === i.id)
   );
+
+  useEffect(() => {
+    if (!pickerOpen) {
+      setPickerSearch("");
+    }
+  }, [pickerOpen]);
 
   return (
     <div className="space-y-4">
@@ -369,28 +387,60 @@ export default function SubstituteGroupManager({ inventoryItems, selectedOutletI
                       <Plus className="h-3.5 w-3.5 mr-1" /> Add
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[260px] p-0" align="end">
-                    <Command>
-                      <CommandInput placeholder="Search items..." className="h-9" />
-                      <CommandList>
-                        <CommandEmpty>No items.</CommandEmpty>
-                        <CommandGroup>
+                  <PopoverContent className="w-[260px] p-0 flex flex-col overflow-hidden" align="end">
+                    <div className="flex items-center border-b px-3">
+                      <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                      <input
+                        placeholder="Search items..."
+                        className="flex h-9 w-full rounded-md bg-transparent py-2 text-xs outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                        value={pickerSearch}
+                        onChange={(e) => setPickerSearch(e.target.value)}
+                        autoFocus
+                      />
+                      {pickerSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setPickerSearch("")}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-[190px] overflow-y-auto p-1 min-h-0">
+                      {isSearchLoading ? (
+                        <div className="py-6 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Searching items...</span>
+                        </div>
+                      ) : candidatePool.length === 0 ? (
+                        <div className="py-6 text-center text-xs text-muted-foreground">
+                          No items found.
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
                           {candidatePool.map((it) => (
-                            <CommandItem
+                            <button
                               key={it.id}
-                              value={it.name}
-                              onSelect={() => {
+                              type="button"
+                              className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors hover:bg-accent hover:text-accent-foreground text-left font-normal"
+                              onClick={() => {
                                 addItem(it.id);
                                 setPickerOpen(false);
                               }}
                             >
-                              <Check className="mr-2 h-3.5 w-3.5 opacity-0" />
-                              <span className="truncate">{it.name}</span>
-                            </CommandItem>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs truncate">{it.name}</div>
+                                <div className="text-[10px] text-muted-foreground truncate">
+                                  {it.sku}
+                                </div>
+                              </div>
+                            </button>
                           ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
+                        </div>
+                      )}
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>

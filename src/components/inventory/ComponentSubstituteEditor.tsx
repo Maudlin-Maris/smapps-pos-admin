@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { NumericInput } from "@/components/ui/numeric-input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -24,34 +23,33 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { ChevronsUpDown, Check, ArrowUp, ArrowDown, X, Plus, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
+import { Check, ArrowUp, ArrowDown, X, Plus, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNaira } from "@/lib/currency";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import type { SubstituteGroup, ComponentSubstitute, ComponentSubstituteConfig, SubstituteMode } from "@/lib/composite-substitution";
+import { useGetInventoryItem } from "@/services/api/inventory/item";
+import { InventoryItemPicker } from "@/components/inventory/InventoryItemPicker";
 
 interface Props {
   /** Original inventory item id (the component's primary). */
   originalItemId: string;
   config: ComponentSubstituteConfig;
   onChange: (next: ComponentSubstituteConfig) => void;
-  inventoryItems: InventoryItem[];
+  inventoryItems?: InventoryItem[];
   groups: SubstituteGroup[];
+  outletId?: string;
 }
 
-/**
- * Editor block embedded inside a composite component card.
- *
- * Surfaces:
- *  - Allow Substitute toggle
- *  - Substitute Mode select (STRICT / AUTO / MANUAL_APPROVAL)
- *  - Direct Substitute Items list with priority up/down + conversion ratio
- *  - Substitute Group references
- *  - Live cost-variance hint per substitute candidate
- *  - Stock-availability preview for each candidate
- */
-export default function ComponentSubstituteEditor({ originalItemId, config, onChange, inventoryItems, groups }: Props) {
+export default function ComponentSubstituteEditor({
+  originalItemId,
+  config,
+  onChange,
+  inventoryItems,
+  groups,
+  outletId,
+}: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [groupPickerOpen, setGroupPickerOpen] = useState(false);
 
@@ -60,7 +58,10 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
   const subs = config.substitutes ?? [];
   const groupIds = config.substituteGroupIds ?? [];
 
-  const original = inventoryItems.find((i) => i.id === originalItemId);
+  const { data: fetchedOriginal } = useGetInventoryItem(
+    !inventoryItems || inventoryItems.length === 0 ? originalItemId : undefined
+  );
+  const original = inventoryItems?.find((i) => i.id === originalItemId) || fetchedOriginal;
   const originalCost = original?.costPrice ?? 0;
 
   const setConfig = (patch: Partial<ComponentSubstituteConfig>) => onChange({ ...config, ...patch });
@@ -111,9 +112,12 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
     });
   };
 
-  const candidatePool = inventoryItems.filter(
-    (i) => i.id !== originalItemId && !subs.some((s) => s.inventoryItemId === i.id)
-  );
+  const candidatePool = useMemo(() => {
+    if (!inventoryItems) return [];
+    return inventoryItems.filter(
+      (i) => i.id !== originalItemId && !subs.some((s) => s.inventoryItemId === i.id)
+    );
+  }, [inventoryItems, originalItemId, subs]);
 
   return (
     <div className="border-t pt-2.5 mt-2 space-y-2.5">
@@ -161,158 +165,75 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button type="button" variant="ghost" size="sm" className="h-6 text-[11px] px-1.5">
-                    <Plus className="h-3 w-3 mr-0.5" /> Add
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[260px] p-0" align="end">
-                  <Command>
-                    <CommandInput placeholder="Search items..." className="h-9" />
-                    <CommandList>
-                      <CommandEmpty>No items.</CommandEmpty>
-                      <CommandGroup>
-                        {candidatePool.map((it) => (
-                          <CommandItem
-                            key={it.id}
-                            value={it.name}
-                            onSelect={() => {
-                              addSub(it.id);
-                              setPickerOpen(false);
-                            }}
-                          >
-                            <Check className="mr-2 h-3.5 w-3.5 opacity-0" />
-                            <span className="truncate">{it.name}</span>
-                            <span className="ml-auto text-[10px] text-muted-foreground">
-                              {it.stock ?? 0}
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              {!inventoryItems || inventoryItems.length === 0 ? (
+                <InventoryItemPicker
+                  selectedId=""
+                  outletId={outletId}
+                  placeholder="Search item..."
+                  triggerPlaceholder="Add substitute"
+                  onSelect={(id) => {
+                    if (id && id !== originalItemId && !subs.some((s) => s.inventoryItemId === id)) {
+                      addSub(id);
+                    }
+                  }}
+                />
+              ) : (
+                <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="h-6 text-[11px] px-1.5">
+                      <Plus className="h-3 w-3 mr-0.5" /> Add
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[260px] p-0" align="end">
+                    <Command>
+                      <CommandInput placeholder="Search items..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No items.</CommandEmpty>
+                        <CommandGroup>
+                          {candidatePool.map((it) => (
+                            <CommandItem
+                              key={it.id}
+                              value={it.name}
+                              onSelect={() => {
+                                addSub(it.id);
+                                setPickerOpen(false);
+                              }}
+                            >
+                              <Check className="mr-2 h-3.5 w-3.5 opacity-0" />
+                              <span className="truncate">{it.name}</span>
+                              <span className="ml-auto text-[10px] text-muted-foreground">
+                                {it.stock ?? 0}
+                              </span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
             </div>
 
             {sortedSubs.length === 0 && (
               <p className="text-[11px] text-muted-foreground italic">No direct substitutes</p>
             )}
 
-            {sortedSubs.map((s, idx) => {
-              const item = inventoryItems.find((i) => i.id === s.inventoryItemId);
-              if (!item) return null;
-              const subCost = item.costPrice ?? 0;
-              const variance = subCost * s.conversionRatio - originalCost;
-              const cheaper = variance < 0;
-              const stock = item.stock ?? 0;
-              return (
-                <div key={s.inventoryItemId} className="flex flex-wrap items-center gap-1.5 p-1.5 rounded border bg-muted/30">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="h-5 px-1.5 text-[10px] tabular-nums cursor-help">
-                        #{idx + 1}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[220px]">
-                      <p className="text-xs">Priority order — #1 is tried first when the original item is out of stock. Use arrows to reorder.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <span className="text-xs font-medium truncate flex-1 min-w-[100px]">{item.name}</span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "h-5 px-1.5 text-[10px] tabular-nums cursor-help",
-                          stock <= 0
-                            ? "border-destructive/40 text-destructive"
-                            : "border-success/40 text-success"
-                        )}
-                      >
-                        {stock} stk
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[220px]">
-                      <p className="text-xs">Current stock level for this substitute item in the selected outlet.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1 cursor-help">
-                        <span className="text-[10px] text-muted-foreground">ratio</span>
-                        <NumericInput
-                          step={0.01}
-                          min={0.01}
-                          precision={2}
-                          value={s.conversionRatio}
-                          onChange={(val) =>
-                            updateSub(s.inventoryItemId, {
-                              conversionRatio: Math.max(0.01, val || 1),
-                            })
-                          }
-                          className="h-6 w-14 text-[11px] px-1.5"
-                        />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[240px]">
-                      <p className="text-xs">Conversion ratio: how many units of this substitute are needed to replace 1 unit of the original component. Example: set 0.5 if two 500ml units replace one 1L unit.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  {originalCost > 0 && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span
-                          className={cn(
-                            "text-[10px] tabular-nums flex items-center gap-0.5 cursor-help",
-                            cheaper ? "text-success" : variance > 0 ? "text-warning" : "text-muted-foreground"
-                          )}
-                        >
-                          {cheaper ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
-                          {variance >= 0 ? "+" : ""}
-                          {formatNaira(variance)}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[240px]">
-                        <p className="text-xs">Cost variance versus the original component (per 1 base unit replaced). Green = cheaper substitute, amber = more expensive.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  <div className="flex items-center gap-0.5 ml-auto">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5"
-                      disabled={idx === 0}
-                      onClick={() => movePriority(idx, -1)}
-                    >
-                      <ArrowUp className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5"
-                      disabled={idx === sortedSubs.length - 1}
-                      onClick={() => movePriority(idx, 1)}
-                    >
-                      <ArrowDown className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5 text-destructive"
-                      onClick={() => removeSub(s.inventoryItemId)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+            <div className="space-y-1.5">
+              {sortedSubs.map((s, idx) => (
+                <SubstituteItemRow
+                  key={s.inventoryItemId}
+                  s={s}
+                  idx={idx}
+                  originalCost={originalCost}
+                  movePriority={movePriority}
+                  removeSub={removeSub}
+                  updateSub={updateSub}
+                  isFirst={idx === 0}
+                  isLast={idx === sortedSubs.length - 1}
+                  fallbackItem={inventoryItems?.find((i) => i.id === s.inventoryItemId)}
+                />
+              ))}
+            </div>
           </div>
 
           {/* Substitute groups */}
@@ -405,6 +326,152 @@ export default function ComponentSubstituteEditor({ originalItemId, config, onCh
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function SubstituteItemRow({
+  s,
+  idx,
+  originalCost,
+  movePriority,
+  removeSub,
+  updateSub,
+  isFirst,
+  isLast,
+  fallbackItem,
+}: {
+  s: ComponentSubstitute;
+  idx: number;
+  originalCost: number;
+  movePriority: (idx: number, dir: -1 | 1) => void;
+  removeSub: (id: string) => void;
+  updateSub: (id: string, patch: Partial<ComponentSubstitute>) => void;
+  isFirst: boolean;
+  isLast: boolean;
+  fallbackItem?: InventoryItem;
+}) {
+  const { data: fetchedItem } = useGetInventoryItem(
+    !fallbackItem ? s.inventoryItemId : undefined
+  );
+  const item = fallbackItem || fetchedItem;
+
+  if (!item) {
+    return (
+      <div className="flex items-center justify-between p-1.5 rounded border bg-muted/30 text-[11px] text-muted-foreground animate-pulse h-9">
+        Loading substitute details...
+      </div>
+    );
+  }
+
+  const subCost = item.costPrice ?? 0;
+  const variance = subCost * s.conversionRatio - originalCost;
+  const cheaper = variance < 0;
+  const stock = item.stock ?? 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded border bg-muted/30">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="outline" className="h-5 px-1.5 text-[10px] tabular-nums cursor-help">
+            #{idx + 1}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[220px]">
+          <p className="text-xs">Priority order — #1 is tried first when the original item is out of stock. Use arrows to reorder.</p>
+        </TooltipContent>
+      </Tooltip>
+      <span className="text-xs font-medium truncate flex-1 min-w-[100px]">{item.name}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant="outline"
+            className={cn(
+              "h-5 px-1.5 text-[10px] tabular-nums cursor-help",
+              stock <= 0
+                ? "border-destructive/40 text-destructive"
+                : "border-success/40 text-success"
+            )}
+          >
+            {stock} stk
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[220px]">
+          <p className="text-xs">Current stock level for this substitute item in the selected outlet.</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center gap-1 cursor-help">
+            <span className="text-[10px] text-muted-foreground">ratio</span>
+            <NumericInput
+              step={0.01}
+              min={0.01}
+              precision={2}
+              value={s.conversionRatio}
+              onChange={(val) =>
+                updateSub(s.inventoryItemId, {
+                  conversionRatio: Math.max(0.01, val || 1),
+                })
+              }
+              className="h-6 w-14 text-[11px] px-1.5"
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-[240px]">
+          <p className="text-xs">Conversion ratio: how many units of this substitute are needed to replace 1 unit of the original component. Example: set 0.5 if two 500ml units replace one 1L unit.</p>
+        </TooltipContent>
+      </Tooltip>
+      {originalCost > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className={cn(
+                "text-[10px] tabular-nums flex items-center gap-0.5 cursor-help",
+                cheaper ? "text-success" : variance > 0 ? "text-warning" : "text-muted-foreground"
+              )}
+            >
+              {cheaper ? <TrendingDown className="h-2.5 w-2.5" /> : <TrendingUp className="h-2.5 w-2.5" />}
+              {variance >= 0 ? "+" : ""}
+              {formatNaira(variance)}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[240px]">
+            <p className="text-xs">Cost variance versus the original component (per 1 base unit replaced). Green = cheaper substitute, amber = more expensive.</p>
+          </TooltipContent>
+        </Tooltip>
+      )}
+      <div className="flex items-center gap-0.5 ml-auto">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5"
+          disabled={isFirst}
+          onClick={() => movePriority(idx, -1)}
+        >
+          <ArrowUp className="h-3 w-3" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5"
+          disabled={isLast}
+          onClick={() => movePriority(idx, 1)}
+        >
+          <ArrowDown className="h-3 w-3" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-5 w-5 text-destructive"
+          onClick={() => removeSub(s.inventoryItemId)}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
     </div>
   );
 }

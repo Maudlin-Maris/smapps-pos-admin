@@ -385,6 +385,12 @@ export default function LoyaltyManagement() {
     gold: 2,
     platinum: 3,
   });
+  const [crossOutletRedemption, setCrossOutletRedemption] = useState(true);
+  const [autoPromptCashiers, setAutoPromptCashiers] = useState(true);
+  const [allowPosRegistration, setAllowPosRegistration] = useState(true);
+  const [showPointsOnReceipt, setShowPointsOnReceipt] = useState(true);
+  const [enablePointsExpiry, setEnablePointsExpiry] = useState(false);
+  const [pointsExpiryDays, setPointsExpiryDays] = useState("365");
 
   // Reward form state
   const [rewardFormOpen, setRewardFormOpen] = useState(false);
@@ -431,19 +437,25 @@ export default function LoyaltyManagement() {
 
   // Sync SWR settings response into editable local states
   useEffect(() => {
-    if (settingsData) {
-      setProgramEnabled(settingsData.programEnabled);
-      setEarnRate(settingsData.pointsPerCurrency.toString());
-      if (settingsData.tierConfigs) {
-        const thresholds: Record<string, number> = {};
-        const multipliers: Record<string, number> = {};
-        settingsData.tierConfigs.forEach((tc) => {
-          thresholds[tc.tier] = tc.minPoints;
-          multipliers[tc.tier] = tc.earnMultiplier;
-        });
-        setTierThresholds(prev => ({ ...prev, ...thresholds }));
-        setTierMultipliers(prev => ({ ...prev, ...multipliers }));
+    if (settingsData?.data) {
+      const data = settingsData.data;
+      setProgramEnabled(data.programEnabled);
+      setEarnRate((data.baseEarnRate ?? 1).toString());
+      if (data.tierThresholds) {
+        setTierThresholds(prev => ({ ...prev, ...data.tierThresholds }));
       }
+      if (data.tierMultipliers) {
+        setTierMultipliers(prev => ({ ...prev, ...data.tierMultipliers }));
+      }
+      if (data.outletOverrides) {
+        setEarnOverrides(data.outletOverrides);
+      }
+      setCrossOutletRedemption(data.crossOutletRedemption ?? true);
+      setAutoPromptCashiers(data.autoPromptCashiers ?? true);
+      setAllowPosRegistration(data.allowPosRegistration ?? true);
+      setShowPointsOnReceipt(data.showPointsOnReceipt ?? true);
+      setEnablePointsExpiry(data.enablePointsExpiry ?? false);
+      setPointsExpiryDays((data.pointsExpiryDays ?? 365).toString());
     }
   }, [settingsData]);
 
@@ -490,6 +502,7 @@ export default function LoyaltyManagement() {
   const outletPerformance = useMemo(() => {
     return performanceData?.data || [];
   }, [performanceData]);
+
 
   // Map tier breakdown
   const tierBreakdown = useMemo(() => {
@@ -578,16 +591,38 @@ export default function LoyaltyManagement() {
 
   const handleSaveSettings = async () => {
     try {
-      const tierConfigs = (Object.keys(tierConfig) as LoyaltyTier[]).map((tier) => ({
-        tier,
-        minPoints: tierThresholds[tier],
-        earnMultiplier: tierMultipliers[tier],
-      }));
+      const formattedOverrides = earnOverrides.map(o => {
+        const outlet = outlets.find(out => out.id === o.outletId);
+        return {
+          outletId: o.outletId,
+          outletName: outlet?.name || o.outletName || "",
+          multiplier: Number(o.multiplier),
+          label: o.label || "",
+        };
+      });
 
       await updateSettingsMutation.trigger({
         programEnabled,
-        pointsPerCurrency: Number(earnRate),
-        tierConfigs,
+        baseEarnRate: Number(earnRate),
+        tierThresholds: {
+          bronze: Number(tierThresholds.bronze),
+          silver: Number(tierThresholds.silver),
+          gold: Number(tierThresholds.gold),
+          platinum: Number(tierThresholds.platinum),
+        },
+        tierMultipliers: {
+          bronze: Number(tierMultipliers.bronze),
+          silver: Number(tierMultipliers.silver),
+          gold: Number(tierMultipliers.gold),
+          platinum: Number(tierMultipliers.platinum),
+        },
+        outletOverrides: formattedOverrides,
+        crossOutletRedemption,
+        autoPromptCashiers,
+        allowPosRegistration,
+        showPointsOnReceipt,
+        enablePointsExpiry,
+        pointsExpiryDays: Number(pointsExpiryDays),
       });
       toast.success("Settings saved");
       mutateSettings();
@@ -745,7 +780,7 @@ export default function LoyaltyManagement() {
                     <Card key={t.tier} className="p-4 relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-16 h-16 rounded-bl-full opacity-10" style={{ backgroundColor: t.color }} />
                       <div className="flex items-center gap-3 mb-3">
-                        <Badge className={cn("text-xs font-semibold", t.badgeClass)}>
+                        <Badge className={cn("text-xs font-semibold hover:text-white", t.badgeClass)}>
                           <TierIcon className="h-3 w-3 mr-1" />
                           {t.label}
                         </Badge>
@@ -776,6 +811,7 @@ export default function LoyaltyManagement() {
                       <TableHead className="text-right">Points Earned</TableHead>
                       <TableHead className="text-right">Points Redeemed</TableHead>
                       <TableHead className="text-right">New Members</TableHead>
+                      <TableHead className="text-right">Transactions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -786,11 +822,12 @@ export default function LoyaltyManagement() {
                           <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
                           <TableCell className="text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
                           <TableCell className="text-right"><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-4 w-8 ml-auto" /></TableCell>
                         </TableRow>
                       ))
                     ) : outletPerformance.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">No outlet data available</TableCell>
+                        <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No outlet data available</TableCell>
                       </TableRow>
                     ) : (
                       outletPerformance.map(op => (
@@ -801,9 +838,10 @@ export default function LoyaltyManagement() {
                               <span className="font-medium">{op.outletName}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-right text-success font-semibold">+{op.pointsEarned.toLocaleString()}</TableCell>
-                          <TableCell className="text-right text-destructive font-semibold">-{op.pointsRedeemed?.toLocaleString() ?? 0}</TableCell>
-                          <TableCell className="text-right">{op.members}</TableCell>
+                          <TableCell className="text-right text-success font-semibold">+{op.earned.toLocaleString()}</TableCell>
+                          <TableCell className="text-right text-destructive font-semibold">-{op.redeemed.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{op.registrations.toLocaleString()}</TableCell>
+                          <TableCell className="text-right">{op.transactions.toLocaleString()}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -1257,14 +1295,6 @@ export default function LoyaltyManagement() {
             </p>
           </Card>
 
-          {/* Save applies to Points Earning Rules, Per-Outlet Overrides, and Tier Thresholds */}
-          <div className="flex justify-end">
-            <Button onClick={handleSaveSettings} disabled={updateSettingsMutation.isMutating}>
-              {updateSettingsMutation.isMutating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save Settings
-            </Button>
-          </div>
-
           {/* Program behaviour */}
           <Card className="p-6">
             <h2 className="text-lg font-heading font-semibold mb-1">Program Behaviour</h2>
@@ -1276,7 +1306,7 @@ export default function LoyaltyManagement() {
                   <p className="text-sm font-medium">Cross-outlet redemption</p>
                   <p className="text-xs text-muted-foreground">Allow customers to redeem points earned at any outlet</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={crossOutletRedemption} onCheckedChange={setCrossOutletRedemption} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -1284,7 +1314,7 @@ export default function LoyaltyManagement() {
                   <p className="text-sm font-medium">Auto-prompt cashiers</p>
                   <p className="text-xs text-muted-foreground">Ask cashier to look up loyalty member at every checkout</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={autoPromptCashiers} onCheckedChange={setAutoPromptCashiers} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -1292,7 +1322,7 @@ export default function LoyaltyManagement() {
                   <p className="text-sm font-medium">Allow POS registration</p>
                   <p className="text-xs text-muted-foreground">Let cashiers register new members during checkout</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={allowPosRegistration} onCheckedChange={setAllowPosRegistration} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -1300,7 +1330,7 @@ export default function LoyaltyManagement() {
                   <p className="text-sm font-medium">Show points on receipt</p>
                   <p className="text-xs text-muted-foreground">Print loyalty balance and earned points on customer receipts</p>
                 </div>
-                <Switch defaultChecked />
+                <Switch checked={showPointsOnReceipt} onCheckedChange={setShowPointsOnReceipt} />
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -1308,10 +1338,39 @@ export default function LoyaltyManagement() {
                   <p className="text-sm font-medium">Points expiry</p>
                   <p className="text-xs text-muted-foreground">Automatically expire unused points after a period</p>
                 </div>
-                <Switch />
+                <Switch checked={enablePointsExpiry} onCheckedChange={setEnablePointsExpiry} />
               </div>
+              {enablePointsExpiry && (
+                <>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Expiry period</p>
+                      <p className="text-xs text-muted-foreground">Number of days before points expire</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <NumericInput
+                        min={1}
+                        precision={0}
+                        value={pointsExpiryDays}
+                        onChange={(_, valStr) => setPointsExpiryDays(valStr)}
+                        className="w-24 text-right"
+                      />
+                      <span className="text-sm text-muted-foreground">days</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </Card>
+
+          {/* Save applies to all loyalty settings */}
+          <div className="flex justify-end">
+            <Button onClick={handleSaveSettings} disabled={updateSettingsMutation.isMutating}>
+              {updateSettingsMutation.isMutating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Settings
+            </Button>
+          </div>
         </div>
       )}
 

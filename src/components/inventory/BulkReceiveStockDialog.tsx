@@ -116,12 +116,12 @@ export default function BulkReceiveStockDialog({
         stock: apiItem.stock ?? apiItem.quantity ?? fullItem?.stock ?? 0,
         minStock: fullItem?.minStock ?? 0,
         costPrice: apiItem.costPrice ?? fullItem?.costPrice ?? 0,
-        sellPrice: fullItem?.sellPrice ?? 0,
+        sellingPrice: apiItem.sellingPrice ?? fullItem?.sellingPrice ?? 0,
         pricingMethod: fullItem?.pricingMethod ?? "markup",
         pricingValue: fullItem?.pricingValue ?? 30,
         status: fullItem?.status ?? "good",
         conversions: fullItem?.conversions ?? [
-          { id: Math.random().toString(), fromQuantity: 1, toQuantity: 1, toUnitId: apiItem.unitId || "5", sellable: true, sellPrice: fullItem?.sellPrice ?? 0 }
+          { id: Math.random().toString(), fromQuantity: 1, toQuantity: 1, toUnitId: apiItem.unitId || "5", sellable: true, sellPrice: apiItem.sellingPrice ?? fullItem?.sellingPrice ?? 0 }
         ],
         outletId: apiItem.outletId || fullItem?.outletId || effectiveOutletId,
         batchNumber: fullItem?.batchNumber ?? "",

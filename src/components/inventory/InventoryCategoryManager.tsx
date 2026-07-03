@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";;
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import {
   useCreateInventoryCategory,
   useUpdateInventoryCategory,
@@ -23,54 +25,34 @@ import { toast } from "sonner";
 export interface InventoryCategory {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   itemCount: number;
 }
 
-const defaultCategories: InventoryCategory[] = [
-  { id: "1", name: "Beverages", description: "Drinks and beverage ingredients", itemCount: 3 },
-  { id: "2", name: "Food Supplies", description: "Raw food and bakery ingredients", itemCount: 2 },
-  { id: "3", name: "Packaging", description: "Cups, bags, and containers", itemCount: 2 },
-  { id: "4", name: "Salon & Barber Supplies", description: "Hair and beauty products", itemCount: 3 },
-  { id: "5", name: "Pharmaceuticals", description: "Drugs, supplements, and medical supplies", itemCount: 0 },
-  { id: "6", name: "Fresh Produce", description: "Fruits, vegetables, and perishables", itemCount: 0 },
-  { id: "7", name: "Dairy & Frozen", description: "Milk, cheese, ice cream, frozen goods", itemCount: 0 },
-  { id: "8", name: "Wines & Spirits", description: "Alcoholic beverages and mixers", itemCount: 0 },
-  { id: "9", name: "Apparel", description: "Clothing, footwear, accessories", itemCount: 0 },
-  { id: "10", name: "Electronics & Gadgets", description: "Phones, accessories, devices", itemCount: 0 },
-  { id: "11", name: "Hair & Wigs", description: "Wigs, extensions, hair accessories", itemCount: 0 },
-  { id: "12", name: "Grocery Staples", description: "Rice, oil, canned goods, snacks", itemCount: 0 },
-];
-
 interface Props {
-  categories: InventoryCategory[];
   onMutate: () => void;
 }
 
-export default function InventoryCategoryManager({ categories, onMutate }: Props) {
+export default function InventoryCategoryManager({ onMutate }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<InventoryCategory | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   const { data: categoriesRes } = useGetInventoryCategories({
     search: debouncedSearch.trim() || undefined,
-    page: 1,
-    per_page: 100,
+    page: page,
+    per_page: DEFAULT_PAGE_SIZE,
   });
 
-  const apiCategories = useMemo<InventoryCategory[]>(() => {
-    if (!categoriesRes?.data) return [];
-    return categoriesRes.data.map((c) => ({
-      id: c.id,
-      name: c.name,
-      description: c.description || "",
-      itemCount: 0,
-    }));
-  }, [categoriesRes]);
+  const apiCategories = categoriesRes?.data || [];
 
   const createCategoryMutation = useCreateInventoryCategory();
   const updateCategoryMutation = useUpdateInventoryCategory();
@@ -100,7 +82,7 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
           payload: {
             name: form.name,
             description: form.description,
-          }
+          },
         });
         toast.success("Category updated");
       } else {
@@ -114,7 +96,9 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
       onMutate();
       setOpen(false);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || "Failed to save category");
+      toast.error(
+        e.response?.data?.message || e.message || "Failed to save category",
+      );
     }
   };
 
@@ -124,7 +108,9 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
       toast.success("Category deleted");
       onMutate();
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || "Failed to delete category");
+      toast.error(
+        e.response?.data?.message || e.message || "Failed to delete category",
+      );
     }
   };
 
@@ -156,47 +142,105 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{cat.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{cat.description}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {cat.description}
+                  </p>
                 </div>
               </div>
-              <Badge variant="secondary" className="text-xs shrink-0">{cat.itemCount} items</Badge>
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {cat.itemCount} items
+              </Badge>
             </div>
             <div className="flex gap-1 mt-3 justify-end">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cat)} disabled={deleteCategoryMutation.isMutating}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => openEdit(cat)}
+                disabled={deleteCategoryMutation.isMutating}
+              >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(cat.id)} disabled={deleteCategoryMutation.isMutating}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive"
+                onClick={() => handleDelete(cat.id)}
+                disabled={deleteCategoryMutation.isMutating}
+              >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
           </Card>
         ))}
         {filtered.length === 0 && (
-          <p className="text-sm text-muted-foreground col-span-full text-center py-8">No categories found</p>
+          <p className="text-sm text-muted-foreground col-span-full text-center py-8">
+            No categories found
+          </p>
         )}
       </div>
 
+      {categoriesRes?.meta && categoriesRes.meta.last_page > 1 && (
+        <div className="flex justify-end pt-2">
+          <ResuablePagination
+            currentPage={page}
+            totalPages={categoriesRes.meta.last_page}
+            onPageChange={setPage}
+            totalItems={categoriesRes.meta.total}
+            rowsPerPage={DEFAULT_PAGE_SIZE}
+          />
+        </div>
+      )}
+
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10">
+        <SheetContent
+          side="right"
+          className="!w-full !max-w-none lg:!max-w-md p-0 flex flex-col overflow-hidden [&>button]:z-10"
+        >
           <SheetHeader className="px-6 pt-6 pb-4">
-            <SheetTitle>{editing ? "Edit Category" : "Add Category"}</SheetTitle>
+            <SheetTitle>
+              {editing ? "Edit Category" : "Add Category"}
+            </SheetTitle>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto px-6 pb-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Name</label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Beverages" />
+                <Input
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="e.g. Beverages"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
-                <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Brief description" />
+                <Input
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                  placeholder="Brief description"
+                />
               </div>
             </div>
           </div>
           <SheetFooter className="px-6 py-4 border-t">
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={createCategoryMutation.isMutating || updateCategoryMutation.isMutating}>
-              {createCategoryMutation.isMutating || updateCategoryMutation.isMutating ? "Saving..." : editing ? "Update" : "Add"}
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={
+                createCategoryMutation.isMutating ||
+                updateCategoryMutation.isMutating
+              }
+            >
+              {createCategoryMutation.isMutating ||
+              updateCategoryMutation.isMutating
+                ? "Saving..."
+                : editing
+                  ? "Update"
+                  : "Add"}
             </Button>
           </SheetFooter>
         </SheetContent>
@@ -204,5 +248,3 @@ export default function InventoryCategoryManager({ categories, onMutate }: Props
     </div>
   );
 }
-
-export { defaultCategories };

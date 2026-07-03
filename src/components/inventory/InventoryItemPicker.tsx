@@ -5,10 +5,11 @@ import { cn } from "@/lib/utils";
 import { useGetInventoryItems, useGetInventoryItem } from "@/services/api/inventory/item";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
+import type { InventoryListItem } from "@/lib/types/inventory-list-response";
 
 interface InventoryItemPickerProps {
   selectedId?: string;
-  onSelect: (id: string, item: any | null) => void;
+  onSelect: (id: string, item: InventoryListItem | null) => void;
   outletId?: string;
   className?: string;
   triggerClassName?: string;
@@ -82,7 +83,7 @@ export function InventoryItemPicker({
     setIsOpen(false);
   };
 
-  const handleSelectItem = (item: any) => {
+  const handleSelectItem = (item: InventoryListItem) => {
     onSelect(item.id, item);
     setIsOpen(false);
   };

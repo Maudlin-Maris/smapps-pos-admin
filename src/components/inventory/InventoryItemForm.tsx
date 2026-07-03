@@ -67,22 +67,22 @@ export interface ItemBatch {
 export interface InventoryItem {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   sku: string;
   categoryId: string;
   unitId: string;
   stock: number;
   minStock: number;
   costPrice: number;
-  sellPrice?: number;
-  pricingMethod?: PricingMethod;
-  pricingValue?: number;
-  status: "good" | "low" | "critical";
-  conversions: ItemConversion[];
+  sellingPrice: number;
+  pricingMethod?: string | null;
+  pricingValue?: number | null;
+  status: string;
+  conversions: any[];
   outletId: string;
-  batchNumber?: string;
-  expiryDate?: string;
-  batches?: ItemBatch[];
+  batchNumber?: string | null;
+  expiryDate?: string | null;
+  batches?: any[];
 }
 
 interface Props {
@@ -147,7 +147,7 @@ const emptyForm = (outletId: string = ""): FormState => ({
   stock: 0,
   minStock: 0,
   costPrice: 0,
-  sellPrice: 0,
+  sellingPrice: 0,
   pricingMethod: "markup",
   pricingValue: 30,
   conversions: [],
@@ -226,15 +226,15 @@ export default function InventoryItemForm({
         categoryId: itemDetail.categoryId || "",
         unitId: itemDetail.unit ? (units.find(u => u.name === itemDetail.unit || u.abbreviation === itemDetail.unit)?.id || "5") : "5",
         stock: itemDetail.quantity || 0,
-        minStock: itemDetail.reorderLevel || 0,
+        minStock: itemDetail.minStock || 0,
         costPrice: itemDetail.costPrice || 0,
-        sellPrice: itemDetail.sellPrice || 0,
+        sellingPrice: itemDetail.sellingPrice || 0,
         pricingMethod: "markup",
         pricingValue: 30,
         conversions: editing.conversions || [],
         outletId: itemDetail.outletId || "",
         batchNumber: editing.batchNumber || "",
-        expiryDate: itemDetail.createdAt || "",
+        expiryDate: itemDetail.expiryDate || "",
         batches: editing.batches || [],
       });
     }
@@ -284,7 +284,7 @@ export default function InventoryItemForm({
       stock: item.stock,
       minStock: item.minStock,
       costPrice: item.costPrice,
-      sellPrice: item.sellPrice ?? Math.round(item.costPrice * 1.3 * 100) / 100,
+      sellingPrice: item.sellingPrice ?? Math.round(item.costPrice * 1.3 * 100) / 100,
       pricingMethod: item.pricingMethod ?? "markup",
       pricingValue: item.pricingValue ?? 30,
       conversions: item.conversions || [],
@@ -309,9 +309,9 @@ export default function InventoryItemForm({
         categoryId: itemDetail.categoryId || "",
         unitId: clonedUnitId,
         costPrice: itemDetail.costPrice || 0,
-        sellingPrice: itemDetail.sellPrice || 0,
+        sellingPrice: itemDetail.sellingPrice || 0,
         stock: itemDetail.quantity || 0,
-        minStock: itemDetail.reorderLevel || 10,
+        minStock: itemDetail.minStock || 10,
         pricingMethod: item.pricingMethod || "markup",
         pricingValue: item.pricingValue || 0,
         conversions: (item.conversions || []).map(c => ({
@@ -357,7 +357,7 @@ export default function InventoryItemForm({
           payload: {
             name: form.name,
             minStock: Number(form.minStock),
-            sellingPrice: Number(form.sellPrice || 0),
+            sellingPrice: Number(form.sellingPrice || 0),
           }
         });
         toast.success("Item updated");
@@ -370,7 +370,7 @@ export default function InventoryItemForm({
           categoryId: form.categoryId,
           unitId: form.unitId,
           costPrice: Number(form.costPrice),
-          sellingPrice: Number(form.sellPrice || 0),
+          sellingPrice: Number(form.sellingPrice || 0),
           stock: Number(form.stock),
           minStock: Number(form.minStock),
           pricingMethod: form.pricingMethod || "markup",
@@ -399,13 +399,12 @@ export default function InventoryItemForm({
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteItemMutation.trigger(id);
-      toast.success("Item deleted");
-      onMutate();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || "Failed to delete item");
-    }
+    deleteItemMutation.trigger(id, {
+      onSuccess: () => {
+        toast.success("Item deleted");
+        onMutate();
+      }
+    });
   };
 
   // Conversion helpers
@@ -515,6 +514,8 @@ export default function InventoryItemForm({
         totalItems={totalItems}
         rowsPerPage={perPage}
         onRowsPerPageChange={onPerPageChange}
+        disabled={isLoading}
+        isLoading={isLoading}
       />
 
       <div className="grid gap-3">
@@ -841,8 +842,8 @@ export default function InventoryItemForm({
                     const cp = val || 0;
                     const method = form.pricingMethod ?? "markup";
                     const val_ = form.pricingValue ?? 0;
-                    const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val_) * 100) / 100 : form.sellPrice;
-                    setForm({ ...form, costPrice: cp, sellPrice: newSell });
+                    const newSell = cp > 0 ? Math.round(calcSellPrice(cp, method, val_) * 100) / 100 : form.sellingPrice;
+                    setForm({ ...form, costPrice: cp, sellingPrice: newSell });
                   }}
                   placeholder="0.00"
                 />
@@ -851,7 +852,7 @@ export default function InventoryItemForm({
               {/* Sell Price & Markup — retail businesses only */}
               {isOutletRetail(form.outletId) && (() => {
                 const cost = form.costPrice || 0;
-                const sell = form.sellPrice || 0;
+                const sell = form.sellingPrice || 0;
                 const profit = sell - cost;
                 const profitPositive = profit >= 0;
                 return (
@@ -879,7 +880,7 @@ export default function InventoryItemForm({
                             const method = v as PricingMethod;
                             const val = form.pricingValue ?? 0;
                             const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val) * 100) / 100 : sell;
-                            setForm({ ...form, pricingMethod: method, sellPrice: newSell });
+                            setForm({ ...form, pricingMethod: method, sellingPrice: newSell });
                           }}
                         >
                           <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
@@ -903,7 +904,7 @@ export default function InventoryItemForm({
                             const val_ = val || 0;
                             const method = form.pricingMethod ?? "markup";
                             const newSell = cost > 0 ? Math.round(calcSellPrice(cost, method, val_) * 100) / 100 : sell;
-                            setForm({ ...form, pricingValue: val_, sellPrice: newSell });
+                            setForm({ ...form, pricingValue: val_, sellingPrice: newSell });
                           }}
                           className="h-9"
                         />
@@ -914,8 +915,8 @@ export default function InventoryItemForm({
                           min={0}
                           step={0.01}
                           precision={2}
-                          value={form.sellPrice ?? 0}
-                          onChange={(val) => setForm({ ...form, sellPrice: val || 0 })}
+                          value={form.sellingPrice ?? 0}
+                          onChange={(val) => setForm({ ...form, sellingPrice: val || 0 })}
                           className="h-9"
                         />
                       </div>
@@ -1058,7 +1059,7 @@ export default function InventoryItemForm({
               {(() => {
                 const retail = isOutletRetail(form.outletId);
                 const baseUnit = getUnit(form.unitId);
-                const baseSell = form.sellPrice ?? 0;
+                const baseSell = form.sellingPrice ?? 0;
                 return (
                   <div className="space-y-3 border-t pt-4">
                     <div className="flex items-center justify-between gap-2">

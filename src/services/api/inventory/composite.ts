@@ -10,8 +10,7 @@ import { createUrlWithParams } from "@/lib/utils";
 import { api } from "../base";
 
 // Types
-import type { CompositeResponse } from "@/lib/types/composite-response";
-import type { CompositeListResponse } from "@/lib/types/composite-list-response";
+import type { CompositeListResponse, Composite } from "@/lib/types/composite-list-response";
 import type { CreateCompositePayload } from "@/lib/types/create-composite-payload";
 import type { UpdateCompositePayload } from "@/lib/types/update-composite-payload";
 
@@ -36,7 +35,7 @@ export const useGetComposite = (
   options?: SWRConfiguration,
 ) => {
   const { isLoggedIn } = useAuth();
-  return useApi<CompositeResponse>(
+  return useApi<Composite>(
     isLoggedIn && id ? API_ENDPOINTS.SINGLE_COMPOSITE(id) : null,
     options,
   );
@@ -44,7 +43,7 @@ export const useGetComposite = (
 
 export const useCreateComposite = (
   options?: SWRMutationConfiguration<
-    CompositeResponse,
+    Composite,
     APIError,
     string,
     CreateCompositePayload
@@ -55,7 +54,7 @@ export const useCreateComposite = (
     const { data } = await api.post(url, arg);
     return data;
   };
-  return useSWRMutation<CompositeResponse, APIError, string, CreateCompositePayload>(
+  return useSWRMutation<Composite, APIError, string, CreateCompositePayload>(
     API_ENDPOINTS.COMPOSITES,
     fetcher,
     {
@@ -73,7 +72,7 @@ export const useCreateComposite = (
 
 export const useUpdateComposite = (
   options?: SWRMutationConfiguration<
-    CompositeResponse,
+    Composite,
     APIError,
     string,
     { id: string | number; payload: UpdateCompositePayload }
@@ -85,7 +84,7 @@ export const useUpdateComposite = (
     return data;
   };
   return useSWRMutation<
-    CompositeResponse,
+    Composite,
     APIError,
     string,
     { id: string | number; payload: UpdateCompositePayload }

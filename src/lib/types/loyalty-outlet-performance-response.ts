@@ -1,13 +1,12 @@
-export interface LoyaltyOutletPerformanceRecord {
-  outletId: string;
-  outletName: string;
-  members: number;
-  pointsEarned: number;
-  pointsRedeemed?: number;
-  registrations?: number;
-  transactions?: number;
+export interface LoyaltyOutletPerformanceResponse {
+  data: Datum[];
 }
 
-export interface LoyaltyOutletPerformanceResponse {
-  data: LoyaltyOutletPerformanceRecord[];
+export interface Datum {
+  outletId: string;
+  outletName: string;
+  earned: number;
+  redeemed: number;
+  registrations: number;
+  transactions: number;
 }

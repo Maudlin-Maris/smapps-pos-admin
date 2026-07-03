@@ -1,15 +1,17 @@
 import type { SWRConfiguration } from "swr";
+import type { SWRInfiniteConfiguration } from "swr/infinite";
 import type { SWRMutationConfiguration } from "swr/mutation";
 import useSWRMutation from "swr/mutation";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useApi, type APIError } from "../api-hooks";
+import { useApi, useApiInfinite, type APIError } from "../api-hooks";
 import { API_ENDPOINTS } from "../endpoints";
 import { createUrlWithParams } from "@/lib/utils";
 import { api } from "../base";
 
 // Types
+import type { InventoryListResponse } from "@/lib/types/inventory-list-response";
 import type { InventoryAdjustmentListResponse } from "@/lib/types/inventory-adjustments";
 import type { InventoryBalanceResponse } from "@/lib/types/inventory-balance";
 import type { InventoryBalancesListResponse } from "@/lib/types/inventory-balances";
@@ -243,4 +245,22 @@ export const useGetSubstitutionLogs = (
     ? createUrlWithParams(API_ENDPOINTS.LIST_SUBSTITUTION_LOGS, params)
     : null;
   return useApi<SubstitutionLogsListResponse>(url, options);
+};
+
+export const useGetInventoryItemsInfinite = (
+  params?: {
+    search?: string;
+    categoryId?: string;
+    outletId?: string;
+  },
+  options?: SWRInfiniteConfiguration,
+) => {
+  const { isLoggedIn } = useAuth();
+  const url = isLoggedIn ? API_ENDPOINTS.INVENTORY : null;
+  return useApiInfinite<InventoryListResponse>(
+    url,
+    params,
+    undefined,
+    options,
+  );
 };

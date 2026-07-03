@@ -1,9 +1,9 @@
 export interface CatalogItemsListResponse {
-    data: Datum[];
+    data: CatalogItem[];
     meta: Meta;
 }
 
-export interface Datum {
+export interface CatalogItem {
     id: string;
     outletId: string;
     name: string;

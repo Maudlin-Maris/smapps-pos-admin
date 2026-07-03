@@ -127,7 +127,7 @@ interface ModifierGroup {
 }
 import { defaultUnits as defaultMeasuringUnits } from "@/components/inventory/MeasuringUnitManager";
 import { formatNaira } from "@/lib/currency";
-import { defaultCategories as defaultInventoryCategories } from "@/components/inventory/InventoryCategoryManager";
+import type { InventoryListItem } from "@/lib/types/inventory-list-response";
 import type { ComponentSubstituteConfig } from "@/lib/composite-substitution";
 import ComponentSubstituteEditor from "@/components/inventory/ComponentSubstituteEditor";
 import { useGetSubstituteGroups } from "@/services/api/inventory/substitute-group";
@@ -352,9 +352,7 @@ function VariantRow({
             step={0.01}
             precision={2}
             value={variant.price || 0}
-            onChange={(val) =>
-              onChange({ ...variant, price: val || 0 })
-            }
+            onChange={(val) => onChange({ ...variant, price: val || 0 })}
             placeholder="0.00"
           />
         </div>
@@ -376,9 +374,7 @@ function VariantRow({
             precision={0}
             step={1}
             value={variant.quantity || 0}
-            onChange={(val) =>
-              onChange({ ...variant, quantity: val || 0 })
-            }
+            onChange={(val) => onChange({ ...variant, quantity: val || 0 })}
             placeholder="0"
             disabled={variant.trackInventory}
           />
@@ -747,7 +743,7 @@ export default function MenuItemForm({
         sku: i.sku || "",
         stock: i.quantity ?? i.stock ?? 0,
         costPrice: i.costPrice ?? 0,
-        sellPrice: i.sellPrice ?? 0,
+        sellingPrice: i.sellingPrice ?? i.sellPrice ?? 0,
         pricingMethod: i.pricingMethod ?? "markup",
         pricingValue: i.pricingValue ?? 30,
         status: i.status ?? "good",
@@ -932,47 +928,29 @@ export default function MenuItemForm({
     }
   };
 
-  // Auto-fill from linked inventory item (Simple type). Suggests a category
+  // Auto-fill from linked inventory item. Suggests a category
   // by name match against the catalog categories — admin can override.
-  const handleLinkInventory = (invId: string) => {
-    setLinkedInventoryItemId(invId);
-    const inv = inventoryItems.find((i) => i.id === invId);
-    if (!inv) return;
+  const handleLinkInventory = (inv: InventoryListItem) => {
+    setLinkedInventoryItemId(inv.id);
     if (!name.trim()) setName(inv.name);
     // Always sync barcode/qty from the linked item — these become read-only.
     setSku(inv.sku);
-    setQuantity(String(inv.stock));
+    setQuantity(String(inv.stock ?? inv.quantity));
     setAddToInventory(false);
     // Sync selling unit from the linked inventory item if available.
-    const linkedUnit = defaultMeasuringUnits.find(
-      (u) => u.id === (inv as { unitId?: string }).unitId,
-    );
+    const linkedUnit = defaultMeasuringUnits.find((u) => u.id === inv.unitId);
     if (linkedUnit) setSellingUnit(linkedUnit.abbreviation);
     // Sync category from the linked inventory item's category. Match the
     // inventory category name against the catalog categories (case-insensitive,
     // partial) so admins keep a single source of truth.
-    const invCat = defaultInventoryCategories.find(
-      (c) => c.id === (inv as { categoryId?: string }).categoryId,
-    );
-    if (invCat) {
-      const lowerCat = invCat.name.toLowerCase();
-      const match =
-        categories.find((c) => c.name.toLowerCase() === lowerCat) ??
-        categories.find((c) =>
-          lowerCat.includes(c.name.toLowerCase().split(" ")[0]),
-        ) ??
-        categories.find((c) =>
-          c.name.toLowerCase().includes(lowerCat.split(" ")[0]),
-        );
-      if (match) setSelectedCatId(match.id);
-    }
     // Sync cost / sell price / markup from inventory record. Sell price
     // becomes the catalog Price, and the cost+markup pair drives the
     // read-only profit summary shown in the Pricing section.
     setCostPrice(inv.costPrice != null ? String(inv.costPrice) : "");
-    if (inv.sellPrice != null && inv.sellPrice > 0)
-      setPrice(String(inv.sellPrice));
-    if (inv.pricingMethod) setMenuPricingMethod(inv.pricingMethod);
+    if (inv.sellingPrice != null && inv.sellingPrice > 0)
+      setPrice(String(inv.sellingPrice));
+    if (inv.pricingMethod)
+      setMenuPricingMethod(inv.pricingMethod as PricingMethod);
     if (inv.pricingValue != null) setMenuPricingValue(String(inv.pricingValue));
   };
 
@@ -1493,14 +1471,18 @@ export default function MenuItemForm({
                       </Label>
                       <InventoryItemPicker
                         selectedId={linkedInventoryItemId}
-                        onSelect={(id) => {
-                          if (id) {
-                            handleLinkInventory(id);
+                        onSelect={(id, item) => {
+                          if (id && item) {
+                            handleLinkInventory(item);
                           } else {
                             setLinkedInventoryItemId("");
                           }
                         }}
-                        outletId={selectedOutletIds.length === 1 ? selectedOutletIds[0] : undefined}
+                        outletId={
+                          selectedOutletIds.length === 1
+                            ? selectedOutletIds[0]
+                            : undefined
+                        }
                         placeholder="Search by name or SKU..."
                         triggerPlaceholder="Search inventory..."
                         triggerClassName="h-9 text-sm mt-1"
@@ -2180,7 +2162,7 @@ export default function MenuItemForm({
                         if (linkedInv) {
                           const cost = linkedInv.costPrice ?? 0;
                           const sell =
-                            linkedInv.sellPrice ?? (parseFloat(price) || 0);
+                            linkedInv.sellingPrice ?? (parseFloat(price) || 0);
                           const profit = sell - cost;
                           const markupPct =
                             cost > 0 ? (profit / cost) * 100 : 0;

@@ -1,7 +1,6 @@
 export interface InventorySnapshotsSummaryResponse {
-  date: string;
-  outletId: string;
-  totalItems: number;
-  totalValue: number;
-  varianceCount: number;
+  snapshotCount:               number;
+  varianceSnapshotCount:       number;
+  pendingReconciliationsCount: number;
+  netVarianceCost:             number;
 }

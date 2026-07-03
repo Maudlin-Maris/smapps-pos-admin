@@ -44,23 +44,29 @@ import {
   useGetMeasuringUnits,
 } from "@/services/api/inventory/unit";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 interface Props {
-  units: MeasuringUnit[];
   onMutate: () => void;
 }
 
-export default function MeasuringUnitManager({ units, onMutate }: Props) {
+export default function MeasuringUnitManager({ onMutate }: Props) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MeasuringUnit | null>(null);
   const [form, setForm] = useState({ name: "", abbreviation: "" });
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   const { data: unitsRes } = useGetMeasuringUnits({
     search: debouncedSearch.trim() || undefined,
-    page: 1,
-    per_page: 100,
+    page: page,
+    per_page: DEFAULT_PAGE_SIZE,
   });
 
   const apiUnits = useMemo<MeasuringUnit[]>(() => {
@@ -188,6 +194,18 @@ export default function MeasuringUnitManager({ units, onMutate }: Props) {
           </p>
         )}
       </div>
+
+      {unitsRes?.meta && unitsRes.meta.last_page > 1 && (
+        <div className="flex justify-end pt-2">
+          <ResuablePagination
+            currentPage={page}
+            totalPages={unitsRes.meta.last_page}
+            onPageChange={setPage}
+            totalItems={unitsRes.meta.total}
+            rowsPerPage={DEFAULT_PAGE_SIZE}
+          />
+        </div>
+      )}
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent

@@ -76,7 +76,7 @@ export default function ProfitabilityView({
         sku: item.sku || fullItem?.sku || "",
         description: fullItem?.description || "",
         costPrice: item.costPrice ?? fullItem?.costPrice ?? 0,
-        sellPrice: fullItem?.sellPrice ?? 0,
+        sellingPrice: item.sellingPrice ?? fullItem?.sellingPrice ?? 0,
         stock: stock,
         minStock: minStock,
         status: stock <= minStock * 0.3 ? "critical" : stock <= minStock ? "low" : "good",

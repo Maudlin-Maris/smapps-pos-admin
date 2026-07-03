@@ -14,7 +14,7 @@ import type { LoyaltyRewardRecord } from "@/lib/types/loyalty-reward-record";
 import type { LoyaltyRewardsResponse } from "@/lib/types/loyalty-rewards-response";
 import type { LoyaltyActivityResponse } from "@/lib/types/loyalty-activity-response";
 import type { LoyaltyOutletPerformanceResponse } from "@/lib/types/loyalty-outlet-performance-response";
-import type { LoyaltySettingsResponse } from "@/lib/types/loyalty-settings-response";
+import type { LoyaltySettingsResponse, Tier, OutletOverride } from "@/lib/types/loyalty-settings-response";
 export interface LoyaltyOverviewResponse {
   totalMembers: number;
   pointsIssued: number;
@@ -42,13 +42,18 @@ export interface UpdateLoyaltyRewardPayload {
   outletIds?: string[];
 }
 
-import type { TierConfig } from "@/lib/types/loyalty-settings-response";
-
 export interface UpdateLoyaltySettingsPayload {
   programEnabled?: boolean;
-  pointsPerCurrency?: number;
-  currencyPerPoint?: number;
-  tierConfigs?: TierConfig[];
+  baseEarnRate?: number;
+  tierThresholds?: Tier;
+  tierMultipliers?: Tier;
+  outletOverrides?: OutletOverride[];
+  crossOutletRedemption?: boolean;
+  autoPromptCashiers?: boolean;
+  allowPosRegistration?: boolean;
+  showPointsOnReceipt?: boolean;
+  enablePointsExpiry?: boolean;
+  pointsExpiryDays?: number;
 }
 
 export interface UpdateMemberPointsPayload {

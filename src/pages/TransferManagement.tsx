@@ -871,7 +871,7 @@ function TransferCreate() {
                           </td>
                           <td className="p-2 text-right">{transferable}</td>
                           <td className="p-2 text-right">
-                            <NumericInput min={1} max={transferable} precision={0} value={l.qty}
+                            <NumericInput min={0.1} max={transferable} value={l.qty}
                               onChange={(val) => updateQty(l.itemId, val || 0)}
                               className="h-8 w-20 ml-auto text-right" />
                           </td>
@@ -1510,7 +1510,7 @@ function ActionDialog({
                     {kind === "approve" && <>
                       <td className="p-2 text-right">{it.requestedQty}</td>
                       <td className="p-2 text-right">
-                        <NumericInput min={0} max={it.requestedQty} precision={0}
+                        <NumericInput min={0} max={it.requestedQty}
                           value={approvals[it.id] ?? 0}
                           onChange={(val) => setApprovals((p) => ({ ...p, [it.id]: val || 0 }))}
                           className="h-8 w-24 ml-auto text-right" />

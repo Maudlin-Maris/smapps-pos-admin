@@ -1,11 +1,25 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, Eye, Clock, Truck, Upload, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Eye,
+  Clock,
+  Truck,
+  Upload,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useStockAdjustments, type StoredAdjustment } from "@/hooks/use-financial-data";
-import { useGetInventoryItems, useAdjustInventoryItem, useCreateInventoryItem } from "@/services/api/inventory/item";
+import {
+  useStockAdjustments,
+  type StoredAdjustment,
+} from "@/hooks/use-financial-data";
+import {
+  useGetInventoryItems,
+  useAdjustInventoryItem,
+  useCreateInventoryItem,
+} from "@/services/api/inventory/item";
 import { useGetInventoryAdjustments } from "@/services/api/inventory/live-inventory";
 import { useGetInventoryCategories } from "@/services/api/inventory/category";
 import {
@@ -20,7 +34,6 @@ import { useGetMeasuringUnits } from "@/services/api/inventory/unit";
 import { useGetComposites } from "@/services/api/inventory/composite";
 import { type MenuItem } from "@/components/menu/MenuItemForm";
 import InventoryCategoryManager, {
-  defaultCategories,
   type InventoryCategory,
 } from "@/components/inventory/InventoryCategoryManager";
 import MeasuringUnitManager, {
@@ -35,7 +48,6 @@ import CompositeItemForm, {
 } from "@/components/inventory/CompositeItemForm";
 import StockAdjustmentHistory, {
   StockAdjustDialog,
-  type StockAdjustment,
   type AdjustmentType,
 } from "@/components/inventory/StockAdjustmentHistory";
 import BulkReceiveStockDialog from "@/components/inventory/BulkReceiveStockDialog";
@@ -45,16 +57,6 @@ import { computeProfitability } from "@/lib/profitability";
 import { useCompositesStore } from "@/hooks/use-composites-store";
 import SubstituteGroupManager from "@/components/inventory/SubstituteGroupManager";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-import { api } from "@/services/api/base";
-import { API_ENDPOINTS } from "@/services/api/endpoints";
-
-const defaultItems: InventoryItem[] = [];
-
-const defaultComposites: CompositeItem[] = [
-  { id: "c1", name: "Cappuccino", menuItemId: "m1", menuVariantId: "v1", description: "Classic cappuccino", components: [{ inventoryItemId: "i1", quantity: 0.02, role: "primary" }, { inventoryItemId: "i2", quantity: 0.15, role: "secondary" }, { inventoryItemId: "i4", quantity: 1, role: "secondary" }], outletId: "outlet-1", sellPrice: 1500, overheadPerUnit: 150 },
-  { id: "c2", name: "Club Sandwich", menuItemId: "m4", description: "Triple-decker sandwich", components: [{ inventoryItemId: "i9", quantity: 2, role: "primary" }, { inventoryItemId: "i3", quantity: 0.005, role: "secondary" }], outletId: "outlet-3", sellPrice: 2500, overheadPerUnit: 200 },
-  { id: "c3", name: "Hair Coloring Service", menuItemId: "m7", description: "Full color treatment", components: [{ inventoryItemId: "i7", quantity: 1, role: "primary" }, { inventoryItemId: "i8", quantity: 1, role: "secondary" }, { inventoryItemId: "i6", quantity: 0.03, role: "secondary" }], outletId: "outlet-5", sellPrice: 12000, overheadPerUnit: 800 },
-];
 
 const DEFAULT_OUTLET_OVERHEAD: Record<string, number> = {
   "outlet-1": 100,
@@ -70,77 +72,56 @@ function computeStatus(stock: number, min: number): InventoryItem["status"] {
   return "good";
 }
 
-type MenuItemOption = { id: string; name: string; variants: { id: string; name: string }[] };
+type MenuItemOption = {
+  id: string;
+  name: string;
+  variants: { id: string; name: string }[];
+};
 
-type Tab = "stock" | "categories" | "units" | "composite" | "substitutes" | "adjustments" | "profitability";
-
-const sampleMenuItems: MenuItemOption[] = [
-  // Restaurant
-  { id: "m1", name: "Cappuccino", variants: [{ id: "v1", name: "Regular" }, { id: "v2", name: "Small" }, { id: "v3", name: "Large" }] },
-  { id: "m2", name: "Iced Latte", variants: [] },
-  { id: "m3", name: "Croissant", variants: [] },
-  { id: "m4", name: "Club Sandwich", variants: [] },
-  { id: "m5", name: "Espresso", variants: [] },
-  { id: "m20", name: "Chicken Wrap", variants: [] },
-  { id: "m21", name: "Orange Juice", variants: [] },
-  // Pharmacy
-  { id: "m22", name: "Paracetamol 500mg", variants: [] },
-  { id: "m23", name: "Vitamin C 1000mg", variants: [] },
-  { id: "m24", name: "Cough Syrup", variants: [] },
-  // Salon
-  { id: "m6", name: "Women's Haircut", variants: [] },
-  { id: "m7", name: "Full Color", variants: [] },
-  { id: "m8", name: "Blowout", variants: [] },
-  // Barber
-  { id: "m27", name: "Men's Haircut", variants: [{ id: "v4", name: "Regular Cut" }, { id: "v5", name: "Fade" }, { id: "v6", name: "Skin Fade + Beard" }] },
-  { id: "m28", name: "Hot Towel Shave", variants: [] },
-  // Grocery
-  { id: "m9", name: "Organic Apples", variants: [] },
-  { id: "m29", name: "Tomatoes (1kg)", variants: [] },
-  { id: "m30", name: "Basmati Rice 5kg", variants: [] },
-  // Supermarket
-  { id: "m32", name: "Full Cream Milk 1L", variants: [] },
-  { id: "m33", name: "Cheddar Cheese 250g", variants: [] },
-  // Wine & Liquor
-  { id: "m36", name: "Cabernet Sauvignon Reserve", variants: [] },
-  { id: "m37", name: "Hennessy VS 750ml", variants: [] },
-  // Clothing
-  { id: "m39", name: "Classic T-Shirt", variants: [{ id: "v7", name: "S" }, { id: "v8", name: "M" }, { id: "v9", name: "L" }, { id: "v10", name: "XL" }] },
-  { id: "m40", name: "Slim Fit Jeans", variants: [{ id: "v11", name: "30" }, { id: "v12", name: "32" }, { id: "v13", name: "34" }] },
-  // Electronics
-  { id: "m42", name: "USB-C Cable 1m", variants: [] },
-  { id: "m43", name: "Wireless Earbuds Pro", variants: [{ id: "v17", name: "Black" }, { id: "v18", name: "White" }] },
-  { id: "m44", name: "Power Bank 10000mAh", variants: [] },
-  // Hair / Wig Store
-  { id: "m46", name: "Brazilian Body Wave", variants: [{ id: "v19", name: "14 inch" }, { id: "v20", name: "18 inch" }, { id: "v21", name: "22 inch" }] },
-  { id: "m47", name: "Lace Front Wig (Bob)", variants: [] },
-  { id: "m48", name: "4x4 Closure Straight", variants: [] },
-];
+type Tab =
+  | "stock"
+  | "categories"
+  | "units"
+  | "composite"
+  | "substitutes"
+  | "adjustments"
+  | "profitability";
 
 export default function InventoryManagement() {
   const [tab, setTab] = useState<Tab>("stock");
-  
+
   const [stockPage, setStockPage] = useState(1);
   const [stockPerPage, setStockPerPage] = useState(DEFAULT_PAGE_SIZE);
   const [stockSearch, setStockSearch] = useState("");
   const [stockCategory, setStockCategory] = useState("all");
-  
+
   const [selectedOutletId, setSelectedOutletId] = useState<string>("all");
 
   const [adjustmentsPage, setAdjustmentsPage] = useState(1);
-  const [adjustmentsPerPage, setAdjustmentsPerPage] = useState(DEFAULT_PAGE_SIZE);
+  const [adjustmentsPerPage, setAdjustmentsPerPage] =
+    useState(DEFAULT_PAGE_SIZE);
   const [adjustmentsSearch, setAdjustmentsSearch] = useState("");
-  const [adjustmentsFilterType, setAdjustmentsFilterType] = useState<string>("all");
-  const [adjustmentsFilterItem, setAdjustmentsFilterItem] = useState<string>("all");
+  const [adjustmentsFilterType, setAdjustmentsFilterType] =
+    useState<string>("all");
+  const [adjustmentsFilterItem, setAdjustmentsFilterItem] =
+    useState<string>("all");
 
   useEffect(() => {
     setAdjustmentsPage(1);
-  }, [selectedOutletId, adjustmentsSearch, adjustmentsFilterType, adjustmentsFilterItem]);
+  }, [
+    selectedOutletId,
+    adjustmentsSearch,
+    adjustmentsFilterType,
+    adjustmentsFilterItem,
+  ]);
 
   const { data: outletsRes } = useGetOutlets();
   const outlets = useMemo(() => outletsRes || [], [outletsRes]);
 
-  const { data: unitsRes, mutate: mutateUnits } = useGetMeasuringUnits({ page: 1, per_page: DEFAULT_PAGE_SIZE });
+  const { data: unitsRes, mutate: mutateUnits } = useGetMeasuringUnits({
+    page: 1,
+    per_page: DEFAULT_PAGE_SIZE,
+  });
   const units = useMemo(() => unitsRes?.data || defaultUnits, [unitsRes]);
 
   const { data: compositesRes, mutate: mutateComposites } = useGetComposites({
@@ -164,9 +145,7 @@ export default function InventoryManagement() {
       sellPrice: c.sellPrice,
     }));
   }, [compositesRes]);
-  
-  const { adjustments: storedAdjustments, addAdjustment } = useStockAdjustments();
-  const [adjustments, setAdjustments] = useState<StockAdjustment[]>([]);
+
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [bulkReceiveOpen, setBulkReceiveOpen] = useState(false);
@@ -174,185 +153,94 @@ export default function InventoryManagement() {
   const [showLowStock, setShowLowStock] = useState(false);
   const [showExpired, setShowExpired] = useState(false);
   const [showExpiringSoon, setShowExpiringSoon] = useState(false);
-  const [outletOverheadDefaults, setOutletOverheadDefaults] =
-    useState<Record<string, number>>(DEFAULT_OUTLET_OVERHEAD);
+  const [outletOverheadDefaults, setOutletOverheadDefaults] = useState<
+    Record<string, number>
+  >(DEFAULT_OUTLET_OVERHEAD);
 
   const isAllOutlets = selectedOutletId === "all";
 
-  const { data: categoriesResponse, mutate: mutateCategories } = useGetInventoryCategories({
-    page: 1,
-    per_page: DEFAULT_PAGE_SIZE,
-  });
+  const { data: categoriesResponse, mutate: mutateCategories } =
+    useGetInventoryCategories({
+      page: 1,
+      per_page: DEFAULT_PAGE_SIZE,
+    });
 
-  const { data: itemsResponse, isLoading: isItemsLoading, mutate: mutateItems } = useGetInventoryItems({
-    page: stockPage,
-    per_page: stockPerPage,
-    search: stockSearch.trim() || undefined,
-    categoryId: stockCategory === "all" ? undefined : stockCategory,
-    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
-  });
+  const {
+    data: itemsResponse,
+    isLoading: isItemsLoading,
+    mutate: mutateItems,
+  } = useGetInventoryItems(
+    {
+      page: stockPage,
+      per_page: stockPerPage,
+      search: stockSearch.trim() || undefined,
+      categoryId: stockCategory === "all" ? undefined : stockCategory,
+      outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+    },
+    { keepPreviousData: true },
+  );
 
-  const { data: allItemsResponse, mutate: mutateAllItems } = useGetInventoryItems({
-    per_page: DEFAULT_PAGE_SIZE,
-    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
-  });
+  const { data: allItemsResponse, mutate: mutateAllItems } =
+    useGetInventoryItems({
+      per_page: DEFAULT_PAGE_SIZE,
+      outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+    });
 
-  const { data: adjustmentsResponse, isLoading: isAdjustmentsLoading, mutate: mutateAdjustments } = useGetInventoryAdjustments({
-    page: adjustmentsPage,
-    per_page: adjustmentsPerPage,
-    outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
-    search: adjustmentsSearch.trim() || undefined,
-    type: adjustmentsFilterType === "all" ? undefined : adjustmentsFilterType,
-    inventoryItemId: adjustmentsFilterItem === "all" ? undefined : adjustmentsFilterItem,
-  } as any);
-
-  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    if (itemsResponse?.data) {
-      setInventoryCache((prev) => {
-        const next = { ...prev };
-        itemsResponse.data.forEach((i) => {
-          next[i.id] = i;
-        });
-        return next;
-      });
-    }
-  }, [itemsResponse]);
-
-  useEffect(() => {
-    if (allItemsResponse?.data) {
-      setInventoryCache((prev) => {
-        const next = { ...prev };
-        allItemsResponse.data.forEach((i) => {
-          next[i.id] = i;
-        });
-        return next;
-      });
-    }
-  }, [allItemsResponse]);
-
-  useEffect(() => {
-    if (adjustmentsResponse?.data) {
-      adjustmentsResponse.data.forEach(async (a: any) => {
-        if (!inventoryCache[a.inventoryItemId]) {
-          try {
-            const { data } = await api.get(API_ENDPOINTS.SINGLE_INVENTORY(a.inventoryItemId));
-            if (data) {
-              setInventoryCache(prev => ({ ...prev, [a.inventoryItemId]: data }));
-            }
-          } catch (e) {}
-        }
-      });
-    }
-  }, [adjustmentsResponse, inventoryCache]);
+  const {
+    data: adjustmentsResponse,
+    isLoading: isAdjustmentsLoading,
+    mutate: mutateAdjustments,
+  } = useGetInventoryAdjustments(
+    {
+      page: adjustmentsPage,
+      per_page: adjustmentsPerPage,
+      outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+      search: adjustmentsSearch.trim() || undefined,
+      type: adjustmentsFilterType === "all" ? undefined : adjustmentsFilterType,
+      inventoryItemId:
+        adjustmentsFilterItem === "all" ? undefined : adjustmentsFilterItem,
+    } as any,
+    { keepPreviousData: true },
+  );
 
   const createItemMutation = useCreateInventoryItem();
   const adjustMutation = useAdjustInventoryItem();
 
-  const mapApiItemToInventoryItem = (apiItem: any): InventoryItem => {
-    const mockItem = defaultItems.find(x => x.id === apiItem.id || x.sku === apiItem.sku);
-    const stock = apiItem.quantity ?? apiItem.stock ?? mockItem?.stock ?? 0;
-    const minStock = apiItem.minStock ?? apiItem.reorderLevel ?? mockItem?.minStock ?? 0;
-
-    return {
-      id: apiItem.id,
-      name: apiItem.name || mockItem?.name || "",
-      description: apiItem.description ?? mockItem?.description ?? "",
-      sku: apiItem.sku || mockItem?.sku || "",
-      categoryId: apiItem.categoryId ?? mockItem?.categoryId ?? "1",
-      unitId: apiItem.unitId ?? mockItem?.unitId ?? "5", // pcs fallback
-      stock: stock,
-      minStock: minStock,
-      costPrice: apiItem.costPrice ?? mockItem?.costPrice ?? 0,
-      sellPrice: apiItem.sellPrice ?? mockItem?.sellPrice ?? 0,
-      pricingMethod: apiItem.pricingMethod ?? mockItem?.pricingMethod ?? "markup",
-      pricingValue: apiItem.pricingValue ?? mockItem?.pricingValue ?? 30,
-      status: computeStatus(stock, minStock),
-      conversions: apiItem.conversions ?? mockItem?.conversions ?? [
-        { id: crypto.randomUUID(), fromQuantity: 1, toQuantity: 1, toUnitId: apiItem.unitId ?? mockItem?.unitId ?? "5", sellable: true, sellPrice: apiItem.sellPrice ?? mockItem?.sellPrice ?? 0 }
-      ],
-      outletId: apiItem.outletId ?? mockItem?.outletId ?? selectedOutletId,
-      batchNumber: apiItem.batchNumber ?? mockItem?.batchNumber ?? "",
-      expiryDate: apiItem.expiryDate ?? mockItem?.expiryDate ?? "",
-      batches: apiItem.batches ?? mockItem?.batches ?? [],
-    };
-  };
-
   const items = useMemo<InventoryItem[]>(() => {
-    if (!itemsResponse?.data) return [];
-    return itemsResponse.data.map(mapApiItemToInventoryItem);
+    return (itemsResponse?.data as any as InventoryItem[]) || [];
   }, [itemsResponse]);
 
   const allItems = useMemo<InventoryItem[]>(() => {
-    return Object.values(inventoryCache).map(mapApiItemToInventoryItem);
-  }, [inventoryCache]);
+    return (allItemsResponse?.data as any as InventoryItem[]) || [];
+  }, [allItemsResponse]);
 
   const outletItems = allItems;
 
-  const categories = useMemo<InventoryCategory[]>(() => {
-    if (!categoriesResponse?.data) return [];
-    return categoriesResponse.data.map(cat => {
-      const count = allItems.filter(item => item.categoryId === cat.id).length;
-      return {
-        id: cat.id,
-        name: cat.name,
-        description: cat.description || "",
-        itemCount: count,
-      };
-    });
-  }, [categoriesResponse, allItems]);
-
-  const outletComposites = useMemo(
-    () => isAllOutlets ? composites : composites.filter((c) => c.outletId === selectedOutletId),
-    [composites, selectedOutletId, isAllOutlets]
-  );
-
-  const mappedApiAdjustments = useMemo<StockAdjustment[]>(() => {
-    if (!adjustmentsResponse?.data) return [];
-    return adjustmentsResponse.data.map((a: any) => {
-      const item = allItems.find((i) => i.id === a.inventoryItemId);
-      const stock = item?.stock ?? 0;
-      const change = a.quantity ?? 0;
-      const type = a.type === "add" ? "add" : "remove";
-      return {
-        id: a.id,
-        inventoryItemId: a.inventoryItemId,
-        type: type,
-        quantityChange: change,
-        previousStock: Math.max(0, type === "add" ? stock - change : stock + change),
-        newStock: stock,
-        reason: a.reason,
-        timestamp: new Date(a.createdAt),
-        outletId: item?.outletId ?? selectedOutletId,
-        costPrice: item?.costPrice ?? 0,
-        costTotal: change * (item?.costPrice ?? 0),
-      };
-    });
-  }, [adjustmentsResponse, allItems, selectedOutletId]);
+  const categories = categoriesResponse?.data || [];
 
   const outletAdjustments = useMemo(() => {
-    const apiAdjs = mappedApiAdjustments;
-    const localOnly = adjustments.filter(
-      (la) => !apiAdjs.some((aa) => aa.id === la.id)
-    );
-    const combined = [...localOnly, ...apiAdjs];
-    return isAllOutlets ? combined : combined.filter((a) => a.outletId === selectedOutletId);
-  }, [mappedApiAdjustments, adjustments, isAllOutlets, selectedOutletId]);
+    return adjustmentsResponse?.data ?? [];
+  }, [adjustmentsResponse]);
 
-  const lowStockCount = outletItems.filter((i) => i.status === "low" || i.status === "critical").length;
+  const lowStockCount = outletItems.filter(
+    (i) => i.status === "low" || i.status === "critical",
+  ).length;
 
   const EXPIRY_SOON_DAYS = 90;
   const now = new Date();
-  const soonDate = new Date(Date.now() + EXPIRY_SOON_DAYS * 24 * 60 * 60 * 1000);
+  const soonDate = new Date(
+    Date.now() + EXPIRY_SOON_DAYS * 24 * 60 * 60 * 1000,
+  );
 
   const { expiredItemCount, expiringSoonItemCount } = useMemo(() => {
     let expiredCount = 0;
     let soonCount = 0;
     for (const item of outletItems) {
       if (item.batches && item.batches.length > 0) {
-        const hasExpired = item.batches.some(b => b.expiryDate && new Date(b.expiryDate) < now);
-        const hasExpiringSoon = item.batches.some(b => {
+        const hasExpired = item.batches.some(
+          (b) => b.expiryDate && new Date(b.expiryDate) < now,
+        );
+        const hasExpiringSoon = item.batches.some((b) => {
           if (!b.expiryDate) return false;
           const exp = new Date(b.expiryDate);
           return exp >= now && exp < soonDate;
@@ -368,12 +256,24 @@ export default function InventoryManagement() {
     return { expiredItemCount: expiredCount, expiringSoonItemCount: soonCount };
   }, [outletItems]);
 
-  const handleAdjustStock = async (itemId: string, type: AdjustmentType, quantity: number, reason: string, batchCostPrice?: number, batchNumber?: string, expiryDate?: string, pricing?: import("@/components/inventory/StockAdjustmentHistory").StockReceivePricing) => {
+  const handleAdjustStock = async (
+    itemId: string,
+    type: AdjustmentType,
+    quantity: number,
+    reason: string,
+    batchCostPrice?: number,
+    batchNumber?: string,
+    expiryDate?: string,
+    pricing?: import("@/components/inventory/StockAdjustmentHistory").StockReceivePricing,
+  ) => {
     const item = allItems.find((i) => i.id === itemId);
     if (!item) return;
 
     const previousStock = item.stock;
-    const recordedCostPrice = (type === "add" || type === "returned") && batchCostPrice ? batchCostPrice : item.costPrice;
+    const recordedCostPrice =
+      (type === "add" || type === "returned") && batchCostPrice
+        ? batchCostPrice
+        : item.costPrice;
     const costTotal = quantity * recordedCostPrice;
 
     try {
@@ -385,39 +285,13 @@ export default function InventoryManagement() {
           reason,
           costPrice: recordedCostPrice,
           notes: batchNumber ? `Batch: ${batchNumber}` : undefined,
-        }
+        },
       });
 
-      const newStock = type === "add" || type === "returned" ? previousStock + quantity : Math.max(0, previousStock - quantity);
-
-      const adjustment: StockAdjustment = {
-        id: crypto.randomUUID(),
-        inventoryItemId: itemId,
-        type,
-        quantityChange: quantity,
-        previousStock,
-        newStock,
-        reason,
-        timestamp: new Date(),
-        outletId: item.outletId,
-        costPrice: recordedCostPrice,
-        costTotal,
-        batchNumber,
-        expiryDate,
-        sellPrice: pricing?.sellPrice,
-        pricingMethod: pricing?.method,
-        pricingValue: pricing?.value,
-        syncToCatalog: pricing?.syncToCatalog,
-      };
-
-      setAdjustments((prev) => [adjustment, ...prev]);
-
-      // Also persist to localStorage for COGS reporting
-      const storedAdj: StoredAdjustment = {
-        ...adjustment,
-        timestamp: adjustment.timestamp.toISOString(),
-      };
-      addAdjustment(storedAdj);
+      const newStock =
+        type === "add" || type === "returned"
+          ? previousStock + quantity
+          : Math.max(0, previousStock - quantity);
 
       await mutateItems();
       await mutateAllItems();
@@ -429,13 +303,17 @@ export default function InventoryManagement() {
       if (pricing?.syncToCatalog && type === "add") {
         toast.success(
           `Stock received: ${previousStock} → ${newStock} | Sell price: ₦${pricing.sellPrice.toFixed(2)} | Catalog updated automatically`,
-          { duration: 5000 }
+          { duration: 5000 },
         );
       } else {
-        toast.success(`Stock adjusted: ${previousStock} → ${newStock} (cost: ₦${costTotal.toFixed(2)})`);
+        toast.success(
+          `Stock adjusted: ${previousStock} → ${newStock} (cost: ₦${costTotal.toFixed(2)})`,
+        );
       }
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || "Failed to adjust stock");
+      toast.error(
+        e.response?.data?.message || e.message || "Failed to adjust stock",
+      );
     }
   };
 
@@ -443,26 +321,28 @@ export default function InventoryManagement() {
     try {
       for (const item of newItems) {
         await createItemMutation.trigger({
-          outletId: item.outletId || (selectedOutletId === "all" ? "" : selectedOutletId),
+          outletId:
+            item.outletId ||
+            (selectedOutletId === "all" ? "" : selectedOutletId),
           name: item.name,
           description: item.description || "",
           sku: item.sku,
           categoryId: item.categoryId,
           unitId: item.unitId,
           costPrice: item.costPrice,
-          sellingPrice: item.sellPrice || 0,
+          sellingPrice: item.sellingPrice || 0,
           stock: item.stock,
           minStock: item.minStock,
           pricingMethod: item.pricingMethod || "markup",
           pricingValue: item.pricingValue || 0,
-          conversions: (item.conversions || []).map(c => ({
+          conversions: (item.conversions || []).map((c) => ({
             fromQuantity: c.fromQuantity,
             toQuantity: c.toQuantity,
             toUnitId: c.toUnitId,
             sellable: c.sellable ?? true,
             sellPrice: c.sellPrice ?? 0,
           })),
-          batches: (item.batches || []).map(b => ({
+          batches: (item.batches || []).map((b) => ({
             batchNumber: b.batchNumber,
             expiryDate: b.expiryDate ? new Date(b.expiryDate) : new Date(),
             quantity: b.quantity,
@@ -474,7 +354,9 @@ export default function InventoryManagement() {
       await mutateAllItems();
       toast.success(`Successfully imported ${newItems.length} items`);
     } catch (e: any) {
-      toast.error(e.response?.data?.message || e.message || "Failed to import items");
+      toast.error(
+        e.response?.data?.message || e.message || "Failed to import items",
+      );
     }
   };
 
@@ -483,20 +365,23 @@ export default function InventoryManagement() {
     setAdjustOpen(true);
   };
 
-  const profitability = useMemo(
-    () =>
-      computeProfitability({
-        inventoryItems: outletItems,
-        composites: outletComposites,
-        outletOverheadDefaults,
-      }),
-    [outletItems, outletComposites, outletOverheadDefaults]
-  );
+  // const profitability = useMemo(
+  //   () =>
+  //     computeProfitability({
+  //       inventoryItems: outletItems,
+  //       composites: outletComposites,
+  //       outletOverheadDefaults,
+  //     }),
+  //   [outletItems, outletComposites, outletOverheadDefaults],
+  // );
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "stock", label: "Stock Items" },
-    { key: "profitability", label: "Profitability" },
-    { key: "adjustments", label: `Adjustments${outletAdjustments.length > 0 ? ` (${outletAdjustments.length})` : ""}` },
+    // { key: "profitability", label: "Profitability" },
+    {
+      key: "adjustments",
+      label: `Adjustments${outletAdjustments.length > 0 ? ` (${outletAdjustments.length})` : ""}`,
+    },
     { key: "categories", label: "Categories" },
     { key: "units", label: "Units" },
     { key: "composite", label: "Composite Items" },
@@ -507,8 +392,12 @@ export default function InventoryManagement() {
     <div className="space-y-6 pb-20 lg:pb-0">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight">Inventory</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage stock, categories, units and composite items</p>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">
+            Inventory
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage stock, categories, units and composite items
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button
@@ -535,7 +424,9 @@ export default function InventoryManagement() {
             <SelectContent>
               <SelectItem value="all">All Outlets</SelectItem>
               {outlets.map((o) => (
-                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                <SelectItem key={o.id} value={o.id}>
+                  {o.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -549,8 +440,12 @@ export default function InventoryManagement() {
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">{lowStockCount} items need restocking</p>
-                  <p className="text-xs text-muted-foreground">Items below minimum threshold</p>
+                  <p className="text-sm font-medium">
+                    {lowStockCount} items need restocking
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Items below minimum threshold
+                  </p>
                 </div>
               </div>
               <Button
@@ -560,7 +455,10 @@ export default function InventoryManagement() {
                 onClick={() => {
                   setTab("stock");
                   setShowLowStock((prev) => !prev);
-                  if (!showLowStock) { setShowExpired(false); setShowExpiringSoon(false); }
+                  if (!showLowStock) {
+                    setShowExpired(false);
+                    setShowExpiringSoon(false);
+                  }
                 }}
               >
                 <Eye className="h-3.5 w-3.5" />
@@ -576,8 +474,12 @@ export default function InventoryManagement() {
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">{expiredItemCount} items have expired batches</p>
-                  <p className="text-xs text-muted-foreground">Items with batches past their expiry date</p>
+                  <p className="text-sm font-medium">
+                    {expiredItemCount} items have expired batches
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Items with batches past their expiry date
+                  </p>
                 </div>
               </div>
               <Button
@@ -587,7 +489,10 @@ export default function InventoryManagement() {
                 onClick={() => {
                   setTab("stock");
                   setShowExpired((prev) => !prev);
-                  if (!showExpired) { setShowLowStock(false); setShowExpiringSoon(false); }
+                  if (!showExpired) {
+                    setShowLowStock(false);
+                    setShowExpiringSoon(false);
+                  }
                 }}
               >
                 <Eye className="h-3.5 w-3.5" />
@@ -603,8 +508,12 @@ export default function InventoryManagement() {
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-orange-500 shrink-0" />
                 <div>
-                  <p className="text-sm font-medium">{expiringSoonItemCount} items expiring soon</p>
-                  <p className="text-xs text-muted-foreground">Items with batches expiring within 90 days</p>
+                  <p className="text-sm font-medium">
+                    {expiringSoonItemCount} items expiring soon
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Items with batches expiring within 90 days
+                  </p>
                 </div>
               </div>
               <Button
@@ -614,7 +523,10 @@ export default function InventoryManagement() {
                 onClick={() => {
                   setTab("stock");
                   setShowExpiringSoon((prev) => !prev);
-                  if (!showExpiringSoon) { setShowLowStock(false); setShowExpired(false); }
+                  if (!showExpiringSoon) {
+                    setShowLowStock(false);
+                    setShowExpired(false);
+                  }
                 }}
               >
                 <Eye className="h-3.5 w-3.5" />
@@ -632,7 +544,7 @@ export default function InventoryManagement() {
             onClick={() => setTab(t.key)}
             className={cn(
               "px-4 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap",
-              tab === t.key ? "bg-card shadow-sm" : "text-muted-foreground"
+              tab === t.key ? "bg-card shadow-sm" : "text-muted-foreground",
             )}
           >
             {t.label}
@@ -653,18 +565,23 @@ export default function InventoryManagement() {
           filterCategory={stockCategory}
           onFilterCategoryChange={setStockCategory}
           isLoading={isItemsLoading}
-          onMutate={() => { mutateItems(); mutateAllItems(); }}
+          onMutate={() => {
+            mutateItems();
+            mutateAllItems();
+          }}
           categories={categories}
           units={units}
           onAdjustStock={isAllOutlets ? undefined : openAdjust}
           readOnly={false}
           selectedOutletId={selectedOutletId}
           filterLowStock={showLowStock}
-          filterExpiryStatus={showExpired ? "expired" : showExpiringSoon ? "expiring" : undefined}
-          profitability={profitability.rawMaterials}
+          filterExpiryStatus={
+            showExpired ? "expired" : showExpiringSoon ? "expiring" : undefined
+          }
+          // profitability={profitability.rawMaterials}
         />
       )}
-      {tab === "profitability" && (
+      {/* {tab === "profitability" && (
         <ProfitabilityView
           inventoryItems={outletItems}
           composites={outletComposites}
@@ -673,9 +590,9 @@ export default function InventoryManagement() {
           setOutletOverheadDefaults={setOutletOverheadDefaults}
           selectedOutletId={selectedOutletId}
         />
-      )}
-      {tab === "adjustments" && (
-        isAdjustmentsLoading ? (
+      )} */}
+      {tab === "adjustments" &&
+        (isAdjustmentsLoading && !adjustmentsResponse ? (
           <Card className="p-8 text-center text-muted-foreground flex items-center justify-center gap-2">
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading adjustments...
@@ -690,36 +607,35 @@ export default function InventoryManagement() {
             perPage={adjustmentsPerPage}
             onPerPageChange={setAdjustmentsPerPage}
             totalPages={adjustmentsResponse?.meta?.last_page ?? 1}
-            totalItems={adjustmentsResponse?.meta?.total ?? outletAdjustments.length}
+            totalItems={
+              adjustmentsResponse?.meta?.total ?? outletAdjustments.length
+            }
             search={adjustmentsSearch}
             onSearchChange={setAdjustmentsSearch}
             filterType={adjustmentsFilterType}
             onFilterTypeChange={setAdjustmentsFilterType}
             filterItem={adjustmentsFilterItem}
             onFilterItemChange={setAdjustmentsFilterItem}
+            isLoading={isAdjustmentsLoading}
+            outletId={selectedOutletId}
           />
-        )
-      )}
+        ))}
       {tab === "categories" && (
-        <InventoryCategoryManager categories={categories} onMutate={mutateCategories} />
+        <InventoryCategoryManager onMutate={mutateCategories} />
       )}
       {tab === "units" && (
-        <MeasuringUnitManager units={units} onMutate={mutateUnits} />
+        <MeasuringUnitManager onMutate={mutateUnits} />
       )}
       {tab === "composite" && (
         <CompositeItemForm
-          composites={outletComposites}
           onMutate={mutateComposites}
-          inventoryItems={outletItems}
           units={units}
-          menuItems={sampleMenuItems}
           readOnly={isAllOutlets}
           selectedOutletId={selectedOutletId}
         />
       )}
       {tab === "substitutes" && (
         <SubstituteGroupManager
-          inventoryItems={outletItems}
           selectedOutletId={isAllOutlets ? undefined : selectedOutletId}
           readOnly={isAllOutlets}
         />

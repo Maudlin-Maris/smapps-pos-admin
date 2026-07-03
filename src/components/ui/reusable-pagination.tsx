@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,6 +18,8 @@ interface ResuablePaginationProps {
   onRowsPerPageChange?: (rows: number) => void;
   rowsPerPageOptions?: number[];
   className?: string;
+  disabled?: boolean;
+  isLoading?: boolean;
 }
 
 export function ResuablePagination({
@@ -29,6 +31,8 @@ export function ResuablePagination({
   onRowsPerPageChange,
   rowsPerPageOptions = [5, 10, 20, 50],
   className,
+  disabled,
+  isLoading,
 }: ResuablePaginationProps) {
   const safePage = Math.min(Math.max(1, currentPage), Math.max(1, totalPages));
 
@@ -42,6 +46,11 @@ export function ResuablePagination({
     const endPage = Math.min(totalPages - 1, safePage + siblingCount);
 
     // Always show page 1
+    if (safePage === 1 && isLoading) {
+      pages.push(
+        <Loader2 key="page-spinner" className="h-4 w-4 animate-spin text-muted-foreground" />
+      );
+    }
     pages.push(
       <Button
         key={1}
@@ -49,6 +58,7 @@ export function ResuablePagination({
         size="icon"
         className="h-8 w-8 text-xs rounded-md transition-all hover:scale-105"
         onClick={() => onPageChange(1)}
+        disabled={disabled}
       >
         1
       </Button>
@@ -63,6 +73,11 @@ export function ResuablePagination({
     }
 
     for (let i = startPage; i <= endPage; i++) {
+      if (safePage === i && isLoading) {
+        pages.push(
+          <Loader2 key="page-spinner" className="h-4 w-4 animate-spin text-muted-foreground" />
+        );
+      }
       pages.push(
         <Button
           key={i}
@@ -70,6 +85,7 @@ export function ResuablePagination({
           size="icon"
           className="h-8 w-8 text-xs rounded-md transition-all hover:scale-105"
           onClick={() => onPageChange(i)}
+          disabled={disabled}
         >
           {i}
         </Button>
@@ -86,6 +102,11 @@ export function ResuablePagination({
 
     // Always show last page if it exists and is > 1
     if (totalPages > 1) {
+      if (safePage === totalPages && isLoading) {
+        pages.push(
+          <Loader2 key="page-spinner" className="h-4 w-4 animate-spin text-muted-foreground" />
+        );
+      }
       pages.push(
         <Button
           key={totalPages}
@@ -93,6 +114,7 @@ export function ResuablePagination({
           size="icon"
           className="h-8 w-8 text-xs rounded-md transition-all hover:scale-105"
           onClick={() => onPageChange(totalPages)}
+          disabled={disabled}
         >
           {totalPages}
         </Button>
@@ -119,6 +141,7 @@ export function ResuablePagination({
             <Select
               value={String(rowsPerPage)}
               onValueChange={(v) => onRowsPerPageChange(Number(v))}
+              disabled={disabled}
             >
               <SelectTrigger className="w-[70px] h-8 text-xs">
                 <SelectValue />
@@ -140,7 +163,7 @@ export function ResuablePagination({
           variant="outline"
           size="icon"
           className="h-8 w-8 rounded-md transition-all hover:scale-105"
-          disabled={safePage <= 1}
+          disabled={disabled || safePage <= 1}
           onClick={() => onPageChange(safePage - 1)}
           aria-label="Previous page"
         >
@@ -153,7 +176,7 @@ export function ResuablePagination({
           variant="outline"
           size="icon"
           className="h-8 w-8 rounded-md transition-all hover:scale-105"
-          disabled={safePage >= totalPages}
+          disabled={disabled || safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
           aria-label="Next page"
         >
