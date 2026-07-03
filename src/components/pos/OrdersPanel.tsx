@@ -901,6 +901,8 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
       <RemoveItemAuthDialog
         open={!!removeAuth}
         onClose={() => setRemoveAuth(null)}
+        codeType="item"
+        outletId={selectedOrder?.outletId}
         onAuthorized={() => {
           if (!removeAuth) return;
           removeItemFromOrder(removeAuth.orderId, removeAuth.itemId);
@@ -927,6 +929,8 @@ export default function OrdersPanel({ printers = [] }: OrdersPanelProps) {
           setSelectedOrder(null);
           setVoidAuth(null);
         }}
+        codeType="order"
+        outletId={voidAuth?.outletId ?? selectedOrder?.outletId}
         title="Void Order"
         description={
           <>Enter 4-digit code to void order <span className="font-semibold text-foreground">{voidAuth?.orderNumber}</span>. This cannot be undone.</>

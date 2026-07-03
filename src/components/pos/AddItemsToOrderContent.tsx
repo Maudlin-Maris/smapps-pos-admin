@@ -460,6 +460,8 @@ export default function AddItemsToOrderContent({ orderId, onDone, onBack }: Prop
         onClose={() => setRemoveAuth(null)}
         onAuthorized={handleRemoveAuthorized}
         itemName={removeAuth?.itemName || ""}
+        codeType="item"
+        outletId={currentOutlet?.id}
       />
     </>
   );

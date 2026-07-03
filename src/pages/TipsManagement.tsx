@@ -73,17 +73,6 @@ export default function TipsManagement() {
     per_page: payoutsPerPage,
   });
 
-  if (!hasPermission("tips.view")) {
-    return (
-      <div className="p-8 text-center">
-        <Lock className="w-10 h-10 mx-auto text-muted-foreground" />
-        <p className="mt-3 text-sm text-muted-foreground">
-          You don't have permission to view Tips & Payouts.
-        </p>
-      </div>
-    );
-  }
-
   const staffList = tipsData?.staff || [];
   const orderRows = tipsData?.data || [];
   const payouts = payoutsData?.data || [];
@@ -120,6 +109,17 @@ export default function TipsManagement() {
 
   const selectedStaffName =
     staffList.find((s) => s.id === staffId)?.name || "";
+
+  if (!hasPermission("tips.view")) {
+    return (
+      <div className="p-8 text-center">
+        <Lock className="w-10 h-10 mx-auto text-muted-foreground" />
+        <p className="mt-3 text-sm text-muted-foreground">
+          You don't have permission to view Tips & Payouts.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

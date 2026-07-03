@@ -32,6 +32,8 @@ import UserManagement from "@/pages/UserManagement";
 import RolesPermissions from "@/pages/RolesPermissions";
 import ModifierGroups from "@/pages/ModifierGroups";
 import TerminalManagement from "@/pages/TerminalManagement";
+import VoidCodeManagement from "@/pages/VoidCodeManagement";
+import PublicMenu from "@/pages/PublicMenu";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +55,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/m/:outletId" element={<PublicMenu />} />
                 <Route path="/" element={<Protected><Dashboard /></Protected>} />
                 <Route path="/profile" element={<Protected><Profile /></Protected>} />
                 <Route path="/menu" element={<Protected><MenuManagement /></Protected>} />
@@ -76,6 +79,7 @@ const App = () => (
                 <Route path="/users" element={<Protected><UserManagement /></Protected>} />
                 <Route path="/roles" element={<Protected><RolesPermissions /></Protected>} />
                 <Route path="/terminals" element={<Protected><TerminalManagement /></Protected>} />
+                <Route path="/void-codes" element={<Protected><VoidCodeManagement /></Protected>} />
                 <Route path="/pos" element={<POSProvider><POSMain /></POSProvider>} />
 
                 <Route path="*" element={<NotFound />} />

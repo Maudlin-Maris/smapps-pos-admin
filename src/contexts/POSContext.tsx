@@ -74,6 +74,7 @@ interface POSContextType {
   removeItemFromOrder: (orderId: string, itemId: string) => void;
   mergeOrders: (sourceId: string, targetId: string) => void;
   addPayment: (orderId: string, payment: PaymentEntry) => void;
+  updateOrderTotals: (orderId: string, updates: { totalAmount: number; tipAmount?: number; discountAmount?: number; discountName?: string; appliedFees?: AppliedFee[]; feesTotal?: number; loyaltyRedemption?: LoyaltyRedemption | null; }) => void;
   voidOrder: (orderId: string) => void;
   transferOrder: (orderId: string, toCashierId: string) => void;
   acceptTransfer: (orderId: string) => void;
@@ -499,6 +500,23 @@ export function POSProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const updateOrderTotals = useCallback((orderId: string, updates: { totalAmount: number; tipAmount?: number; discountAmount?: number; discountName?: string; appliedFees?: AppliedFee[]; feesTotal?: number; loyaltyRedemption?: LoyaltyRedemption | null; }) => {
+    setOrders(prev => prev.map(o => {
+      if (o.id !== orderId) return o;
+      return {
+        ...o,
+        totalAmount: updates.totalAmount,
+        tipAmount: updates.tipAmount,
+        discountAmount: updates.discountAmount,
+        discountName: updates.discountName,
+        appliedFees: updates.appliedFees,
+        feesTotal: updates.feesTotal,
+        loyaltyRedemption: updates.loyaltyRedemption ?? undefined,
+        updatedAt: new Date(),
+      };
+    }));
+  }, []);
+
   const voidOrder = useCallback((orderId: string) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "voided" as OrderStatus, updatedAt: new Date() } : o));
   }, []);
@@ -529,7 +547,7 @@ export function POSProvider({ children }: { children: ReactNode }) {
       currentShift, startShift, closeShift,
       currentOutlet, setCurrentOutlet, availableOutlets, outletOpen, toggleOutletOpen,
       cart, addToCart, removeFromCart, updateCartItemQuantity, updateCartItem, clearCart, cartTotal, removeBundleFromCart, breakBundle, swapBundleItem,
-      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, voidOrder, transferOrder, acceptTransfer, rejectTransfer, changeOrderLocation,
+      orders, createOrder, updateOrderStatus, updateItemStatus, addItemsToOrder, removeItemFromOrder, mergeOrders, addPayment, updateOrderTotals, voidOrder, transferOrder, acceptTransfer, rejectTransfer, changeOrderLocation,
       orderType, setOrderType,
     }}>
       {children}

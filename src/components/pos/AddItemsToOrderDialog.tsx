@@ -483,6 +483,8 @@ export default function AddItemsToOrderDialog({ open, onClose, onBackToOrder, or
         onClose={() => setRemoveAuth(null)}
         onAuthorized={handleRemoveAuthorized}
         itemName={removeAuth?.itemName || ""}
+        codeType="item"
+        outletId={currentOutlet?.id}
       />
     </>
   );
