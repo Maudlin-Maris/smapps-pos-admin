@@ -65,8 +65,8 @@ export interface RawMaterialUsageEntry {
 }
 
 interface Props {
-  adjustments: StoredAdjustment[];
-  itemNames: ItemNameMap;
+  adjustments?: StoredAdjustment[];
+  itemNames?: ItemNameMap;
   itemUnits?: ItemUnitMap;
   totalRevenue: number;
   /** Period total inventory COGS from P&L. Used as the markup denominator so
@@ -78,6 +78,18 @@ interface Props {
   transactions?: Transaction[];
   dateFrom?: Date;
   dateTo?: Date;
+  rawMaterials?: {
+    inventoryItemId: string;
+    name: string;
+    unit: string;
+    qty: number;
+    totalCost: number;
+    avgCost: number;
+    attributedRevenue: number;
+    profit: number;
+    margin: number;
+    share: number;
+  }[];
 }
 
 interface Row {
@@ -103,8 +115,8 @@ const COLUMN_DEFINITIONS: { label: string; description: string }[] = [
 ];
 
 export default function RawMaterialContribution({
-  adjustments,
-  itemNames,
+  adjustments = [],
+  itemNames = {},
   itemUnits = {},
   totalRevenue,
   totalCOGS: totalCOGSProp,
@@ -112,6 +124,7 @@ export default function RawMaterialContribution({
   transactions = [],
   dateFrom,
   dateTo,
+  rawMaterials,
 }: Props) {
   const [drillRow, setDrillRow] = useState<Row | null>(null);
 
@@ -129,6 +142,25 @@ export default function RawMaterialContribution({
   }, [transactions]);
 
   const { rows, totalCOGS, totalProfit, markupMultiplier } = useMemo(() => {
+    if (rawMaterials) {
+      const rows: Row[] = rawMaterials.map((rm) => ({
+        id: rm.inventoryItemId,
+        name: rm.name,
+        unit: rm.unit,
+        qty: rm.qty,
+        totalCost: rm.totalCost,
+        avgCost: rm.avgCost,
+        attributedRevenue: rm.attributedRevenue,
+        profit: rm.profit,
+        margin: rm.margin,
+        share: rm.share,
+      }));
+      const totalCOGS = rows.reduce((s, r) => s + r.totalCost, 0);
+      const totalProfit = rows.reduce((s, r) => s + r.profit, 0);
+      const markupMultiplier = totalCOGS > 0 ? totalRevenue / totalCOGS : 0;
+      return { rows, totalCOGS, totalProfit, markupMultiplier };
+    }
+
     const consumption = adjustments.filter((a) =>
       CONSUMPTION_TYPES.includes(a.type)
     );
@@ -186,7 +218,7 @@ export default function RawMaterialContribution({
     const totalProfit = rows.reduce((s, r) => s + r.profit, 0);
 
     return { rows, totalCOGS: consumedCost, totalProfit, markupMultiplier };
-  }, [adjustments, itemNames, itemUnits, totalRevenue, totalCOGSProp]);
+  }, [adjustments, itemNames, itemUnits, totalRevenue, totalCOGSProp, rawMaterials]);
 
   const {
     page,

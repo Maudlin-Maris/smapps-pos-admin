@@ -3,7 +3,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { ShieldAlert } from "lucide-react";
-import { validateVoidCode, type VoidCodeType } from "@/lib/void-codes-store";
+import { useGetVoidCodes } from "@/services/api/inventory/void-codes";
+import type { VoidCodeType } from "@/lib/types/void-codes";
 
 interface Props {
   open: boolean;
@@ -20,8 +21,13 @@ export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, item
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
 
+  const { data: voidCodesData, isLoading } = useGetVoidCodes();
+
   const handleSubmit = () => {
-    if (validateVoidCode(codeType, code, outletId)) {
+    const effectiveCode = (outletId && voidCodesData?.byOutlet?.[outletId]?.[codeType])
+      || voidCodesData?.global?.[codeType];
+
+    if (code === effectiveCode) {
       setCode("");
       setError(false);
       onAuthorized();
@@ -56,6 +62,7 @@ export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, item
             value={code}
             onChange={val => { setCode(val); setError(false); }}
             onComplete={() => handleSubmit()}
+            disabled={isLoading}
           >
             <InputOTPGroup>
               <InputOTPSlot index={0} />
@@ -67,7 +74,7 @@ export default function RemoveItemAuthDialog({ open, onClose, onAuthorized, item
           {error && <p className="text-xs text-destructive font-medium">Invalid authorization code</p>}
           <div className="flex gap-2 w-full">
             <Button variant="outline" size="sm" className="flex-1" onClick={handleClose}>Cancel</Button>
-            <Button size="sm" className="flex-1" onClick={handleSubmit} disabled={code.length < 4}>Confirm</Button>
+            <Button size="sm" className="flex-1" onClick={handleSubmit} disabled={code.length < 4 || isLoading}>Confirm</Button>
           </div>
         </div>
       </SheetContent>

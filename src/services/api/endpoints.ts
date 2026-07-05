@@ -126,9 +126,9 @@ export const API_ENDPOINTS = {
   SEND_TIPS_PAYOUT_OTP: "/api/admin/tips/payouts/send-otp",
 
   // Cashiers
-  CASHIERS: "/api/cashiers",
-  SINGLE_CASHIER: (id: string | number) => `/api/cashiers/${id}`,
-  REGENERATE_CASHIER_PIN: (id: string | number) => `/api/cashiers/${id}/regenerate-pin`,
+  CASHIERS: "/api/admin/cashiers",
+  SINGLE_CASHIER: (id: string | number) => `/api/admin/cashiers/${id}`,
+  REGENERATE_CASHIER_PIN: (id: string | number) => `/api/admin/cashiers/${id}/regenerate-pin`,
 
   // Users
   USERS: "/api/admin/users",
@@ -147,5 +147,78 @@ export const API_ENDPOINTS = {
   // Service Bookings
   SERVICE_BOOKINGS: "/api/admin/service-bookings",
   SINGLE_SERVICE_BOOKING: (id: string | number) => `/api/admin/service-bookings/${id}`,
+
+  // Subscription Management
+  SUBSCRIPTION: "/api/admin/subscription",
+  SUBSCRIPTION_CANCEL: "/api/admin/subscription/cancel",
+  SUBSCRIPTION_REACTIVATE: "/api/admin/subscription/reactivate",
+  SUBSCRIPTION_AUTO_RENEW: "/api/admin/subscription/auto-renew",
+  SUBSCRIPTION_CHANGE_PLAN: "/api/admin/subscription/change-plan",
+  SUBSCRIPTION_PLAN_CHANGE_PREVIEW: "/api/admin/subscription/plan-change/preview",
+  SUBSCRIPTION_PLAN_CHANGE_CONFIRM: "/api/admin/subscription/plan-change/confirm",
+  SUBSCRIPTION_PLANS: "/api/admin/subscription/plans",
+  SUBSCRIPTION_USAGE: "/api/admin/subscription/usage",
+  SUBSCRIPTION_FEATURES: "/api/admin/subscription/features",
+  SUBSCRIPTION_ADDONS: "/api/admin/subscription/addons",
+  SUBSCRIPTION_SINGLE_ADDON: (key: string) => `/api/admin/subscription/addons/${key}`,
+  SUBSCRIPTION_ADDON_ACTIVATE: (key: string) => `/api/admin/subscription/addons/${key}/activate`,
+  SUBSCRIPTION_ADDON_DEACTIVATE: (key: string) => `/api/admin/subscription/addons/${key}/deactivate`,
+  SUBSCRIPTION_ADDON_QR_MENU: "/api/admin/subscription/addons/qrmenu/menu",
+
+  // Subscription Billing Payment Methods
+  SUBSCRIPTION_BILLING_PAYMENT_METHODS: "/api/admin/subscription/billing/payment-methods",
+  SUBSCRIPTION_BILLING_SINGLE_PAYMENT_METHOD: (id: string | number) => `/api/admin/subscription/billing/payment-methods/${id}`,
+  SUBSCRIPTION_BILLING_PAYMENT_METHOD_DEFAULT: (id: string | number) => `/api/admin/subscription/billing/payment-methods/${id}/default`,
+
+  // Subscription Payment Methods (regular)
+  SUBSCRIPTION_PAYMENT_METHODS: "/api/admin/subscription/payment-methods",
+  SUBSCRIPTION_SINGLE_PAYMENT_METHOD: (id: string | number) => `/api/admin/subscription/payment-methods/${id}`,
+  SUBSCRIPTION_PAYMENT_METHOD_DEFAULT: (id: string | number) => `/api/admin/subscription/payment-methods/${id}/default`,
+
+  // Subscription Billing Portal
+  SUBSCRIPTION_BILLING_PORTAL: "/api/admin/subscription/billing/portal",
+
+  // Subscription Billing Invoices
+  SUBSCRIPTION_BILLING_INVOICES: "/api/admin/subscription/billing/invoices",
+  SUBSCRIPTION_BILLING_SINGLE_INVOICE: (id: string | number) => `/api/admin/subscription/billing/invoices/${id}`,
+  SUBSCRIPTION_BILLING_SINGLE_INVOICE_PDF: (id: string | number) => `/api/admin/subscription/billing/invoices/${id}/pdf`,
+  SUBSCRIPTION_BILLING_INVOICES_EXPORT: "/api/admin/subscription/billing/invoices/export",
+  SUBSCRIPTION_BILLING_UPCOMING_INVOICE: "/api/admin/subscription/billing/upcoming-invoice",
+
+  // Subscription Invoices (regular)
+  SUBSCRIPTION_INVOICES: "/api/admin/subscription/invoices",
+  SUBSCRIPTION_SINGLE_INVOICE: (id: string | number) => `/api/admin/subscription/invoices/${id}`,
+  SUBSCRIPTION_SINGLE_INVOICE_PDF: (id: string | number) => `/api/admin/subscription/invoices/${id}/pdf`,
+  SUBSCRIPTION_INVOICES_EXPORT: "/api/admin/subscription/invoices/export",
+  SUBSCRIPTION_INVOICES_UPCOMING: "/api/admin/subscription/invoices/upcoming",
+
+  // Subscription Audit Logs
+  SUBSCRIPTION_AUDIT_LOG: "/api/admin/subscription/audit-log",
+  SUBSCRIPTION_AUDIT_LOG_EXPORT: "/api/admin/subscription/audit-log/export",
+
+  // Reports
+  REPORTS_TRANSACTION_DETAIL: (id: string | number) => `/api/admin/reports/transactions/${id}`,
+  REPORTS_TRANSACTIONS_PAYMENT_METHODS: "/api/admin/reports/transactions/payment-methods",
+  REPORTS_TRANSACTIONS: "/api/admin/reports/transactions",
+  REPORTS_CASHIERS: "/api/admin/reports/cashiers",
+  REPORTS_PROFIT_LOSS: "/api/admin/reports/profit-loss",
+  REPORTS_SALES_BY_CATEGORY: "/api/admin/reports/sales-by-category",
+  REPORTS_SALES_BY_DEPARTMENT: "/api/admin/reports/sales-by-department",
+  REPORTS_SALES_BY_ITEM: "/api/admin/reports/sales-by-item",
+  REPORTS_SALES_SUMMARY: "/api/admin/reports/sales-summary",
+  REPORTS_SALES_BY_CATEGORY_CATEGORIES: "/api/admin/reports/sales-by-category/categories",
+  REPORTS_SALES_BY_CATEGORY_DAILY: "/api/admin/reports/sales-by-category/daily",
+  REPORTS_SALES_BY_DEPARTMENT_DAILY: "/api/admin/reports/sales-by-department/daily",
+  REPORTS_SALES_BY_DEPARTMENT_DEPARTMENTS: "/api/admin/reports/sales-by-department/departments",
+  REPORTS_SALES_BY_ITEM_DAILY: "/api/admin/reports/sales-by-item/daily",
+  REPORTS_SALES_BY_ITEM_ITEMS: "/api/admin/reports/sales-by-item/items",
+  REPORTS_SALES_BY_ITEM_TOP_SELLING: "/api/admin/reports/sales-by-item/top-selling",
+  REPORTS_SALES_SUMMARY_BY_CASHIER: "/api/admin/reports/sales-summary/by-cashier",
+  REPORTS_SALES_SUMMARY_BY_DATE: "/api/admin/reports/sales-summary/by-date",
+  REPORTS_SALES_SUMMARY_PAYMENT_METHODS_DAILY: "/api/admin/reports/sales-summary/payment-methods-daily",
+
+  // Void authorization codes
+  VOID_CODES: "/api/admin/void-codes",
+  VOID_CODES_OUTLET: (outletId: string | number, type: string) => `/api/admin/void-codes/outlets/${outletId}/${type}`,
 } as const;
 

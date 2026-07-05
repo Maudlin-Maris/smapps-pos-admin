@@ -4,18 +4,33 @@ export interface UserRole {
 }
 
 export interface UserRecord {
-  id: string;
-  email: string;
-  displayName: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  role: UserRole;
-  permissions: string[];
-  outlets: string[];
-  isActive: boolean;
-  createdAt: string;
+  id:              string;
+  businessId:      string;
+  email:           string;
+  first_name:      string;
+  last_name:       string;
+  display_name:    string;
+  avatar:          null;
+  phone:           string;
+  status:          string;
+  role:            Role;
+  role_id:         string;
+  assignedOutlets: AssignedOutlet[];
+  permissions:     string[];
+  created_at:      Date;
 }
+
+export interface AssignedOutlet {
+  id:   string;
+  name: string;
+}
+
+export interface Role {
+  id:          string;
+  name:        string;
+  description: string;
+}
+
 
 export interface CreateUserPayload {
   email: string;

@@ -93,7 +93,7 @@ export default function UserManagement() {
     onSuccess: (result) => {
       mutate();
       setConfirmDeactivate(null);
-      toast({ title: result.isActive ? "User reactivated" : "User deactivated" });
+      toast({ title: result.status === "active" ? "User reactivated" : "User deactivated" });
     }
   });
 
@@ -127,13 +127,13 @@ export default function UserManagement() {
   const openEdit = (u: UserRecord) => {
     setEditingId(u.id);
     setForm({
-      first_name: u.firstName || "",
-      last_name: u.lastName || "",
+      first_name: u.first_name || "",
+      last_name: u.last_name || "",
       email: u.email,
       phone: u.phone || "",
       role_id: u.role?.id || "",
-      outlet_ids: u.outlets || [],
-      status: u.isActive ? "active" : "inactive",
+      outlet_ids: u.assignedOutlets ? u.assignedOutlets.map((o) => o.id) : [],
+      status: u.status === "active" ? "active" : "inactive",
     });
     setErrors({});
     setDialogOpen(true);
@@ -186,7 +186,7 @@ export default function UserManagement() {
   };
 
   const toggleStatus = (u: UserRecord) => {
-    if (u.isActive) {
+    if (u.status === "active") {
       setConfirmDeactivate(u);
     } else {
       setReactivateTarget(u);
@@ -266,10 +266,8 @@ export default function UserManagement() {
         ) : (
           filtered.map((u) => {
             const isSelf = currentUser?.id === u.id;
-            const assignedOutlets = u.outlets && u.outlets.length
-              ? outlets.filter((o) => u.outlets.includes(o.id))
-              : [];
-            const displayName = u.displayName || `${u.firstName} ${u.lastName}`;
+            const assignedOutlets = u.assignedOutlets || [];
+            const displayName = u.display_name || `${u.first_name} ${u.last_name}`;
             return (
               <Card key={u.id} className="p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-3">
@@ -285,9 +283,9 @@ export default function UserManagement() {
                         )}
                       </h3>
                       <p className="text-xs text-muted-foreground">
-                        {!u.outlets || u.outlets.length === 0
+                        {!u.assignedOutlets || u.assignedOutlets.length === 0
                           ? "All outlets"
-                          : `${u.outlets.length} outlet${u.outlets.length !== 1 ? "s" : ""}`}
+                          : `${u.assignedOutlets.length} outlet${u.assignedOutlets.length !== 1 ? "s" : ""}`}
                       </p>
                     </div>
                   </div>
@@ -309,13 +307,13 @@ export default function UserManagement() {
                       title={
                         isSelf
                           ? "You can't deactivate yourself"
-                          : u.isActive
+                          : u.status === "active"
                           ? "Deactivate user"
                           : "Reactivate user"
                       }
                       onClick={() => toggleStatus(u)}
                     >
-                      {u.isActive ? (
+                      {u.status === "active" ? (
                         <UserX className="h-4 w-4 text-muted-foreground hover:text-destructive" />
                       ) : (
                         <UserCheck className="h-4 w-4 text-success" />
@@ -345,7 +343,7 @@ export default function UserManagement() {
 
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-2 flex-1 min-w-0">
-                    {!u.outlets || u.outlets.length === 0 ? (
+                    {!u.assignedOutlets || u.assignedOutlets.length === 0 ? (
                       <div className="flex items-center gap-2 text-xs">
                         <Store className="h-3.5 w-3.5 text-accent shrink-0" />
                         <span className="font-medium">All outlets</span>
@@ -364,7 +362,7 @@ export default function UserManagement() {
                       </p>
                     )}
                   </div>
-                  {u.isActive ? (
+                  {u.status === "active" ? (
                     <Badge className="bg-success/15 text-success hover:bg-success/15 border-success/20 shrink-0">
                       Active
                     </Badge>
@@ -534,7 +532,7 @@ export default function UserManagement() {
               Deactivate user?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmDeactivate?.displayName || `${confirmDeactivate?.firstName} ${confirmDeactivate?.lastName}`} will no longer be able to sign in to the admin portal.
+              {confirmDeactivate?.display_name || `${confirmDeactivate?.first_name} ${confirmDeactivate?.last_name}`} will no longer be able to sign in to the admin portal.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

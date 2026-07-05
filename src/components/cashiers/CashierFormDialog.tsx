@@ -1,46 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Pencil, Building2 } from "lucide-react";
+import { UserPlus, Pencil, Building2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-const initialDepartments = [
-  { id: "dept-1", name: "Kitchen", outletId: 1 },
-  { id: "dept-2", name: "Bar", outletId: 1 },
-  { id: "dept-3", name: "Front of House", outletId: 1 },
-  { id: "dept-4", name: "Drive-Through", outletId: 1 },
-  { id: "dept-5", name: "Sales Floor", outletId: 2 },
-  { id: "dept-6", name: "Checkout", outletId: 2 },
-  { id: "dept-7", name: "Customer Service", outletId: 2 },
-  { id: "dept-8", name: "Stock Room", outletId: 2 },
-  { id: "dept-9", name: "Counter", outletId: 3 },
-  { id: "dept-10", name: "Lounge Service", outletId: 3 },
-  { id: "dept-11", name: "Dispensary", outletId: 4 },
-  { id: "dept-12", name: "Front Desk", outletId: 4 },
-  { id: "dept-13", name: "Warehouse", outletId: 4 },
-];
-
-const availableOutlets = [
-  { id: "outlet-1", name: "Downtown Flagship", outletNumericId: 1 },
-  { id: "outlet-2", name: "Mall Branch", outletNumericId: 2 },
-  { id: "outlet-3", name: "Airport Kiosk", outletNumericId: 3 },
-  { id: "outlet-4", name: "Suburban Store", outletNumericId: 4 },
-];
-
-/** Map of outlet string id -> available departments for that outlet */
-const departmentsByOutlet: Record<string, { id: string; name: string }[]> = availableOutlets.reduce(
-  (acc, o) => {
-    acc[o.id] = initialDepartments
-      .filter((d) => d.outletId === o.outletNumericId)
-      .map((d) => ({ id: d.id, name: d.name }));
-    return acc;
-  },
-  {} as Record<string, { id: string; name: string }[]>
-);
+import { useGetOutlets } from "@/services/api/outlets";
+import { API_ENDPOINTS } from "@/services/api/endpoints";
+import { api } from "@/services/api/base";
 
 export interface OutletAssignment {
   outletId: string;
@@ -57,7 +32,11 @@ export interface CashierFormData {
 }
 
 const emptyForm: CashierFormData = {
-  firstName: "", lastName: "", email: "", phone: "", assignments: [],
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  assignments: [],
 };
 
 interface CashierFormDialogProps {
@@ -68,10 +47,72 @@ interface CashierFormDialogProps {
   onSubmit: (data: CashierFormData) => void;
 }
 
-export default function CashierFormDialog({ open, onOpenChange, mode, initialData, onSubmit }: CashierFormDialogProps) {
+export default function CashierFormDialog({
+  open,
+  onOpenChange,
+  mode,
+  initialData,
+  onSubmit,
+}: CashierFormDialogProps) {
   const [form, setForm] = useState<CashierFormData>(emptyForm);
   // Map of outletId -> selected department ids
-  const [outletDeptMap, setOutletDeptMap] = useState<Record<string, string[]>>({});
+  const [outletDeptMap, setOutletDeptMap] = useState<Record<string, string[]>>(
+    {},
+  );
+
+  const { data: outlets = [], isLoading: isLoadingOutlets } = useGetOutlets(
+    open ? undefined : { shouldRetryOnError: false },
+  );
+
+  const [departmentsByOutlet, setDepartmentsByOutlet] = useState<
+    Record<string, { id: string; name: string }[]>
+  >({});
+  const [isLoadingDepts, setIsLoadingDepts] = useState(false);
+
+  useEffect(() => {
+    if (!open || outlets.length === 0) return;
+
+    let isMounted = true;
+    const fetchDepartments = async () => {
+      setIsLoadingDepts(true);
+      try {
+        const results = await Promise.all(
+          outlets.map(async (outlet) => {
+            try {
+              const res = await api.get<any[]>(
+                API_ENDPOINTS.OUTLET_DEPARTMENTS(outlet.id),
+              );
+              return { outletId: outlet.id, depts: res.data };
+            } catch (err) {
+              console.error(
+                `Failed to load departments for outlet ${outlet.id}`,
+                err,
+              );
+              return { outletId: outlet.id, depts: [] };
+            }
+          }),
+        );
+        if (isMounted) {
+          const map: Record<string, { id: string; name: string }[]> = {};
+          results.forEach(({ outletId, depts }) => {
+            map[outletId] = depts.map((d: any) => ({ id: d.id, name: d.name }));
+          });
+          setDepartmentsByOutlet(map);
+        }
+      } catch (err) {
+        toast.error("Failed to load departments for some outlets");
+      } finally {
+        if (isMounted) {
+          setIsLoadingDepts(false);
+        }
+      }
+    };
+
+    fetchDepartments();
+    return () => {
+      isMounted = false;
+    };
+  }, [open, outlets]);
 
   useEffect(() => {
     if (open) {
@@ -85,9 +126,13 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
     }
   }, [open, initialData]);
 
-  const update = (key: keyof CashierFormData, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  const update = (key: keyof CashierFormData, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const selectedOutlets = useMemo(() => Object.keys(outletDeptMap), [outletDeptMap]);
+  const selectedOutlets = useMemo(
+    () => Object.keys(outletDeptMap),
+    [outletDeptMap],
+  );
 
   const toggleOutlet = (outletId: string, checked: boolean) => {
     setOutletDeptMap((prev) => {
@@ -102,7 +147,11 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
     });
   };
 
-  const toggleDepartment = (outletId: string, deptId: string, checked: boolean) => {
+  const toggleDepartment = (
+    outletId: string,
+    deptId: string,
+    checked: boolean,
+  ) => {
     setOutletDeptMap((prev) => {
       const current = prev[outletId] ?? [];
       const next = checked
@@ -113,12 +162,18 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
   };
 
   const handleSubmit = () => {
-    if (!form.firstName.trim() || !form.lastName.trim()) { toast.error("First and last name are required"); return; }
-    if (selectedOutlets.length === 0) { toast.error("Assign at least one outlet"); return; }
+    if (!form.firstName.trim() || !form.lastName.trim()) {
+      toast.error("First and last name are required");
+      return;
+    }
+    if (selectedOutlets.length === 0) {
+      toast.error("Assign at least one outlet");
+      return;
+    }
 
     const assignments: OutletAssignment[] = [];
     for (const outletId of selectedOutlets) {
-      const outlet = availableOutlets.find((o) => o.id === outletId);
+      const outlet = outlets.find((o) => o.id === outletId);
       if (!outlet) continue;
       const depts = departmentsByOutlet[outletId] ?? [];
       const selectedDeptIds = outletDeptMap[outletId] ?? [];
@@ -141,10 +196,17 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+      <SheetContent
+        side="right"
+        className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10"
+      >
         <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
           <SheetTitle className="flex items-center gap-2 font-heading">
-            {isEdit ? <Pencil className="h-5 w-5 text-accent" /> : <UserPlus className="h-5 w-5 text-accent" />}
+            {isEdit ? (
+              <Pencil className="h-5 w-5 text-accent" />
+            ) : (
+              <UserPlus className="h-5 w-5 text-accent" />
+            )}
             {isEdit ? "Edit Cashier" : "Add New Cashier"}
           </SheetTitle>
         </SheetHeader>
@@ -153,23 +215,47 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
-              <Input id="firstName" placeholder="First name" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} />
+              <Input
+                id="firstName"
+                placeholder="First name"
+                value={form.firstName}
+                onChange={(e) => update("firstName", e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
-              <Input id="lastName" placeholder="Last name" value={form.lastName} onChange={(e) => update("lastName", e.target.value)} />
+              <Input
+                id="lastName"
+                placeholder="Last name"
+                value={form.lastName}
+                onChange={(e) => update("lastName", e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cashierEmail">Email</Label>
-              <Input id="cashierEmail" type="email" placeholder="cashier@example.com" value={form.email} onChange={(e) => update("email", e.target.value)} />
+              <Input
+                id="cashierEmail"
+                type="email"
+                placeholder="cashier@example.com"
+                value={form.email}
+                onChange={(e) => update("email", e.target.value)}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="cashierPhone">Phone</Label>
-              <Input id="cashierPhone" type="tel" placeholder="+234 800 000 0000" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+              <Input
+                id="cashierPhone"
+                type="tel"
+                placeholder="+234 800 000 0000"
+                value={form.phone}
+                onChange={(e) => update("phone", e.target.value)}
+              />
             </div>
             <div className="space-y-2 sm:col-span-2 rounded-lg border border-dashed border-border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">
-                A secure 4-digit PIN will be generated automatically when this cashier is created and emailed to them. You can regenerate it later from the cashier list.
+                A secure 4-digit PIN will be generated automatically when this
+                cashier is created and emailed to them. You can regenerate it
+                later from the cashier list.
               </p>
             </div>
           </div>
@@ -178,69 +264,121 @@ export default function CashierFormDialog({ open, onOpenChange, mode, initialDat
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-heading font-semibold text-foreground">Outlet & Department Assignment</h3>
+              <h3 className="text-sm font-heading font-semibold text-foreground">
+                Outlet & Department Assignment
+              </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Select outlets this cashier can access, then choose which departments at each outlet they handle.
+                Select outlets this cashier can access, then choose which
+                departments at each outlet they handle.
               </p>
             </div>
             <div className="space-y-3">
-              {availableOutlets.map((outlet) => {
-                const isChecked = selectedOutlets.includes(outlet.id);
-                const depts = departmentsByOutlet[outlet.id] ?? [];
-                const selectedDeptIds = outletDeptMap[outlet.id] ?? [];
-                return (
-                  <div key={outlet.id} className={`rounded-lg border p-3 transition-colors ${isChecked ? "border-accent bg-accent/5" : "border-border"}`}>
-                    <div className="flex items-center gap-3">
-                      <Checkbox id={`outlet-${outlet.id}`} checked={isChecked} onCheckedChange={(checked) => toggleOutlet(outlet.id, checked === true)} />
-                      <Label htmlFor={`outlet-${outlet.id}`} className="text-sm font-medium cursor-pointer flex-1">{outlet.name}</Label>
-                      {isChecked && depts.length > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-5">
-                          {selectedDeptIds.length}/{depts.length} depts
-                        </Badge>
-                      )}
-                    </div>
+              <div className="space-y-3">
+                {isLoadingOutlets || isLoadingDepts ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-sm text-muted-foreground gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Loading outlets and departments...</span>
+                  </div>
+                ) : outlets.length === 0 ? (
+                  <div className="text-center py-12 text-sm text-muted-foreground">
+                    <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+                    <p>No outlets configured</p>
+                  </div>
+                ) : (
+                  outlets.map((outlet) => {
+                    const isChecked = selectedOutlets.includes(outlet.id);
+                    const depts = departmentsByOutlet[outlet.id] ?? [];
+                    const selectedDeptIds = outletDeptMap[outlet.id] ?? [];
+                    return (
+                      <div
+                        key={outlet.id}
+                        className={`rounded-lg border p-3 transition-colors ${isChecked ? "border-accent bg-accent/5" : "border-border"}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id={`outlet-${outlet.id}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) =>
+                              toggleOutlet(outlet.id, checked === true)
+                            }
+                          />
+                          <Label
+                            htmlFor={`outlet-${outlet.id}`}
+                            className="text-sm font-medium cursor-pointer flex-1"
+                          >
+                            {outlet.name}
+                          </Label>
+                          {isChecked && depts.length > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] h-5"
+                            >
+                              {selectedDeptIds.length}/{depts.length} depts
+                            </Badge>
+                          )}
+                        </div>
 
-                    {isChecked && (
-                      <div className="mt-3 pl-7">
-                        {depts.length === 0 ? (
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
-                            <Building2 className="h-3 w-3" />
-                            No departments configured for this outlet
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-2">
-                            {depts.map((dept) => {
-                              const deptChecked = selectedDeptIds.includes(dept.id);
-                              return (
-                                <div key={dept.id} className="flex items-center gap-2">
-                                  <Checkbox
-                                    id={`dept-${outlet.id}-${dept.id}`}
-                                    checked={deptChecked}
-                                    onCheckedChange={(c) => toggleDepartment(outlet.id, dept.id, c === true)}
-                                  />
-                                  <Label
-                                    htmlFor={`dept-${outlet.id}-${dept.id}`}
-                                    className="text-xs cursor-pointer font-normal"
-                                  >
-                                    {dept.name}
-                                  </Label>
-                                </div>
-                              );
-                            })}
+                        {isChecked && (
+                          <div className="mt-3 pl-7">
+                            {depts.length === 0 ? (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
+                                <Building2 className="h-3 w-3" />
+                                No departments configured for this outlet
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2">
+                                {depts.map((dept) => {
+                                  const deptChecked = selectedDeptIds.includes(
+                                    dept.id,
+                                  );
+                                  return (
+                                    <div
+                                      key={dept.id}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Checkbox
+                                        id={`dept-${outlet.id}-${dept.id}`}
+                                        checked={deptChecked}
+                                        onCheckedChange={(c) =>
+                                          toggleDepartment(
+                                            outlet.id,
+                                            dept.id,
+                                            c === true,
+                                          )
+                                        }
+                                      />
+                                      <Label
+                                        htmlFor={`dept-${outlet.id}-${dept.id}`}
+                                        className="text-xs cursor-pointer font-normal"
+                                      >
+                                        {dept.name}
+                                      </Label>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="px-6 py-4 border-t border-border flex justify-end gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit}>{isEdit ? "Save Changes" : "Add Cashier"}</Button>
+          <div className="px-6 py-4 border-t border-border flex justify-end gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isLoadingOutlets || isLoadingDepts}
+            >
+              {isEdit ? "Save Changes" : "Add Cashier"}
+            </Button>
+          </div>
         </div>
       </SheetContent>
     </Sheet>

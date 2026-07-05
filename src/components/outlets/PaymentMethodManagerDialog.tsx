@@ -65,7 +65,7 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
 
   const startEdit = (m: PaymentMethodRecord) => {
     setEditingId(m.id);
-    setFormLabel(m.name);
+    setFormLabel(m.label);
     setShowForm(true);
   };
 
@@ -106,7 +106,7 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
     if (!deleteTarget) return;
     try {
       await triggerDelete(deleteTarget.id);
-      toast.success(`Removed "${deleteTarget.name}"`);
+      toast.success(`Removed "${deleteTarget.label}"`);
       setDeleteTarget(null);
       mutateMethods();
       onUpdated?.();
@@ -189,7 +189,7 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
                 ) : (
                   methods.map((m) => (
                     <TableRow key={m.id} className={!m.enabled ? "opacity-60" : ""}>
-                      <TableCell className="font-medium">{m.name}</TableCell>
+                      <TableCell className="font-medium">{m.label}</TableCell>
                       <TableCell className="text-center">
                         <Switch
                           checked={m.enabled}
@@ -232,7 +232,7 @@ export default function PaymentMethodManagerDialog({ open, onOpenChange, outletI
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete "{deleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogTitle>Delete "{deleteTarget?.label}"?</AlertDialogTitle>
             <AlertDialogDescription>
               Cashiers at this outlet will no longer be able to accept this payment method. Existing payment records are not affected.
             </AlertDialogDescription>

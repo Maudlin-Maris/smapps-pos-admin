@@ -1,28 +1,56 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { SalesRecord } from "@/hooks/use-financial-data";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Cell, AreaChart, Area, LineChart, Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
 } from "recharts";
-import { TrendingUp, ShoppingCart, Wallet, Trophy, CalendarDays, User, CalendarRange, Clock, CreditCard } from "lucide-react";
-import { usePagination } from "@/hooks/use-pagination";
-import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-import PaginationControls from "@/components/inventory/PaginationControls";
-import { outletPaymentSplits, PAYMENT_COLORS, formatCurrency, filterSales, dailySalesShareFor } from "./salesData";
+import {
+  TrendingUp,
+  ShoppingCart,
+  Wallet,
+  Trophy,
+  CalendarDays,
+  CalendarRange,
+  Clock,
+  CreditCard,
+} from "lucide-react";
+import {
+  useGetSalesSummaryReport,
+  useGetSalesSummaryByCashier,
+  useGetSalesSummaryByDate,
+  useGetSalesSummaryPaymentMethodsDaily,
+} from "@/services/api/reports-api";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { PAYMENT_COLORS, formatCurrency } from "./salesData";
 
 interface SalesReportProps {
-  sales: SalesRecord[];
+  sales?: any[]; // Kept for prop signature compatibility
   selectedOutlets: string[];
   dateRange: { from: Date; to: Date };
   /** When provided, controls cashier filter externally and hides the internal selector. */
@@ -30,244 +58,120 @@ interface SalesReportProps {
   outlets?: any[];
 }
 
-const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
+export default function SalesReport({
+  selectedOutlets,
+  dateRange,
+  cashierFilter,
+}: SalesReportProps) {
+  const [trendMetric, setTrendMetric] = useState<"sales" | "orders">("sales");
+  const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  // Pagination states
+  const [datePage, setDatePage] = useState(1);
+  const [datePerPage, setDatePerPage] = useState(10);
 
-/**
- * Sales Summary — high-level overview only.
- * Item-level and category-level breakdowns live in their own tabs (SalesByItem, SalesByCategory).
- */
-export default function SalesReport({ sales, selectedOutlets, dateRange, cashierFilter, outlets = [] }: SalesReportProps) {
-  const [internalCashier, setInternalCashier] = useState<string>("all");
-  const isControlled = cashierFilter !== undefined;
-  const selectedCashier = isControlled ? (cashierFilter as string) : internalCashier;
-  const setSelectedCashier = isControlled ? () => {} : setInternalCashier;
+  const [cashierPage, setCashierPage] = useState(1);
+  const [cashierPerPage, setCashierPerPage] = useState(10);
 
-  const availableCashiers = useMemo(() => {
-    const fromStr = dateRange.from.toISOString().split("T")[0];
-    const toStr = dateRange.to.toISOString().split("T")[0];
-    const names = new Set<string>();
-    sales.forEach((s) => {
-      if (selectedOutlets.includes(s.outletId) && s.date >= fromStr && s.date <= toStr && s.cashier) {
-        names.add(s.cashier);
-      }
-    });
-    return Array.from(names).sort();
-  }, [sales, selectedOutlets, dateRange]);
+  const [paymentPage, setPaymentPage] = useState(1);
+  const [paymentPerPage, setPaymentPerPage] = useState(10);
 
-  const filteredSales = useMemo(
-    () => filterSales(sales, selectedOutlets, dateRange, selectedCashier),
-    [sales, selectedOutlets, dateRange, selectedCashier]
-  );
+  const formattedFrom = dateRange.from.toISOString().split("T")[0];
+  const formattedTo = dateRange.to.toISOString().split("T")[0];
+  const outletIdParam =
+    selectedOutlets.length === 1 && selectedOutlets[0] !== "all"
+      ? selectedOutlets[0]
+      : undefined;
+  const cashierIdParam = cashierFilter === "all" ? undefined : cashierFilter;
 
-  const totalSales = filteredSales.reduce((sum, s) => sum + s.totalSales, 0);
-  const totalOtherIncome = filteredSales.reduce((sum, s) => sum + s.otherIncome, 0);
-  const totalRevenue = totalSales + totalOtherIncome;
-  const avgPerTxn = filteredSales.length > 0 ? totalSales / filteredSales.length : 0;
-
-  // Sales by outlet
-  const salesByOutlet = useMemo(() => {
-    const grouped: Record<string, { sales: number; otherIncome: number; count: number }> = {};
-    filteredSales.forEach((s) => {
-      if (!grouped[s.outletId]) grouped[s.outletId] = { sales: 0, otherIncome: 0, count: 0 };
-      grouped[s.outletId].sales += s.totalSales;
-      grouped[s.outletId].otherIncome += s.otherIncome;
-      grouped[s.outletId].count += 1;
-    });
-    return Object.entries(grouped).map(([outletId, data]) => ({
-      outletId,
-      outletName: outlets.find((o) => o.id === outletId)?.name || outletId,
-      ...data,
-      total: data.sales + data.otherIncome,
-    }));
-  }, [filteredSales]);
-
-  // Sales by date — include every day in the selected range, even when there are zero orders
-  const salesByDate = useMemo(() => {
-    const grouped: Record<string, { sales: number; orders: number }> = {};
-    filteredSales.forEach((s) => {
-      if (!grouped[s.date]) grouped[s.date] = { sales: 0, orders: 0 };
-      grouped[s.date].sales += s.totalSales;
-      grouped[s.date].orders += 1;
+  // 1. Overall sales summary data
+  const { data: summaryReport, isLoading: isSummaryLoading } =
+    useGetSalesSummaryReport({
+      dateFrom: formattedFrom,
+      dateTo: formattedTo,
+      outletId: outletIdParam,
+      cashierId: cashierIdParam,
     });
 
-    const rows: { date: string; displayDate: string; sales: number; orders: number }[] = [];
-    const cursor = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate());
-    const today = new Date();
-    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const rangeEnd = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate());
-    // Don't list future dates — they're guaranteed to be empty for a typical business view.
-    const end = rangeEnd > todayMidnight ? todayMidnight : rangeEnd;
-
-    while (cursor <= end) {
-      const year = cursor.getFullYear();
-      const month = String(cursor.getMonth() + 1).padStart(2, "0");
-      const day = String(cursor.getDate()).padStart(2, "0");
-      const date = `${year}-${month}-${day}`;
-      const dayData = grouped[date] || { sales: 0, orders: 0 };
-
-      rows.push({
-        date,
-        displayDate: cursor.toLocaleDateString("en-NG", {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-        sales: dayData.sales,
-        orders: dayData.orders,
-      });
-
-      cursor.setDate(cursor.getDate() + 1);
-    }
-
-    return rows.sort((a, b) => b.date.localeCompare(a.date));
-  }, [filteredSales, dateRange]);
-
-  // Sales by business day
-  const salesByBusinessDay = useMemo(() => {
-    const dayTotals: Record<number, { sales: number; count: number }> = {};
-    filteredSales.forEach((s) => {
-      const day = new Date(s.date).getDay();
-      if (!dayTotals[day]) dayTotals[day] = { sales: 0, count: 0 };
-      dayTotals[day].sales += s.totalSales;
-      dayTotals[day].count += 1;
+  // 2. Sales summary by date paginated data
+  const { data: salesByDateData, isLoading: isSalesByDateLoading } =
+    useGetSalesSummaryByDate({
+      dateFrom: formattedFrom,
+      dateTo: formattedTo,
+      outletId: outletIdParam,
+      cashierId: cashierIdParam,
+      page: datePage,
+      perPage: datePerPage,
     });
-    return DAY_NAMES.map((name, idx) => ({
-      day: name.slice(0, 3),
-      fullDay: name,
-      sales: dayTotals[idx]?.sales || 0,
-      avg: dayTotals[idx] ? dayTotals[idx].sales / dayTotals[idx].count : 0,
-      transactions: dayTotals[idx]?.count || 0,
-    }));
-  }, [filteredSales]);
 
-  const topBusinessDay = useMemo(
-    () => [...salesByBusinessDay].sort((a, b) => b.sales - a.sales)[0],
-    [salesByBusinessDay]
-  );
-
-  // Net sales by time of day (hourly buckets). SalesRecord has no timestamp,
-  // so derive a deterministic hour from the record id with a realistic
-  // hospitality/retail distribution (peaks at lunch & dinner).
-  const salesByHour = useMemo(() => {
-    const HOUR_WEIGHTS = [
-      0.2, 0.1, 0.05, 0.05, 0.1, 0.3, 0.6, 1.0, 1.4, 1.6, 1.8, 2.2,
-      2.6, 2.4, 1.9, 1.7, 1.8, 2.1, 2.5, 2.4, 1.8, 1.2, 0.7, 0.4,
-    ];
-    const cumulative: number[] = [];
-    let acc = 0;
-    HOUR_WEIGHTS.forEach((w) => { acc += w; cumulative.push(acc); });
-    const total = acc;
-    const buckets: { sales: number; orders: number }[] = Array.from({ length: 24 }, () => ({ sales: 0, orders: 0 }));
-    filteredSales.forEach((s) => {
-      const idNum = Number((s.id || "").replace(/\D/g, "")) || 0;
-      const r = ((Math.sin(idNum * 9301 + 49297) * 233280) % 1 + 1) % 1;
-      const target = r * total;
-      let hour = cumulative.findIndex((c) => target <= c);
-      if (hour < 0) hour = 23;
-      buckets[hour].sales += s.totalSales;
-      buckets[hour].orders += 1;
+  // 3. Sales summary by cashier paginated data
+  const { data: salesByCashierData, isLoading: isSalesByCashierLoading } =
+    useGetSalesSummaryByCashier({
+      dateFrom: formattedFrom,
+      dateTo: formattedTo,
+      outletId: outletIdParam,
+      cashierId: cashierIdParam,
+      page: cashierPage,
+      perPage: cashierPerPage,
     });
-    return buckets.map((b, h) => ({
-      hour: h,
-      label: `${((h + 11) % 12) + 1}${h < 12 ? "a" : "p"}`,
-      fullLabel: `${((h + 11) % 12) + 1}:00 ${h < 12 ? "AM" : "PM"}`,
-      sales: Math.round(b.sales),
-      orders: b.orders,
-    }));
-  }, [filteredSales]);
 
-  const peakHour = useMemo(
-    () => [...salesByHour].sort((a, b) => b.sales - a.sales)[0],
-    [salesByHour]
-  );
+  // 4. Daily payment method breakdown paginated data
+  const {
+    data: paymentMethodsDailyData,
+    isLoading: isPaymentMethodsDailyLoading,
+  } = useGetSalesSummaryPaymentMethodsDaily({
+    dateFrom: formattedFrom,
+    dateTo: formattedTo,
+    outletId: outletIdParam,
+    cashierId: cashierIdParam,
+    page: paymentPage,
+    perPage: paymentPerPage,
+  });
 
-  // Payment methods
+  const summary = summaryReport?.data;
+  const overview = summary?.overview || {
+    totalRevenue: 0,
+    totalSales: 0,
+    totalOtherIncome: 0,
+    transactionCount: 0,
+    avgPerTransaction: 0,
+    topBusinessDay: { day: "", fullDay: "", sales: 0, transactions: 0 },
+  };
+
+  const salesByBusinessDay = summary?.salesByBusinessDay || [];
   const paymentMethodData = useMemo(() => {
-    const methods: Record<string, number> = {};
-    selectedOutlets.forEach((outletId) => {
-      const splits = outletPaymentSplits[outletId];
-      if (!splits) return;
-      const outletSalesTotal = filteredSales
-        .filter((s) => s.outletId === outletId)
-        .reduce((sum, s) => sum + s.totalSales, 0);
-      Object.entries(splits).forEach(([method, pct]) => {
-        methods[method] = (methods[method] || 0) + outletSalesTotal * pct;
-      });
-    });
-    return Object.entries(methods)
-      .map(([name, value]) => ({
-        name,
-        value: Math.round(value),
-        color: PAYMENT_COLORS[name] || "hsl(var(--chart-5))",
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [selectedOutlets, filteredSales]);
+    const rawMethods = summary?.salesByPaymentMethod || [];
+    return rawMethods.map((pm) => ({
+      ...pm,
+      color: PAYMENT_COLORS[pm.name] || "hsl(var(--chart-5))",
+    }));
+  }, [summary?.salesByPaymentMethod]);
+
+  const salesByHour = summary?.salesByHour || [];
+  const peakHour = useMemo(() => {
+    if (salesByHour.length === 0) return null;
+    return [...salesByHour].sort((a, b) => b.sales - a.sales)[0];
+  }, [salesByHour]);
+
+  const salesTrend = summary?.salesTrend || [];
+  const salesByOutlet = summary?.salesByOutlet || [];
 
   const topPaymentMethod = paymentMethodData[0];
   const totalPaymentValue = paymentMethodData.reduce((s, p) => s + p.value, 0);
 
-  // Cashier leaderboard
-  const salesByCashier = useMemo(() => {
-    const grouped: Record<string, { sales: number; otherIncome: number; count: number }> = {};
-    filteredSales.forEach((s) => {
-      const name = s.cashier || "Unknown";
-      if (!grouped[name]) grouped[name] = { sales: 0, otherIncome: 0, count: 0 };
-      grouped[name].sales += s.totalSales;
-      grouped[name].otherIncome += s.otherIncome;
-      grouped[name].count += 1;
-    });
-    return Object.entries(grouped)
-      .map(([cashier, data]) => ({
-        cashier,
-        total: data.sales + data.otherIncome,
-        transactions: data.count,
-      }))
-      .sort((a, b) => b.total - a.total);
-  }, [filteredSales]);
-
-  const dailyShare = useMemo(() => dailySalesShareFor(filteredSales), [filteredSales]);
-  const [paymentDailyOpen, setPaymentDailyOpen] = useState(false);
-
-  const salesByDatePag = usePagination(salesByDate, DEFAULT_PAGE_SIZE);
-  const cashierPag = usePagination(salesByCashier, DEFAULT_PAGE_SIZE);
-  const paymentDailyPag = usePagination(dailyShare.dates, DEFAULT_PAGE_SIZE);
-  const [trendMetric, setTrendMetric] = useState<"sales" | "orders">("sales");
-
-  // Chronological trend (oldest -> newest) for the line chart
-  const salesTrend = useMemo(
-    () =>
-      [...salesByDate]
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map((d) => ({
-          ...d,
-          shortDate: new Date(d.date).toLocaleDateString("en-NG", { month: "short", day: "numeric" }),
-        })),
-    [salesByDate]
-  );
+  if (isSummaryLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] gap-2">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <p className="text-xs text-muted-foreground">
+          Loading sales summary...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Cashier Filter (hidden when controlled) */}
-      {!isControlled && availableCashiers.length > 0 && (
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <Select value={selectedCashier} onValueChange={setSelectedCashier}>
-            <SelectTrigger className="w-[150px] sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Cashiers</SelectItem>
-              {availableCashiers.map((name) => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card className="p-3 sm:p-0">
@@ -276,9 +180,15 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-0 sm:p-6 sm:pt-0">
-            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Total Revenue</p>
-            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Sales + Other Income</p>
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">
+              Total Revenue
+            </p>
+            <div className="text-lg sm:text-2xl font-bold">
+              {formatCurrency(overview.totalRevenue)}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Sales + Other Income
+            </p>
           </CardContent>
         </Card>
         <Card className="p-3 sm:p-0">
@@ -287,31 +197,55 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-0 sm:p-6 sm:pt-0">
-            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Total Sales</p>
-            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalSales)}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">{filteredSales.length} transactions</p>
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">
+              Total Sales
+            </p>
+            <div className="text-lg sm:text-2xl font-bold">
+              {formatCurrency(overview.totalSales)}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              {overview.transactionCount} transactions
+            </p>
           </CardContent>
         </Card>
         <Card className="p-3 sm:p-0">
           <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Top Business Day</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Top Business Day
+            </CardTitle>
             <Trophy className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-0 sm:p-6 sm:pt-0">
-            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Top Day</p>
-            <div className="text-lg sm:text-2xl font-bold">{topBusinessDay?.fullDay || "—"}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">{topBusinessDay ? formatCurrency(topBusinessDay.sales) : "No data"}</p>
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">
+              Top Day
+            </p>
+            <div className="text-lg sm:text-2xl font-bold">
+              {overview.topBusinessDay?.fullDay || "—"}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              {overview.topBusinessDay
+                ? formatCurrency(overview.topBusinessDay.sales)
+                : "No data"}
+            </p>
           </CardContent>
         </Card>
         <Card className="p-3 sm:p-0">
           <CardHeader className="hidden sm:flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg per Transaction</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg per Transaction
+            </CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent className="p-0 sm:p-6 sm:pt-0">
-            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">Avg / Transaction</p>
-            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(avgPerTxn)}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Across selected period</p>
+            <p className="text-xs text-muted-foreground sm:hidden mb-0.5">
+              Avg / Transaction
+            </p>
+            <div className="text-lg sm:text-2xl font-bold">
+              {formatCurrency(overview.avgPerTransaction)}
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Across selected period
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -328,21 +262,46 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={salesByBusinessDay}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="day" className="text-xs" tick={{ fontSize: 11 }} />
-                <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" tick={{ fontSize: 10 }} width={45} />
-                <Tooltip
-                  formatter={(value: number, name: string) => [formatCurrency(value), name === "sales" ? "Total Sales" : "Avg Sales"]}
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                <XAxis
+                  dataKey="day"
+                  className="text-xs"
+                  tick={{ fontSize: 11 }}
                 />
-                <Bar dataKey="sales" name="Total Sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <YAxis
+                  tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`}
+                  className="text-xs"
+                  tick={{ fontSize: 10 }}
+                  width={45}
+                />
+                <Tooltip
+                  formatter={(value: number, name: string) => [
+                    formatCurrency(value),
+                    name === "sales" ? "Total Sales" : "Avg Sales",
+                  ]}
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                />
+                <Bar
+                  dataKey="sales"
+                  name="Total Sales"
+                  fill="hsl(var(--primary))"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
-            {topBusinessDay && topBusinessDay.sales > 0 && (
+            {overview.topBusinessDay && overview.topBusinessDay.sales > 0 && (
               <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary/5 p-2 sm:p-3">
                 <Trophy className="h-3.5 w-3.5 text-primary shrink-0" />
                 <span className="text-xs sm:text-sm">
-                  <strong>{topBusinessDay.fullDay}</strong> is the top day with{" "}
-                  <strong>{formatCurrency(topBusinessDay.sales)}</strong>
+                  <strong>{overview.topBusinessDay.fullDay}</strong> is the top
+                  day with{" "}
+                  <strong>
+                    {formatCurrency(overview.topBusinessDay.sales)}
+                  </strong>
                 </span>
               </div>
             )}
@@ -351,9 +310,16 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
 
         <Card>
           <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4 flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-sm sm:text-base">Sales by Payment Method</CardTitle>
+            <CardTitle className="text-sm sm:text-base">
+              Sales by Payment Method
+            </CardTitle>
             {paymentMethodData.length > 0 && (
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setPaymentDailyOpen(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => setPaymentDailyOpen(true)}
+              >
                 <CalendarRange className="h-3.5 w-3.5" /> Daily
               </Button>
             )}
@@ -362,20 +328,48 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
             {paymentMethodData.length > 0 ? (
               <>
                 <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={paymentMethodData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} className="text-xs" interval={0} />
-                    <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={45} />
+                  <BarChart
+                    data={paymentMethodData}
+                    margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      className="stroke-muted"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: 11 }}
+                      className="text-xs"
+                      interval={0}
+                    />
+                    <YAxis
+                      tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`}
+                      tick={{ fontSize: 10 }}
+                      width={45}
+                    />
                     <Tooltip
-                      formatter={(value: number) => [formatCurrency(value), "Sales"]}
-                      contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                      formatter={(value: number) => [
+                        formatCurrency(value),
+                        "Sales",
+                      ]}
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                        fontSize: "12px",
+                      }}
                       cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
                     />
                     <Bar dataKey="value" name="Sales" radius={[4, 4, 0, 0]}>
                       {paymentMethodData.map((entry) => (
                         <Cell
                           key={entry.name}
-                          fill={entry.name === topPaymentMethod?.name ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.35)"}
+                          fill={
+                            entry.name === topPaymentMethod?.name
+                              ? "hsl(var(--primary))"
+                              : "hsl(var(--muted-foreground) / 0.35)"
+                          }
                         />
                       ))}
                     </Bar>
@@ -388,14 +382,24 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                       <strong>{topPaymentMethod.name}</strong> leads with{" "}
                       <strong>{formatCurrency(topPaymentMethod.value)}</strong>
                       {totalPaymentValue > 0 && (
-                        <span className="text-muted-foreground"> ({((topPaymentMethod.value / totalPaymentValue) * 100).toFixed(1)}%)</span>
+                        <span className="text-muted-foreground">
+                          {" "}
+                          (
+                          {(
+                            (topPaymentMethod.value / totalPaymentValue) *
+                            100
+                          ).toFixed(1)}
+                          %)
+                        </span>
                       )}
                     </span>
                   </div>
                 )}
               </>
             ) : (
-              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">No data</div>
+              <div className="flex h-[180px] items-center justify-center text-muted-foreground text-sm">
+                No data
+              </div>
             )}
           </CardContent>
         </Card>
@@ -409,20 +413,52 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           </CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
-          {filteredSales.length > 0 ? (
+          {salesByHour.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={240}>
-                <LineChart data={salesByHour} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} className="text-xs" interval={1} />
-                  <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 10 }} width={45} />
+                <LineChart
+                  data={salesByHour}
+                  margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    className="stroke-muted"
+                    vertical={false}
+                  />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 10 }}
+                    className="text-xs"
+                    interval={1}
+                  />
+                  <YAxis
+                    tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`}
+                    tick={{ fontSize: 10 }}
+                    width={45}
+                  />
                   <Tooltip
                     formatter={(value: number, _name, item) => {
-                      const p = item?.payload as { orders?: number } | undefined;
-                      return [`${formatCurrency(value)} · ${p?.orders ?? 0} orders`, "Net Sales"];
+                      const p = item?.payload as
+                        | { orders?: number }
+                        | undefined;
+                      return [
+                        `${formatCurrency(value)} · ${p?.orders ?? 0} orders`,
+                        "Net Sales",
+                      ];
                     }}
-                    labelFormatter={(_, payload) => (payload?.[0]?.payload as { fullLabel?: string } | undefined)?.fullLabel || ""}
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                    labelFormatter={(_, payload) =>
+                      (
+                        payload?.[0]?.payload as
+                          | { fullLabel?: string }
+                          | undefined
+                      )?.fullLabel || ""
+                    }
+                    contentStyle={{
+                      background: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                    }}
                     cursor={{ stroke: "hsl(var(--muted-foreground) / 0.3)" }}
                   />
                   <Line
@@ -440,7 +476,9 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                           cx={cx}
                           cy={cy}
                           r={isPeak ? 5 : 3}
-                          fill={isPeak ? "hsl(var(--primary))" : "hsl(var(--card))"}
+                          fill={
+                            isPeak ? "hsl(var(--primary))" : "hsl(var(--card))"
+                          }
                           stroke="hsl(var(--primary))"
                           strokeWidth={2}
                         />
@@ -449,20 +487,22 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     activeDot={{ r: 6, fill: "hsl(var(--primary))" }}
                   />
                 </LineChart>
-
               </ResponsiveContainer>
               {peakHour && peakHour.sales > 0 && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-primary/5 p-2 sm:p-3">
                   <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span className="text-xs sm:text-sm">
                     Peak hour <strong>{peakHour.fullLabel}</strong> with{" "}
-                    <strong>{formatCurrency(peakHour.sales)}</strong> across {peakHour.orders} orders
+                    <strong>{formatCurrency(peakHour.sales)}</strong> across{" "}
+                    {peakHour.orders} orders
                   </span>
                 </div>
               )}
             </>
           ) : (
-            <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">No sales data for this period</div>
+            <div className="flex h-[200px] items-center justify-center text-muted-foreground text-sm">
+              No sales data for this period
+            </div>
           )}
         </CardContent>
       </Card>
@@ -503,17 +543,43 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
         <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
           {salesTrend.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={salesTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <AreaChart
+                data={salesTrend}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              >
                 <defs>
-                  <linearGradient id="salesTrendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <linearGradient
+                    id="salesTrendFill"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="hsl(var(--primary))"
+                      stopOpacity={0.35}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="hsl(var(--primary))"
+                      stopOpacity={0}
+                    />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="shortDate" className="text-xs" tick={{ fontSize: 11 }} minTickGap={16} />
+                <XAxis
+                  dataKey="shortDate"
+                  className="text-xs"
+                  tick={{ fontSize: 11 }}
+                  minTickGap={16}
+                />
                 <YAxis
-                  tickFormatter={(v) => (trendMetric === "sales" ? `₦${(v / 1000).toFixed(0)}k` : `${v}`)}
+                  tickFormatter={(v) =>
+                    trendMetric === "sales"
+                      ? `₦${(v / 1000).toFixed(0)}k`
+                      : `${v}`
+                  }
                   className="text-xs"
                   tick={{ fontSize: 10 }}
                   width={50}
@@ -524,8 +590,19 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                     trendMetric === "sales" ? formatCurrency(value) : value,
                     trendMetric === "sales" ? "Sales" : "Orders",
                   ]}
-                  labelFormatter={(_, payload) => (payload?.[0]?.payload as { displayDate?: string } | undefined)?.displayDate || ""}
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: "12px" }}
+                  labelFormatter={(_, payload) =>
+                    (
+                      payload?.[0]?.payload as
+                        | { displayDate?: string }
+                        | undefined
+                    )?.displayDate || ""
+                  }
+                  contentStyle={{
+                    background: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
                 />
                 <Area
                   type="monotone"
@@ -533,13 +610,19 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                   stroke="hsl(var(--primary))"
                   strokeWidth={2}
                   fill="url(#salesTrendFill)"
-                  dot={salesTrend.length <= 31 ? { r: 3, fill: "hsl(var(--primary))" } : false}
+                  dot={
+                    salesTrend.length <= 31
+                      ? { r: 3, fill: "hsl(var(--primary))" }
+                      : false
+                  }
                   activeDot={{ r: 5 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-[220px] items-center justify-center text-muted-foreground text-sm">No sales data for this period</div>
+            <div className="flex h-[220px] items-center justify-center text-muted-foreground text-sm">
+              No sales data for this period
+            </div>
           )}
         </CardContent>
       </Card>
@@ -550,95 +633,155 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
           <CardTitle className="text-sm sm:text-base">Sales by Date</CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 space-y-2">
-          <PaginationControls
-            page={salesByDatePag.page}
-            totalPages={salesByDatePag.totalPages}
-            perPage={salesByDatePag.perPage}
-            totalItems={salesByDatePag.totalItems}
-            pageSizeOptions={salesByDatePag.pageSizeOptions}
-            onPageChange={salesByDatePag.setPage}
-            onPerPageChange={salesByDatePag.setPerPage}
-          />
           <div className="overflow-x-auto -mx-3 sm:mx-0">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">Date</TableHead>
                   <TableHead className="text-right text-xs">Orders</TableHead>
-                  <TableHead className="text-right text-xs">Total Sales</TableHead>
+                  <TableHead className="text-right text-xs">
+                    Total Sales
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {salesByDatePag.paginatedItems.length > 0 ? (
-                  salesByDatePag.paginatedItems.map((row) => (
+                {isSalesByDateLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-6">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto" />
+                    </TableCell>
+                  </TableRow>
+                ) : salesByDateData?.data.items &&
+                  salesByDateData.data.items.length > 0 ? (
+                  salesByDateData.data.items.map((row) => (
                     <TableRow key={row.date}>
-                      <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">{row.displayDate}</TableCell>
-                      <TableCell className="text-right text-xs sm:text-sm">{row.orders}</TableCell>
-                      <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.sales)}</TableCell>
+                      <TableCell className="font-medium text-xs sm:text-sm whitespace-nowrap">
+                        {row.displayDate}
+                      </TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">
+                        {row.orders}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-xs sm:text-sm">
+                        {formatCurrency(row.sales)}
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground text-xs">No sales data</TableCell>
+                    <TableCell
+                      colSpan={3}
+                      className="text-center text-muted-foreground text-xs"
+                    >
+                      No sales data
+                    </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+          <ResuablePagination
+            currentPage={datePage}
+            totalPages={salesByDateData?.data.pagination.lastPage ?? 1}
+            totalItems={salesByDateData?.data.pagination.total ?? 0}
+            rowsPerPage={datePerPage}
+            onPageChange={setDatePage}
+            onRowsPerPageChange={setDatePerPage}
+            isLoading={isSalesByDateLoading}
+          />
         </CardContent>
       </Card>
 
       {/* Sales by Cashier + Sales by Outlet */}
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-        {salesByCashier.length > 0 && (
-          <Card>
-            <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                <User className="h-4 w-4" /> Sales by Cashier
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 sm:p-6 pt-0 space-y-2">
-              <PaginationControls
-                page={cashierPag.page}
-                totalPages={cashierPag.totalPages}
-                perPage={cashierPag.perPage}
-                totalItems={cashierPag.totalItems}
-                pageSizeOptions={cashierPag.pageSizeOptions}
-                onPageChange={cashierPag.setPage}
-                onPerPageChange={cashierPag.setPerPage}
-              />
-              <div className="overflow-x-auto -mx-3 sm:mx-0">
-                <Table>
-                  <TableHeader>
+        <Card>
+          <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <CalendarDays className="h-4 w-4" /> Sales by Cashier
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-6 pt-0 space-y-2">
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Cashier</TableHead>
+                    <TableHead className="text-right text-xs">Txns</TableHead>
+                    <TableHead className="text-right text-xs">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isSalesByCashierLoading ? (
                     <TableRow>
-                      <TableHead className="text-xs">Cashier</TableHead>
-                      <TableHead className="text-right text-xs">Txns</TableHead>
-                      <TableHead className="text-right text-xs">Total</TableHead>
+                      <TableCell colSpan={3} className="text-center py-6">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto" />
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cashierPag.paginatedItems.map((row) => (
-                      <TableRow key={row.cashier}>
-                        <TableCell className="font-medium text-xs sm:text-sm">{row.cashier}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{row.transactions}</TableCell>
-                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.total)}</TableCell>
+                  ) : salesByCashierData?.data.items &&
+                    salesByCashierData.data.items.length > 0 ? (
+                    <>
+                      {salesByCashierData.data.items.map((row) => (
+                        <TableRow key={row.cashier}>
+                          <TableCell className="font-medium text-xs sm:text-sm">
+                            {row.cashier}
+                          </TableCell>
+                          <TableCell className="text-right text-xs sm:text-sm">
+                            {row.transactions}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-xs sm:text-sm">
+                            {formatCurrency(row.total)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell className="text-xs sm:text-sm">
+                          Total
+                        </TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">
+                          {salesByCashierData.data.items.reduce(
+                            (s, r) => s + r.transactions,
+                            0,
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">
+                          {formatCurrency(
+                            salesByCashierData.data.items.reduce(
+                              (s, r) => s + r.total,
+                              0,
+                            ),
+                          )}
+                        </TableCell>
                       </TableRow>
-                    ))}
-                    <TableRow className="bg-muted/50 font-semibold">
-                      <TableCell className="text-xs sm:text-sm">Total</TableCell>
-                      <TableCell className="text-right text-xs sm:text-sm">{filteredSales.length}</TableCell>
-                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalRevenue)}</TableCell>
+                    </>
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-center text-muted-foreground text-xs"
+                      >
+                        No cashier data
+                      </TableCell>
                     </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <ResuablePagination
+              currentPage={cashierPage}
+              totalPages={salesByCashierData?.data.pagination.lastPage ?? 1}
+              totalItems={salesByCashierData?.data.pagination.total ?? 0}
+              rowsPerPage={cashierPerPage}
+              onPageChange={setCashierPage}
+              onRowsPerPageChange={setCashierPerPage}
+              isLoading={isSalesByCashierLoading}
+            />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
-            <CardTitle className="text-sm sm:text-base">Sales by Outlet</CardTitle>
+            <CardTitle className="text-sm sm:text-base">
+              Sales by Outlet
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0">
             {salesByOutlet.length > 0 ? (
@@ -647,28 +790,50 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
                   <TableHeader>
                     <TableRow>
                       <TableHead className="text-xs">Outlet</TableHead>
-                      <TableHead className="text-right text-xs">Sales</TableHead>
-                      <TableHead className="text-right text-xs">Total</TableHead>
+                      <TableHead className="text-right text-xs">
+                        Sales
+                      </TableHead>
+                      <TableHead className="text-right text-xs">
+                        Total
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {salesByOutlet.map((row) => (
                       <TableRow key={row.outletId}>
-                        <TableCell className="font-medium text-xs sm:text-sm">{row.outletName}</TableCell>
-                        <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(row.sales)}</TableCell>
-                        <TableCell className="text-right font-semibold text-xs sm:text-sm">{formatCurrency(row.total)}</TableCell>
+                        <TableCell className="font-medium text-xs sm:text-sm">
+                          {row.outletName}
+                        </TableCell>
+                        <TableCell className="text-right text-xs sm:text-sm">
+                          {formatCurrency(row.sales)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-xs sm:text-sm">
+                          {formatCurrency(row.total)}
+                        </TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/50 font-semibold">
-                      <TableCell className="text-xs sm:text-sm">Total</TableCell>
-                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalSales)}</TableCell>
-                      <TableCell className="text-right text-xs sm:text-sm">{formatCurrency(totalRevenue)}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">
+                        Total
+                      </TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">
+                        {formatCurrency(
+                          salesByOutlet.reduce((s, r) => s + r.sales, 0),
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">
+                        {formatCurrency(
+                          salesByOutlet.reduce((s, r) => s + r.total, 0),
+                        )}
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </div>
             ) : (
-              <div className="flex h-[100px] items-center justify-center text-muted-foreground text-sm">No outlet data</div>
+              <div className="flex h-[100px] items-center justify-center text-muted-foreground text-sm">
+                No outlet data
+              </div>
             )}
           </CardContent>
         </Card>
@@ -678,58 +843,113 @@ export default function SalesReport({ sales, selectedOutlets, dateRange, cashier
       <Dialog open={paymentDailyOpen} onOpenChange={setPaymentDailyOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-base">Payment Methods — Daily Breakdown</DialogTitle>
+            <DialogTitle className="text-base">
+              Payment Methods — Daily Breakdown
+            </DialogTitle>
             <DialogDescription className="text-xs">
               Estimated revenue per payment method, per day
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <PaginationControls
-              page={paymentDailyPag.page}
-              totalPages={paymentDailyPag.totalPages}
-              perPage={paymentDailyPag.perPage}
-              totalItems={paymentDailyPag.totalItems}
-              pageSizeOptions={paymentDailyPag.pageSizeOptions}
-              onPageChange={paymentDailyPag.setPage}
-              onPerPageChange={paymentDailyPag.setPerPage}
-            />
             <div className="max-h-[55vh] overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="text-xs">Date</TableHead>
                     {paymentMethodData.map((pm) => (
-                      <TableHead key={pm.name} className="text-right text-xs whitespace-nowrap">{pm.name}</TableHead>
+                      <TableHead
+                        key={pm.name}
+                        className="text-right text-xs whitespace-nowrap"
+                      >
+                        {pm.name}
+                      </TableHead>
                     ))}
                     <TableHead className="text-right text-xs">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paymentDailyPag.paginatedItems.map((date) => {
-                    const dayTotal = dailyShare.perDay[date];
-                    const share = dailyShare.total > 0 ? dayTotal / dailyShare.total : 0;
-                    return (
-                      <TableRow key={date}>
-                        <TableCell className="text-xs whitespace-nowrap">
-                          {new Date(date).toLocaleDateString("en-NG", { weekday: "short", month: "short", day: "numeric" })}
+                  {isPaymentMethodsDailyLoading ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={paymentMethodData.length + 2}
+                        className="text-center py-6"
+                      >
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : paymentMethodsDailyData?.data.rows &&
+                    paymentMethodsDailyData.data.rows.length > 0 ? (
+                    <>
+                      {paymentMethodsDailyData.data.rows.map((row) => (
+                        <TableRow key={row.date}>
+                          <TableCell className="text-xs whitespace-nowrap">
+                            {row.displayDate}
+                          </TableCell>
+                          {paymentMethodData.map((pm) => {
+                            const methodVal =
+                              row.methods.find((m) => m.name === pm.name)
+                                ?.value ?? 0;
+                            return (
+                              <TableCell
+                                key={pm.name}
+                                className="text-right text-xs"
+                              >
+                                {formatCurrency(methodVal)}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-right text-xs font-semibold">
+                            {formatCurrency(row.total)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted/50 font-semibold">
+                        <TableCell className="text-xs">
+                          Total (all dates)
                         </TableCell>
                         {paymentMethodData.map((pm) => (
-                          <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(Math.round(pm.value * share))}</TableCell>
+                          <TableCell
+                            key={pm.name}
+                            className="text-right text-xs"
+                          >
+                            {formatCurrency(
+                              paymentMethodsDailyData.data.totalsByMethod?.find(
+                                (m) => m.name === pm.name,
+                              )?.value ?? 0,
+                            )}
+                          </TableCell>
                         ))}
-                        <TableCell className="text-right text-xs font-semibold">{formatCurrency(dayTotal)}</TableCell>
+                        <TableCell className="text-right text-xs">
+                          {formatCurrency(
+                            paymentMethodsDailyData.data.grandTotal,
+                          )}
+                        </TableCell>
                       </TableRow>
-                    );
-                  })}
-                  <TableRow className="bg-muted/50 font-semibold">
-                    <TableCell className="text-xs">Total (all dates)</TableCell>
-                    {paymentMethodData.map((pm) => (
-                      <TableCell key={pm.name} className="text-right text-xs">{formatCurrency(pm.value)}</TableCell>
-                    ))}
-                    <TableCell className="text-right text-xs">{formatCurrency(dailyShare.total)}</TableCell>
-                  </TableRow>
+                    </>
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={paymentMethodData.length + 2}
+                        className="text-center text-muted-foreground text-xs"
+                      >
+                        No daily payment data
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
+            <ResuablePagination
+              currentPage={paymentPage}
+              totalPages={
+                paymentMethodsDailyData?.data.pagination.lastPage ?? 1
+              }
+              totalItems={paymentMethodsDailyData?.data.pagination.total ?? 0}
+              rowsPerPage={paymentPerPage}
+              onPageChange={setPaymentPage}
+              onRowsPerPageChange={setPaymentPerPage}
+              isLoading={isPaymentMethodsDailyLoading}
+            />
           </div>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
@@ -18,11 +18,56 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, subDays, startOfYear, startOfYear as soy, endOfYear, subYears } from "date-fns";
-import { CalendarIcon, TrendingUp, TrendingDown, DollarSign, Minus, FileSpreadsheet, FileText, User, X } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  startOfDay,
+  endOfDay,
+  subDays,
+  startOfYear,
+  startOfYear as soy,
+  endOfYear,
+  subYears,
+} from "date-fns";
+import {
+  CalendarIcon,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Minus,
+  FileSpreadsheet,
+  FileText,
+  User,
+  X,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 import { useGetOutlets } from "@/services/api/outlets";
-import { useExpenses, useSales, useStockAdjustments, buildPnL, type PnLData } from "@/hooks/use-financial-data";
+import {
+  useGetProfitLossReport,
+  useGetCashiersReport,
+  useGetReportsTransactions,
+} from "@/services/api/reports-api";
+import {
+  useExpenses,
+  useSales,
+  useStockAdjustments,
+  buildPnL,
+  type PnLData,
+} from "@/hooks/use-financial-data";
 import PnLStatement from "@/components/reports/PnLStatement";
 
 import RawMaterialContribution from "@/components/reports/RawMaterialContribution";
@@ -31,7 +76,12 @@ import SalesByItem from "@/components/reports/SalesByItem";
 import SalesByCategory from "@/components/reports/SalesByCategory";
 import SalesByDepartment from "@/components/reports/SalesByDepartment";
 import ReportTransactions from "@/components/reports/ReportTransactions";
-import { exportPnLToExcel, exportPnLToPDF, buildCOGSItems } from "@/lib/report-export";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import {
+  exportPnLToExcel,
+  exportPnLToPDF,
+  buildCOGSItems,
+} from "@/lib/report-export";
 import {
   exportSalesSummaryExcel,
   exportSalesSummaryPDF,
@@ -44,11 +94,16 @@ import {
   exportTransactionsPDF,
   filterSales as filterSalesForExport,
 } from "@/lib/sales-export";
-import { initialReportTransactions } from "@/components/reports/ReportTransactions";
 import * as XLSX from "@/lib/xlsx-compat";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 function fmt(n: number) {
-  return new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
 export default function Reports() {
@@ -62,7 +117,9 @@ export default function Reports() {
   const defaultTo = endOfMonth(new Date());
   const [dateFrom, setDateFrom] = useState<Date>(defaultFrom);
   const [dateTo, setDateTo] = useState<Date>(defaultTo);
-  const [calendarMonth, setCalendarMonth] = useState<Date>(startOfMonth(new Date()));
+  const [calendarMonth, setCalendarMonth] = useState<Date>(
+    startOfMonth(new Date()),
+  );
 
   // Date picker draft state — only committed to dateFrom/dateTo on Apply
   const [dateOpen, setDateOpen] = useState(false);
@@ -74,7 +131,9 @@ export default function Reports() {
     if (open) {
       setDraftFrom(dateFrom);
       setDraftTo(dateTo);
-      setCalendarMonth(new Date(dateFrom.getFullYear(), dateFrom.getMonth(), 1));
+      setCalendarMonth(
+        new Date(dateFrom.getFullYear(), dateFrom.getMonth(), 1),
+      );
     }
     setDateOpen(open);
   };
@@ -91,6 +150,7 @@ export default function Reports() {
     setDateFrom(defaultFrom);
     setDateTo(defaultTo);
     setCalendarMonth(startOfMonth(new Date()));
+    setTxnPage(1);
   };
 
   const get12h = (d: Date) => {
@@ -99,11 +159,21 @@ export default function Reports() {
     const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
     return { h12, minute: d.getMinutes(), period };
   };
-  const setTimeParts = (base: Date, h12: number, minute: number, period: "AM" | "PM") => {
+  const setTimeParts = (
+    base: Date,
+    h12: number,
+    minute: number,
+    period: "AM" | "PM",
+  ) => {
     let h24 = h12 % 12;
     if (period === "PM") h24 += 12;
     const d = new Date(base);
-    d.setHours(h24, minute, period === "PM" ? 59 : 0, period === "PM" ? 999 : 0);
+    d.setHours(
+      h24,
+      minute,
+      period === "PM" ? 59 : 0,
+      period === "PM" ? 999 : 0,
+    );
     return d;
   };
   const applyDraftPreset = (from: Date, to: Date) => {
@@ -124,161 +194,220 @@ export default function Reports() {
     setDateOpen(false);
   };
 
-
   const { getExpensesByOutletAndPeriod } = useExpenses();
   const { sales, getSalesByOutletAndPeriod } = useSales();
-  const { getCOGSByOutletAndPeriod, getAdjustmentsByOutletAndPeriod } = useStockAdjustments();
+  const { getCOGSByOutletAndPeriod, getAdjustmentsByOutletAndPeriod } =
+    useStockAdjustments();
 
   const isAllOutlets = selectedOutletId === "all";
-  const outletIds = isAllOutlets ? outlets.map((o) => o.id) : [selectedOutletId];
+  const outletIds = isAllOutlets
+    ? outlets.map((o) => o.id)
+    : [selectedOutletId];
 
   const filteredAdjustments = useMemo(
     () => getAdjustmentsByOutletAndPeriod(outletIds, dateFrom, dateTo),
-    [outletIds, dateFrom, dateTo, getAdjustmentsByOutletAndPeriod]
+    [outletIds, dateFrom, dateTo, getAdjustmentsByOutletAndPeriod],
   );
 
   // Item name map from default inventory (localStorage items could be loaded here too)
-  const itemNames: Record<string, string> = useMemo(() => ({
-    i1: "Coffee Beans (Arabica)", i2: "Whole Milk", i3: "Sugar",
-    i4: "Paper Cups (12oz)", i5: "Croissant Dough", i6: "Shampoo (Professional)",
-    i7: "Hair Color Mix", i8: "Disposable Gloves", i9: "Sandwich Bread", i10: "Napkins",
-  }), []);
+  const itemNames: Record<string, string> = useMemo(
+    () => ({
+      i1: "Coffee Beans (Arabica)",
+      i2: "Whole Milk",
+      i3: "Sugar",
+      i4: "Paper Cups (12oz)",
+      i5: "Croissant Dough",
+      i6: "Shampoo (Professional)",
+      i7: "Hair Color Mix",
+      i8: "Disposable Gloves",
+      i9: "Sandwich Bread",
+      i10: "Napkins",
+    }),
+    [],
+  );
 
   // Base unit per inventory item (used for display in the Qty Used column)
-  const itemUnits: Record<string, string> = useMemo(() => ({
-    i1: "kg", i2: "L", i3: "kg",
-    i4: "pcs", i5: "kg", i6: "bottles",
-    i7: "tubes", i8: "pairs", i9: "loaves", i10: "packs",
-  }), []);
+  const itemUnits: Record<string, string> = useMemo(
+    () => ({
+      i1: "kg",
+      i2: "L",
+      i3: "kg",
+      i4: "pcs",
+      i5: "kg",
+      i6: "bottles",
+      i7: "tubes",
+      i8: "pairs",
+      i9: "loaves",
+      i10: "packs",
+    }),
+    [],
+  );
 
   // Synthetic recipe map: which sold menu/composite items use each raw material,
   // and how much of the material's base unit is consumed per one unit sold.
   // Used for the Raw Material drill-down. Names match items in
-  // `initialReportTransactions` so counts can be derived directly.
+  // API transactions so counts can be derived directly.
   const rawMaterialUsage: Record<
     string,
     { menuItem: string; qtyPerUnit: number }[]
-  > = useMemo(() => ({
-    i1: [ // Coffee Beans (kg)
-      { menuItem: "Burger Meal", qtyPerUnit: 0.02 },
-      { menuItem: "Milkshake", qtyPerUnit: 0.015 },
-      { menuItem: "Fresh Juice", qtyPerUnit: 0.01 },
-    ],
-    i2: [ // Whole Milk (L)
-      { menuItem: "Milkshake", qtyPerUnit: 0.25 },
-      { menuItem: "Fresh Juice", qtyPerUnit: 0.1 },
-      { menuItem: "Dessert Bowl", qtyPerUnit: 0.15 },
-    ],
-    i3: [ // Sugar (kg)
-      { menuItem: "Milkshake", qtyPerUnit: 0.03 },
-      { menuItem: "Dessert Bowl", qtyPerUnit: 0.04 },
-      { menuItem: "Fresh Juice", qtyPerUnit: 0.02 },
-    ],
-    i4: [ // Paper Cups
-      { menuItem: "Fresh Juice", qtyPerUnit: 1 },
-      { menuItem: "Milkshake", qtyPerUnit: 1 },
-      { menuItem: "Soft Drinks Pack", qtyPerUnit: 4 },
-    ],
-    i5: [ // Croissant Dough (kg)
-      { menuItem: "Sandwich", qtyPerUnit: 0.12 },
-      { menuItem: "Burger Meal", qtyPerUnit: 0.1 },
-    ],
-    i6: [ // Shampoo (bottles)
-      { menuItem: "Haircut - Men", qtyPerUnit: 0.05 },
-      { menuItem: "Manicure", qtyPerUnit: 0.02 },
-    ],
-    i7: [ // Hair Color (tubes)
-      { menuItem: "Haircut - Men", qtyPerUnit: 0.1 },
-      { menuItem: "Eyebrow Threading", qtyPerUnit: 0.05 },
-    ],
-    i8: [ // Disposable Gloves (pairs)
-      { menuItem: "Haircut - Men", qtyPerUnit: 1 },
-      { menuItem: "Manicure", qtyPerUnit: 1 },
-      { menuItem: "Beard Trim", qtyPerUnit: 1 },
-      { menuItem: "Eyebrow Threading", qtyPerUnit: 1 },
-    ],
-    i9: [ // Sandwich Bread (loaves)
-      { menuItem: "Sandwich", qtyPerUnit: 0.5 },
-      { menuItem: "Bread Loaf", qtyPerUnit: 1 },
-      { menuItem: "Burger Meal", qtyPerUnit: 0.25 },
-      { menuItem: "Family Platter", qtyPerUnit: 0.5 },
-    ],
-    i10: [ // Napkins (packs)
-      { menuItem: "Burger Meal", qtyPerUnit: 0.05 },
-      { menuItem: "Family Platter", qtyPerUnit: 0.2 },
-      { menuItem: "Grilled Chicken Combo", qtyPerUnit: 0.1 },
-    ],
-  }), []);
+  > = useMemo(
+    () => ({
+      i1: [
+        // Coffee Beans (kg)
+        { menuItem: "Burger Meal", qtyPerUnit: 0.02 },
+        { menuItem: "Milkshake", qtyPerUnit: 0.015 },
+        { menuItem: "Fresh Juice", qtyPerUnit: 0.01 },
+      ],
+      i2: [
+        // Whole Milk (L)
+        { menuItem: "Milkshake", qtyPerUnit: 0.25 },
+        { menuItem: "Fresh Juice", qtyPerUnit: 0.1 },
+        { menuItem: "Dessert Bowl", qtyPerUnit: 0.15 },
+      ],
+      i3: [
+        // Sugar (kg)
+        { menuItem: "Milkshake", qtyPerUnit: 0.03 },
+        { menuItem: "Dessert Bowl", qtyPerUnit: 0.04 },
+        { menuItem: "Fresh Juice", qtyPerUnit: 0.02 },
+      ],
+      i4: [
+        // Paper Cups
+        { menuItem: "Fresh Juice", qtyPerUnit: 1 },
+        { menuItem: "Milkshake", qtyPerUnit: 1 },
+        { menuItem: "Soft Drinks Pack", qtyPerUnit: 4 },
+      ],
+      i5: [
+        // Croissant Dough (kg)
+        { menuItem: "Sandwich", qtyPerUnit: 0.12 },
+        { menuItem: "Burger Meal", qtyPerUnit: 0.1 },
+      ],
+      i6: [
+        // Shampoo (bottles)
+        { menuItem: "Haircut - Men", qtyPerUnit: 0.05 },
+        { menuItem: "Manicure", qtyPerUnit: 0.02 },
+      ],
+      i7: [
+        // Hair Color (tubes)
+        { menuItem: "Haircut - Men", qtyPerUnit: 0.1 },
+        { menuItem: "Eyebrow Threading", qtyPerUnit: 0.05 },
+      ],
+      i8: [
+        // Disposable Gloves (pairs)
+        { menuItem: "Haircut - Men", qtyPerUnit: 1 },
+        { menuItem: "Manicure", qtyPerUnit: 1 },
+        { menuItem: "Beard Trim", qtyPerUnit: 1 },
+        { menuItem: "Eyebrow Threading", qtyPerUnit: 1 },
+      ],
+      i9: [
+        // Sandwich Bread (loaves)
+        { menuItem: "Sandwich", qtyPerUnit: 0.5 },
+        { menuItem: "Bread Loaf", qtyPerUnit: 1 },
+        { menuItem: "Burger Meal", qtyPerUnit: 0.25 },
+        { menuItem: "Family Platter", qtyPerUnit: 0.5 },
+      ],
+      i10: [
+        // Napkins (packs)
+        { menuItem: "Burger Meal", qtyPerUnit: 0.05 },
+        { menuItem: "Family Platter", qtyPerUnit: 0.2 },
+        { menuItem: "Grilled Chicken Combo", qtyPerUnit: 0.1 },
+      ],
+    }),
+    [],
+  );
 
   // Transactions in scope of the current Reports filters (date range + outlet
   // via location-name match). Used by the raw-material drill-down to count
   // how many times each menu item that uses the material was sold.
-  const filteredTransactions = useMemo(() => {
-    const fromTime = startOfDay(dateFrom).getTime();
-    const toTime = endOfDay(dateTo).getTime();
-    const allowedLocations = isAllOutlets
-      ? null
-      : new Set(
-          outlets
-            .filter((o) => outletIds.includes(o.id))
-            .map((o) => o.name.toLowerCase())
-        );
-    return initialReportTransactions.filter((t) => {
-      const ts = new Date(t.date).getTime();
-      if (Number.isFinite(ts) && (ts < fromTime || ts > toTime)) return false;
-      if (allowedLocations && !allowedLocations.has(t.location.toLowerCase()))
-        return false;
-      if (selectedCashier !== "all" && t.cashier !== selectedCashier)
-        return false;
-      return true;
-    });
-  }, [dateFrom, dateTo, isAllOutlets, outletIds, selectedCashier]);
+  const formattedFrom = dateFrom.toISOString().split("T")[0];
+  const formattedTo = dateTo.toISOString().split("T")[0];
+  const outletIdParam =
+    selectedOutletId === "all" ? undefined : selectedOutletId;
+
+  const [txnPage, setTxnPage] = useState(1);
+  const [txnRowsPerPage, setTxnRowsPerPage] = useState(DEFAULT_PAGE_SIZE);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setTxnPage(1);
+  }, [formattedFrom, formattedTo, outletIdParam, selectedCashier]);
+
+  const { data: reportsTxnsResponse, isLoading: isTxnsLoading } = useGetReportsTransactions({
+    dateFrom: formattedFrom,
+    dateTo: formattedTo,
+    outletId: outletIdParam,
+    cashierId: selectedCashier !== "all" ? selectedCashier : undefined,
+    page: txnPage,
+    per_page: txnRowsPerPage,
+  });
+
+  const filteredTransactions = reportsTxnsResponse?.data || [];
 
   // Available cashiers within current outlet scope (date-independent so filter is always usable)
-  const availableCashiers = useMemo(() => {
-    const names = new Set<string>();
-    sales.forEach((s) => {
-      if (outletIds.includes(s.outletId) && s.cashier) {
-        names.add(s.cashier);
-      }
-    });
-    return Array.from(names).sort();
-  }, [sales, outletIds]);
+  const { data: cashiersResponse } = useGetCashiersReport({
+    outletId: selectedOutletId === "all" ? "all" : selectedOutletId,
+  });
+  const availableCashiers = cashiersResponse?.data || [];
 
   // Reset cashier selection if it's no longer valid for the current outlet
   useMemo(() => {
-    if (selectedCashier !== "all" && !availableCashiers.includes(selectedCashier)) {
+    if (
+      selectedCashier !== "all" &&
+      !availableCashiers.find((c) => c.id === selectedCashier)
+    ) {
       setSelectedCashier("all");
     }
     return null;
   }, [availableCashiers, selectedCashier]);
 
-  const data = useMemo(() => {
-    const filteredExpenses = getExpensesByOutletAndPeriod(outletIds, dateFrom, dateTo);
-    let filteredSales = getSalesByOutletAndPeriod(outletIds, dateFrom, dateTo);
-    if (selectedCashier !== "all") {
-      filteredSales = filteredSales.filter((s) => s.cashier === selectedCashier);
-    }
-    const cogsInventory = getCOGSByOutletAndPeriod(outletIds, dateFrom, dateTo);
-    const totalSales = filteredSales.reduce((s, r) => s + r.totalSales, 0);
-    const cogsLabor = Math.round(totalSales * 0.10);
-    return buildPnL(filteredExpenses, filteredSales, cogsInventory, cogsLabor);
-  }, [selectedOutletId, selectedCashier, dateFrom, dateTo, outletIds, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod, getCOGSByOutletAndPeriod]);
+  const { data: profitLossReport, isLoading: isProfitLossLoading } =
+    useGetProfitLossReport({
+      dateFrom: format(dateFrom, "yyyy-MM-dd'T'HH:mm:ssxxx"),
+      dateTo: format(dateTo, "yyyy-MM-dd'T'HH:mm:ssxxx"),
+      outletId: selectedOutletId === "all" ? undefined : selectedOutletId,
+      cashierId: selectedCashier === "all" ? undefined : selectedCashier,
+    });
 
-  const cogsItemRows = useMemo(
-    () => buildCOGSItems(filteredAdjustments, itemNames),
-    [filteredAdjustments, itemNames]
-  );
+  const pnlReportData = profitLossReport?.data;
+  const pnlData = pnlReportData?.pnl || {
+    revenue: { sales: 0, otherIncome: 0 },
+    costOfGoods: { inventory: 0, directLabor: 0 },
+    expenses: {
+      rent: 0,
+      utilities: 0,
+      salaries: 0,
+      marketing: 0,
+      maintenance: 0,
+      other: 0,
+    },
+  };
+  const cogsItemRows = pnlReportData?.cogsItems || [];
+  const rawMaterials = pnlReportData?.rawMaterials || [];
+  const outletComparison = pnlReportData?.outletComparison || [];
 
-  const outletLabel = isAllOutlets ? "All Outlets" : outlets.find((o) => o.id === selectedOutletId)?.name || selectedOutletId;
+  const outletLabel = isAllOutlets
+    ? "All Outlets"
+    : outlets.find((o) => o.id === selectedOutletId)?.name || selectedOutletId;
 
   const filteredSalesForExport = useMemo(
-    () => filterSalesForExport(sales, outletIds, { from: dateFrom, to: dateTo }, selectedCashier),
-    [sales, outletIds, dateFrom, dateTo, selectedCashier]
+    () =>
+      filterSalesForExport(
+        sales,
+        outletIds,
+        { from: dateFrom, to: dateTo },
+        selectedCashier,
+      ),
+    [sales, outletIds, dateFrom, dateTo, selectedCashier],
   );
 
   const handleExportExcel = () => {
-    if (activeTab === "pnl") return exportPnLToExcel(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+    if (activeTab === "pnl")
+      return exportPnLToExcel(
+        pnlData,
+        cogsItemRows,
+        dateFrom,
+        dateTo,
+        outletLabel,
+      );
     if (activeTab === "sales")
       return exportSalesSummaryExcel({
         outletLabel,
@@ -289,15 +418,31 @@ export default function Reports() {
         outlets,
       });
     if (activeTab === "items")
-      return exportSalesByItemExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+      return exportSalesByItemExcel({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+      });
     if (activeTab === "categories")
-      return exportSalesByCategoryExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+      return exportSalesByCategoryExcel({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+      });
     if (activeTab === "departments")
-      return exportSalesByDepartmentExcel({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo, outlets });
+      return exportSalesByDepartmentExcel({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+        outlets,
+      });
     if (activeTab === "transactions") {
       // Build workbook for transactions tab
 
-      const txnRows = initialReportTransactions.map((t) => ({
+      const txnRows = filteredTransactions.map((t) => ({
         "Order ID": t.orderId,
         Date: t.date,
         Phone: t.customerPhone,
@@ -305,19 +450,31 @@ export default function Reports() {
         Cashier: t.cashier,
         Location: t.location,
         "Payment Status": t.paymentStatus,
-        "Payment Methods": t.payments.map((p) => `${p.method}: ${p.amount}`).join(", "),
+        "Payment Methods": t.payments
+          .map((p) => `${p.method}: ${p.amount}`)
+          .join(", "),
         "Order Status": t.orderStatus,
       }));
       const ws = XLSX.utils.json_to_sheet(txnRows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Transactions");
       ws["!cols"] = Object.keys(txnRows[0] || {}).map(() => ({ wch: 20 }));
-      XLSX.writeFile(wb, `Transactions_${format(dateFrom, "yyyy-MM-dd")}_${format(dateTo, "yyyy-MM-dd")}.xlsx`);
+      XLSX.writeFile(
+        wb,
+        `Transactions_${format(dateFrom, "yyyy-MM-dd")}_${format(dateTo, "yyyy-MM-dd")}.xlsx`,
+      );
     }
   };
 
   const handleExportPDF = () => {
-    if (activeTab === "pnl") return exportPnLToPDF(data, cogsItemRows, dateFrom, dateTo, outletLabel);
+    if (activeTab === "pnl")
+      return exportPnLToPDF(
+        pnlData,
+        cogsItemRows,
+        dateFrom,
+        dateTo,
+        outletLabel,
+      );
     if (activeTab === "sales")
       return exportSalesSummaryPDF({
         outletLabel,
@@ -328,17 +485,33 @@ export default function Reports() {
         outlets,
       });
     if (activeTab === "items")
-      return exportSalesByItemPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+      return exportSalesByItemPDF({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+      });
     if (activeTab === "categories")
-      return exportSalesByCategoryPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo });
+      return exportSalesByCategoryPDF({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+      });
     if (activeTab === "departments")
-      return exportSalesByDepartmentPDF({ outletLabel, selectedOutlets: outletIds, dateFrom, dateTo, outlets });
+      return exportSalesByDepartmentPDF({
+        outletLabel,
+        selectedOutlets: outletIds,
+        dateFrom,
+        dateTo,
+        outlets,
+      });
     if (activeTab === "transactions")
       return exportTransactionsPDF({
         outletLabel,
         dateFrom,
         dateTo,
-        rows: initialReportTransactions.map((t) => ({
+        rows: filteredTransactions.map((t) => ({
           orderId: t.orderId,
           date: t.date,
           customerPhone: t.customerPhone,
@@ -346,47 +519,48 @@ export default function Reports() {
           cashier: t.cashier,
           location: t.location,
           paymentStatus: t.paymentStatus,
-          paymentSummary: t.payments.map((p) => `${p.method}: ${p.amount}`).join(", "),
+          paymentSummary: t.payments
+            .map((p) => `${p.method}: ${p.amount}`)
+            .join(", "),
           orderStatus: t.orderStatus,
         })),
       });
   };
 
-  const totalRevenue = data.revenue.sales + data.revenue.otherIncome;
-  const totalCOGS = data.costOfGoods.inventory + data.costOfGoods.directLabor;
-  const grossProfit = totalRevenue - totalCOGS;
-  const totalExpenses = Object.values(data.expenses).reduce((a, b) => a + b, 0);
-  const netProfit = grossProfit - totalExpenses;
-  const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-  const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+  const totalRevenue = pnlReportData?.summary.totalRevenue ?? 0;
+  const totalCOGS = pnlReportData?.summary.totalCOGS ?? 0;
+  const grossProfit = pnlReportData?.summary.grossProfit ?? 0;
+  const grossMargin = pnlReportData?.summary.grossMargin ?? 0;
+  const totalExpenses = pnlReportData?.summary.totalExpenses ?? 0;
+  const netProfit = pnlReportData?.summary.netProfit ?? 0;
+  const netMargin = pnlReportData?.summary.netMargin ?? 0;
 
   const breakdownData = [
     { name: "COGS", value: totalCOGS, color: "hsl(var(--chart-5))" },
     { name: "Expenses", value: totalExpenses, color: "hsl(var(--chart-3))" },
-    { name: "Net Profit", value: Math.max(0, netProfit), color: "hsl(var(--chart-1))" },
+    {
+      name: "Net Profit",
+      value: Math.max(0, netProfit),
+      color: "hsl(var(--chart-1))",
+    },
   ];
 
   const expenseBreakdown = [
-    { name: "Rent", value: data.expenses.rent },
-    { name: "Utilities", value: data.expenses.utilities },
-    { name: "Salaries", value: data.expenses.salaries },
-    { name: "Marketing", value: data.expenses.marketing },
-    { name: "Maintenance", value: data.expenses.maintenance },
-    { name: "Other", value: data.expenses.other },
+    { name: "Rent", value: pnlData.expenses.rent },
+    { name: "Utilities", value: pnlData.expenses.utilities },
+    { name: "Salaries", value: pnlData.expenses.salaries },
+    { name: "Marketing", value: pnlData.expenses.marketing },
+    { name: "Maintenance", value: pnlData.expenses.maintenance },
+    { name: "Other", value: pnlData.expenses.other },
   ];
 
-  const outletComparison = useMemo(() => {
-    if (!isAllOutlets) return [];
-    return outlets.map((o) => {
-      const oExpenses = getExpensesByOutletAndPeriod([o.id], dateFrom, dateTo);
-      const oSales = getSalesByOutletAndPeriod([o.id], dateFrom, dateTo);
-      const rev = oSales.reduce((s, r) => s + r.totalSales + r.otherIncome, 0);
-      const cogs = getCOGSByOutletAndPeriod([o.id], dateFrom, dateTo);
-      const laborEst = Math.round(rev * 0.10);
-      const exp = oExpenses.reduce((s, e) => s + e.amount, 0);
-      return { name: o.name.split(" ")[0], revenue: rev, profit: rev - cogs - laborEst - exp };
-    });
-  }, [isAllOutlets, dateFrom, dateTo, getExpensesByOutletAndPeriod, getSalesByOutletAndPeriod]);
+  const outletComparisonData = useMemo(() => {
+    return outletComparison.map((oc) => ({
+      name: oc.shortName,
+      revenue: oc.revenue,
+      profit: oc.profit,
+    }));
+  }, [outletComparison]);
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
@@ -394,15 +568,29 @@ export default function Reports() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-2xl font-heading font-bold tracking-tight">Reports</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Financial performance & analytics</p>
+            <h1 className="text-xl sm:text-2xl font-heading font-bold tracking-tight">
+              Reports
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              Financial performance & analytics
+            </p>
           </div>
           <div className="flex items-center gap-1.5">
-            <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportExcel}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 h-8 text-xs sm:h-9 sm:text-sm"
+              onClick={handleExportExcel}
+            >
               <FileSpreadsheet className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Excel</span>
             </Button>
-            <Button variant="outline" size="sm" className="gap-1 h-8 text-xs sm:h-9 sm:text-sm" onClick={handleExportPDF}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 h-8 text-xs sm:h-9 sm:text-sm"
+              onClick={handleExportPDF}
+            >
               <FileText className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Print / PDF</span>
             </Button>
@@ -416,7 +604,9 @@ export default function Reports() {
             <SelectContent>
               <SelectItem value="all">All Outlets</SelectItem>
               {outlets.map((o) => (
-                <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                <SelectItem key={o.id} value={o.id}>
+                  {o.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -433,16 +623,23 @@ export default function Reports() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Cashiers</SelectItem>
-              {availableCashiers.map((name) => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
+              {availableCashiers.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Popover open={dateOpen} onOpenChange={openDatePicker}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 h-8 sm:h-9 text-xs sm:text-sm shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 sm:h-9 text-xs sm:text-sm shrink-0"
+              >
                 <CalendarIcon className="h-3.5 w-3.5" />
-                {format(dateFrom, "MMM d, h:mm a")} – {format(dateTo, "MMM d, yyyy, h:mm a")}
+                {format(dateFrom, "MMM d, h:mm a")} –{" "}
+                {format(dateTo, "MMM d, yyyy, h:mm a")}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="end">
@@ -450,20 +647,76 @@ export default function Reports() {
                 <div className="flex flex-col gap-1 p-2 border-b sm:border-b-0 sm:border-r min-w-[140px]">
                   {(() => {
                     const presets = [
-                      { label: "Today", get: () => { const n = new Date(); return [startOfDay(n), endOfDay(n)] as const; } },
-                      { label: "Yesterday", get: () => { const y = subDays(new Date(), 1); return [startOfDay(y), endOfDay(y)] as const; } },
-                      { label: "Last 7 days", get: () => [startOfDay(subDays(new Date(), 6)), endOfDay(new Date())] as const },
-                      { label: "Last 30 days", get: () => [startOfDay(subDays(new Date(), 29)), endOfDay(new Date())] as const },
-                      { label: "This Month", get: () => [startOfMonth(new Date()), endOfMonth(new Date())] as const },
-                      { label: "Last Month", get: () => [startOfMonth(subMonths(new Date(), 1)), endOfMonth(subMonths(new Date(), 1))] as const },
-                      { label: "Year to date", get: () => [startOfYear(new Date()), endOfDay(new Date())] as const },
-                      { label: "Last year", get: () => { const ly = subYears(new Date(), 1); return [startOfYear(ly), endOfYear(ly)] as const; } },
+                      {
+                        label: "Today",
+                        get: () => {
+                          const n = new Date();
+                          return [startOfDay(n), endOfDay(n)] as const;
+                        },
+                      },
+                      {
+                        label: "Yesterday",
+                        get: () => {
+                          const y = subDays(new Date(), 1);
+                          return [startOfDay(y), endOfDay(y)] as const;
+                        },
+                      },
+                      {
+                        label: "Last 7 days",
+                        get: () =>
+                          [
+                            startOfDay(subDays(new Date(), 6)),
+                            endOfDay(new Date()),
+                          ] as const,
+                      },
+                      {
+                        label: "Last 30 days",
+                        get: () =>
+                          [
+                            startOfDay(subDays(new Date(), 29)),
+                            endOfDay(new Date()),
+                          ] as const,
+                      },
+                      {
+                        label: "This Month",
+                        get: () =>
+                          [
+                            startOfMonth(new Date()),
+                            endOfMonth(new Date()),
+                          ] as const,
+                      },
+                      {
+                        label: "Last Month",
+                        get: () =>
+                          [
+                            startOfMonth(subMonths(new Date(), 1)),
+                            endOfMonth(subMonths(new Date(), 1)),
+                          ] as const,
+                      },
+                      {
+                        label: "Year to date",
+                        get: () =>
+                          [
+                            startOfYear(new Date()),
+                            endOfDay(new Date()),
+                          ] as const,
+                      },
+                      {
+                        label: "Last year",
+                        get: () => {
+                          const ly = subYears(new Date(), 1);
+                          return [startOfYear(ly), endOfYear(ly)] as const;
+                        },
+                      },
                     ];
                     const sameDay = (a: Date, b: Date) =>
-                      a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+                      a.getFullYear() === b.getFullYear() &&
+                      a.getMonth() === b.getMonth() &&
+                      a.getDate() === b.getDate();
                     return presets.map((preset) => {
                       const [pFrom, pTo] = preset.get();
-                      const active = sameDay(pFrom, draftFrom) && sameDay(pTo, draftTo);
+                      const active =
+                        sameDay(pFrom, draftFrom) && sameDay(pTo, draftTo);
                       return (
                         <Button
                           key={preset.label}
@@ -471,7 +724,8 @@ export default function Reports() {
                           variant={active ? "secondary" : "ghost"}
                           className={cn(
                             "justify-start text-xs h-8 font-normal",
-                            active && "bg-primary/10 text-primary font-medium hover:bg-primary/15"
+                            active &&
+                              "bg-primary/10 text-primary font-medium hover:bg-primary/15",
                           )}
                           onClick={() => applyDraftPreset(pFrom, pTo)}
                         >
@@ -492,12 +746,22 @@ export default function Reports() {
                       if (!range) return;
                       if (range.from) {
                         const f = new Date(range.from);
-                        f.setHours(draftFrom.getHours(), draftFrom.getMinutes(), 0, 0);
+                        f.setHours(
+                          draftFrom.getHours(),
+                          draftFrom.getMinutes(),
+                          0,
+                          0,
+                        );
                         setDraftFrom(f);
                       }
                       if (range.to) {
                         const t = new Date(range.to);
-                        t.setHours(draftTo.getHours(), draftTo.getMinutes(), 59, 999);
+                        t.setHours(
+                          draftTo.getHours(),
+                          draftTo.getMinutes(),
+                          59,
+                          999,
+                        );
                         setDraftTo(t);
                       } else if (range.from) {
                         const t = new Date(range.from);
@@ -510,31 +774,67 @@ export default function Reports() {
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-end gap-3 px-3 py-2.5 border-t bg-muted/30">
-                {([
-                  { label: "From", value: draftFrom, set: setDraftFrom },
-                  { label: "To", value: draftTo, set: setDraftTo },
-                ] as const).map(({ label, value, set }) => {
+                {(
+                  [
+                    { label: "From", value: draftFrom, set: setDraftFrom },
+                    { label: "To", value: draftTo, set: setDraftTo },
+                  ] as const
+                ).map(({ label, value, set }) => {
                   const { h12, minute, period } = get12h(value);
                   return (
                     <div key={label} className="flex flex-col gap-1">
-                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</Label>
+                      <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {label}
+                      </Label>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium min-w-[90px]">{format(value, "MMM d, yyyy")}</span>
-                        <Select value={String(h12)} onValueChange={(v) => set(setTimeParts(value, Number(v), minute, period))}>
-                          <SelectTrigger className="h-7 w-[58px] text-xs px-2"><SelectValue /></SelectTrigger>
+                        <span className="text-xs font-medium min-w-[90px]">
+                          {format(value, "MMM d, yyyy")}
+                        </span>
+                        <Select
+                          value={String(h12)}
+                          onValueChange={(v) =>
+                            set(setTimeParts(value, Number(v), minute, period))
+                          }
+                        >
+                          <SelectTrigger className="h-7 w-[58px] text-xs px-2">
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent className="max-h-[220px]">
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-                              <SelectItem key={h} value={String(h)} className="text-xs">{String(h).padStart(2, "0")}</SelectItem>
-                            ))}
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                              (h) => (
+                                <SelectItem
+                                  key={h}
+                                  value={String(h)}
+                                  className="text-xs"
+                                >
+                                  {String(h).padStart(2, "0")}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                         <span className="text-xs">:</span>
-                        <Select value={String(minute).padStart(2, "0")} onValueChange={(v) => set(setTimeParts(value, h12, Number(v), period))}>
-                          <SelectTrigger className="h-7 w-[58px] text-xs px-2"><SelectValue /></SelectTrigger>
+                        <Select
+                          value={String(minute).padStart(2, "0")}
+                          onValueChange={(v) =>
+                            set(setTimeParts(value, h12, Number(v), period))
+                          }
+                        >
+                          <SelectTrigger className="h-7 w-[58px] text-xs px-2">
+                            <SelectValue />
+                          </SelectTrigger>
                           <SelectContent className="max-h-[220px]">
-                            {Array.from({ length: 60 }, (_, i) => i).map((m) => (
-                              <SelectItem key={m} value={String(m).padStart(2, "0")} className="text-xs">{String(m).padStart(2, "0")}</SelectItem>
-                            ))}
+                            {Array.from({ length: 60 }, (_, i) => i).map(
+                              (m) => (
+                                <SelectItem
+                                  key={m}
+                                  value={String(m).padStart(2, "0")}
+                                  className="text-xs"
+                                >
+                                  {String(m).padStart(2, "0")}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                         <div className="flex rounded-md border overflow-hidden">
@@ -542,10 +842,14 @@ export default function Reports() {
                             <button
                               key={p}
                               type="button"
-                              onClick={() => set(setTimeParts(value, h12, minute, p))}
+                              onClick={() =>
+                                set(setTimeParts(value, h12, minute, p))
+                              }
                               className={cn(
                                 "px-2 h-7 text-[10px] font-medium transition-colors",
-                                period === p ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted"
+                                period === p
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-background hover:bg-muted",
                               )}
                             >
                               {p}
@@ -558,10 +862,19 @@ export default function Reports() {
                 })}
               </div>
               <div className="flex items-center justify-end gap-2 px-3 py-2.5 border-t">
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={cancelDateRange}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={cancelDateRange}
+                >
                   Cancel
                 </Button>
-                <Button size="sm" className="h-8 text-xs" onClick={applyDateRange}>
+                <Button
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={applyDateRange}
+                >
                   Apply
                 </Button>
               </div>
@@ -585,156 +898,330 @@ export default function Reports() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full sm:w-auto flex-wrap h-auto sm:h-10">
-          <TabsTrigger value="pnl" className="flex-1 sm:flex-none text-xs sm:text-sm">Profit & Loss</TabsTrigger>
-          <TabsTrigger value="sales" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales Summary</TabsTrigger>
-          <TabsTrigger value="items" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Item</TabsTrigger>
-          <TabsTrigger value="categories" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Category</TabsTrigger>
-          <TabsTrigger value="departments" className="flex-1 sm:flex-none text-xs sm:text-sm">Sales by Department</TabsTrigger>
-          <TabsTrigger value="transactions" className="flex-1 sm:flex-none text-xs sm:text-sm">Transactions</TabsTrigger>
+          <TabsTrigger
+            value="pnl"
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
+            Profit & Loss
+          </TabsTrigger>
+          <TabsTrigger
+            value="sales"
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
+            Sales Summary
+          </TabsTrigger>
+          <TabsTrigger
+            value="items"
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
+            Sales by Item
+          </TabsTrigger>
+          <TabsTrigger
+            value="categories"
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
+            Sales by Category
+          </TabsTrigger>
+          <TabsTrigger
+            value="departments"
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
+            Sales by Department
+          </TabsTrigger>
+          <TabsTrigger
+            value="transactions"
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
+          >
+            Transactions
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pnl" className="space-y-6 mt-6">
-          {/* KPI Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                  <DollarSign className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Revenue</p>
-                  <p className="text-lg font-heading font-bold">{fmt(totalRevenue)}</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                  <TrendingUp className="h-5 w-5 text-success" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Gross Profit</p>
-                  <p className="text-lg font-heading font-bold">{fmt(grossProfit)}</p>
-                  <p className="text-xs text-muted-foreground">{grossMargin.toFixed(1)}% margin</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-                  <Minus className="h-5 w-5 text-warning" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Total Expenses</p>
-                  <p className="text-lg font-heading font-bold">{fmt(totalExpenses)}</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center shrink-0", netProfit >= 0 ? "bg-success/10" : "bg-destructive/10")}>
-                  {netProfit >= 0 ? <TrendingUp className="h-5 w-5 text-success" /> : <TrendingDown className="h-5 w-5 text-destructive" />}
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Net Profit</p>
-                  <p className={cn("text-lg font-heading font-bold", netProfit >= 0 ? "text-success" : "text-destructive")}>{fmt(netProfit)}</p>
-                  <p className="text-xs text-muted-foreground">{netMargin.toFixed(1)}% margin</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* P&L Statement + Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <PnLStatement data={data} dateFrom={dateFrom} dateTo={dateTo} />
-
-            <div className="space-y-4">
-              <Card className="p-4">
-                <h3 className="text-sm font-heading font-semibold mb-4">Revenue Breakdown</h3>
-                <div className="h-[200px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={breakdownData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={2}>
-                        {breakdownData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(v: number) => fmt(v)} />
-                      <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
-
-              <Card className="p-4">
-                <h3 className="text-sm font-heading font-semibold mb-4">Expense Breakdown</h3>
-                <div className="h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={expenseBreakdown} layout="vertical" margin={{ left: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                      <XAxis type="number" tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
-                      <YAxis type="category" dataKey="name" width={80} className="text-xs" />
-                      <Tooltip formatter={(v: number) => fmt(v)} />
-                      <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </Card>
+          {isProfitLossLoading ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              <p className="text-xs text-muted-foreground">
+                Loading P&L Statement...
+              </p>
             </div>
-          </div>
-
-          {/* Raw Material Financial Contribution (replaces COGS Breakdown by Item) */}
-          <RawMaterialContribution
-            adjustments={filteredAdjustments}
-            itemNames={itemNames}
-            itemUnits={itemUnits}
-            totalRevenue={totalRevenue}
-            totalCOGS={data.costOfGoods.inventory}
-            usageMap={rawMaterialUsage}
-            transactions={filteredTransactions}
-            dateFrom={dateFrom}
-            dateTo={dateTo}
-          />
-
-          {/* Outlet Comparison */}
-          {isAllOutlets && outletComparison.length > 0 && (
-            <Card className="p-4">
-              <h3 className="text-sm font-heading font-semibold mb-4">Outlet Comparison</h3>
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={outletComparison} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="name" className="text-xs" />
-                    <YAxis tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`} className="text-xs" />
-                    <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Legend iconSize={8} wrapperStyle={{ fontSize: "12px" }} />
-                    <Bar dataKey="revenue" name="Revenue" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="profit" name="Net Profit" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+          ) : (
+            <>
+              {/* KPI Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <Card className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+                      <DollarSign className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Total Revenue
+                      </p>
+                      <p className="text-lg font-heading font-bold">
+                        {fmt(totalRevenue)}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                      <TrendingUp className="h-5 w-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Gross Profit
+                      </p>
+                      <p className="text-lg font-heading font-bold">
+                        {fmt(grossProfit)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {grossMargin.toFixed(1)}% margin
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                      <Minus className="h-5 w-5 text-warning" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Total Expenses
+                      </p>
+                      <p className="text-lg font-heading font-bold">
+                        {fmt(totalExpenses)}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={cn(
+                        "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+                        netProfit >= 0 ? "bg-success/10" : "bg-destructive/10",
+                      )}
+                    >
+                      {netProfit >= 0 ? (
+                        <TrendingUp className="h-5 w-5 text-success" />
+                      ) : (
+                        <TrendingDown className="h-5 w-5 text-destructive" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Net Profit
+                      </p>
+                      <p
+                        className={cn(
+                          "text-lg font-heading font-bold",
+                          netProfit >= 0 ? "text-success" : "text-destructive",
+                        )}
+                      >
+                        {fmt(netProfit)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {netMargin.toFixed(1)}% margin
+                      </p>
+                    </div>
+                  </div>
+                </Card>
               </div>
-            </Card>
+
+              {/* P&L Statement + Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <PnLStatement
+                  data={pnlData}
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                />
+
+                <div className="space-y-4">
+                  <Card className="p-4">
+                    <h3 className="text-sm font-heading font-semibold mb-4">
+                      Revenue Breakdown
+                    </h3>
+                    <div className="h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={breakdownData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            dataKey="value"
+                            paddingAngle={2}
+                          >
+                            {breakdownData.map((entry, i) => (
+                              <Cell key={i} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(v: number) => fmt(v)} />
+                          <Legend
+                            iconSize={8}
+                            wrapperStyle={{ fontSize: "12px" }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+
+                  <Card className="p-4">
+                    <h3 className="text-sm font-heading font-semibold mb-4">
+                      Expense Breakdown
+                    </h3>
+                    <div className="h-[220px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={expenseBreakdown}
+                          layout="vertical"
+                          margin={{ left: 10 }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            className="stroke-border"
+                          />
+                          <XAxis
+                            type="number"
+                            tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`}
+                            className="text-xs"
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            width={80}
+                            className="text-xs"
+                          />
+                          <Tooltip formatter={(v: number) => fmt(v)} />
+                          <Bar
+                            dataKey="value"
+                            fill="hsl(var(--chart-3))"
+                            radius={[0, 4, 4, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Raw Material Financial Contribution */}
+              <div className="space-y-4">
+                <RawMaterialContribution
+                  rawMaterials={rawMaterials}
+                  totalRevenue={totalRevenue}
+                  usageMap={rawMaterialUsage}
+                  transactions={filteredTransactions}
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                />
+                {reportsTxnsResponse?.meta && (
+                  <ResuablePagination
+                    currentPage={txnPage}
+                    totalPages={reportsTxnsResponse.meta.last_page}
+                    totalItems={reportsTxnsResponse.meta.total}
+                    rowsPerPage={txnRowsPerPage}
+                    onPageChange={setTxnPage}
+                    onRowsPerPageChange={setTxnRowsPerPage}
+                    isLoading={isTxnsLoading}
+                  />
+                )}
+              </div>
+
+              {/* Outlet Comparison */}
+              {isAllOutlets && outletComparisonData.length > 0 && (
+                <Card className="p-4">
+                  <h3 className="text-sm font-heading font-semibold mb-4">
+                    Outlet Comparison
+                  </h3>
+                  <div className="h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={outletComparisonData}
+                        margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          className="stroke-border"
+                        />
+                        <XAxis dataKey="name" className="text-xs" />
+                        <YAxis
+                          tickFormatter={(v) => `₦${(v / 1000).toFixed(0)}k`}
+                          className="text-xs"
+                        />
+                        <Tooltip formatter={(v: number) => fmt(v)} />
+                        <Legend
+                          iconSize={8}
+                          wrapperStyle={{ fontSize: "12px" }}
+                        />
+                        <Bar
+                          dataKey="revenue"
+                          name="Revenue"
+                          fill="hsl(var(--chart-2))"
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar
+                          dataKey="profit"
+                          name="Net Profit"
+                          fill="hsl(var(--chart-1))"
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              )}
+            </>
           )}
         </TabsContent>
 
         <TabsContent value="sales" className="mt-6">
-          <SalesReport sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} outlets={outlets} />
+          <SalesReport
+            sales={sales}
+            selectedOutlets={outletIds}
+            dateRange={{ from: dateFrom, to: dateTo }}
+            cashierFilter={selectedCashier}
+            outlets={outlets}
+          />
         </TabsContent>
 
         <TabsContent value="items" className="mt-6">
-          <SalesByItem sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+          <SalesByItem
+            sales={sales}
+            selectedOutlets={outletIds}
+            dateRange={{ from: dateFrom, to: dateTo }}
+            cashierFilter={selectedCashier}
+          />
         </TabsContent>
 
         <TabsContent value="categories" className="mt-6">
-          <SalesByCategory sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+          <SalesByCategory
+            sales={sales}
+            selectedOutlets={outletIds}
+            dateRange={{ from: dateFrom, to: dateTo }}
+            cashierFilter={selectedCashier}
+          />
         </TabsContent>
 
         <TabsContent value="departments" className="mt-6">
-          <SalesByDepartment sales={sales} selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} outlets={outlets} />
+          <SalesByDepartment
+            sales={sales}
+            selectedOutlets={outletIds}
+            dateRange={{ from: dateFrom, to: dateTo }}
+            cashierFilter={selectedCashier}
+            outlets={outlets}
+          />
         </TabsContent>
 
         <TabsContent value="transactions" className="mt-6">
-          <ReportTransactions selectedOutlets={outletIds} dateRange={{ from: dateFrom, to: dateTo }} cashierFilter={selectedCashier} />
+          <ReportTransactions
+            selectedOutlets={outletIds}
+            dateRange={{ from: dateFrom, to: dateTo }}
+            cashierFilter={selectedCashier}
+          />
         </TabsContent>
       </Tabs>
     </div>

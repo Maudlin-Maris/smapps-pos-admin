@@ -1,7 +1,35 @@
-import { Fragment, useMemo, useState } from "react";
-import { usePagination } from "@/hooks/use-pagination";
-import PaginationControls from "@/components/inventory/PaginationControls";
+import { Fragment, useMemo, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { ResuablePagination } from "@/components/ui/reusable-pagination";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
+import {
+  useGetSubscription,
+  useGetPlans,
+  useGetUsage,
+  useGetFeatures,
+  useGetAddons,
+  useGetQrMenu,
+  useGetBillingPaymentMethods,
+  useGetBillingInvoices,
+  useGetBillingUpcomingInvoice,
+  useGetAuditLogs,
+  useCancelSubscription,
+  useConfirmPlanChange,
+  useActivateAddon,
+  useDeactivateAddon,
+  useDeleteAddon,
+  useCreateBillingPaymentMethod,
+  useCreateBillingPortal,
+  usePreviewPlanChange,
+  useChangePlan,
+  useReactivateSubscription,
+  useDeleteBillingPaymentMethod,
+  useUpdateSubscription,
+  useSetDefaultBillingPaymentMethod,
+  useUpdateAutoRenew,
+} from "@/services/api/subscriptions";
+import { API_BASE_URL, API_ENDPOINTS } from "@/services/api/endpoints";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -67,7 +95,11 @@ import {
   ExternalLink,
   type LucideIcon,
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -95,7 +127,13 @@ import { cn } from "@/lib/utils";
 /* -------------------------------------------------------------------------- */
 /*                       Click-to-reveal feature tooltip                      */
 /* -------------------------------------------------------------------------- */
-function FeatureInfo({ title, description }: { title: string; description: string }) {
+function FeatureInfo({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <Popover>
       <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -109,7 +147,9 @@ function FeatureInfo({ title, description }: { title: string; description: strin
       </PopoverTrigger>
       <PopoverContent side="top" align="start" className="w-64 p-3">
         <p className="text-xs font-semibold mb-1">{title}</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          {description}
+        </p>
       </PopoverContent>
     </Popover>
   );
@@ -130,13 +170,57 @@ const subscription = {
 };
 
 const usage = [
-  { key: "outlets", label: "Outlets", icon: Store, used: 4, limit: 10, unit: "" },
+  {
+    key: "outlets",
+    label: "Outlets",
+    icon: Store,
+    used: 4,
+    limit: 10,
+    unit: "",
+  },
   { key: "staff", label: "Staff", icon: Users, used: 32, limit: 50, unit: "" },
-  { key: "cashiers", label: "Cashiers", icon: Receipt, used: 18, limit: 25, unit: "" },
-  { key: "registers", label: "Registers", icon: Monitor, used: 9, limit: 15, unit: "" },
-  { key: "transactions", label: "Transactions", icon: Activity, used: 42300, limit: 50000, unit: "/mo" },
-  { key: "storage", label: "Storage", icon: HardDrive, used: 84, limit: 100, unit: " GB" },
+  {
+    key: "cashiers",
+    label: "Cashiers",
+    icon: Receipt,
+    used: 18,
+    limit: 25,
+    unit: "",
+  },
+  {
+    key: "registers",
+    label: "Registers",
+    icon: Monitor,
+    used: 9,
+    limit: 15,
+    unit: "",
+  },
+  {
+    key: "transactions",
+    label: "Transactions",
+    icon: Activity,
+    used: 42300,
+    limit: 50000,
+    unit: "/mo",
+  },
+  {
+    key: "storage",
+    label: "Storage",
+    icon: HardDrive,
+    used: 84,
+    limit: 100,
+    unit: " GB",
+  },
 ];
+
+const usageIcons: Record<string, LucideIcon> = {
+  outlets: Store,
+  staff: Users,
+  cashiers: Receipt,
+  registers: Monitor,
+  transactions: Activity,
+  storage: HardDrive,
+};
 
 /**
  * Master feature catalog — derived from the actual application modules
@@ -156,72 +240,310 @@ interface FeatureDef {
 
 const featureCatalog: FeatureDef[] = [
   // ───── POS & Checkout (Core) ─────
-  { category: "POS & Checkout", tier: 0, name: "Core POS & Catalog",       desc: "Cart, checkout, item search, variants" },
-  { category: "POS & Checkout", tier: 0, name: "Cashier PIN & Lock Screen",desc: "Multi-session sign-in, fast switching" },
-  { category: "POS & Checkout", tier: 0, name: "Receipt Printing",         desc: "Thermal & A4 receipt printing" },
-  { category: "POS & Checkout", tier: 0, name: "Shift Management",         desc: "Open / close shifts, cash drawer reconciliation" },
-  { category: "POS & Checkout", tier: 1, name: "Split Payments & Tips",    desc: "Multi-tender, tip pooling & payouts" },
-  { category: "POS & Checkout", tier: 1, name: "Order Merging & Modifiers",desc: "Combine tickets, auth-protected edits" },
-  { category: "POS & Checkout", tier: 1, name: "Barcode Scan & Print",     desc: "Camera + hardware scanners, bulk label printing" },
+  {
+    category: "POS & Checkout",
+    tier: 0,
+    name: "Core POS & Catalog",
+    desc: "Cart, checkout, item search, variants",
+  },
+  {
+    category: "POS & Checkout",
+    tier: 0,
+    name: "Cashier PIN & Lock Screen",
+    desc: "Multi-session sign-in, fast switching",
+  },
+  {
+    category: "POS & Checkout",
+    tier: 0,
+    name: "Receipt Printing",
+    desc: "Thermal & A4 receipt printing",
+  },
+  {
+    category: "POS & Checkout",
+    tier: 0,
+    name: "Shift Management",
+    desc: "Open / close shifts, cash drawer reconciliation",
+  },
+  {
+    category: "POS & Checkout",
+    tier: 1,
+    name: "Split Payments & Tips",
+    desc: "Multi-tender, tip pooling & payouts",
+  },
+  {
+    category: "POS & Checkout",
+    tier: 1,
+    name: "Order Merging & Modifiers",
+    desc: "Combine tickets, auth-protected edits",
+  },
+  {
+    category: "POS & Checkout",
+    tier: 1,
+    name: "Barcode Scan & Print",
+    desc: "Camera + hardware scanners, bulk label printing",
+  },
 
   // ───── Menu & Catalog ─────
-  { category: "Menu & Catalog", tier: 0, name: "Menu Management",          desc: "Items, categories, basic variants" },
-  { category: "Menu & Catalog", tier: 1, name: "Modifier Groups",          desc: "Reusable add-ons & forced choices" },
-  { category: "Menu & Catalog", tier: 1, name: "Composite Items & Recipes",desc: "BOM, unit mappings, substitutions" },
-  { category: "Menu & Catalog", tier: 1, name: "Promo Bundles",            desc: "Locked groups, Toast-style upcharges" },
+  {
+    category: "Menu & Catalog",
+    tier: 0,
+    name: "Menu Management",
+    desc: "Items, categories, basic variants",
+  },
+  {
+    category: "Menu & Catalog",
+    tier: 1,
+    name: "Modifier Groups",
+    desc: "Reusable add-ons & forced choices",
+  },
+  {
+    category: "Menu & Catalog",
+    tier: 1,
+    name: "Composite Items & Recipes",
+    desc: "BOM, unit mappings, substitutions",
+  },
+  {
+    category: "Menu & Catalog",
+    tier: 1,
+    name: "Promo Bundles",
+    desc: "Locked groups, Toast-style upcharges",
+  },
 
   // ───── Inventory ─────
-  { category: "Inventory",      tier: 0, name: "Stock Tracking",           desc: "On-hand quantities & low-stock alerts" },
-  { category: "Inventory",      tier: 1, name: "WAC Valuation",            desc: "Weighted-average cost, live recalc" },
-  { category: "Inventory",      tier: 1, name: "Batch & FEFO Tracking",    desc: "Lot IDs, expiry-first depletion" },
-  { category: "Inventory",      tier: 1, name: "Inventory History & Audit",desc: "Full adjustment log with reasons" },
-  { category: "Inventory",      tier: 1, name: "Stock Transfers",          desc: "Inter-outlet transfers & approvals" },
-  { category: "Inventory",      tier: 1, name: "Bulk Import / Receive",    desc: "CSV import, bulk receive workflows" },
+  {
+    category: "Inventory",
+    tier: 0,
+    name: "Stock Tracking",
+    desc: "On-hand quantities & low-stock alerts",
+  },
+  {
+    category: "Inventory",
+    tier: 1,
+    name: "WAC Valuation",
+    desc: "Weighted-average cost, live recalc",
+  },
+  {
+    category: "Inventory",
+    tier: 1,
+    name: "Batch & FEFO Tracking",
+    desc: "Lot IDs, expiry-first depletion",
+  },
+  {
+    category: "Inventory",
+    tier: 1,
+    name: "Inventory History & Audit",
+    desc: "Full adjustment log with reasons",
+  },
+  {
+    category: "Inventory",
+    tier: 1,
+    name: "Stock Transfers",
+    desc: "Inter-outlet transfers & approvals",
+  },
+  {
+    category: "Inventory",
+    tier: 1,
+    name: "Bulk Import / Receive",
+    desc: "CSV import, bulk receive workflows",
+  },
 
   // ───── Outlets & Operations ─────
-  { category: "Outlets",        tier: 0, name: "Single Outlet",            desc: "One location, one terminal pool" },
-  { category: "Outlets",        tier: 1, name: "Multi-Outlet Management",  desc: "Centralised admin across locations" },
-  { category: "Outlets",        tier: 1, name: "Departments & Routing",    desc: "Kitchen / bar / counter routing" },
-  { category: "Outlets",        tier: 1, name: "Fees, Taxes & Discounts",  desc: "Location-specific charges & rules" },
-  { category: "Outlets",        tier: 1, name: "Terminal Management",      desc: "Device linking IDs, per-outlet binding" },
-  { category: "Outlets",        tier: 2, name: "Multi-Business Groups",    desc: "Parent-child org hierarchy" },
+  {
+    category: "Outlets",
+    tier: 0,
+    name: "Single Outlet",
+    desc: "One location, one terminal pool",
+  },
+  {
+    category: "Outlets",
+    tier: 1,
+    name: "Multi-Outlet Management",
+    desc: "Centralised admin across locations",
+  },
+  {
+    category: "Outlets",
+    tier: 1,
+    name: "Departments & Routing",
+    desc: "Kitchen / bar / counter routing",
+  },
+  {
+    category: "Outlets",
+    tier: 1,
+    name: "Fees, Taxes & Discounts",
+    desc: "Location-specific charges & rules",
+  },
+  {
+    category: "Outlets",
+    tier: 1,
+    name: "Terminal Management",
+    desc: "Device linking IDs, per-outlet binding",
+  },
+  {
+    category: "Outlets",
+    tier: 2,
+    name: "Multi-Business Groups",
+    desc: "Parent-child org hierarchy",
+  },
 
   // ───── Customers & Loyalty ─────
-  { category: "Customers",      tier: 0, name: "Customer Database",        desc: "Profiles, contact info, order history" },
-  { category: "Customers",      tier: 1, name: "Loyalty Program",          desc: "Points, tiers, location overrides", addon: true },
-  { category: "Customers",      tier: 1, name: "Service Bookings",         desc: "Appointments, duration & status",   addon: true },
+  {
+    category: "Customers",
+    tier: 0,
+    name: "Customer Database",
+    desc: "Profiles, contact info, order history",
+  },
+  {
+    category: "Customers",
+    tier: 1,
+    name: "Loyalty Program",
+    desc: "Points, tiers, location overrides",
+    addon: true,
+  },
+  {
+    category: "Customers",
+    tier: 1,
+    name: "Service Bookings",
+    desc: "Appointments, duration & status",
+    addon: true,
+  },
 
   // ───── Reports & Analytics ─────
-  { category: "Reports",        tier: 0, name: "Basic Sales Reports",      desc: "Daily totals, by item, by cashier" },
-  { category: "Reports",        tier: 1, name: "Advanced Reports",         desc: "P&L, COGS, raw-material contribution" },
-  { category: "Reports",        tier: 1, name: "Profitability Analytics",  desc: "Margin by item, category, department" },
-  { category: "Reports",        tier: 1, name: "Report Exports",           desc: "Excel / CSV / PDF export bundles" },
-  { category: "Reports",        tier: 2, name: "Custom Reports & BI Feed", desc: "Custom dashboards & data warehouse sync", addon: true },
+  {
+    category: "Reports",
+    tier: 0,
+    name: "Basic Sales Reports",
+    desc: "Daily totals, by item, by cashier",
+  },
+  {
+    category: "Reports",
+    tier: 1,
+    name: "Advanced Reports",
+    desc: "P&L, COGS, raw-material contribution",
+  },
+  {
+    category: "Reports",
+    tier: 1,
+    name: "Profitability Analytics",
+    desc: "Margin by item, category, department",
+  },
+  {
+    category: "Reports",
+    tier: 1,
+    name: "Report Exports",
+    desc: "Excel / CSV / PDF export bundles",
+  },
+  {
+    category: "Reports",
+    tier: 2,
+    name: "Custom Reports & BI Feed",
+    desc: "Custom dashboards & data warehouse sync",
+    addon: true,
+  },
 
   // ───── Finance ─────
-  { category: "Finance",        tier: 1, name: "Expense Management",       desc: "Track outlet expenses & categories" },
-  { category: "Finance",        tier: 1, name: "Tips Management",          desc: "Pooling rules & cashier payouts" },
+  {
+    category: "Finance",
+    tier: 1,
+    name: "Expense Management",
+    desc: "Track outlet expenses & categories",
+  },
+  {
+    category: "Finance",
+    tier: 1,
+    name: "Tips Management",
+    desc: "Pooling rules & cashier payouts",
+  },
 
   // ───── Kitchen & Fulfillment ─────
-  { category: "Kitchen",        tier: 1, name: "Kitchen Display (KDS)",    desc: "Live tickets, station routing",       addon: true },
-  { category: "Kitchen",        tier: 2, name: "Delivery & Dispatch",      desc: "Rider assignment & tracking",         addon: true },
-  { category: "Kitchen",        tier: 2, name: "Online Ordering",          desc: "Branded order-ahead web storefront",  addon: true },
+  {
+    category: "Kitchen",
+    tier: 1,
+    name: "Kitchen Display (KDS)",
+    desc: "Live tickets, station routing",
+    addon: true,
+  },
+  {
+    category: "Kitchen",
+    tier: 2,
+    name: "Delivery & Dispatch",
+    desc: "Rider assignment & tracking",
+    addon: true,
+  },
+  {
+    category: "Kitchen",
+    tier: 2,
+    name: "Online Ordering",
+    desc: "Branded order-ahead web storefront",
+    addon: true,
+  },
 
   // ───── Users & Security ─────
-  { category: "Users & Security", tier: 0, name: "Staff Roles & PINs",     desc: "Basic role assignment" },
-  { category: "Users & Security", tier: 1, name: "Granular RBAC",          desc: "Permission matrix per role" },
-  { category: "Users & Security", tier: 2, name: "SSO / SAML",             desc: "Enterprise identity provider login" },
-  { category: "Users & Security", tier: 2, name: "Advanced Audit Logs",    desc: "Tamper-evident activity trail" },
+  {
+    category: "Users & Security",
+    tier: 0,
+    name: "Staff Roles & PINs",
+    desc: "Basic role assignment",
+  },
+  {
+    category: "Users & Security",
+    tier: 1,
+    name: "Granular RBAC",
+    desc: "Permission matrix per role",
+  },
+  {
+    category: "Users & Security",
+    tier: 2,
+    name: "SSO / SAML",
+    desc: "Enterprise identity provider login",
+  },
+  {
+    category: "Users & Security",
+    tier: 2,
+    name: "Advanced Audit Logs",
+    desc: "Tamper-evident activity trail",
+  },
 
   // ───── Platform & Extensibility ─────
-  { category: "Platform",       tier: 2, name: "API Access & Webhooks",    desc: "REST endpoints & event webhooks",     addon: true },
-  { category: "Platform",       tier: 2, name: "White Label",              desc: "Custom branding & domain" },
-  { category: "Platform",       tier: 2, name: "WhatsApp Receipts",        desc: "Auto-send digital receipts",          addon: true },
+  {
+    category: "Platform",
+    tier: 2,
+    name: "API Access & Webhooks",
+    desc: "REST endpoints & event webhooks",
+    addon: true,
+  },
+  {
+    category: "Platform",
+    tier: 2,
+    name: "White Label",
+    desc: "Custom branding & domain",
+  },
+  {
+    category: "Platform",
+    tier: 2,
+    name: "WhatsApp Receipts",
+    desc: "Auto-send digital receipts",
+    addon: true,
+  },
 
   // ───── Support & SLA ─────
-  { category: "Support",        tier: 0, name: "Email Support",            desc: "Standard email response" },
-  { category: "Support",        tier: 1, name: "Priority Support",         desc: "Faster response, in-app chat" },
-  { category: "Support",        tier: 2, name: "Dedicated CSM & 99.9% SLA",desc: "Named success manager, uptime SLA" },
+  {
+    category: "Support",
+    tier: 0,
+    name: "Email Support",
+    desc: "Standard email response",
+  },
+  {
+    category: "Support",
+    tier: 1,
+    name: "Priority Support",
+    desc: "Faster response, in-app chat",
+  },
+  {
+    category: "Support",
+    tier: 2,
+    name: "Dedicated CSM & 99.9% SLA",
+    desc: "Named success manager, uptime SLA",
+  },
 ];
 
 const planByTier: Record<0 | 1 | 2, string> = {
@@ -232,14 +554,18 @@ const planByTier: Record<0 | 1 | 2, string> = {
 
 /** Plan name → set of feature names included by that tier (cumulative). */
 const planFeatures: Record<string, string[]> = {
-  Starter:        featureCatalog.filter((f) => f.tier <= 0).map((f) => f.name),
+  Starter: featureCatalog.filter((f) => f.tier <= 0).map((f) => f.name),
   "Business Pro": featureCatalog.filter((f) => f.tier <= 1).map((f) => f.name),
-  Enterprise:     featureCatalog.filter((f) => f.tier <= 2).map((f) => f.name),
+  Enterprise: featureCatalog.filter((f) => f.tier <= 2).map((f) => f.name),
 };
 
 const CURRENT_PLAN = subscription.plan;
-const enabledFeatures = featureCatalog.filter((f) => planFeatures[CURRENT_PLAN].includes(f.name));
-const disabledFeatures = featureCatalog.filter((f) => !planFeatures[CURRENT_PLAN].includes(f.name));
+const enabledFeatures = featureCatalog.filter((f) =>
+  planFeatures[CURRENT_PLAN].includes(f.name),
+);
+const disabledFeatures = featureCatalog.filter(
+  (f) => !planFeatures[CURRENT_PLAN].includes(f.name),
+);
 
 /** Icon resolution for add-on cards. */
 const addonIcons: Record<string, LucideIcon> = {
@@ -268,15 +594,92 @@ interface AddonDef {
 }
 
 const addons: AddonDef[] = [
-  { key: "loyalty",  name: "Loyalty Engine",     icon: addonIcons.loyalty,  price: "₦12,000/mo", active: true,  includedFromTier: 1, desc: "Points, tiers & redemption rules" },
-  { key: "kds",      name: "Kitchen Display",    icon: addonIcons.kds,      price: "₦9,000/mo",  active: true,  includedFromTier: 1, desc: "Real-time kitchen station tickets" },
-  { key: "bookings", name: "Service Bookings",   icon: addonIcons.bookings, price: "₦8,000/mo",  active: false, includedFromTier: 1, desc: "Appointments for salons & services" },
-  { key: "qrmenu",   name: "QR Code Menu",       icon: addonIcons.qrmenu,   price: "₦5,000/mo",  active: false, includedFromTier: 1, desc: "Customers scan a QR to view your catalog on their phone" },
-  { key: "delivery", name: "Delivery & Dispatch",icon: addonIcons.delivery, price: "₦18,000/mo", active: false, includedFromTier: 2, desc: "Rider assignment & live tracking", comingSoon: true },
-  { key: "online",   name: "Online Ordering",    icon: addonIcons.online,   price: "₦22,000/mo", active: false, includedFromTier: 2, desc: "Branded order-ahead storefront", comingSoon: true },
-  { key: "whatsapp", name: "WhatsApp Receipts",  icon: addonIcons.whatsapp, price: "₦6,000/mo",  active: false, includedFromTier: 2, desc: "Auto-send digital receipts", comingSoon: true },
-  { key: "api",      name: "API Access",         icon: addonIcons.api,      price: "₦25,000/mo", active: false, includedFromTier: 2, desc: "REST endpoints & webhooks", comingSoon: true },
-  { key: "bi",       name: "BI Data Feed",       icon: addonIcons.bi,       price: "₦30,000/mo", active: false, includedFromTier: 2, desc: "Warehouse sync for Looker / Power BI", comingSoon: true },
+  {
+    key: "loyalty",
+    name: "Loyalty Engine",
+    icon: addonIcons.loyalty,
+    price: "₦12,000/mo",
+    active: true,
+    includedFromTier: 1,
+    desc: "Points, tiers & redemption rules",
+  },
+  {
+    key: "kds",
+    name: "Kitchen Display",
+    icon: addonIcons.kds,
+    price: "₦9,000/mo",
+    active: true,
+    includedFromTier: 1,
+    desc: "Real-time kitchen station tickets",
+  },
+  {
+    key: "bookings",
+    name: "Service Bookings",
+    icon: addonIcons.bookings,
+    price: "₦8,000/mo",
+    active: false,
+    includedFromTier: 1,
+    desc: "Appointments for salons & services",
+  },
+  {
+    key: "qrmenu",
+    name: "QR Code Menu",
+    icon: addonIcons.qrmenu,
+    price: "₦5,000/mo",
+    active: false,
+    includedFromTier: 1,
+    desc: "Customers scan a QR to view your catalog on their phone",
+  },
+  {
+    key: "delivery",
+    name: "Delivery & Dispatch",
+    icon: addonIcons.delivery,
+    price: "₦18,000/mo",
+    active: false,
+    includedFromTier: 2,
+    desc: "Rider assignment & live tracking",
+    comingSoon: true,
+  },
+  {
+    key: "online",
+    name: "Online Ordering",
+    icon: addonIcons.online,
+    price: "₦22,000/mo",
+    active: false,
+    includedFromTier: 2,
+    desc: "Branded order-ahead storefront",
+    comingSoon: true,
+  },
+  {
+    key: "whatsapp",
+    name: "WhatsApp Receipts",
+    icon: addonIcons.whatsapp,
+    price: "₦6,000/mo",
+    active: false,
+    includedFromTier: 2,
+    desc: "Auto-send digital receipts",
+    comingSoon: true,
+  },
+  {
+    key: "api",
+    name: "API Access",
+    icon: addonIcons.api,
+    price: "₦25,000/mo",
+    active: false,
+    includedFromTier: 2,
+    desc: "REST endpoints & webhooks",
+    comingSoon: true,
+  },
+  {
+    key: "bi",
+    name: "BI Data Feed",
+    icon: addonIcons.bi,
+    price: "₦30,000/mo",
+    active: false,
+    includedFromTier: 2,
+    desc: "Warehouse sync for Looker / Power BI",
+    comingSoon: true,
+  },
 ];
 
 const comparisonPlans = [
@@ -327,7 +730,13 @@ interface PaymentMethod {
 }
 const initialPaymentMethods: PaymentMethod[] = [
   { id: "pm_1", brand: "Visa", last4: "4242", exp: "08/27", default: true },
-  { id: "pm_2", brand: "Mastercard", last4: "8801", exp: "12/26", default: false },
+  {
+    id: "pm_2",
+    brand: "Mastercard",
+    last4: "8801",
+    exp: "12/26",
+    default: false,
+  },
 ];
 
 const upcomingInvoice = {
@@ -343,33 +752,114 @@ const upcomingInvoice = {
 };
 
 const invoiceHistory = [
-  { id: "INV-2026-002", date: "Feb 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2026-001", date: "Jan 15, 2026", amount: "₦118,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2025-012", date: "Dec 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2025-011", date: "Nov 15, 2025", amount: "₦100,000", status: "Paid", method: "Visa •••• 4242" },
-  { id: "INV-2025-010", date: "Oct 15, 2025", amount: "₦79,000", status: "Paid", method: "Visa •••• 4242" },
+  {
+    id: "INV-2026-002",
+    date: "Feb 15, 2026",
+    amount: "₦118,000",
+    status: "Paid",
+    method: "Visa •••• 4242",
+  },
+  {
+    id: "INV-2026-001",
+    date: "Jan 15, 2026",
+    amount: "₦118,000",
+    status: "Paid",
+    method: "Visa •••• 4242",
+  },
+  {
+    id: "INV-2025-012",
+    date: "Dec 15, 2025",
+    amount: "₦100,000",
+    status: "Paid",
+    method: "Visa •••• 4242",
+  },
+  {
+    id: "INV-2025-011",
+    date: "Nov 15, 2025",
+    amount: "₦100,000",
+    status: "Paid",
+    method: "Visa •••• 4242",
+  },
+  {
+    id: "INV-2025-010",
+    date: "Oct 15, 2025",
+    amount: "₦79,000",
+    status: "Paid",
+    method: "Visa •••• 4242",
+  },
 ];
-
-
 
 /** Numeric entitlement limits per plan (Infinity = unlimited). */
 const planLimits: Record<string, Record<string, number>> = {
-  Starter: { outlets: 1, staff: 10, cashiers: 5, registers: 3, transactions: 5000, storage: 20 },
-  "Business Pro": { outlets: 10, staff: 50, cashiers: 25, registers: 15, transactions: 50000, storage: 100 },
+  Starter: {
+    outlets: 1,
+    staff: 10,
+    cashiers: 5,
+    registers: 3,
+    transactions: 5000,
+    storage: 20,
+  },
+  "Business Pro": {
+    outlets: 10,
+    staff: 50,
+    cashiers: 25,
+    registers: 15,
+    transactions: 50000,
+    storage: 100,
+  },
   Enterprise: {
-    outlets: Infinity, staff: Infinity, cashiers: Infinity,
-    registers: Infinity, transactions: Infinity, storage: 1000,
+    outlets: Infinity,
+    staff: Infinity,
+    cashiers: Infinity,
+    registers: Infinity,
+    transactions: Infinity,
+    storage: 1000,
   },
 };
 
 const auditLog = [
-  { date: "Feb 15, 2026", type: "renewal", title: "Subscription renewed", desc: "Business Pro — ₦118,000 charged to Visa •••• 4242" },
-  { date: "Feb 02, 2026", type: "addon", title: "Add-on activated", desc: "Kitchen Display add-on added (₦9,000/mo)" },
-  { date: "Jan 18, 2026", type: "upgrade", title: "Plan upgraded", desc: "Starter → Business Pro" },
-  { date: "Dec 22, 2025", type: "failed", title: "Payment failed", desc: "Visa •••• 1212 declined — retried successfully" },
-  { date: "Dec 15, 2025", type: "renewal", title: "Subscription renewed", desc: "Starter — ₦29,000 charged" },
-  { date: "Nov 30, 2025", type: "downgrade", title: "Plan downgraded", desc: "Business Pro → Starter (cost optimisation)" },
-  { date: "Oct 15, 2025", type: "renewal", title: "Subscription renewed", desc: "Business Pro — ₦79,000 charged" },
+  {
+    date: "Feb 15, 2026",
+    type: "renewal",
+    title: "Subscription renewed",
+    desc: "Business Pro — ₦118,000 charged to Visa •••• 4242",
+  },
+  {
+    date: "Feb 02, 2026",
+    type: "addon",
+    title: "Add-on activated",
+    desc: "Kitchen Display add-on added (₦9,000/mo)",
+  },
+  {
+    date: "Jan 18, 2026",
+    type: "upgrade",
+    title: "Plan upgraded",
+    desc: "Starter → Business Pro",
+  },
+  {
+    date: "Dec 22, 2025",
+    type: "failed",
+    title: "Payment failed",
+    desc: "Visa •••• 1212 declined — retried successfully",
+  },
+  {
+    date: "Dec 15, 2025",
+    type: "renewal",
+    title: "Subscription renewed",
+    desc: "Starter — ₦29,000 charged",
+  },
+  {
+    date: "Nov 30, 2025",
+    type: "downgrade",
+    title: "Plan downgraded",
+    desc: "Business Pro → Starter (cost optimisation)",
+  },
+  {
+    date: "Oct 15, 2025",
+    type: "renewal",
+    title: "Subscription renewed",
+    desc: "Business Pro — ₦79,000 charged",
+  },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -440,20 +930,25 @@ const auditIconMap: Record<string, { icon: LucideIcon; cls: string }> = {
 /*               Plan-change workflow: eligibility + preview                  */
 /* -------------------------------------------------------------------------- */
 
-const fmtNaira = (n: number) =>
-  "₦" + Math.round(n).toLocaleString("en-NG");
-const fmtLimit = (n: number) => (n === Infinity ? "Unlimited" : n.toLocaleString());
+const fmtNaira = (n: number) => "₦" + Math.round(n).toLocaleString("en-NG");
+const fmtLimit = (n: number) =>
+  n === Infinity ? "Unlimited" : n.toLocaleString();
 
 interface PlanChangePreview {
   kind: "upgrade" | "downgrade" | "same";
-  current: typeof comparisonPlans[number];
-  target: typeof comparisonPlans[number];
+  current: (typeof comparisonPlans)[number];
+  target: (typeof comparisonPlans)[number];
   /** Blocking issues that must be resolved before the change is allowed. */
   blockers: { resource: string; used: number; newLimit: number }[];
   /** Non-blocking warnings (e.g. features the user will lose). */
   warnings: string[];
   /** Entitlement diffs displayed in the dialog. */
-  limitDiff: { label: string; from: string; to: string; tone: "up" | "down" | "same" }[];
+  limitDiff: {
+    label: string;
+    from: string;
+    to: string;
+    tone: "up" | "down" | "same";
+  }[];
   featureDiff: { gained: string[]; lost: string[] };
   /** Proration math + next invoice preview line items. */
   proration: number; // credit (negative on downgrade, positive on upgrade)
@@ -470,12 +965,20 @@ function buildPlanChangePreview(targetName: string): PlanChangePreview | null {
   if (!current || !target) return null;
 
   const kind: PlanChangePreview["kind"] =
-    target.tier === current.tier ? "same" : target.tier > current.tier ? "upgrade" : "downgrade";
+    target.tier === current.tier
+      ? "same"
+      : target.tier > current.tier
+        ? "upgrade"
+        : "downgrade";
 
   // Eligibility: downgrades blocked when current usage exceeds the target's limits.
   const targetLimits = planLimits[target.name] ?? {};
   const blockers = usage
-    .map((u) => ({ resource: u.label, used: u.used, newLimit: targetLimits[u.key] ?? Infinity }))
+    .map((u) => ({
+      resource: u.label,
+      used: u.used,
+      newLimit: targetLimits[u.key] ?? Infinity,
+    }))
     .filter((b) => b.used > b.newLimit);
 
   // Feature diff
@@ -500,7 +1003,10 @@ function buildPlanChangePreview(targetName: string): PlanChangePreview | null {
       label,
       from: fmtLimit(from),
       to: fmtLimit(to),
-      tone: (to > from ? "up" : to < from ? "down" : "same") as "up" | "down" | "same",
+      tone: (to > from ? "up" : to < from ? "down" : "same") as
+        | "up"
+        | "down"
+        | "same",
     };
   });
 
@@ -535,15 +1041,29 @@ function buildPlanChangePreview(targetName: string): PlanChangePreview | null {
   const invoiceTotal = Math.max(0, proration);
 
   const warnings: string[] = [];
-  if (lost.length) warnings.push(`You'll lose access to ${lost.length} feature${lost.length > 1 ? "s" : ""} on ${target.name}.`);
+  if (lost.length)
+    warnings.push(
+      `You'll lose access to ${lost.length} feature${lost.length > 1 ? "s" : ""} on ${target.name}.`,
+    );
   if (kind === "downgrade" && blockers.length === 0) {
-    warnings.push("Downgrade takes effect at the end of the current billing cycle.");
+    warnings.push(
+      "Downgrade takes effect at the end of the current billing cycle.",
+    );
   }
 
   return {
-    kind, current, target, blockers, warnings,
-    limitDiff, featureDiff: { gained, lost },
-    proration, invoiceItems, invoiceTotal, daysLeft, cycleDays,
+    kind,
+    current,
+    target,
+    blockers,
+    warnings,
+    limitDiff,
+    featureDiff: { gained, lost },
+    proration,
+    invoiceItems,
+    invoiceTotal,
+    daysLeft,
+    cycleDays,
   };
 }
 
@@ -551,34 +1071,77 @@ interface PlanChangeDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   targetPlan: string | null;
-  onConfirm: (preview: PlanChangePreview) => void;
+  preview: any;
+  isLoading: boolean;
+  isConfirming: boolean;
+  onConfirm: () => void;
 }
 
-function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanChangeDialogProps) {
-  const preview = useMemo(
-    () => (targetPlan ? buildPlanChangePreview(targetPlan) : null),
-    [targetPlan],
-  );
+function PlanChangeDialog({
+  open,
+  onOpenChange,
+  targetPlan,
+  preview,
+  isLoading,
+  isConfirming,
+  onConfirm,
+}: PlanChangeDialogProps) {
+  if (isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl p-6 flex flex-col items-center justify-center min-h-[300px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+          <p className="text-sm text-muted-foreground">
+            Calculating plan differences and proration...
+          </p>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (!preview) return null;
-  const { kind, current, target, blockers, warnings, limitDiff, featureDiff, invoiceItems, invoiceTotal, daysLeft } = preview;
+  const {
+    kind,
+    current,
+    target,
+    blockers,
+    warnings,
+    limitDiff,
+    featureDiff,
+    invoiceItems,
+    invoiceTotal,
+    daysLeft,
+  } = preview;
   const isBlocked = blockers.length > 0;
-  const KindIcon = kind === "upgrade" ? ArrowUpRight : kind === "downgrade" ? ArrowDownRight : RefreshCw;
+  const KindIcon =
+    kind === "upgrade"
+      ? ArrowUpRight
+      : kind === "downgrade"
+        ? ArrowDownRight
+        : RefreshCw;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-heading">
-            <KindIcon className={cn(
-              "h-5 w-5",
-              kind === "upgrade" && "text-info",
-              kind === "downgrade" && "text-warning",
-            )} />
-            {kind === "upgrade" ? "Upgrade to" : kind === "downgrade" ? "Downgrade to" : "Switch to"} {target.name}
+            <KindIcon
+              className={cn(
+                "h-5 w-5",
+                kind === "upgrade" && "text-info",
+                kind === "downgrade" && "text-warning",
+              )}
+            />
+            {kind === "upgrade"
+              ? "Upgrade to"
+              : kind === "downgrade"
+                ? "Downgrade to"
+                : "Switch to"}{" "}
+            {target.name}
           </DialogTitle>
           <DialogDescription>
-            {current.name} ({fmtNaira(current.priceValue)}/mo) → {target.name} ({fmtNaira(target.priceValue)}/mo)
+            {current.name} ({fmtNaira(current.priceValue)}/mo) → {target.name} (
+            {fmtNaira(target.priceValue)}/mo)
           </DialogDescription>
         </DialogHeader>
 
@@ -590,9 +1153,11 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
               Not eligible — usage exceeds {target.name} limits
             </div>
             <ul className="text-xs space-y-1 ml-6 list-disc text-foreground/80">
-              {blockers.map((b) => (
+              {blockers.map((b: any) => (
                 <li key={b.resource}>
-                  <span className="font-medium">{b.resource}:</span> {b.used.toLocaleString()} in use, {target.name} allows {fmtLimit(b.newLimit)}.
+                  <span className="font-medium">{b.resource}:</span>{" "}
+                  {b.used.toLocaleString()} in use, {target.name} allows{" "}
+                  {fmtLimit(b.newLimit)}.
                 </li>
               ))}
             </ul>
@@ -605,8 +1170,11 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
         {/* Non-blocking warnings */}
         {!isBlocked && warnings.length > 0 && (
           <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-1">
-            {warnings.map((w) => (
-              <div key={w} className="flex items-start gap-2 text-xs text-foreground/80">
+            {warnings.map((w: any) => (
+              <div
+                key={w}
+                className="flex items-start gap-2 text-xs text-foreground/80"
+              >
                 <AlertCircle className="h-3.5 w-3.5 text-warning mt-0.5 shrink-0" />
                 <span>{w}</span>
               </div>
@@ -616,7 +1184,9 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
 
         {/* Entitlements diff */}
         <div>
-          <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">New entitlements</h4>
+          <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+            New entitlements
+          </h4>
           <div className="rounded-lg border border-border overflow-hidden">
             <Table>
               <TableHeader>
@@ -627,17 +1197,25 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {limitDiff.map((d) => (
+                {limitDiff.map((d: any) => (
                   <TableRow key={d.label}>
-                    <TableCell className="text-xs font-medium py-2">{d.label}</TableCell>
-                    <TableCell className="text-xs py-2 text-muted-foreground">{d.from}</TableCell>
-                    <TableCell className={cn(
-                      "text-xs py-2 font-medium flex items-center gap-1",
-                      d.tone === "up" && "text-success",
-                      d.tone === "down" && "text-destructive",
-                    )}>
+                    <TableCell className="text-xs font-medium py-2">
+                      {d.label}
+                    </TableCell>
+                    <TableCell className="text-xs py-2 text-muted-foreground">
+                      {d.from}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-xs py-2 font-medium flex items-center gap-1",
+                        d.tone === "up" && "text-success",
+                        d.tone === "down" && "text-destructive",
+                      )}
+                    >
                       {d.tone === "up" && <ArrowUpRight className="h-3 w-3" />}
-                      {d.tone === "down" && <ArrowDownRight className="h-3 w-3" />}
+                      {d.tone === "down" && (
+                        <ArrowDownRight className="h-3 w-3" />
+                      )}
                       {d.to}
                     </TableCell>
                   </TableRow>
@@ -652,9 +1230,11 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
           <div className="grid sm:grid-cols-2 gap-3">
             {featureDiff.gained.length > 0 && (
               <div className="rounded-lg border border-success/30 bg-success/5 p-3">
-                <p className="text-xs font-semibold text-success mb-1.5">You'll gain</p>
+                <p className="text-xs font-semibold text-success mb-1.5">
+                  You'll gain
+                </p>
                 <ul className="space-y-1">
-                  {featureDiff.gained.map((f) => (
+                  {featureDiff.gained.map((f: any) => (
                     <li key={f} className="text-xs flex items-center gap-1.5">
                       <Check className="h-3 w-3 text-success" /> {f}
                     </li>
@@ -664,9 +1244,11 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
             )}
             {featureDiff.lost.length > 0 && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-                <p className="text-xs font-semibold text-destructive mb-1.5">You'll lose</p>
+                <p className="text-xs font-semibold text-destructive mb-1.5">
+                  You'll lose
+                </p>
                 <ul className="space-y-1">
-                  {featureDiff.lost.map((f) => (
+                  {featureDiff.lost.map((f: any) => (
                     <li key={f} className="text-xs flex items-center gap-1.5">
                       <X className="h-3 w-3 text-destructive" /> {f}
                     </li>
@@ -681,14 +1263,26 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
         {invoiceItems.length > 0 && (
           <div>
             <h4 className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-              {kind === "upgrade" ? "Today's prorated charge" : "Next invoice preview"}
+              {kind === "upgrade"
+                ? "Today's prorated charge"
+                : "Next invoice preview"}
             </h4>
             <div className="rounded-lg border border-border p-3 space-y-1.5">
-              {invoiceItems.map((i) => (
-                <div key={i.label} className="flex justify-between text-xs py-1 border-b border-border/50 last:border-0">
+              {invoiceItems.map((i: any) => (
+                <div
+                  key={i.label}
+                  className="flex justify-between text-xs py-1 border-b border-border/50 last:border-0"
+                >
                   <span className="text-muted-foreground">{i.label}</span>
-                  <span className={cn("font-medium tabular-nums", i.amount < 0 && "text-success")}>
-                    {i.amount < 0 ? `− ${fmtNaira(Math.abs(i.amount))}` : fmtNaira(i.amount)}
+                  <span
+                    className={cn(
+                      "font-medium tabular-nums",
+                      i.amount < 0 && "text-success",
+                    )}
+                  >
+                    {i.amount < 0
+                      ? `− ${fmtNaira(Math.abs(i.amount))}`
+                      : fmtNaira(i.amount)}
                   </span>
                 </div>
               ))}
@@ -697,7 +1291,9 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
                 <span className="text-sm font-medium">
                   {kind === "upgrade" ? "Due today" : "Due at next renewal"}
                 </span>
-                <span className="text-lg font-heading font-bold">{fmtNaira(invoiceTotal)}</span>
+                <span className="text-lg font-heading font-bold">
+                  {fmtNaira(invoiceTotal)}
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">
                 Based on {daysLeft} days remaining in the current billing cycle.
@@ -707,13 +1303,24 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button
-            disabled={isBlocked || kind === "same"}
-            onClick={() => onConfirm(preview)}
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isConfirming}
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={isBlocked || kind === "same" || isConfirming}
+            onClick={onConfirm}
             variant={kind === "downgrade" ? "outline" : "default"}
           >
-            {isBlocked ? "Not eligible" : kind === "upgrade" ? "Confirm upgrade & pay" : "Schedule downgrade"}
+            {isConfirming && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isBlocked
+              ? "Not eligible"
+              : kind === "upgrade"
+                ? "Confirm upgrade & pay"
+                : "Schedule downgrade"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -721,40 +1328,145 @@ function PlanChangeDialog({ open, onOpenChange, targetPlan, onConfirm }: PlanCha
   );
 }
 
-
-/* -------------------------------------------------------------------------- */
-/*                                 Component                                  */
-/* -------------------------------------------------------------------------- */
-
 export default function SubscriptionManagement() {
-  const [autoRenew, setAutoRenew] = useState(subscription.autoRenew);
-  const [activeAddons, setActiveAddons] = useState(
-    Object.fromEntries(addons.map((a) => [a.key, a.active])),
-  );
+  // API Fetch hooks
+  const {
+    data: subDetail,
+    isLoading: subLoading,
+    mutate: mutateSub,
+  } = useGetSubscription();
+  const { data: plansData, isLoading: plansLoading } = useGetPlans();
+  const { data: usageData, isLoading: usageLoading } = useGetUsage();
+  const { data: featuresData, isLoading: featuresLoading } = useGetFeatures();
+  const {
+    data: addonsData,
+    isLoading: addonsLoading,
+    mutate: mutateAddons,
+  } = useGetAddons();
+  const {
+    data: pmsData,
+    isLoading: pmsLoading,
+    mutate: mutatePms,
+  } = useGetBillingPaymentMethods();
+  const {
+    data: upcomingInvoiceData,
+    isLoading: upcomingInvoiceLoading,
+    mutate: mutateUpcoming,
+  } = useGetBillingUpcomingInvoice();
+
+  // Invoice Pagination
+  const [invoicePage, setInvoicePage] = useState(1);
+  const [invoicePerPage, setInvoicePerPage] = useState(5);
+  const { data: invoicesData, isLoading: invoicesLoading } =
+    useGetBillingInvoices({
+      page: invoicePage,
+      per_page: invoicePerPage,
+    });
+
+  // Audit Log Pagination
+  const [auditLogPage, setAuditLogPage] = useState(1);
+  const [auditLogPerPage, setAuditLogPerPage] = useState(5);
+  const { data: auditLogsData, isLoading: auditLogsLoading } = useGetAuditLogs({
+    page: auditLogPage,
+    per_page: auditLogPerPage,
+  });
+
+  // Dialog State
   const [planDialogTarget, setPlanDialogTarget] = useState<string | null>(null);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
-  const [pmForm, setPmForm] = useState({ brand: "Visa", number: "", exp: "", cvc: "", name: "" });
-  const [removeTarget, setRemoveTarget] = useState<PaymentMethod | null>(null);
+  const [pmForm, setPmForm] = useState({
+    brand: "Visa",
+    number: "",
+    exp: "",
+    cvc: "",
+    name: "",
+  });
+  const [removeTarget, setRemoveTarget] = useState<any>(null);
   const [qrMenuOpen, setQrMenuOpen] = useState(false);
-  const [qrOutletId, setQrOutletId] = useState<string>(posOutlets[0]?.id ?? "outlet-1");
-  const [canceled, setCanceled] = useState(false);
+  const [qrOutletId, setQrOutletId] = useState<string>(
+    posOutlets[0]?.id ?? "outlet-1",
+  );
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelStep, setCancelStep] = useState<1 | 2>(1);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelFeedback, setCancelFeedback] = useState("");
   const [reactivateOpen, setReactivateOpen] = useState(false);
 
-  const {
-    page: invoicePage,
-    setPage: setInvoicePage,
-    perPage: invoicePerPage,
-    setPerPage: setInvoicePerPage,
-    paginatedItems: paginatedInvoices,
-    totalPages: invoiceTotalPages,
-    totalItems: invoiceTotalItems,
-    pageSizeOptions: invoicePageSizeOptions,
-  } = usePagination(invoiceHistory, 5);
+  // Plan Preview State
+  const previewPlanChange = usePreviewPlanChange();
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    if (planDialogTarget) {
+      setIsPreviewLoading(true);
+      previewPlanChange
+        .trigger({ targetPlan: planDialogTarget })
+        .then((res) => {
+          setPreviewData(res.data);
+        })
+        .catch(() => {
+          toast.error("Failed to fetch plan change preview");
+        })
+        .finally(() => {
+          setIsPreviewLoading(false);
+        });
+    } else {
+      setPreviewData(null);
+    }
+  }, [planDialogTarget]);
+
+  // Mutations
+  const cancelSubscriptionMutation = useCancelSubscription();
+  const reactivateSubscriptionMutation = useReactivateSubscription();
+  const updateAutoRenewMutation = useUpdateAutoRenew();
+  const confirmPlanChangeMutation = useConfirmPlanChange();
+  const createBillingPaymentMethodMutation = useCreateBillingPaymentMethod();
+  const deleteBillingPaymentMethodMutation = useDeleteBillingPaymentMethod();
+  const setDefaultBillingPaymentMethodMutation =
+    useSetDefaultBillingPaymentMethod();
+  const activateAddonMutation = useActivateAddon();
+  const deactivateAddonMutation = useDeactivateAddon();
+
+  const subscription = subDetail?.data || {
+    plan: { name: "Business Pro", key: "business_pro", tier: 1 },
+    status: "active",
+    renewalDate: "March 15, 2026",
+    billingCycle: "Monthly",
+    monthlyCost: 79000,
+    monthlyCostFormatted: "₦79,000",
+    autoRenew: true,
+    daysLeft: 18,
+    canceled: false,
+    externalReference: "sub_8K2J9F",
+    since: "Oct 2025",
+  };
+
+  const autoRenew = subscription.autoRenew;
+  const canceled = subscription.canceled;
+
+  const comparisonPlansList = plansData?.data || comparisonPlans;
+
+  const usageItems = usageData?.data || [];
+
+  const addonsList = addonsData?.data || [];
+
+  const paymentMethodsList = pmsData?.data || [];
+
+  const upcomingInvoice = upcomingInvoiceData?.data || {
+    number: "INV-2026-003",
+    date: "March 15, 2026",
+    amount: "₦118,000",
+    items: [],
+  };
+
+  const invoicesList = invoicesData?.data || [];
+  const invoiceTotalPages = invoicesData?.meta?.last_page || 1;
+  const invoiceTotalItems = invoicesData?.meta?.total || 0;
+
+  const auditLogItems = auditLogsData?.data || [];
+  const auditLogTotalPages = auditLogsData?.meta?.last_page || 1;
+  const auditLogTotalItems = auditLogsData?.meta?.total || 0;
 
   const cancelReasons = [
     "Too expensive",
@@ -778,23 +1490,49 @@ export default function SubscriptionManagement() {
     setCancelStep(2);
   };
 
-  const confirmCancelSubscription = () => {
-    setCanceled(true);
-    setAutoRenew(false);
-    setCancelOpen(false);
-    setCancelStep(1);
-    toast.success(`Subscription canceled. You'll keep access until ${subscription.renewalDate}.`);
+  const confirmCancelSubscription = async () => {
+    try {
+      await cancelSubscriptionMutation.trigger({
+        reason: cancelReason,
+        feedback: cancelFeedback,
+      });
+      setCancelOpen(false);
+      setCancelStep(1);
+      mutateSub();
+      toast.success(
+        `Subscription canceled. You'll keep access until ${subscription.renewalDate}.`,
+      );
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to cancel subscription",
+      );
+    }
   };
 
-  const confirmReactivate = () => {
-    setCanceled(false);
-    setAutoRenew(true);
-    setCancelReason("");
-    setCancelFeedback("");
-    setReactivateOpen(false);
-    toast.success(`Welcome back! Your ${subscription.plan} plan is active again.`);
+  const confirmReactivate = async () => {
+    try {
+      await reactivateSubscriptionMutation.trigger(undefined);
+      setCancelReason("");
+      setCancelFeedback("");
+      setReactivateOpen(false);
+      mutateSub();
+      toast.success(`Welcome back! Your plan is active again.`);
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to reactivate subscription",
+      );
+    }
   };
 
+  const handleAutoRenewChange = async (checked: boolean) => {
+    try {
+      await updateAutoRenewMutation.trigger({ autoRenew: checked });
+      mutateSub();
+      toast.success(`Auto-renew turned ${checked ? "on" : "off"}`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update auto-renew");
+    }
+  };
 
   const detectBrand = (num: string): string => {
     const n = num.replace(/\s/g, "");
@@ -805,80 +1543,134 @@ export default function SubscriptionManagement() {
     return "Card";
   };
 
-  const submitAddPayment = () => {
+  const submitAddPayment = async () => {
     const num = pmForm.number.replace(/\s/g, "");
-    if (num.length < 12) { toast.error("Enter a valid card number"); return; }
-    if (!/^\d{2}\/\d{2}$/.test(pmForm.exp)) { toast.error("Expiry must be MM/YY"); return; }
-    if (pmForm.cvc.length < 3) { toast.error("Enter a valid CVC"); return; }
-    const newPm: PaymentMethod = {
-      id: `pm_${Date.now()}`,
-      brand: detectBrand(num),
-      last4: num.slice(-4),
-      exp: pmForm.exp,
-      default: paymentMethods.length === 0,
-    };
-    setPaymentMethods((prev) => [...prev, newPm]);
-    toast.success(`${newPm.brand} •••• ${newPm.last4} added`);
-    setPmForm({ brand: "Visa", number: "", exp: "", cvc: "", name: "" });
-    setAddPaymentOpen(false);
+    if (num.length < 12) {
+      toast.error("Enter a valid card number");
+      return;
+    }
+    if (!/^\d{2}\/\d{2}$/.test(pmForm.exp)) {
+      toast.error("Expiry must be MM/YY");
+      return;
+    }
+    if (pmForm.cvc.length < 3) {
+      toast.error("Enter a valid CVC");
+      return;
+    }
+    try {
+      await createBillingPaymentMethodMutation.trigger({
+        cardholderName: pmForm.name || "Card Holder",
+        cardNumber: num,
+        exp: pmForm.exp,
+        cvc: pmForm.cvc,
+        default: paymentMethodsList.length === 0,
+      });
+      toast.success(`Payment method added`);
+      setPmForm({ brand: "Visa", number: "", exp: "", cvc: "", name: "" });
+      setAddPaymentOpen(false);
+      mutatePms();
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to add payment method",
+      );
+    }
   };
 
-  const setDefaultPm = (id: string) => {
-    setPaymentMethods((prev) => prev.map((p) => ({ ...p, default: p.id === id })));
-    toast.success("Default payment method updated");
+  const setDefaultPm = async (id: string | number) => {
+    try {
+      await setDefaultBillingPaymentMethodMutation.trigger(id);
+      toast.success("Default payment method updated");
+      mutatePms();
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message ||
+          "Failed to update default payment method",
+      );
+    }
   };
 
-  const confirmRemovePm = () => {
+  const confirmRemovePm = async () => {
     if (!removeTarget) return;
-    setPaymentMethods((prev) => {
-      const next = prev.filter((p) => p.id !== removeTarget.id);
-      // If we removed the default, promote the first remaining card.
-      if (removeTarget.default && next.length > 0) next[0].default = true;
-      return next;
-    });
-    toast.success(`${removeTarget.brand} •••• ${removeTarget.last4} removed`);
-    setRemoveTarget(null);
+    try {
+      await deleteBillingPaymentMethodMutation.trigger(removeTarget.id);
+      toast.success(`Payment method removed`);
+      setRemoveTarget(null);
+      mutatePms();
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to remove payment method",
+      );
+    }
   };
 
   const qrTargetUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${qrOutletId}`;
   const qrImageSrc = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=8&data=${encodeURIComponent(qrTargetUrl)}`;
-  const health = healthMap[subscription.status];
+  const health = healthMap[subscription.status] || healthMap.active;
   const HealthIcon = health.icon;
 
-  const warnings = usage.filter((u) => pct(u.used, u.limit) >= 80);
+  const warnings = usageItems.filter((u) => u.percent >= 80);
 
   const openPlanChange = (planName: string) => setPlanDialogTarget(planName);
-  const handlePlanChangeConfirm = (preview: PlanChangePreview) => {
-    setPlanDialogTarget(null);
-    if (preview.kind === "upgrade") {
-      toast.success(`Upgraded to ${preview.target.name}`, {
-        description: `${fmtNaira(preview.invoiceTotal)} charged. Entitlements updated immediately.`,
-      });
-    } else if (preview.kind === "downgrade") {
-      toast.success(`Downgrade scheduled`, {
-        description: `${preview.target.name} takes effect on ${subscription.renewalDate}.`,
-      });
+
+  const handlePlanChangeConfirm = async () => {
+    if (!planDialogTarget) return;
+    try {
+      await confirmPlanChangeMutation.trigger({ targetPlan: planDialogTarget });
+      setPlanDialogTarget(null);
+      mutateSub();
+      mutateUpcoming();
+      toast.success(`Plan updated successfully`);
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to confirm plan change",
+      );
+    }
+  };
+
+  const handleToggleAddon = async (addon: any) => {
+    try {
+      if (addon.active) {
+        await deactivateAddonMutation.trigger(addon.key);
+        toast.success(`${addon.name} deactivated`);
+      } else {
+        await activateAddonMutation.trigger(addon.key);
+        toast.success(`${addon.name} activated`);
+      }
+      mutateAddons();
+      mutateUpcoming();
+      mutateSub();
+    } catch (err: any) {
+      toast.error(
+        err.response?.data?.message || "Failed to toggle add-on",
+      );
     }
   };
 
   // Default target for the "Upgrade" header button — first plan above current.
-  const nextUpgrade = comparisonPlans.find(
-    (p) => !p.current && p.tier > (comparisonPlans.find((c) => c.current)?.tier ?? 0),
+  const nextUpgrade = comparisonPlansList.find(
+    (p: any) =>
+      !p.current &&
+      p.tier > (comparisonPlansList.find((c: any) => c.current)?.tier ?? 0),
   );
-
 
   return (
     <div className="space-y-6 pb-20 lg:pb-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-heading font-bold tracking-tight">Subscription</h1>
+          <h1 className="text-2xl font-heading font-bold tracking-tight">
+            Subscription
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage your plan, usage, add-ons and billing
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" disabled={!nextUpgrade} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>
+          <Button
+            size="sm"
+            disabled={!nextUpgrade}
+            onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}
+          >
             <TrendingUp className="h-4 w-4" />
             Upgrade
           </Button>
@@ -891,13 +1683,22 @@ export default function SubscriptionManagement() {
           <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
           <div className="text-sm flex-1">
             <p className="font-medium text-foreground">
-              {warnings.length} resource{warnings.length > 1 ? "s are" : " is"} above 80% utilisation
+              {warnings.length} resource{warnings.length > 1 ? "s are" : " is"}{" "}
+              above 80% utilisation
             </p>
             <p className="text-muted-foreground text-xs mt-0.5">
-              {warnings.map((w) => w.label).join(", ")} — consider upgrading to avoid overage.
+              {warnings.map((w) => w.label).join(", ")} — consider upgrading to
+              avoid overage.
             </p>
           </div>
-          <Button size="sm" variant="outline" disabled={!nextUpgrade} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Review</Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!nextUpgrade}
+            onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}
+          >
+            Review
+          </Button>
         </div>
       )}
 
@@ -907,78 +1708,162 @@ export default function SubscriptionManagement() {
         <Card className="lg:col-span-2 p-5 border-primary/20 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] via-transparent to-accent/[0.04] pointer-events-none" />
           <div className="relative">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                    <Zap className="h-4.5 w-4.5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-heading font-bold text-lg leading-none">{subscription.plan}</h3>
-                      <Badge className={cn("text-[10px] uppercase tracking-wide border", health.cls)}>
-                        {health.label}
-                      </Badge>
-                      {canceled && (
-                        <Badge variant="outline" className="text-[10px] uppercase tracking-wide border-destructive/40 text-destructive">
-                          Canceled
-                        </Badge>
-                      )}
+            {subLoading ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-2 items-center">
+                    <Skeleton className="h-9 w-9" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-28" />
+                      <Skeleton className="h-3.5 w-40" />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Plan ID · sub_8K2J9F · since Oct 2025
+                  </div>
+                  <Skeleton className="h-8 w-24" />
+                </div>
+                <div className="grid grid-cols-4 gap-4 pt-4 border-t border-border">
+                  {Array(4)
+                    .fill(0)
+                    .map((_, idx) => (
+                      <div key={idx} className="space-y-2">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-4 w-20" />
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                        <Zap className="h-4.5 w-4.5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-heading font-bold text-lg leading-none">
+                            {subscription.plan.name}
+                          </h3>
+                          <Badge
+                            className={cn(
+                              "text-[10px] uppercase tracking-wide border",
+                              health.cls,
+                            )}
+                          >
+                            {health.label}
+                          </Badge>
+                          {canceled && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] uppercase tracking-wide border-destructive/40 text-destructive"
+                            >
+                              Canceled
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Plan ID · {subscription.externalReference} · since{" "}
+                          {subscription.since}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-heading font-bold tracking-tight">
+                      {subscription.monthlyCostFormatted ||
+                        fmtNaira(subscription.monthlyCost)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      per month · {subscription.billingCycle.toLowerCase()}
                     </p>
                   </div>
                 </div>
-              </div>
-              <div className="text-right">
-                <p className="text-3xl font-heading font-bold tracking-tight">{subscription.monthlyCost}</p>
-                <p className="text-xs text-muted-foreground">per month · {subscription.billingCycle.toLowerCase()}</p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-4 border-t border-border">
-              <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Renewal</p>
-                <p className="text-sm font-semibold mt-1 flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                  {subscription.renewalDate}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Cycle</p>
-                <p className="text-sm font-semibold mt-1">{subscription.billingCycle}</p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Days Left</p>
-                <p className="text-sm font-semibold mt-1">{subscription.daysLeft} days</p>
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Auto-Renew</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Switch checked={autoRenew && !canceled} onCheckedChange={setAutoRenew} disabled={canceled} />
-                  <span className="text-sm font-semibold">{canceled ? "Off" : autoRenew ? "On" : "Off"}</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-5 pt-4 border-t border-border">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Renewal
+                    </p>
+                    <p className="text-sm font-semibold mt-1 flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      {subscription.renewalDate}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Cycle
+                    </p>
+                    <p className="text-sm font-semibold mt-1">
+                      {subscription.billingCycle}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Days Left
+                    </p>
+                    <p className="text-sm font-semibold mt-1">
+                      {subscription.daysLeft} days
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Auto-Renew
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Switch
+                        checked={autoRenew && !canceled}
+                        onCheckedChange={handleAutoRenewChange}
+                        disabled={
+                          canceled || updateAutoRenewMutation.isMutating
+                        }
+                      />
+                      <span className="text-sm font-semibold">
+                        {updateAutoRenewMutation.isMutating ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                        ) : canceled ? (
+                          "Off"
+                        ) : autoRenew ? (
+                          "On"
+                        ) : (
+                          "Off"
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2 mt-5">
-              <Button size="sm" variant="outline" disabled={canceled} onClick={() => nextUpgrade && openPlanChange(nextUpgrade.name)}>Change Plan</Button>
-              {canceled ? (
-                <Button size="sm" variant="outline" onClick={() => setReactivateOpen(true)}>
-                  Reactivate
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                  onClick={openCancelFlow}
-                >
-                  Cancel Subscription
-                </Button>
-              )}
-            </div>
+                <div className="flex flex-wrap gap-2 mt-5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={canceled}
+                    onClick={() =>
+                      nextUpgrade && openPlanChange(nextUpgrade.name)
+                    }
+                  >
+                    Change Plan
+                  </Button>
+                  {canceled ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setReactivateOpen(true)}
+                    >
+                      Reactivate
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={openCancelFlow}
+                    >
+                      Cancel Subscription
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </Card>
 
@@ -989,39 +1874,81 @@ export default function SubscriptionManagement() {
               <Shield className="h-4 w-4 text-muted-foreground" />
               Subscription Health
             </h3>
-            <span className={cn("h-2 w-2 rounded-full", health.dot)} />
+            {subLoading ? (
+              <Skeleton className="h-2 w-2 rounded-full" />
+            ) : (
+              <span className={cn("h-2 w-2 rounded-full", health.dot)} />
+            )}
           </div>
 
-          <div className={cn("flex items-center gap-3 p-3 rounded-lg border", health.cls)}>
-            <HealthIcon className="h-5 w-5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold">{health.label}</p>
-              <p className="text-xs opacity-80">{health.msg}</p>
+          {subLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full rounded-lg" />
+              <div className="space-y-2">
+                {Array(5)
+                  .fill(0)
+                  .map((_, idx) => (
+                    <Skeleton key={idx} className="h-6 w-full" />
+                  ))}
+              </div>
             </div>
-          </div>
-
-          <div className="mt-4 space-y-1.5">
-            {(Object.keys(healthMap) as Array<keyof typeof healthMap>).map((k) => {
-              const h = healthMap[k];
-              const Icon = h.icon;
-              const isCurrent = k === subscription.status;
-              return (
-                <div
-                  key={k}
-                  className={cn(
-                    "flex items-center justify-between text-xs px-2 py-1.5 rounded-md",
-                    isCurrent ? "bg-muted font-medium" : "text-muted-foreground",
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <Icon className="h-3.5 w-3.5" />
-                    {h.label}
-                  </span>
-                  {isCurrent && <Badge variant="outline" className="text-[10px] h-4 px-1.5">Current</Badge>}
+          ) : (
+            <>
+              <div
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border",
+                  health.cls,
+                )}
+              >
+                <HealthIcon className="h-5 w-5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold">{health.label}</p>
+                  <p className="text-xs opacity-80">{health.msg}</p>
                 </div>
-              );
-            })}
-          </div>
+              </div>
+
+              <div className="mt-4 space-y-1.5">
+                {(Object.keys(healthMap) as Array<keyof typeof healthMap>).map(
+                  (k) => {
+                    const h = healthMap[k];
+                    const Icon = h.icon;
+                    const isCurrent = k === subscription.status;
+                    return (
+                      <div
+                        key={k}
+                        className={cn(
+                          "flex items-center justify-between text-xs px-2 py-1.5 rounded-md",
+                          isCurrent
+                            ? "bg-muted font-medium text-foreground"
+                            : "text-muted-foreground/60",
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Icon
+                            className={cn(
+                              "h-3.5 w-3.5",
+                              isCurrent
+                                ? "text-foreground"
+                                : "text-muted-foreground/40",
+                            )}
+                          />
+                          {h.label}
+                        </span>
+                        {isCurrent && (
+                          <Badge
+                            variant="outline"
+                            className="text-[9px] h-3.5 px-1 bg-background"
+                          >
+                            Current
+                          </Badge>
+                        )}
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            </>
+          )}
         </Card>
       </div>
 
@@ -1039,57 +1966,90 @@ export default function SubscriptionManagement() {
         {/* ============================ USAGE ============================ */}
         <TabsContent value="usage" className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {usage.map((u) => {
-              const p = pct(u.used, u.limit);
-              const tone = usageTone(p);
-              const Icon = u.icon;
-              return (
-                <Card key={u.key} className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
+            {usageLoading
+              ? Array(6)
+                  .fill(0)
+                  .map((_, idx) => (
+                    <Card key={idx} className="p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-8 w-8 rounded-md" />
+                        <div className="space-y-1.5 flex-1">
+                          <Skeleton className="h-3 w-16" />
+                          <Skeleton className="h-4 w-28" />
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">{u.label}</p>
-                        <p className="text-sm font-semibold">
-                          {u.used.toLocaleString()}
-                          <span className="text-muted-foreground font-normal">
-                            {" "}/ {u.limit.toLocaleString()}{u.unit}
-                          </span>
+                      <Skeleton className="h-1.5 w-full rounded-full" />
+                    </Card>
+                  ))
+              : usageItems.map((u: any) => {
+                  const p = u.percent ?? pct(u.used, u.limit);
+                  const tone = usageTone(p);
+                  const Icon = usageIcons[u.key] || HardDrive;
+                  const limitDisplay =
+                    u.limitDisplay ||
+                    (u.limit === Infinity
+                      ? "Unlimited"
+                      : u.limit.toLocaleString());
+                  return (
+                    <Card key={u.key} className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              {u.label}
+                            </p>
+                            <p className="text-sm font-semibold">
+                              {u.used.toLocaleString()}
+                              <span className="text-muted-foreground font-normal">
+                                {" "}
+                                / {limitDisplay}
+                                {u.unit}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-5 px-1.5",
+                            tone.tone === "ok" &&
+                              "border-success/30 text-success",
+                            tone.tone === "warn" &&
+                              "border-warning/30 text-warning",
+                            tone.tone === "crit" &&
+                              "border-destructive/30 text-destructive",
+                          )}
+                        >
+                          {p}%
+                        </Badge>
+                      </div>
+                      <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn("h-full transition-all", tone.bar)}
+                          style={{ width: `${p}%` }}
+                        />
+                      </div>
+                      {tone.tone !== "ok" && (
+                        <p
+                          className={cn(
+                            "text-[11px] mt-2 flex items-center gap-1",
+                            tone.tone === "warn"
+                              ? "text-warning"
+                              : "text-destructive",
+                          )}
+                        >
+                          <AlertTriangle className="h-3 w-3" />
+                          {tone.tone === "crit"
+                            ? "Limit nearly reached"
+                            : "Approaching limit"}
                         </p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-[10px] h-5 px-1.5",
-                        tone.tone === "ok" && "border-success/30 text-success",
-                        tone.tone === "warn" && "border-warning/30 text-warning",
-                        tone.tone === "crit" && "border-destructive/30 text-destructive",
                       )}
-                    >
-                      {p}%
-                    </Badge>
-                  </div>
-                  <div className="mt-3 h-1.5 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={cn("h-full transition-all", tone.bar)}
-                      style={{ width: `${p}%` }}
-                    />
-                  </div>
-                  {tone.tone !== "ok" && (
-                    <p className={cn(
-                      "text-[11px] mt-2 flex items-center gap-1",
-                      tone.tone === "warn" ? "text-warning" : "text-destructive",
-                    )}>
-                      <AlertTriangle className="h-3 w-3" />
-                      {tone.tone === "crit" ? "Limit nearly reached" : "Approaching limit"}
-                    </p>
-                  )}
-                </Card>
-              );
-            })}
+                    </Card>
+                  );
+                })}
           </div>
         </TabsContent>
 
@@ -1102,23 +2062,44 @@ export default function SubscriptionManagement() {
                   <CheckCircle2 className="h-4 w-4 text-success" />
                   Enabled Features
                 </h3>
-                <Badge variant="outline" className="text-[10px]">{enabledFeatures.length} active</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {featuresLoading
+                    ? "Loading..."
+                    : `${(featuresData?.enabled || enabledFeatures).length} active`}
+                </Badge>
               </div>
               <div className="space-y-2">
-                {enabledFeatures.map((f) => (
-                  <div key={f.name} className="flex items-start gap-3 p-2.5 rounded-md hover:bg-muted/50 transition-colors">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 shrink-0">
-                      <Check className="h-3.5 w-3.5 text-success" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium flex items-center gap-1.5">
-                        {f.name}
-                        <FeatureInfo title={f.name} description={f.desc} />
-                      </p>
-                      <p className="text-xs text-muted-foreground">{f.desc}</p>
-                    </div>
-                  </div>
-                ))}
+                {featuresLoading
+                  ? Array(5)
+                      .fill(0)
+                      .map((_, idx) => (
+                        <div key={idx} className="flex gap-3 p-2.5">
+                          <Skeleton className="h-7 w-7 rounded-md shrink-0" />
+                          <div className="space-y-1.5 flex-grow">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-48" />
+                          </div>
+                        </div>
+                      ))
+                  : (featuresData?.enabled || enabledFeatures).map((f) => (
+                      <div
+                        key={f.name}
+                        className="flex items-start gap-3 p-2.5 rounded-md hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-success/10 shrink-0">
+                          <Check className="h-3.5 w-3.5 text-success" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium flex items-center gap-1.5">
+                            {f.name}
+                            <FeatureInfo title={f.name} description={f.desc} />
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {f.desc}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
               </div>
             </Card>
 
@@ -1128,26 +2109,55 @@ export default function SubscriptionManagement() {
                   <X className="h-4 w-4 text-muted-foreground" />
                   Not Available on this Plan
                 </h3>
-                <Badge variant="outline" className="text-[10px]">{disabledFeatures.length} locked</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  {featuresLoading
+                    ? "Loading..."
+                    : `${(featuresData?.disabled || disabledFeatures).length} locked`}
+                </Badge>
               </div>
               <div className="space-y-2">
-                {disabledFeatures.map((f) => (
-                  <div key={f.name} className="flex items-start gap-3 p-2.5 rounded-md border border-dashed border-border">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted shrink-0">
-                      <X className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
-                        {f.name}
-                        <FeatureInfo title={f.name} description={f.desc} />
-                      </p>
-                      <p className="text-xs text-muted-foreground/80">{f.desc}</p>
-                    </div>
-                    <Button size="sm" variant="ghost" className="h-7 text-xs">
-                      Unlock
-                    </Button>
-                  </div>
-                ))}
+                {featuresLoading
+                  ? Array(5)
+                      .fill(0)
+                      .map((_, idx) => (
+                        <div key={idx} className="flex gap-3 p-2.5">
+                          <Skeleton className="h-7 w-7 rounded-md shrink-0" />
+                          <div className="space-y-1.5 flex-grow">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-48" />
+                          </div>
+                        </div>
+                      ))
+                  : (featuresData?.disabled || disabledFeatures).map((f) => (
+                      <div
+                        key={f.name}
+                        className="flex items-start gap-3 p-2.5 rounded-md border border-dashed border-border"
+                      >
+                        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted shrink-0">
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                            {f.name}
+                            <FeatureInfo title={f.name} description={f.desc} />
+                          </p>
+                          <p className="text-xs text-muted-foreground/80">
+                            {f.desc}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          disabled={!nextUpgrade}
+                          onClick={() =>
+                            nextUpgrade && openPlanChange(nextUpgrade.name)
+                          }
+                        >
+                          Unlock
+                        </Button>
+                      </div>
+                    ))}
               </div>
             </Card>
           </div>
@@ -1156,67 +2166,129 @@ export default function SubscriptionManagement() {
         {/* ============================ ADDONS ============================ */}
         <TabsContent value="addons" className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {addons.map((a) => {
-              const Icon = a.icon;
-              const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
-              const isIncluded = currentTier >= a.includedFromTier;
-              const isComingSoon = !!a.comingSoon;
-              const isActive = !isComingSoon && (isIncluded || activeAddons[a.key]);
-              return (
-                <Card
-                  key={a.key}
-                  className={cn(
-                    "p-4 transition-all",
-                    isActive && "border-primary/30 bg-primary/[0.02]",
-                    isComingSoon && "opacity-70",
-                  )}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={cn(
-                        "flex h-9 w-9 items-center justify-center rounded-lg",
-                        isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-                      )}>
-                        <Icon className="h-4.5 w-4.5" />
+            {addonsLoading
+              ? Array(3)
+                  .fill(0)
+                  .map((_, idx) => (
+                    <Card key={idx} className="p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Skeleton className="h-9 w-9 rounded-lg" />
+                        <div className="space-y-1.5 flex-1">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3.5 w-20" />
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold">{a.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {isComingSoon ? "Not yet available" : isIncluded ? `Included in ${planByTier[a.includedFromTier]}` : a.price}
-                        </p>
+                      <Skeleton className="h-10 w-full rounded-md" />
+                    </Card>
+                  ))
+              : addonsList.map((a: any) => {
+                  const Icon = addonIcons[a.key] || ChefHat;
+                  const currentTier =
+                    comparisonPlansList.find((c: any) => c.current)?.tier ?? 0;
+                  const isIncluded =
+                    a.bundled || currentTier >= a.includedFromTier;
+                  const isComingSoon = !!a.comingSoon;
+                  const isActive = !isComingSoon && (isIncluded || a.active);
+                  const isToggling =
+                    activateAddonMutation.isMutating ||
+                    deactivateAddonMutation.isMutating;
+                  return (
+                    <Card
+                      key={a.key}
+                      className={cn(
+                        "p-4 transition-all",
+                        isActive && "border-primary/30 bg-primary/[0.02]",
+                        isComingSoon && "opacity-70",
+                      )}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={cn(
+                              "flex h-9 w-9 items-center justify-center rounded-lg",
+                              isActive
+                                ? "bg-primary/10 text-primary"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            <Icon className="h-4.5 w-4.5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">{a.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isComingSoon
+                                ? "Not yet available"
+                                : isIncluded
+                                  ? `Included in ${planByTier[a.includedFromTier as 0 | 1 | 2] || "Business Pro"}`
+                                  : a.price}
+                            </p>
+                          </div>
+                        </div>
+                        {isComingSoon ? (
+                          <Badge
+                            className="text-[10px] h-5 bg-warning/10 text-warning border-warning/20 border"
+                            variant="outline"
+                          >
+                            Coming Soon
+                          </Badge>
+                        ) : isIncluded ? (
+                          <Badge
+                            className="text-[10px] h-5 bg-info/10 text-info border-info/20 border"
+                            variant="outline"
+                          >
+                            Included
+                          </Badge>
+                        ) : isActive ? (
+                          <Badge
+                            className="text-[10px] h-5 bg-success/10 text-success border-success/20 border"
+                            variant="outline"
+                          >
+                            Active
+                          </Badge>
+                        ) : null}
                       </div>
-                    </div>
-                    {isComingSoon ? (
-                      <Badge className="text-[10px] h-5 bg-warning/10 text-warning border-warning/20 border" variant="outline">
-                        Coming Soon
-                      </Badge>
-                    ) : isIncluded ? (
-                      <Badge className="text-[10px] h-5 bg-info/10 text-info border-info/20 border" variant="outline">
-                        Included
-                      </Badge>
-                    ) : isActive ? (
-                      <Badge className="text-[10px] h-5 bg-success/10 text-success border-success/20 border" variant="outline">
-                        Active
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">{a.desc}</p>
-                  <Button
-                    size="sm"
-                    variant={isActive ? "outline" : "default"}
-                    className="w-full mt-3"
-                    disabled={isIncluded || isComingSoon}
-                    onClick={() =>
-                      setActiveAddons((s) => ({ ...s, [a.key]: !s[a.key] }))
-                    }
-                  >
-                    {isComingSoon ? "Coming Soon" : isIncluded ? "Bundled" : isActive ? "Remove" : (<><Plus className="h-3.5 w-3.5" /> Add</>)}
-                  </Button>
-                </Card>
-              );
-            })}
-          </div>
+                      <p className="text-xs text-muted-foreground mt-3 min-h-[2rem]">
+                        {a.desc}
+                      </p>
 
+                      {a.key === "qrmenu" && isActive && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => setQrMenuOpen(true)}
+                        >
+                          <QrCode className="mr-1.5 h-3.5 w-3.5" />
+                          View QR Code
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant={isActive ? "outline" : "default"}
+                        className="w-full mt-3"
+                        disabled={isIncluded || isComingSoon || isToggling}
+                        onClick={() => handleToggleAddon(a)}
+                      >
+                        {isToggling ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : null}
+                        {isComingSoon ? (
+                          "Coming Soon"
+                        ) : isIncluded ? (
+                          "Bundled"
+                        ) : isActive ? (
+                          "Remove"
+                        ) : (
+                          <>
+                            <Plus className="h-3.5 w-3.5" /> Add
+                          </>
+                        )}
+                      </Button>
+                    </Card>
+                  );
+                })}
+          </div>
         </TabsContent>
 
         {/* ============================ BILLING ============================ */}
@@ -1225,96 +2297,195 @@ export default function SubscriptionManagement() {
             {/* Payment Methods */}
             <Card className="p-5 lg:col-span-1">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-heading font-semibold text-sm">Payment Methods</h3>
-                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAddPaymentOpen(true)}>
+                <h3 className="font-heading font-semibold text-sm">
+                  Payment Methods
+                </h3>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => setAddPaymentOpen(true)}
+                >
                   <Plus className="h-3.5 w-3.5" /> Add
                 </Button>
               </div>
               <div className="space-y-2">
-                {paymentMethods.length === 0 && (
+                {pmsLoading ? (
+                  Array(2)
+                    .fill(0)
+                    .map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 p-3 rounded-lg border"
+                      >
+                        <Skeleton className="h-8 w-12 rounded" />
+                        <div className="space-y-1.5 flex-1">
+                          <Skeleton className="h-4 w-28" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                      </div>
+                    ))
+                ) : paymentMethodsList.length === 0 ? (
                   <div className="text-center py-6 border border-dashed rounded-lg">
                     <CreditCard className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-xs text-muted-foreground">No payment methods yet</p>
-                    <Button size="sm" variant="outline" className="mt-3" onClick={() => setAddPaymentOpen(true)}>
+                    <p className="text-xs text-muted-foreground">
+                      No payment methods yet
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => setAddPaymentOpen(true)}
+                    >
                       <Plus className="h-3.5 w-3.5" /> Add card
                     </Button>
                   </div>
+                ) : (
+                  paymentMethodsList.map((pm: any) => (
+                    <div
+                      key={pm.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border",
+                        pm.default
+                          ? "border-primary/30 bg-primary/[0.02]"
+                          : "border-border",
+                      )}
+                    >
+                      <div className="flex h-8 w-12 items-center justify-center rounded bg-muted">
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">
+                          {pm.brand} •••• {pm.last4}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Exp {pm.exp}
+                        </p>
+                      </div>
+                      {pm.default && (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-4 px-1.5 font-medium"
+                        >
+                          Default
+                        </Badge>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                          >
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            disabled={
+                              pm.default ||
+                              setDefaultBillingPaymentMethodMutation.isMutating
+                            }
+                            onClick={() => setDefaultPm(pm.id)}
+                          >
+                            <Star className="h-3.5 w-3.5 mr-1.5" /> Set as
+                            default
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setRemoveTarget(pm)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))
                 )}
-                {paymentMethods.map((pm) => (
-                  <div
-                    key={pm.id}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border",
-                      pm.default ? "border-primary/30 bg-primary/[0.02]" : "border-border",
-                    )}
-                  >
-                    <div className="flex h-8 w-12 items-center justify-center rounded bg-muted">
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{pm.brand} •••• {pm.last4}</p>
-                      <p className="text-[11px] text-muted-foreground">Exp {pm.exp}</p>
-                    </div>
-                    {pm.default && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">Default</Badge>
-                    )}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <MoreVertical className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          disabled={pm.default}
-                          onClick={() => setDefaultPm(pm.id)}
-                        >
-                          <Star className="h-3.5 w-3.5" /> Set as default
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setRemoveTarget(pm)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" /> Remove
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
               </div>
             </Card>
 
             {/* Upcoming Invoice */}
             <Card className="p-5 lg:col-span-2">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-heading font-semibold text-sm">Upcoming Invoice</h3>
-                <Badge variant="outline" className="text-[10px]">
-                  Due {upcomingInvoice.date}
-                </Badge>
+                <h3 className="font-heading font-semibold text-sm">
+                  Upcoming Invoice
+                </h3>
+                {!upcomingInvoiceLoading && (
+                  <Badge variant="outline" className="text-[10px]">
+                    Due {upcomingInvoice.date}
+                  </Badge>
+                )}
               </div>
-              <div className="space-y-2">
-                {upcomingInvoice.items.map((i) => (
-                  <div key={i.label} className="flex justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
-                    <span className="text-muted-foreground">{i.label}</span>
-                    <span className="font-medium">{i.amount}</span>
+              {upcomingInvoiceLoading ? (
+                <div className="space-y-3">
+                  {Array(3)
+                    .fill(0)
+                    .map((_, idx) => (
+                      <div key={idx} className="flex justify-between py-1">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    ))}
+                  <Separator />
+                  <div className="flex justify-between">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-6 w-24" />
                   </div>
-                ))}
-              </div>
-              <Separator className="my-3" />
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm font-medium">Total</span>
-                <span className="text-xl font-heading font-bold">{upcomingInvoice.amount}</span>
-              </div>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    {upcomingInvoice.items &&
+                    upcomingInvoice.items.length > 0 ? (
+                      upcomingInvoice.items.map((i: any) => (
+                        <div
+                          key={i.label}
+                          className="flex justify-between text-sm py-1.5 border-b border-border/50 last:border-0"
+                        >
+                          <span className="text-muted-foreground">
+                            {i.label}
+                          </span>
+                          <span className="font-medium">{i.amount}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        No line items yet
+                      </p>
+                    )}
+                  </div>
+                  <Separator className="my-3" />
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-sm font-medium">Total</span>
+                    <span className="text-xl font-heading font-bold">
+                      {upcomingInvoice.amount}
+                    </span>
+                  </div>
+                </>
+              )}
             </Card>
           </div>
 
           {/* Invoice History */}
           <Card className="p-0 overflow-hidden">
             <div className="p-5 pb-3 flex items-center justify-between">
-              <h3 className="font-heading font-semibold text-sm">Invoice History</h3>
-              <Button size="sm" variant="ghost" className="h-7 text-xs">
-                <Download className="h-3.5 w-3.5" /> Export all
+              <h3 className="font-heading font-semibold text-sm">
+                Invoice History
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() =>
+                  window.open(
+                    `${API_BASE_URL}${API_ENDPOINTS.SUBSCRIPTION_BILLING_INVOICES_EXPORT}`,
+                    "_blank",
+                  )
+                }
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Export all
               </Button>
             </div>
             <Table>
@@ -1329,35 +2500,91 @@ export default function SubscriptionManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedInvoices.map((inv) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="font-mono text-xs">{inv.id}</TableCell>
-                    <TableCell className="text-sm">{inv.date}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{inv.method}</TableCell>
-                    <TableCell className="text-sm font-medium">{inv.amount}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[10px] border-success/30 text-success">
-                        {inv.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                        <Download className="h-3.5 w-3.5" />
-                      </Button>
+                {invoicesLoading ? (
+                  Array(3)
+                    .fill(0)
+                    .map((_, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-4 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-12 rounded-full" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Skeleton className="h-7 w-7 rounded-md ml-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                ) : invoicesList.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-6 text-xs text-muted-foreground"
+                    >
+                      No invoice history found.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  invoicesList.map((inv: any) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-mono text-xs">
+                        {inv.id}
+                      </TableCell>
+                      <TableCell className="text-sm">{inv.date}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {inv.method}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        {inv.amount}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-success/30 text-success"
+                        >
+                          {inv.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 w-7 p-0"
+                          onClick={() =>
+                            window.open(
+                              inv.pdfUrl ||
+                                `${API_BASE_URL}${API_ENDPOINTS.SUBSCRIPTION_BILLING_SINGLE_INVOICE_PDF(inv.id)}`,
+                              "_blank",
+                            )
+                          }
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
             <div className="px-5 py-3 border-t border-border">
-              <PaginationControls
-                page={invoicePage}
+              <ResuablePagination
+                currentPage={invoicePage}
                 totalPages={invoiceTotalPages}
-                perPage={invoicePerPage}
-                totalItems={invoiceTotalItems}
-                pageSizeOptions={invoicePageSizeOptions}
                 onPageChange={setInvoicePage}
-                onPerPageChange={setInvoicePerPage}
+                totalItems={invoiceTotalItems}
+                rowsPerPage={invoicePerPage}
+                onRowsPerPageChange={setInvoicePerPage}
+                isLoading={invoicesLoading}
               />
             </div>
           </Card>
@@ -1366,173 +2593,326 @@ export default function SubscriptionManagement() {
         {/* ============================ PLANS ============================ */}
         <TabsContent value="plans" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-3">
-            {comparisonPlans.map((p) => {
-              const current = p.current;
-              const currentTier = comparisonPlans.find((c) => c.current)?.tier ?? 0;
-              const isUpgrade = !current && p.tier > currentTier;
-              return (
-                <Card
-                  key={p.name}
-                  className={cn(
-                    "p-5 relative",
-                    current && "border-primary shadow-md ring-1 ring-primary/20",
-                  )}
-                >
-                  {current && (
-                    <Badge className="absolute -top-2.5 left-4 text-[10px]">Current Plan</Badge>
-                  )}
-                  <h4 className="font-heading font-bold">{p.name}</h4>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{p.tagline}</p>
-                  <div className="mt-2 flex items-baseline gap-1">
-                    <p className="text-2xl font-heading font-bold">{p.price}</p>
-                    <span className="text-xs text-muted-foreground">/mo</span>
-                  </div>
-                  <Button
-                    variant={current ? "outline" : isUpgrade ? "default" : "outline"}
-                    size="sm"
-                    className="w-full mt-4"
-                    disabled={current}
-                    onClick={() => !current && openPlanChange(p.name)}
-                  >
-                    {current ? "Current" : isUpgrade ? (<><ArrowUpRight className="h-3.5 w-3.5" /> Upgrade</>) : (<><ArrowDownRight className="h-3.5 w-3.5" /> Downgrade</>)}
-                  </Button>
-                  <ul className="mt-4 space-y-1.5 text-xs">
-                    {featureCatalog
-                      .filter((f) => f.tier === p.tier)
-                      .slice(0, 6)
-                      .map((f) => (
-                        <li key={f.name} className="flex items-start gap-1.5">
-                          <Check className="h-3 w-3 text-success mt-0.5 shrink-0" />
-                          <span className="text-foreground/80 flex-1">{f.name}</span>
-                          <FeatureInfo title={f.name} description={f.desc} />
-                        </li>
-                      ))}
-                  </ul>
-                </Card>
-              );
-            })}
+            {plansLoading
+              ? Array(3)
+                  .fill(0)
+                  .map((_, idx) => (
+                    <Card key={idx} className="p-5 space-y-4">
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-8 w-28" />
+                      <Skeleton className="h-10 w-full rounded-md" />
+                      <div className="space-y-2 pt-2">
+                        {Array(4)
+                          .fill(0)
+                          .map((_, iIdx) => (
+                            <div key={iIdx} className="flex justify-between">
+                              <Skeleton className="h-3 w-32" />
+                              <Skeleton className="h-3.5 w-3.5 rounded-full" />
+                            </div>
+                          ))}
+                      </div>
+                    </Card>
+                  ))
+              : comparisonPlansList.map((p: any) => {
+                  const current = p.current;
+                  const currentTier =
+                    comparisonPlansList.find((c: any) => c.current)?.tier ?? 0;
+                  const isUpgrade = !current && p.tier > currentTier;
+                  return (
+                    <Card
+                      key={p.name}
+                      className={cn(
+                        "p-5 relative",
+                        current &&
+                          "border-primary shadow-md ring-1 ring-primary/20",
+                      )}
+                    >
+                      {current && (
+                        <Badge className="absolute -top-2.5 left-4 text-[10px]">
+                          Current Plan
+                        </Badge>
+                      )}
+                      <h4 className="font-heading font-bold">{p.name}</h4>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {p.tagline}
+                      </p>
+                      <div className="mt-2 flex items-baseline gap-1">
+                        <p className="text-2xl font-heading font-bold">
+                          {p.price}
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          /mo
+                        </span>
+                      </div>
+                      <Button
+                        variant={
+                          current
+                            ? "outline"
+                            : isUpgrade
+                              ? "default"
+                              : "outline"
+                        }
+                        size="sm"
+                        className="w-full mt-4"
+                        disabled={current}
+                        onClick={() => !current && openPlanChange(p.name)}
+                      >
+                        {current ? (
+                          "Current"
+                        ) : isUpgrade ? (
+                          <>
+                            <ArrowUpRight className="h-3.5 w-3.5" /> Upgrade
+                          </>
+                        ) : (
+                          <>
+                            <ArrowDownRight className="h-3.5 w-3.5" /> Downgrade
+                          </>
+                        )}
+                      </Button>
+                      <ul className="mt-4 space-y-1.5 text-xs">
+                        {featureCatalog
+                          .filter((f) => f.tier === p.tier)
+                          .slice(0, 6)
+                          .map((f) => (
+                            <li
+                              key={f.name}
+                              className="flex items-start gap-1.5"
+                            >
+                              <Check className="h-3 w-3 text-success mt-0.5 shrink-0" />
+                              <span className="text-foreground/80 flex-1">
+                                {f.name}
+                              </span>
+                              <FeatureInfo
+                                title={f.name}
+                                description={f.desc}
+                              />
+                            </li>
+                          ))}
+                      </ul>
+                    </Card>
+                  );
+                })}
           </div>
 
           {/* Comparison table — limits + capabilities grouped by category */}
           <Card className="p-0 overflow-hidden">
             <div className="p-5 pb-3">
-              <h3 className="font-heading font-semibold text-sm">Side-by-Side Comparison</h3>
+              <h3 className="font-heading font-semibold text-sm">
+                Side-by-Side Comparison
+              </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Capabilities are cumulative — every plan includes everything from the plan below.
+                Capabilities are cumulative — every plan includes everything
+                from the plan below.
               </p>
             </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Feature</TableHead>
-                  {comparisonPlans.map((p) => (
-                    <TableHead key={p.name} className={cn(p.current && "text-primary")}>
-                      {p.name}
-                      {p.current && <span className="ml-1 text-[10px]">(Current)</span>}
-                    </TableHead>
+            {plansLoading ? (
+              <div className="p-5 space-y-3">
+                {Array(6)
+                  .fill(0)
+                  .map((_, idx) => (
+                    <Skeleton key={idx} className="h-10 w-full" />
                   ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {/* Limits section */}
-                <TableRow className="bg-muted/40">
-                  <TableCell colSpan={1 + comparisonPlans.length} className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5">
-                    Limits
-                  </TableCell>
-                </TableRow>
-                {[
-                  { label: "Outlets", key: "outlets" },
-                  { label: "Staff seats", key: "staff" },
-                  { label: "Transactions / mo", key: "transactions" },
-                  { label: "Reports", key: "reports" },
-                  { label: "Support", key: "support" },
-                ].map((row) => (
-                  <TableRow key={row.label}>
-                    <TableCell className="text-sm font-medium">{row.label}</TableCell>
-                    {comparisonPlans.map((p) => (
-                      <TableCell key={p.name} className={cn("text-sm", p.current && "bg-primary/[0.03]")}>
-                        {String((p as any)[row.key])}
-                      </TableCell>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Feature</TableHead>
+                    {comparisonPlansList.map((p: any) => (
+                      <TableHead
+                        key={p.name}
+                        className={cn(p.current && "text-primary")}
+                      >
+                        {p.name}
+                        {p.current && (
+                          <span className="ml-1 text-[10px]">(Current)</span>
+                        )}
+                      </TableHead>
                     ))}
                   </TableRow>
-                ))}
-
-                {/* Capability sections — grouped by feature category */}
-                {Array.from(new Set(featureCatalog.map((f) => f.category))).map((category) => (
-                  <Fragment key={category}>
-                    <TableRow className="bg-muted/40">
-                      <TableCell colSpan={1 + comparisonPlans.length} className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5">
-                        {category}
+                </TableHeader>
+                <TableBody>
+                  {/* Limits section */}
+                  <TableRow className="bg-muted/40">
+                    <TableCell
+                      colSpan={1 + comparisonPlansList.length}
+                      className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5"
+                    >
+                      Limits
+                    </TableCell>
+                  </TableRow>
+                  {[
+                    { label: "Outlets", key: "outlets" },
+                    { label: "Staff seats", key: "staff" },
+                    { label: "Transactions / mo", key: "transactions" },
+                    { label: "Reports", key: "reports" },
+                    { label: "Support", key: "support" },
+                  ].map((row) => (
+                    <TableRow key={row.label}>
+                      <TableCell className="text-sm font-medium">
+                        {row.label}
                       </TableCell>
-                    </TableRow>
-                    {featureCatalog
-                      .filter((f) => f.category === category)
-                      .map((f) => (
-                        <TableRow key={f.name}>
-                          <TableCell className="text-sm font-medium">
-                            <span className="inline-flex items-center gap-1.5">
-                              {f.name}
-                              <FeatureInfo title={f.name} description={f.desc} />
-                              {f.addon && (
-                                <Badge variant="outline" className="ml-1 text-[9px] h-4 px-1">Add-on</Badge>
-                              )}
-                            </span>
-                          </TableCell>
-                          {comparisonPlans.map((p) => (
-                            <TableCell key={p.name} className={cn(p.current && "bg-primary/[0.03]")}>
-                              {planFeatures[p.name].includes(f.name) ? (
-                                <Check className="h-4 w-4 text-success" />
-                              ) : (
-                                <X className="h-4 w-4 text-muted-foreground/40" />
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
+                      {comparisonPlansList.map((p: any) => (
+                        <TableCell
+                          key={p.name}
+                          className={cn(
+                            "text-sm",
+                            p.current && "bg-primary/[0.03]",
+                          )}
+                        >
+                          {String(p[row.key])}
+                        </TableCell>
                       ))}
-                  </Fragment>
-                ))}
-              </TableBody>
-            </Table>
+                    </TableRow>
+                  ))}
+
+                  {/* Capability sections — grouped by feature category */}
+                  {Array.from(
+                    new Set(featureCatalog.map((f) => f.category)),
+                  ).map((category) => (
+                    <Fragment key={category}>
+                      <TableRow className="bg-muted/40">
+                        <TableCell
+                          colSpan={1 + comparisonPlansList.length}
+                          className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold py-1.5"
+                        >
+                          {category}
+                        </TableCell>
+                      </TableRow>
+                      {featureCatalog
+                        .filter((f) => f.category === category)
+                        .map((f) => (
+                          <TableRow key={f.name}>
+                            <TableCell className="text-sm font-medium">
+                              <span className="inline-flex items-center gap-1.5">
+                                {f.name}
+                                <FeatureInfo
+                                  title={f.name}
+                                  description={f.desc}
+                                />
+                                {f.addon && (
+                                  <Badge
+                                    variant="outline"
+                                    className="ml-1 text-[9px] h-4 px-1"
+                                  >
+                                    Add-on
+                                  </Badge>
+                                )}
+                              </span>
+                            </TableCell>
+                            {comparisonPlansList.map((p: any) => (
+                              <TableCell
+                                key={p.name}
+                                className={cn(p.current && "bg-primary/[0.03]")}
+                              >
+                                {planFeatures[p.name] &&
+                                planFeatures[p.name].includes(f.name) ? (
+                                  <Check className="h-4 w-4 text-success" />
+                                ) : (
+                                  <X className="h-4 w-4 text-muted-foreground/40" />
+                                )}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))}
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </Card>
         </TabsContent>
-
 
         {/* =========================== ACTIVITY =========================== */}
         <TabsContent value="activity" className="space-y-4">
           <Card className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-heading font-semibold text-sm">Audit Timeline</h3>
-              <Button size="sm" variant="ghost" className="h-7 text-xs">
-                <Download className="h-3.5 w-3.5" /> Export log
+              <h3 className="font-heading font-semibold text-sm">
+                Audit Timeline
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs"
+                onClick={() =>
+                  window.open(
+                    `${API_BASE_URL}${API_ENDPOINTS.SUBSCRIPTION_AUDIT_LOG_EXPORT}`,
+                    "_blank",
+                  )
+                }
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Export log
               </Button>
             </div>
 
             <div className="relative">
               <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border" />
               <div className="space-y-4">
-                {auditLog.map((e, i) => {
-                  const meta = auditIconMap[e.type] ?? auditIconMap.renewal;
-                  const Icon = meta.icon;
-                  return (
-                    <div key={i} className="flex gap-3 relative">
-                      <div className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full shrink-0 relative z-10 border-2 border-background",
-                        meta.cls,
-                      )}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-                      <div className="flex-1 min-w-0 pb-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <p className="text-sm font-medium">{e.title}</p>
-                          <span className="text-[11px] text-muted-foreground shrink-0">{e.date}</span>
+                {auditLogsLoading ? (
+                  Array(3)
+                    .fill(0)
+                    .map((_, idx) => (
+                      <div key={idx} className="flex gap-3 relative">
+                        <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                        <div className="flex-1 space-y-1.5 py-1">
+                          <div className="flex justify-between">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-16" />
+                          </div>
+                          <Skeleton className="h-3 w-48" />
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">{e.desc}</p>
                       </div>
-                    </div>
-                  );
-                })}
+                    ))
+                ) : auditLogItems.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted-foreground">
+                    No activity logs found.
+                  </div>
+                ) : (
+                  auditLogItems.map((e: any, i: number) => {
+                    const meta = auditIconMap[e.type] ?? auditIconMap.renewal;
+                    const Icon = meta.icon;
+                    return (
+                      <div key={i} className="flex gap-3 relative">
+                        <div
+                          className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-full shrink-0 relative z-10 border-2 border-background",
+                            meta.cls,
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0 pb-1">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="text-sm font-medium">{e.title}</p>
+                            <span className="text-[11px] text-muted-foreground shrink-0">
+                              {e.date}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {e.desc}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
+
+            {!auditLogsLoading && auditLogTotalPages > 1 && (
+              <div className="mt-6 pt-3 border-t border-border">
+                <ResuablePagination
+                  currentPage={auditLogPage}
+                  totalPages={auditLogTotalPages}
+                  onPageChange={setAuditLogPage}
+                  totalItems={auditLogTotalItems}
+                  rowsPerPage={auditLogPerPage}
+                  onRowsPerPageChange={setAuditLogPerPage}
+                  isLoading={auditLogsLoading}
+                />
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>
@@ -1541,6 +2921,9 @@ export default function SubscriptionManagement() {
         open={planDialogTarget !== null}
         onOpenChange={(o) => !o && setPlanDialogTarget(null)}
         targetPlan={planDialogTarget}
+        preview={previewData}
+        isLoading={isPreviewLoading}
+        isConfirming={confirmPlanChangeMutation.isMutating}
         onConfirm={handlePlanChangeConfirm}
       />
 
@@ -1558,49 +2941,84 @@ export default function SubscriptionManagement() {
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label htmlFor="pm-name">Cardholder name</Label>
-              <Input id="pm-name" placeholder="Name on card" value={pmForm.name}
-                onChange={(e) => setPmForm((f) => ({ ...f, name: e.target.value }))} />
+              <Input
+                id="pm-name"
+                placeholder="Name on card"
+                value={pmForm.name}
+                onChange={(e) =>
+                  setPmForm((f) => ({ ...f, name: e.target.value }))
+                }
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pm-number">Card number</Label>
-              <Input id="pm-number" inputMode="numeric" placeholder="4242 4242 4242 4242" value={pmForm.number}
+              <Input
+                id="pm-number"
+                inputMode="numeric"
+                placeholder="4242 4242 4242 4242"
+                value={pmForm.number}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, "").slice(0, 19);
                   const formatted = raw.replace(/(.{4})/g, "$1 ").trim();
                   setPmForm((f) => ({ ...f, number: formatted }));
-                }} />
+                }}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="pm-exp">Expiry (MM/YY)</Label>
-                <Input id="pm-exp" placeholder="08/27" value={pmForm.exp}
+                <Input
+                  id="pm-exp"
+                  placeholder="08/27"
+                  value={pmForm.exp}
                   onChange={(e) => {
                     let v = e.target.value.replace(/\D/g, "").slice(0, 4);
                     if (v.length >= 3) v = `${v.slice(0, 2)}/${v.slice(2)}`;
                     setPmForm((f) => ({ ...f, exp: v }));
-                  }} />
+                  }}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="pm-cvc">CVC</Label>
-                <Input id="pm-cvc" inputMode="numeric" placeholder="123" maxLength={4} value={pmForm.cvc}
-                  onChange={(e) => setPmForm((f) => ({ ...f, cvc: e.target.value.replace(/\D/g, "") }))} />
+                <Input
+                  id="pm-cvc"
+                  inputMode="numeric"
+                  placeholder="123"
+                  maxLength={4}
+                  value={pmForm.cvc}
+                  onChange={(e) =>
+                    setPmForm((f) => ({
+                      ...f,
+                      cvc: e.target.value.replace(/\D/g, ""),
+                    }))
+                  }
+                />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddPaymentOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setAddPaymentOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={submitAddPayment}>Add card</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Remove Payment Method */}
-      <AlertDialog open={!!removeTarget} onOpenChange={(o) => !o && setRemoveTarget(null)}>
+      <AlertDialog
+        open={!!removeTarget}
+        onOpenChange={(o) => !o && setRemoveTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {removeTarget?.brand} •••• {removeTarget?.last4}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Remove {removeTarget?.brand} •••• {removeTarget?.last4}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This card will no longer be charged for subscription renewals. {removeTarget?.default && "Another card will be promoted to default."}
+              This card will no longer be charged for subscription renewals.{" "}
+              {removeTarget?.default &&
+                "Another card will be promoted to default."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1623,7 +3041,8 @@ export default function SubscriptionManagement() {
               <QrCode className="h-4 w-4" /> QR Code Menu
             </DialogTitle>
             <DialogDescription>
-              Print or display this code. Customers scan it with any phone camera to view your catalog.
+              Print or display this code. Customers scan it with any phone
+              camera to view your catalog.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -1635,7 +3054,9 @@ export default function SubscriptionManagement() {
                 onChange={(e) => setQrOutletId(e.target.value)}
               >
                 {posOutlets.map((o) => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -1645,7 +3066,9 @@ export default function SubscriptionManagement() {
                 alt="Menu QR code"
                 className="h-56 w-56 rounded-md bg-white p-2"
               />
-              <p className="text-xs text-muted-foreground text-center break-all">{qrTargetUrl}</p>
+              <p className="text-xs text-muted-foreground text-center break-all">
+                {qrTargetUrl}
+              </p>
             </div>
             <div className="flex gap-2">
               <Button
@@ -1698,16 +3121,24 @@ export default function SubscriptionManagement() {
           {cancelStep === 1 ? (
             <>
               <AlertDialogHeader>
-                <AlertDialogTitle>Cancel your {subscription.plan} subscription?</AlertDialogTitle>
+                <AlertDialogTitle>
+                  Cancel your {subscription.plan.name} subscription?
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  You'll keep full access until <span className="font-medium text-foreground">{subscription.renewalDate}</span>.
-                  After that, your outlets will drop to read-only until you reactivate. Auto-renew will be turned off immediately.
+                  You'll keep full access until{" "}
+                  <span className="font-medium text-foreground">
+                    {subscription.renewalDate}
+                  </span>
+                  . After that, your outlets will drop to read-only until you
+                  reactivate. Auto-renew will be turned off immediately.
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
               <div className="space-y-4 py-1">
                 <div>
-                  <Label className="text-sm font-medium">Why are you canceling?</Label>
+                  <Label className="text-sm font-medium">
+                    Why are you canceling?
+                  </Label>
                   <RadioGroup
                     value={cancelReason}
                     onValueChange={setCancelReason}
@@ -1727,8 +3158,14 @@ export default function SubscriptionManagement() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="cancel-feedback" className="text-sm font-medium">
-                    Anything we could do better? <span className="text-muted-foreground font-normal">(optional)</span>
+                  <Label
+                    htmlFor="cancel-feedback"
+                    className="text-sm font-medium"
+                  >
+                    Anything we could do better?{" "}
+                    <span className="text-muted-foreground font-normal">
+                      (optional)
+                    </span>
                   </Label>
                   <Textarea
                     id="cancel-feedback"
@@ -1740,16 +3177,14 @@ export default function SubscriptionManagement() {
                 </div>
 
                 <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-                  You can reactivate any time before {subscription.renewalDate} and keep all your data, staff, and settings.
+                  You can reactivate any time before {subscription.renewalDate}{" "}
+                  and keep all your data, staff, and settings.
                 </div>
               </div>
 
               <AlertDialogFooter>
                 <AlertDialogCancel>Keep subscription</AlertDialogCancel>
-                <Button
-                  variant="destructive"
-                  onClick={proceedToCancelSummary}
-                >
+                <Button variant="destructive" onClick={proceedToCancelSummary}>
                   Continue
                 </Button>
               </AlertDialogFooter>
@@ -1759,7 +3194,8 @@ export default function SubscriptionManagement() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Confirm cancellation</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Please review the details below. This will end auto-renewal immediately.
+                  Please review the details below. This will end auto-renewal
+                  immediately.
                 </AlertDialogDescription>
               </AlertDialogHeader>
 
@@ -1767,28 +3203,43 @@ export default function SubscriptionManagement() {
                 <div className="rounded-lg border bg-muted/30 divide-y">
                   <div className="flex items-center justify-between px-3 py-2 text-sm">
                     <span className="text-muted-foreground">Plan</span>
-                    <span className="font-semibold">{subscription.plan}</span>
+                    <span className="font-semibold">
+                      {subscription.plan.name}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 text-sm">
                     <span className="text-muted-foreground">Billing cycle</span>
-                    <span className="font-semibold">{subscription.billingCycle}</span>
+                    <span className="font-semibold">
+                      {subscription.billingCycle}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 text-sm">
                     <span className="text-muted-foreground">Current cost</span>
-                    <span className="font-semibold">{subscription.monthlyCost} / month</span>
+                    <span className="font-semibold">
+                      {subscription.monthlyCostFormatted ||
+                        fmtNaira(subscription.monthlyCost)}{" "}
+                      / month
+                    </span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 text-sm">
-                    <span className="text-muted-foreground">Access ends on</span>
-                    <span className="font-semibold">{subscription.renewalDate}</span>
+                    <span className="text-muted-foreground">
+                      Access ends on
+                    </span>
+                    <span className="font-semibold">
+                      {subscription.renewalDate}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 text-sm">
                     <span className="text-muted-foreground">Next billing</span>
-                    <span className="font-semibold text-destructive">Canceled — no charge</span>
+                    <span className="font-semibold text-destructive">
+                      Canceled — no charge
+                    </span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 text-sm">
                     <span className="text-muted-foreground">Refund</span>
                     <span className="font-semibold">
-                      No prorated refund — access continues to {subscription.renewalDate}
+                      No prorated refund — access continues to{" "}
+                      {subscription.renewalDate}
                     </span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 text-sm">
@@ -1799,15 +3250,23 @@ export default function SubscriptionManagement() {
               </div>
 
               <AlertDialogFooter>
-                <Button variant="outline" onClick={() => setCancelStep(1)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setCancelStep(1)}
+                  disabled={cancelSubscriptionMutation.isMutating}
+                >
                   Back
                 </Button>
-                <AlertDialogAction
+                <Button
                   onClick={confirmCancelSubscription}
+                  disabled={cancelSubscriptionMutation.isMutating}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
+                  {cancelSubscriptionMutation.isMutating && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   Confirm cancellation
-                </AlertDialogAction>
+                </Button>
               </AlertDialogFooter>
             </>
           )}
@@ -1818,9 +3277,13 @@ export default function SubscriptionManagement() {
       <AlertDialog open={reactivateOpen} onOpenChange={setReactivateOpen}>
         <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Reactivate your {subscription.plan} subscription?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Reactivate your {subscription.plan.name} subscription?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Auto-renew will be turned back on and billing will resume on your next cycle. Your data, outlets, and staff stay exactly as they are.
+              Auto-renew will be turned back on and billing will resume on your
+              next cycle. Your data, outlets, and staff stay exactly as they
+              are.
             </AlertDialogDescription>
           </AlertDialogHeader>
 
@@ -1828,36 +3291,57 @@ export default function SubscriptionManagement() {
             <div className="rounded-lg border bg-muted/30 divide-y">
               <div className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="text-muted-foreground">Plan</span>
-                <span className="font-semibold">{subscription.plan}</span>
+                <span className="font-semibold">{subscription.plan.name}</span>
               </div>
               <div className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="text-muted-foreground">Billing cycle</span>
-                <span className="font-semibold">{subscription.billingCycle}</span>
+                <span className="font-semibold">
+                  {subscription.billingCycle}
+                </span>
               </div>
               <div className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="text-muted-foreground">Amount</span>
-                <span className="font-semibold">{subscription.monthlyCost} / month</span>
+                <span className="font-semibold">
+                  {subscription.monthlyCostFormatted ||
+                    fmtNaira(subscription.monthlyCost)}{" "}
+                  / month
+                </span>
               </div>
               <div className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="text-muted-foreground">Next billing date</span>
-                <span className="font-semibold">{subscription.renewalDate}</span>
+                <span className="font-semibold">
+                  {subscription.renewalDate}
+                </span>
               </div>
               <div className="flex items-center justify-between px-3 py-2 text-sm">
                 <span className="text-muted-foreground">Auto-renew</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">Will be turned on</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  Will be turned on
+                </span>
               </div>
             </div>
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel>Not now</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReactivate}>
+            <Button
+              variant="outline"
+              onClick={() => setReactivateOpen(false)}
+              disabled={reactivateSubscriptionMutation.isMutating}
+            >
+              Not now
+            </Button>
+            <Button
+              onClick={confirmReactivate}
+              disabled={reactivateSubscriptionMutation.isMutating}
+            >
+              {reactivateSubscriptionMutation.isMutating && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Reactivate subscription
-            </AlertDialogAction>
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
-
   );
 }

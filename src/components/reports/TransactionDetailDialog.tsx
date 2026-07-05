@@ -54,22 +54,47 @@ import {
   StickyNote,
 } from "lucide-react";
 import type { Transaction } from "@/components/TransactionsTable";
+import { useGetReportsTransactionDetail } from "@/services/api/reports-api";
 import TransactionReceiptPreview from "./TransactionReceiptPreview";
 
 const VOID_CODE = "1234"; // In production, this would be validated server-side
 
-const paymentStatusConfig: Record<string, { class: string; icon: React.ElementType }> = {
-  Paid: { class: "bg-success/10 text-success border-success/20", icon: CheckCircle2 },
-  Pending: { class: "bg-warning/10 text-warning border-warning/20", icon: Clock },
-  Failed: { class: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
+const paymentStatusConfig: Record<
+  string,
+  { class: string; icon: React.ElementType }
+> = {
+  Paid: {
+    class: "bg-success/10 text-success border-success/20",
+    icon: CheckCircle2,
+  },
+  Pending: {
+    class: "bg-warning/10 text-warning border-warning/20",
+    icon: Clock,
+  },
+  Failed: {
+    class: "bg-destructive/10 text-destructive border-destructive/20",
+    icon: XCircle,
+  },
   Refunded: { class: "bg-info/10 text-info border-info/20", icon: CreditCard },
 };
 
-const orderStatusConfig: Record<string, { class: string; icon: React.ElementType }> = {
-  Completed: { class: "bg-success/10 text-success border-success/20", icon: CheckCircle2 },
+const orderStatusConfig: Record<
+  string,
+  { class: string; icon: React.ElementType }
+> = {
+  Completed: {
+    class: "bg-success/10 text-success border-success/20",
+    icon: CheckCircle2,
+  },
   Processing: { class: "bg-info/10 text-info border-info/20", icon: Clock },
-  Cancelled: { class: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
-  "On Hold": { class: "bg-warning/10 text-warning border-warning/20", icon: AlertTriangle },
+  Cancelled: {
+    class: "bg-destructive/10 text-destructive border-destructive/20",
+    icon: XCircle,
+  },
+  "On Hold": {
+    class: "bg-warning/10 text-warning border-warning/20",
+    icon: AlertTriangle,
+  },
 };
 
 const paymentMethods = ["Cash", "Card", "Mobile Money", "Bank Transfer"];
@@ -87,7 +112,7 @@ function formatOrderType(t?: string) {
 }
 
 export default function TransactionDetailDialog({
-  transaction,
+  transaction: propTransaction,
   open,
   onOpenChange,
   onUpdate,
@@ -95,26 +120,40 @@ export default function TransactionDetailDialog({
   const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
   const [voidCode, setVoidCode] = useState("");
   const [voidCodeError, setVoidCodeError] = useState("");
-  const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
+  const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(
+    null,
+  );
   const [editMethod, setEditMethod] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [addingPayment, setAddingPayment] = useState(false);
   const [newMethod, setNewMethod] = useState("");
   const [newAmount, setNewAmount] = useState("");
-  const [removePaymentIndex, setRemovePaymentIndex] = useState<number | null>(null);
+  const [removePaymentIndex, setRemovePaymentIndex] = useState<number | null>(
+    null,
+  );
   const [receiptPreviewOpen, setReceiptPreviewOpen] = useState(false);
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const [sendEmailAddress, setSendEmailAddress] = useState("");
   const [sendEmailError, setSendEmailError] = useState("");
 
+  const { data: detailResponse, isLoading: isDetailLoading } =
+    useGetReportsTransactionDetail(propTransaction?.orderId || undefined);
+
+  const transaction = detailResponse?.data || propTransaction;
+
   if (!transaction) return null;
 
-  const pStatus = paymentStatusConfig[transaction.paymentStatus] ?? paymentStatusConfig.Pending;
-  const oStatus = orderStatusConfig[transaction.orderStatus] ?? orderStatusConfig.Processing;
+  const pStatus =
+    paymentStatusConfig[transaction.paymentStatus] ??
+    paymentStatusConfig.Pending;
+  const oStatus =
+    orderStatusConfig[transaction.orderStatus] ?? orderStatusConfig.Processing;
   const PaymentIcon = pStatus.icon;
   const OrderIcon = oStatus.icon;
 
-  const canVoid = transaction.orderStatus !== "Cancelled" && transaction.paymentStatus !== "Refunded";
+  const canVoid =
+    transaction.orderStatus !== "Cancelled" &&
+    transaction.paymentStatus !== "Refunded";
   const hasItems = transaction.items && transaction.items.length > 0;
   const orderTypeLabel = formatOrderType(transaction.orderType);
 
@@ -139,7 +178,13 @@ export default function TransactionDetailDialog({
     if (!cleaned) return "";
     const num = parseFloat(cleaned);
     if (isNaN(num)) return "";
-    return "₦" + num.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (
+      "₦" +
+      num.toLocaleString("en-NG", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    );
   };
 
   const startEdit = (index: number) => {
@@ -186,7 +231,10 @@ export default function TransactionDetailDialog({
     if (!formatted) return;
     onUpdate({
       ...transaction,
-      payments: [...transaction.payments, { method: newMethod, amount: formatted }],
+      payments: [
+        ...transaction.payments,
+        { method: newMethod, amount: formatted },
+      ],
     });
     cancelAdd();
     toast.success("Payment added");
@@ -202,7 +250,9 @@ export default function TransactionDetailDialog({
 
   const confirmRemovePayment = () => {
     if (removePaymentIndex === null) return;
-    const updatedPayments = transaction.payments.filter((_, i) => i !== removePaymentIndex);
+    const updatedPayments = transaction.payments.filter(
+      (_, i) => i !== removePaymentIndex,
+    );
     onUpdate({ ...transaction, payments: updatedPayments });
     setRemovePaymentIndex(null);
     toast.success("Payment method removed");
@@ -255,11 +305,17 @@ export default function TransactionDetailDialog({
                     <Copy className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">{transaction.date}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {transaction.date}
+                </p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -304,167 +360,298 @@ export default function TransactionDetailDialog({
                 <Badge variant="secondary">{transaction.tableLabel}</Badge>
               )}
             </div>
-          </div>
-
+          </div>{" "}
           {/* Body */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 space-y-5">
-            {/* Outlet & Cashier */}
-            <section>
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" /> Outlet
-              </p>
-              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5">
-                <p className="font-medium text-sm">{transaction.location}</p>
-                {transaction.outletAddress && (
-                  <p className="text-xs text-muted-foreground mt-0.5">{transaction.outletAddress}</p>
-                )}
-                <p className="text-xs text-muted-foreground mt-1">
-                  Cashier: <span className="text-foreground font-medium">{transaction.cashier}</span>
+            {isDetailLoading ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+                <p className="text-xs text-muted-foreground">
+                  Loading transaction details...
                 </p>
               </div>
-            </section>
+            ) : (
+              <>
+                {/* Outlet & Cashier */}
+                <section>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" /> Outlet
+                  </p>
+                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5">
+                    <p className="font-medium text-sm">
+                      {transaction.location}
+                    </p>
+                    {transaction.outletAddress && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {transaction.outletAddress}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Cashier:{" "}
+                      <span className="text-foreground font-medium">
+                        {transaction.cashier}
+                      </span>
+                    </p>
+                  </div>
+                </section>
 
-            {/* Customer */}
-            <section>
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <User className="h-3.5 w-3.5" /> Customer
-              </p>
-              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1">
-                {transaction.customerName ? (
-                  <p className="font-medium text-sm">{transaction.customerName}</p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">Walk-in customer</p>
-                )}
-                <p className="text-xs text-muted-foreground">{transaction.customerPhone || "No phone provided"}</p>
-              </div>
-            </section>
+                {/* Customer */}
+                <section>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <User className="h-3.5 w-3.5" /> Customer
+                  </p>
+                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1">
+                    {transaction.customerName ? (
+                      <p className="font-medium text-sm">
+                        {transaction.customerName}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        Walk-in customer
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {transaction.customerPhone || "No phone provided"}
+                    </p>
+                  </div>
+                </section>
 
-            {/* Order Notes */}
-            {transaction.notes && (
-              <section>
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <StickyNote className="h-3.5 w-3.5" /> Order Notes
-                </p>
-                <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-foreground">
-                  {transaction.notes}
-                </div>
-              </section>
-            )}
-
-            {/* Items */}
-            {hasItems && (
-              <section>
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <ShoppingBag className="h-3.5 w-3.5" /> Items ({transaction.items!.length})
-                </p>
-                <div className="rounded-md border border-border overflow-hidden divide-y divide-border">
-                  {transaction.items!.map((item, i) => (
-                    <div key={i} className="p-3 bg-card">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">
-                            <span className="text-muted-foreground mr-1">{item.qty}×</span>
-                            {item.name}
-                          </p>
-                          {item.variantName && (
-                            <p className="text-xs text-muted-foreground mt-0.5">{item.variantName}</p>
-                          )}
-                          {item.notes && (
-                            <p className="text-xs text-muted-foreground italic mt-0.5">Note: {item.notes}</p>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-semibold">{item.total}</p>
-                          <p className="text-[11px] text-muted-foreground">{item.unitPrice} ea</p>
-                        </div>
-                      </div>
-                      {item.extras && item.extras.length > 0 && (
-                        <div className="mt-2 pl-3 border-l-2 border-border space-y-0.5">
-                          {item.extras.map((e, j) => (
-                            <div key={j} className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">
-                                + {(e.qty ?? 1) > 1 ? `${e.qty}× ` : ""}{e.name}
-                              </span>
-                              <span className="text-muted-foreground">{e.price}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                {/* Order Notes */}
+                {transaction.notes && (
+                  <section>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <StickyNote className="h-3.5 w-3.5" /> Order Notes
+                    </p>
+                    <div className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-foreground">
+                      {transaction.notes}
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                  </section>
+                )}
 
-            {/* Totals breakdown */}
-            <section>
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
-                Order Total
-              </p>
-              <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1.5 text-sm">
-                {transaction.subtotal && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">{transaction.subtotal}</span>
-                  </div>
+                {/* Items */}
+                {hasItems && (
+                  <section>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <ShoppingBag className="h-3.5 w-3.5" /> Items (
+                      {transaction.items!.length})
+                    </p>
+                    <div className="rounded-md border border-border overflow-hidden divide-y divide-border">
+                      {transaction.items!.map((item, i) => (
+                        <div key={i} className="p-3 bg-card">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium">
+                                <span className="text-muted-foreground mr-1">
+                                  {item.qty}×
+                                </span>
+                                {item.name}
+                              </p>
+                              {item.variantName && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {item.variantName}
+                                </p>
+                              )}
+                              {item.notes && (
+                                <p className="text-xs text-muted-foreground italic mt-0.5">
+                                  Note: {item.notes}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-sm font-semibold">
+                                {item.total}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                {item.unitPrice} ea
+                              </p>
+                            </div>
+                          </div>
+                          {item.extras && item.extras.length > 0 && (
+                            <div className="mt-2 pl-3 border-l-2 border-border space-y-0.5">
+                              {item.extras.map((e, j) => (
+                                <div
+                                  key={j}
+                                  className="flex items-center justify-between text-xs"
+                                >
+                                  <span className="text-muted-foreground">
+                                    + {(e.qty ?? 1) > 1 ? `${e.qty}× ` : ""}
+                                    {e.name}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {e.price}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 )}
-                {transaction.discount && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">
-                      Discount{transaction.discountName ? ` (${transaction.discountName})` : ""}
-                    </span>
-                    <span className="font-medium text-success">−{transaction.discount}</span>
-                  </div>
-                )}
-                {transaction.fees?.map((fee, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="text-muted-foreground">{fee.name}</span>
-                    <span className="font-medium">{fee.amount}</span>
-                  </div>
-                ))}
-                {transaction.tip && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Tip</span>
-                    <span className="font-medium">{transaction.tip}</span>
-                  </div>
-                )}
-                <Separator className="my-1" />
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-bold text-base">{transaction.amount}</span>
-                </div>
-              </div>
-            </section>
 
-            {/* Payment breakdown */}
-            <section>
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <CreditCard className="h-3.5 w-3.5" /> Payment Breakdown
-              </p>
-              <div className="space-y-1.5">
-                {transaction.payments.map((p, i) => (
-                  <div
-                    key={i}
-                    className="text-sm bg-muted/40 rounded-md px-3 py-2"
-                  >
-                    {editingPaymentIndex === i ? (
-                      <div className="space-y-2">
+                {/* Totals breakdown */}
+                <section>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Order Total
+                  </p>
+                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 space-y-1.5 text-sm">
+                    {transaction.subtotal && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="font-medium">
+                          {transaction.subtotal}
+                        </span>
+                      </div>
+                    )}
+                    {transaction.discount && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">
+                          Discount
+                          {transaction.discountName
+                            ? ` (${transaction.discountName})`
+                            : ""}
+                        </span>
+                        <span className="font-medium text-success">
+                          −{transaction.discount}
+                        </span>
+                      </div>
+                    )}
+                    {transaction.fees?.map((fee, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="text-muted-foreground">
+                          {fee.name}
+                        </span>
+                        <span className="font-medium">{fee.amount}</span>
+                      </div>
+                    ))}
+                    {transaction.tip && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Tip</span>
+                        <span className="font-medium">{transaction.tip}</span>
+                      </div>
+                    )}
+                    <Separator className="my-1" />
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">Total</span>
+                      <span className="font-bold text-base">
+                        {transaction.amount}
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Payment breakdown */}
+                <section>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5" /> Payment Breakdown
+                  </p>
+                  <div className="space-y-1.5">
+                    {transaction.payments.map((p, i) => (
+                      <div
+                        key={i}
+                        className="text-sm bg-muted/40 rounded-md px-3 py-2"
+                      >
+                        {editingPaymentIndex === i ? (
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <Select
+                                value={editMethod}
+                                onValueChange={setEditMethod}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Method" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {paymentMethods.map((m) => (
+                                    <SelectItem key={m} value={m}>
+                                      {m}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                inputMode="decimal"
+                                placeholder="Amount"
+                                value={editAmount}
+                                onChange={(e) => setEditAmount(e.target.value)}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs px-2"
+                                onClick={cancelEdit}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs px-2"
+                                onClick={() => handleSaveEdit(i)}
+                                disabled={!editMethod || !editAmount}
+                              >
+                                Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              {p.method}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{p.amount}</span>
+                              <button
+                                onClick={() => startEdit(i)}
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                title="Edit payment"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                              {transaction.payments.length > 1 && (
+                                <button
+                                  onClick={() => requestRemovePayment(i)}
+                                  className="text-muted-foreground hover:text-destructive transition-colors"
+                                  title="Remove payment"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {addingPayment ? (
+                      <div className="text-sm bg-muted/40 rounded-md px-3 py-2 space-y-2 border border-dashed border-border">
                         <div className="grid grid-cols-2 gap-2">
-                          <Select value={editMethod} onValueChange={setEditMethod}>
+                          <Select
+                            value={newMethod}
+                            onValueChange={setNewMethod}
+                          >
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder="Method" />
                             </SelectTrigger>
                             <SelectContent>
                               {paymentMethods.map((m) => (
-                                <SelectItem key={m} value={m}>{m}</SelectItem>
+                                <SelectItem key={m} value={m}>
+                                  {m}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           <Input
                             inputMode="decimal"
                             placeholder="Amount"
-                            value={editAmount}
-                            onChange={(e) => setEditAmount(e.target.value)}
+                            value={newAmount}
+                            onChange={(e) => setNewAmount(e.target.value)}
                             className="h-8 text-xs"
                           />
                         </div>
@@ -473,177 +660,159 @@ export default function TransactionDetailDialog({
                             variant="ghost"
                             size="sm"
                             className="h-7 text-xs px-2"
-                            onClick={cancelEdit}
+                            onClick={cancelAdd}
                           >
                             Cancel
                           </Button>
                           <Button
                             size="sm"
                             className="h-7 text-xs px-2"
-                            onClick={() => handleSaveEdit(i)}
-                            disabled={!editMethod || !editAmount}
+                            onClick={handleAddPayment}
+                            disabled={!newMethod || !newAmount}
                           >
-                            Save
+                            Add
                           </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">{p.method}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{p.amount}</span>
-                          <button
-                            onClick={() => startEdit(i)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                            title="Edit payment"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                          {transaction.payments.length > 1 && (
-                            <button
-                              onClick={() => requestRemovePayment(i)}
-                              className="text-muted-foreground hover:text-destructive transition-colors"
-                              title="Remove payment"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {addingPayment ? (
-                  <div className="text-sm bg-muted/40 rounded-md px-3 py-2 space-y-2 border border-dashed border-border">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Select value={newMethod} onValueChange={setNewMethod}>
-                        <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {paymentMethods.map((m) => (
-                            <SelectItem key={m} value={m}>{m}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        inputMode="decimal"
-                        placeholder="Amount"
-                        value={newAmount}
-                        onChange={(e) => setNewAmount(e.target.value)}
-                        className="h-8 text-xs"
-                      />
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={cancelAdd}>
-                        Cancel
-                      </Button>
                       <Button
+                        variant="outline"
                         size="sm"
-                        className="h-7 text-xs px-2"
-                        onClick={handleAddPayment}
-                        disabled={!newMethod || !newAmount}
+                        className="w-full h-8 text-xs gap-1.5 border-dashed"
+                        onClick={startAdd}
                       >
-                        Add
+                        <Plus className="h-3.5 w-3.5" /> Add payment
                       </Button>
-                    </div>
+                    )}
+
+                    {(transaction.paidAmount ||
+                      transaction.changeDue ||
+                      transaction.balanceDue) && (
+                      <div className="mt-2 pt-2 border-t border-border space-y-1 text-sm">
+                        {transaction.paidAmount && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              Amount Paid
+                            </span>
+                            <span className="font-medium">
+                              {transaction.paidAmount}
+                            </span>
+                          </div>
+                        )}
+                        {transaction.changeDue && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              Change Due
+                            </span>
+                            <span className="font-semibold text-success">
+                              {transaction.changeDue}
+                            </span>
+                          </div>
+                        )}
+                        {transaction.balanceDue && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">
+                              Balance Due
+                            </span>
+                            <span className="font-semibold text-warning">
+                              {transaction.balanceDue}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 text-xs gap-1.5 border-dashed"
-                    onClick={startAdd}
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Add payment
-                  </Button>
+                </section>
+
+                {/* Loyalty */}
+                {transaction.loyalty && (
+                  <section>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5" /> Loyalty
+                    </p>
+                    <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-primary" />
+                          <p className="text-sm font-medium">
+                            {transaction.loyalty.customerName}
+                          </p>
+                        </div>
+                        {transaction.loyalty.tier && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-primary/10 text-primary border-primary/30"
+                          >
+                            {transaction.loyalty.tier}
+                          </Badge>
+                        )}
+                      </div>
+                      {transaction.loyalty.rewardName && (
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            Reward Redeemed
+                          </span>
+                          <span className="font-medium">
+                            {transaction.loyalty.rewardName}
+                            {transaction.loyalty.discountValue &&
+                              ` (−${transaction.loyalty.discountValue})`}
+                          </span>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-2 pt-1">
+                        {transaction.loyalty.pointsUsed !== undefined && (
+                          <div className="text-center bg-background rounded-md p-2">
+                            <p className="text-[10px] text-muted-foreground uppercase">
+                              Used
+                            </p>
+                            <p className="text-sm font-semibold">
+                              {transaction.loyalty.pointsUsed}
+                            </p>
+                          </div>
+                        )}
+                        {transaction.loyalty.pointsEarned !== undefined && (
+                          <div className="text-center bg-background rounded-md p-2">
+                            <p className="text-[10px] text-muted-foreground uppercase">
+                              Earned
+                            </p>
+                            <p className="text-sm font-semibold text-success">
+                              +{transaction.loyalty.pointsEarned}
+                            </p>
+                          </div>
+                        )}
+                        {transaction.loyalty.pointsBalance !== undefined && (
+                          <div className="text-center bg-background rounded-md p-2">
+                            <p className="text-[10px] text-muted-foreground uppercase">
+                              Balance
+                            </p>
+                            <p className="text-sm font-semibold">
+                              {transaction.loyalty.pointsBalance}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
                 )}
-
-                {(transaction.paidAmount || transaction.changeDue || transaction.balanceDue) && (
-                  <div className="mt-2 pt-2 border-t border-border space-y-1 text-sm">
-                    {transaction.paidAmount && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Amount Paid</span>
-                        <span className="font-medium">{transaction.paidAmount}</span>
-                      </div>
-                    )}
-                    {transaction.changeDue && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Change Due</span>
-                        <span className="font-semibold text-success">{transaction.changeDue}</span>
-                      </div>
-                    )}
-                    {transaction.balanceDue && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Balance Due</span>
-                        <span className="font-semibold text-warning">{transaction.balanceDue}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </section>
-
-
-            {/* Loyalty */}
-            {transaction.loyalty && (
-              <section>
-                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" /> Loyalty
-                </p>
-                <div className="rounded-md border border-primary/30 bg-primary/5 px-3 py-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Award className="h-4 w-4 text-primary" />
-                      <p className="text-sm font-medium">{transaction.loyalty.customerName}</p>
-                    </div>
-                    {transaction.loyalty.tier && (
-                      <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
-                        {transaction.loyalty.tier}
-                      </Badge>
-                    )}
-                  </div>
-                  {transaction.loyalty.rewardName && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">Reward Redeemed</span>
-                      <span className="font-medium">
-                        {transaction.loyalty.rewardName}
-                        {transaction.loyalty.discountValue && ` (−${transaction.loyalty.discountValue})`}
-                      </span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-3 gap-2 pt-1">
-                    {transaction.loyalty.pointsUsed !== undefined && (
-                      <div className="text-center bg-background rounded-md p-2">
-                        <p className="text-[10px] text-muted-foreground uppercase">Used</p>
-                        <p className="text-sm font-semibold">{transaction.loyalty.pointsUsed}</p>
-                      </div>
-                    )}
-                    {transaction.loyalty.pointsEarned !== undefined && (
-                      <div className="text-center bg-background rounded-md p-2">
-                        <p className="text-[10px] text-muted-foreground uppercase">Earned</p>
-                        <p className="text-sm font-semibold text-success">+{transaction.loyalty.pointsEarned}</p>
-                      </div>
-                    )}
-                    {transaction.loyalty.pointsBalance !== undefined && (
-                      <div className="text-center bg-background rounded-md p-2">
-                        <p className="text-[10px] text-muted-foreground uppercase">Balance</p>
-                        <p className="text-sm font-semibold">{transaction.loyalty.pointsBalance}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </section>
+              </>
             )}
           </div>
-
           {/* Footer actions */}
           <div className="border-t border-border px-4 sm:px-5 py-3 bg-card flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={handlePrint}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs flex-1"
+              onClick={handlePrint}
+            >
               <Printer className="h-3.5 w-3.5" /> Generate Bill
             </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs flex-1" onClick={openSendEmail}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs flex-1"
+              onClick={openSendEmail}
+            >
               <Mail className="h-3.5 w-3.5" /> Email
             </Button>
             {canVoid && (
@@ -665,14 +834,21 @@ export default function TransactionDetailDialog({
         open={voidConfirmOpen}
         onOpenChange={(open) => {
           setVoidConfirmOpen(open);
-          if (!open) { setVoidCode(""); setVoidCodeError(""); }
+          if (!open) {
+            setVoidCode("");
+            setVoidCodeError("");
+          }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Void Order {transaction.orderId}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Void Order {transaction.orderId}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This will cancel the order and initiate a refund of {transaction.amount}. Enter the void authorization code to proceed.
+              This will cancel the order and initiate a refund of{" "}
+              {transaction.amount}. Enter the void authorization code to
+              proceed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
@@ -680,7 +856,10 @@ export default function TransactionDetailDialog({
               type="password"
               placeholder="Enter void code"
               value={voidCode}
-              onChange={(e) => { setVoidCode(e.target.value); setVoidCodeError(""); }}
+              onChange={(e) => {
+                setVoidCode(e.target.value);
+                setVoidCodeError("");
+              }}
               className={voidCodeError ? "border-destructive" : ""}
             />
             {voidCodeError && (
@@ -690,7 +869,10 @@ export default function TransactionDetailDialog({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleVoid(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleVoid();
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={!voidCode}
             >
@@ -703,13 +885,16 @@ export default function TransactionDetailDialog({
       {/* Remove payment method confirmation */}
       <AlertDialog
         open={removePaymentIndex !== null}
-        onOpenChange={(open) => { if (!open) setRemovePaymentIndex(null); }}
+        onOpenChange={(open) => {
+          if (!open) setRemovePaymentIndex(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove payment method?</AlertDialogTitle>
             <AlertDialogDescription>
-              {removePaymentIndex !== null && transaction.payments[removePaymentIndex] ? (
+              {removePaymentIndex !== null &&
+              transaction.payments[removePaymentIndex] ? (
                 <>
                   This will remove the{" "}
                   <span className="font-medium text-foreground">
@@ -729,7 +914,10 @@ export default function TransactionDetailDialog({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); confirmRemovePayment(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmRemovePayment();
+              }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove
@@ -743,14 +931,21 @@ export default function TransactionDetailDialog({
         open={sendEmailOpen}
         onOpenChange={(open) => {
           setSendEmailOpen(open);
-          if (!open) { setSendEmailAddress(""); setSendEmailError(""); }
+          if (!open) {
+            setSendEmailAddress("");
+            setSendEmailError("");
+          }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Email bill for {transaction.orderId}</AlertDialogTitle>
+            <AlertDialogTitle>
+              Email bill for {transaction.orderId}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Enter the email address where the bill should be sent. A copy of the receipt with full order details will be delivered to this address.
+              Enter the email address where the bill should be sent. A copy of
+              the receipt with full order details will be delivered to this
+              address.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2 space-y-2">
@@ -758,7 +953,10 @@ export default function TransactionDetailDialog({
               type="email"
               placeholder="customer@example.com"
               value={sendEmailAddress}
-              onChange={(e) => { setSendEmailAddress(e.target.value); setSendEmailError(""); }}
+              onChange={(e) => {
+                setSendEmailAddress(e.target.value);
+                setSendEmailError("");
+              }}
               className={sendEmailError ? "border-destructive" : ""}
               autoFocus
             />
@@ -769,7 +967,10 @@ export default function TransactionDetailDialog({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleSendEmail(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSendEmail();
+              }}
               disabled={!sendEmailAddress.trim()}
             >
               <Send className="h-4 w-4 mr-2" /> Send Bill
@@ -784,6 +985,5 @@ export default function TransactionDetailDialog({
         onOpenChange={setReceiptPreviewOpen}
       />
     </>
-
   );
 }

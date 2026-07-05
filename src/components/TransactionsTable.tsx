@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";;
-import { useGetTransactions } from "@/services/api/transactions";
+import { useGetReportsTransactions } from "@/services/api/reports-api";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -107,11 +107,13 @@ export function TransactionsTable({ transactions }: TransactionsTableProps) {
 
   
 
-  const { data: apiTransactions } = useGetTransactions({
+  const { data: reportsTxnsResponse } = useGetReportsTransactions({
     search: debouncedSearch.trim() || undefined,
   }, {
     keepPreviousData: true,
   });
+
+  const apiTransactions = reportsTxnsResponse?.data;
 
   const displayTransactions = search.trim() ? (apiTransactions || []) : transactions;
 

@@ -1,10 +1,13 @@
 export interface DepartmentRecord {
-  id: string;
-  name: string;
-  description: string;
-  sortOrder: number;
-  categoryIds: string[];
+  id:                 string;
+  outletId:           string;
+  name:               string;
+  itemCount:          number;
+  categoryCount:      number;
+  assignedCategories: any[];
+  createdAt:          Date;
 }
+
 
 export interface CreateDepartmentPayload {
   name: string;
@@ -76,12 +79,14 @@ export interface UpdateLocationPayload {
 }
 
 export interface PaymentMethodRecord {
-  id: string;
-  name: string;
-  code: string;
-  enabled: boolean;
+  id:        string;
+  label:     string;
+  code:      string;
+  enabled:   boolean;
   sortOrder: number;
+  createdAt: Date;
 }
+
 
 export interface CreatePaymentMethodPayload {
   label: string;

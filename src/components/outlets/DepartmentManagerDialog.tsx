@@ -44,6 +44,13 @@ import {
 } from "@/services/api/outlets";
 import type { DepartmentRecord } from "@/lib/types/outlet-subresources";
 
+const getCategoryIds = (dept: DepartmentRecord | null | undefined): string[] => {
+  if (!dept?.assignedCategories) return [];
+  return dept.assignedCategories
+    .map((cat) => (typeof cat === "string" ? cat : cat?.id || cat?.categoryId))
+    .filter(Boolean);
+};
+
 interface DepartmentManagerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -130,10 +137,11 @@ export default function DepartmentManagerDialog({
   };
 
   const toggleCategory = async (dept: DepartmentRecord, categoryId: string) => {
-    const has = dept.categoryIds.includes(categoryId);
+    const assignedIds = getCategoryIds(dept);
+    const has = assignedIds.includes(categoryId);
     const newCategoryIds = has
-      ? dept.categoryIds.filter((id) => id !== categoryId)
-      : [...dept.categoryIds, categoryId];
+      ? assignedIds.filter((id) => id !== categoryId)
+      : [...assignedIds, categoryId];
     try {
       await triggerAssignCategories({
         deptId: dept.id,
@@ -263,7 +271,7 @@ export default function DepartmentManagerDialog({
                         <div>
                           <p className="text-sm font-medium">{dept.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {dept.categoryIds.length} assigned categor{dept.categoryIds.length !== 1 ? "ies" : "y"}
+                            {getCategoryIds(dept).length} assigned categor{getCategoryIds(dept).length !== 1 ? "ies" : "y"}
                           </p>
                         </div>
                       </div>
@@ -326,7 +334,7 @@ export default function DepartmentManagerDialog({
                 </Button>
                 <Separator orientation="vertical" className="h-5" />
                 <Badge variant="secondary" className="text-xs">
-                  {currentSelectedDept.categoryIds.length} categories assigned
+                  {getCategoryIds(currentSelectedDept).length} categories assigned
                 </Badge>
                 {isAssigning && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
@@ -344,7 +352,7 @@ export default function DepartmentManagerDialog({
 
               <div className="space-y-2">
                 {filteredCategories.map((category) => {
-                  const isCategoryAssigned = currentSelectedDept.categoryIds.includes(category.id);
+                  const isCategoryAssigned = getCategoryIds(currentSelectedDept).includes(category.id);
 
                   return (
                     <div
