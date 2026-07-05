@@ -124,6 +124,10 @@ export default function ServiceBookings() {
       toast.error("Customer name and service are required");
       return;
     }
+    if (form.customerPhone.trim() && !/^\d{11}$/.test(form.customerPhone.trim())) {
+      toast.error("Phone number must be an 11-digit number (e.g., 08012345678)");
+      return;
+    }
     if (editing) {
       setAppointments(prev => prev.map(a => a.id === editing.id ? { ...a, ...form } : a));
       toast.success("Appointment updated");
@@ -310,7 +314,7 @@ export default function ServiceBookings() {
               </div>
               <div className="space-y-2">
                 <Label>Phone</Label>
-                <Input value={form.customerPhone} onChange={e => setForm({ ...form, customerPhone: e.target.value })} placeholder="+234 800 000 0000" />
+                <Input value={form.customerPhone} onChange={e => setForm({ ...form, customerPhone: e.target.value })} placeholder="08012345678" />
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">

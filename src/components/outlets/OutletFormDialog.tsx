@@ -83,6 +83,10 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
       toast.error("Outlet name is required");
       return;
     }
+    if (form.phone.trim() && !/^\d{11}$/.test(form.phone.trim())) {
+      toast.error("Outlet phone number must be an 11-digit number (e.g., 08012345678)");
+      return;
+    }
     onSubmit(form);
   };
 
@@ -121,7 +125,7 @@ export default function OutletFormDialog({ open, onOpenChange, mode, initialData
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Outlet Phone</Label>
-              <Input id="phone" type="tel" placeholder="+234 800 000 0000" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
+              <Input id="phone" type="tel" placeholder="08012345678" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>Outlet Sale Currency</Label>

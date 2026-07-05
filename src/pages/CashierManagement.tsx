@@ -474,7 +474,7 @@ export default function CashierManagement() {
                               {cashier.data.lastName[0]}
                             </div>
                             <div>
-                              <div className="font-medium text-sm">
+                              <div className="font-medium text-sm whitespace-nowrap">
                                 {cashier.data.firstName} {cashier.data.lastName}
                               </div>
                               <div className="text-xs text-muted-foreground md:hidden">
@@ -510,9 +510,9 @@ export default function CashierManagement() {
                               >
                                 <Badge
                                   variant="outline"
-                                  className="text-[10px] px-2 py-0.5 font-normal gap-1"
+                                  className="text-[10px] px-2 py-0.5 font-normal gap-1 whitespace-nowrap"
                                 >
-                                  <Store className="h-2.5 w-2.5 text-accent" />
+                                  <Store className="h-2.5 w-2.5 text-accent shrink-0" />
                                   {a.outletName}
                                 </Badge>
                                 {a.departments?.map((d) => (

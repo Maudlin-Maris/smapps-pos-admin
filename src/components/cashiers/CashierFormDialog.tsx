@@ -166,6 +166,10 @@ export default function CashierFormDialog({
       toast.error("First and last name are required");
       return;
     }
+    if (form.phone.trim() && !/^\d{11}$/.test(form.phone.trim())) {
+      toast.error("Phone number must be an 11-digit number (e.g., 08012345678)");
+      return;
+    }
     if (selectedOutlets.length === 0) {
       toast.error("Assign at least one outlet");
       return;
@@ -246,7 +250,7 @@ export default function CashierFormDialog({
               <Input
                 id="cashierPhone"
                 type="tel"
-                placeholder="+234 800 000 0000"
+                placeholder="08012345678"
                 value={form.phone}
                 onChange={(e) => update("phone", e.target.value)}
               />

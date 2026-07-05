@@ -146,6 +146,9 @@ export default function UserManagement() {
     if (!form.email.trim()) e.email = "Email is required";
     else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email";
     if (!form.role_id) e.role_id = "Role is required";
+    if (form.phone.trim() && !/^\d{11}$/.test(form.phone.trim())) {
+      e.phone = "Phone number must be an 11-digit number";
+    }
 
     const dup = usersList.find(
       (u) => u.email.toLowerCase() === form.email.trim().toLowerCase() && u.id !== editingId,
@@ -442,15 +445,19 @@ export default function UserManagement() {
                   <p className="text-xs text-destructive">{errors.email}</p>
                 )}
               </div>
-              <div className="space-y-2">
+               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="+234 800 000 0000"
+                  placeholder="08012345678"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  aria-invalid={!!errors.phone}
                 />
+                {errors.phone && (
+                  <p className="text-xs text-destructive">{errors.phone}</p>
+                )}
               </div>
             </div>
 

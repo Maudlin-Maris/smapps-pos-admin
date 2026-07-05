@@ -121,6 +121,10 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
       toast.error("First name, last name and phone are required");
       return;
     }
+    if (!/^\d{11}$/.test(regPhone.trim())) {
+      toast.error("Phone number must be an 11-digit number (e.g., 08012345678)");
+      return;
+    }
     const fullName = `${regFirstName.trim()} ${regLastName.trim()}`;
     const newCustomer: LoyaltyCustomer = {
       id: `c${Date.now()}`,
@@ -218,7 +222,7 @@ export default function LoyaltyRedemptionPanel({ subtotal, onApplyRedemption, on
           <Input
             value={regPhone}
             onChange={e => setRegPhone(e.target.value)}
-            placeholder="Phone Number *"
+            placeholder="Phone Number * eg: 08012345678"
             className="h-9 text-sm"
           />
           <Input

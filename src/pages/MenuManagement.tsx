@@ -145,18 +145,6 @@ export default function MenuManagement() {
   );
   const menuItems = (itemsData?.data || []) as unknown as MenuItem[];
 
-  const { data: copyItemsData } = useApi<CatalogItemsListResponse>(
-    isLoggedIn && copyDialogOpen && selectedOutletId !== "all"
-      ? createUrlWithParams(API_ENDPOINTS.ITEMS, {
-          outletId: selectedOutletId,
-          per_page: 1000,
-        })
-      : null,
-  );
-  const copyItems = useMemo(() => {
-    return (copyItemsData?.data || []) as unknown as MenuItem[];
-  }, [copyItemsData]);
-
   const { trigger: triggerCreateItem, isMutating: isCreatingItem } =
     useCreateItem();
   const { trigger: triggerUpdateItem, isMutating: isUpdatingItem } =
@@ -629,7 +617,6 @@ export default function MenuManagement() {
         <CopyMenuDialog
           open={copyDialogOpen}
           onOpenChange={setCopyDialogOpen}
-          items={copyItems}
           currentOutletId={selectedOutletId}
           currentOutletName={currentOutlet.name}
           outlets={outlets}

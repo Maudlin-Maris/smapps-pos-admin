@@ -82,6 +82,10 @@ function CustomerFormDialog({
   const handleSave = () => {
     if (!firstName.trim()) { toast.error("First name is required"); return; }
     if (!lastName.trim()) { toast.error("Last name is required"); return; }
+    if (phone.trim() && !/^\d{11}$/.test(phone.trim())) {
+      toast.error("Phone number must be an 11-digit number (e.g., 08012345678)");
+      return;
+    }
     onSave({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -102,7 +106,7 @@ function CustomerFormDialog({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isSaving} /></div>
-            <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isSaving} /></div>
+            <div><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={isSaving} placeholder="08012345678" /></div>
           </div>
           <div><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} disabled={isSaving} /></div>
         </div>

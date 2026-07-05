@@ -26,9 +26,17 @@ export default function Profile() {
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (phone.trim() && !/^\d{11}$/.test(phone.trim())) {
+      toast({
+        title: "Invalid phone number",
+        description: "Phone number must be an 11-digit number (e.g., 08012345678).",
+        variant: "destructive",
+      });
+      return;
+    }
     setSavingProfile(true);
     await new Promise((r) => setTimeout(r, 300));
-    updateProfile({ display_name: displayName, phone });
+    updateProfile({ display_name: displayName, phone: phone.trim() });
     setSavingProfile(false);
     toast({ title: "Profile updated" });
   };
@@ -122,7 +130,7 @@ export default function Profile() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+234 800 000 0000"
+                  placeholder="08012345678"
                 />
               </div>
             </div>
