@@ -62,7 +62,8 @@ import {
 function useTransfers(params?: { status?: TransferStatus; page?: number; per_page?: number; search?: string }) {
   const { data: response, isLoading, mutate } = useGetTransfers(params);
   const transfers = useMemo(() => response?.data || [], [response]);
-  return { transfers, isLoading, mutate };
+  const meta = response?.meta;
+  return { transfers, meta, isLoading, mutate };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,15 +90,21 @@ function TransferList() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState<"all" | TransferStatus>("all");
-
-  
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(DEFAULT_PAGE_SIZE);
 
   const { transfers: countTransfers } = useTransfers();
-  const { transfers, isLoading } = useTransfers({
+  const { transfers, meta, isLoading } = useTransfers({
     status: statusFilter !== "all" ? statusFilter : undefined,
     search: debouncedSearch.trim() || undefined,
+    page,
+    per_page: perPage,
   });
   const nav = useNavigate();
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, debouncedSearch]);
 
   const filtered = transfers;
 
@@ -229,6 +236,19 @@ function TransferList() {
             </tbody>
           </table>
         </div>
+        <ResuablePagination
+          currentPage={page}
+          totalPages={meta?.last_page || 1}
+          totalItems={meta?.total || 0}
+          rowsPerPage={perPage}
+          onPageChange={setPage}
+          onRowsPerPageChange={(v) => {
+            setPerPage(v);
+            setPage(1);
+          }}
+          isLoading={isLoading}
+          className="border-t border-border bg-card/20 rounded-b-lg"
+        />
       </Card>
     </div>
   );
@@ -978,7 +998,7 @@ function TransferDetails() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-heading font-bold font-mono">{t.reference}</h1>
+              <h1 className="text-xl font-bold font-mono">{t.reference}</h1>
               <StatusBadge status={t.status} />
             </div>
             <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">

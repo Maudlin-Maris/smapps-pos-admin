@@ -54,6 +54,7 @@ import {
   Pencil,
   Check as CheckIcon,
   Loader2,
+  Search,
 } from "lucide-react";
 import type { PricingMethod } from "@/components/inventory/StockAdjustmentHistory";
 
@@ -92,7 +93,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useGetModifierGroups, useGetModifierGroup } from "@/services/api/catalog/modifier-group";
+import {
+  useGetModifierGroups,
+  useGetModifierGroup,
+} from "@/services/api/catalog/modifier-group";
 interface Modifier {
   id: string;
   name: string;
@@ -390,6 +394,13 @@ export default function MenuItemForm({
   const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>([]);
   const [modifierPickerOpen, setModifierPickerOpen] = useState(false);
 
+  // Clear modifier search on open change
+  useEffect(() => {
+    if (!modifierPickerOpen) {
+      setModifierSearch("");
+    }
+  }, [modifierPickerOpen]);
+
   const [modifierSearch, setModifierSearch] = useState("");
   const { data: modifierGroupsRes } = useGetModifierGroups({
     search: modifierSearch || undefined,
@@ -473,7 +484,7 @@ export default function MenuItemForm({
         const cat = categories.find(
           (c) =>
             c.name === item.category ||
-            c.subcategories.some((s) => s.name === item.subcategory),
+            c.subcategories?.some((s) => s.name === item.subcategory),
         );
         setSelectedCatId(cat?.id ?? "");
         setSubcategory(item.subcategory);
@@ -834,9 +845,7 @@ export default function MenuItemForm({
         });
       }
     }
-    const manual = extras.filter(
-      (e) => !fromGroups.some((f) => f.id === e.id),
-    );
+    const manual = extras.filter((e) => !fromGroups.some((f) => f.id === e.id));
     const finalExtras = [...fromGroups, ...manual];
 
     onSave(
@@ -2453,6 +2462,7 @@ export default function MenuItemForm({
                         </Label>
                         <Popover
                           open={modifierPickerOpen}
+                          modal
                           onOpenChange={setModifierPickerOpen}
                         >
                           <PopoverTrigger asChild>
@@ -2466,53 +2476,85 @@ export default function MenuItemForm({
                               <Plus className="h-3.5 w-3.5 mr-1" /> Attach group
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-72 p-0" align="end">
-                            <Command shouldFilter={false}>
-                              <CommandInput
+                          <PopoverContent
+                            className="w-72 p-0 flex flex-col overflow-hidden"
+                            align="end"
+                          >
+                            <div className="flex items-center border-b px-3">
+                              <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                              <input
                                 placeholder="Search modifier groups..."
                                 data-testid="search-modifier-groups-input"
-                                className="h-9"
+                                className="flex h-9 w-full bg-transparent py-2 text-xs outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
                                 value={modifierSearch}
-                                onValueChange={setModifierSearch}
+                                onChange={(e) =>
+                                  setModifierSearch(e.target.value)
+                                }
+                                autoFocus
                               />
-                              <CommandList>
-                                <CommandEmpty>
+                              {modifierSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => setModifierSearch("")}
+                                  className="text-muted-foreground hover:text-foreground"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                            <div className="max-h-[190px] overflow-y-auto p-1 min-h-0">
+                              {modifierGroups.length === 0 ? (
+                                <div className="py-6 text-center text-xs text-muted-foreground">
                                   No modifier groups. Create one in Admin.
-                                </CommandEmpty>
-                                <CommandGroup>
+                                </div>
+                              ) : (
+                                <div className="space-y-0.5">
                                   {modifierGroups.map((g) => {
                                     const checked = modifierGroupIds.includes(
                                       g.id,
                                     );
                                     return (
-                                      <CommandItem
+                                      <button
                                         key={g.id}
-                                        onSelect={() => {
+                                        type="button"
+                                        className={cn(
+                                          "group relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors text-left font-normal",
+                                          checked
+                                            ? "bg-accent text-accent-foreground"
+                                            : "hover:bg-accent hover:text-accent-foreground",
+                                        )}
+                                        onClick={() => {
                                           setModifierGroupIds((prev) =>
                                             checked
                                               ? prev.filter((id) => id !== g.id)
                                               : [...prev, g.id],
                                           );
                                         }}
-                                        className="flex items-center justify-between gap-2"
                                       >
-                                        <div className="min-w-0">
-                                          <div className="text-sm truncate">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="text-xs truncate">
                                             {g.name}
                                           </div>
-                                          <div className="text-[10px] text-muted-foreground truncate">
+                                          <div
+                                            className={cn(
+                                              "text-[10px] text-muted-foreground group-hover:text-accent-foreground/80 truncate",
+                                              checked
+                                                ? "text-accent-foreground/80"
+                                                : "text-muted-foreground",
+                                            )}
+                                          >
                                             {g.modifiers.length} options
                                           </div>
                                         </div>
                                         {checked && (
-                                          <Check className="h-4 w-4 text-primary shrink-0" />
+                                          <Check className="h-4 w-4 text-primary shrink-0 ml-2" />
                                         )}
-                                      </CommandItem>
+                                      </button>
                                     );
                                   })}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
+                                </div>
+                              )}
+                            </div>
                           </PopoverContent>
                         </Popover>
                       </div>
@@ -2731,10 +2773,7 @@ function ModifierGroupBadge({
     );
   }
   return (
-    <Badge
-      variant="secondary"
-      className="gap-1 pr-1 text-[11px]"
-    >
+    <Badge variant="secondary" className="gap-1 pr-1 text-[11px]">
       <span>{g.name}</span>
       <span className="text-muted-foreground">
         · {g.modifiers?.length ?? 0}

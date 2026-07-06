@@ -381,7 +381,7 @@ export default function SubstituteGroupManager({ selectedOutletId, readOnly }: P
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Items (priority ordered)</label>
-                <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <Popover modal open={pickerOpen} onOpenChange={setPickerOpen}>
                   <PopoverTrigger asChild>
                     <Button type="button" variant="outline" size="sm">
                       <Plus className="h-3.5 w-3.5 mr-1" /> Add

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,6 +93,7 @@ import {
   useRejectReconciliation,
   useDeleteReconciliation,
 } from "@/services/api/inventory/reconciliations";
+import type { InventoryMovementItem } from "@/lib/types/inventory-movements";
 import { formatNaira } from "@/lib/currency";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { api } from "@/services/api/base";
@@ -187,12 +188,12 @@ export default function InventoryHistory() {
   const { trigger: triggerRegenerate, isMutating: isRegenerating } =
     useRegenerateSnapshots();
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     setTick((t) => t + 1);
     mutateRecons();
     mutateSnapshots();
     mutateSummary();
-  };
+  }, [mutateRecons, mutateSnapshots, mutateSummary]);
 
   // Drill-down + counting modals
   const [drillSnap, setDrillSnap] = useState<DailyInventorySnapshot | null>(
@@ -216,7 +217,7 @@ export default function InventoryHistory() {
       window.removeEventListener("snapshots:changed", onChange);
       window.removeEventListener("transfers:changed", onChange);
     };
-  }, []);
+  }, [refresh]);
 
   const filter: SnapshotFilter = useMemo(
     () => ({
@@ -325,7 +326,7 @@ export default function InventoryHistory() {
       });
       toast.success("Inventory snapshots regenerated successfully");
       refresh();
-    } catch (e: any) {
+    } catch (e) {
       // Handled
     }
   };
@@ -339,7 +340,7 @@ export default function InventoryHistory() {
       toast.success(`Draft ${r.reference} deleted`);
       setConfirmDelete(null);
       refresh();
-    } catch (e: any) {
+    } catch (e) {
       // Handled
     }
   };
@@ -1115,7 +1116,7 @@ function MovementDrillDialog({
 
   const movements = useMemo(() => {
     if (!movementsResponse?.data) return [];
-    return movementsResponse.data.map((m: any) => ({
+    return movementsResponse.data.map((m: InventoryMovementItem) => ({
       ts: m.createdAt || new Date().toISOString(),
       type: m.type,
       quantity: m.quantity,
@@ -1126,8 +1127,8 @@ function MovementDrillDialog({
     }));
   }, [movementsResponse, snap]);
 
-  const total = (movementsResponse as any)?.meta?.total ?? movements.length;
-  const totalPages = (movementsResponse as any)?.meta?.last_page ?? 1;
+  const total = movementsResponse?.meta?.total ?? movements.length;
+  const totalPages = movementsResponse?.meta?.last_page ?? 1;
 
   return (
     <Dialog open={!!snap} onOpenChange={(o) => !o && onClose()}>
@@ -1339,7 +1340,7 @@ function StockCountDialog({
     setSearch("");
     setCountPage(1);
     setCountPerPage(DEFAULT_PAGE_SIZE);
-  }, [session]);
+  }, [session, outlets]);
 
   // Available snapshots for new sessions; locked once draft exists
   const snapshots = useMemo(() => {
@@ -1534,7 +1535,7 @@ function StockCountDialog({
         );
       }
       onChanged();
-    } catch (e: any) {
+    } catch (e) {
       // Handled
     }
   };
@@ -1564,7 +1565,7 @@ function StockCountDialog({
       toast.success("Count submitted for review");
       onOpenChange(false);
       onChanged();
-    } catch (e: any) {
+    } catch (e) {
       // Handled
     }
   };

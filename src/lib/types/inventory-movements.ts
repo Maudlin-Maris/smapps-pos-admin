@@ -1,3 +1,4 @@
+import type { Meta } from "./paginated-response";
 
 export interface InventoryMovementItem {
   id: string;
@@ -11,4 +12,5 @@ export interface InventoryMovementItem {
 
 export interface InventoryMovementsListResponse {
   data: InventoryMovementItem[];
+  meta?: Meta;
 }

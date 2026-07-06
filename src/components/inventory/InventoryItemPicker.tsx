@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Search, X, Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useGetInventoryItems, useGetInventoryItem } from "@/services/api/inventory/item";
+import {
+  useGetInventoryItems,
+  useGetInventoryItem,
+} from "@/services/api/inventory/item";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import type { InventoryListItem } from "@/lib/types/inventory-list-response";
@@ -36,21 +39,27 @@ export function InventoryItemPicker({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch search results
-  const { data: searchRes, isLoading, isValidating } = useGetInventoryItems(
+  const {
+    data: searchRes,
+    isLoading,
+    isValidating,
+  } = useGetInventoryItems(
     isOpen
       ? {
           search: debouncedSearch.trim() || undefined,
           per_page: DEFAULT_PAGE_SIZE,
           outletId,
         }
-      : undefined
+      : undefined,
   );
 
   const searchItems = searchRes?.data || [];
 
   // Fetch single item details if selectedId is set but not in current search results
   const { data: singleRes } = useGetInventoryItem(
-    selectedId && !searchItems.some((i) => i.id === selectedId) ? selectedId : undefined
+    selectedId && !searchItems.some((i) => i.id === selectedId)
+      ? selectedId
+      : undefined,
   );
 
   const selectedItem = useMemo(() => {
@@ -63,7 +72,10 @@ export function InventoryItemPicker({
   // Click outside listener
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -97,7 +109,10 @@ export function InventoryItemPicker({
         disabled={disabled}
         data-testid={dataTestId}
         onClick={() => setIsOpen((prev) => !prev)}
-        className={cn("group w-full justify-between font-normal h-9 text-xs px-2 truncate", triggerClassName)}
+        className={cn(
+          "group w-full justify-between font-normal h-9 text-xs px-2 truncate",
+          triggerClassName,
+        )}
       >
         {selectedItem ? (
           <span className="truncate group-hover:text-accent-foreground">
@@ -171,14 +186,14 @@ export function InventoryItemPicker({
                         "group relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none transition-colors text-left",
                         isSelected
                           ? "bg-accent text-accent-foreground"
-                          : "hover:bg-accent hover:text-accent-foreground"
+                          : "hover:bg-accent hover:text-accent-foreground",
                       )}
                       onClick={() => handleSelectItem(inv)}
                     >
                       <Check
                         className={cn(
                           "h-3.5 w-3.5 mr-2",
-                          isSelected ? "opacity-100" : "opacity-0"
+                          isSelected ? "opacity-100" : "opacity-0",
                         )}
                       />
                       <div className="flex-1 min-w-0">
@@ -186,10 +201,15 @@ export function InventoryItemPicker({
                         <div
                           className={cn(
                             "text-[10px] text-muted-foreground group-hover:text-accent-foreground/80 truncate",
-                            isSelected ? "text-accent-foreground/80" : "text-muted-foreground"
+                            isSelected
+                              ? "text-accent-foreground/80"
+                              : "text-muted-foreground",
                           )}
                         >
-                          {inv.sku} {inv.stock !== undefined || inv.quantity !== undefined ? `· stock ${inv.quantity ?? inv.stock}` : ""}
+                          {inv.sku}{" "}
+                          {inv.stock !== undefined || inv.quantity !== undefined
+                            ? `· stock ${inv.quantity ?? inv.stock}`
+                            : ""}
                         </div>
                       </div>
                     </button>
