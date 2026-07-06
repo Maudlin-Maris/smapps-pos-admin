@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";;
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -20,10 +20,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Copy, ArrowRight, Search, ChevronLeft, ChevronRight } from "lucide-react";
-import type { MenuItem } from "./MenuItemForm";
+import {
+  Copy,
+  ArrowRight,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import type { MenuItem, MenuItemType } from "./MenuItemForm";
 import type { Outlet } from "@/lib/types/outlet";
 import { useGetItems } from "@/services/api/catalog/item";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 interface PriceOverride {
   basePrice?: number;
@@ -33,11 +40,14 @@ interface PriceOverride {
 interface CopyMenuDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  items: MenuItem[];
   currentOutletId: string;
   currentOutletName: string;
   outlets: Outlet[];
-  onCopy: (itemIds: string[], targetOutletId: string, priceOverrides?: Record<string, PriceOverride>) => void;
+  onCopy: (
+    itemIds: string[],
+    targetOutletId: string,
+    priceOverrides?: Record<string, PriceOverride>,
+  ) => void;
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -45,7 +55,6 @@ const ITEMS_PER_PAGE = 5;
 export default function CopyMenuDialog({
   open,
   onOpenChange,
-  items,
   currentOutletId,
   currentOutletName,
   outlets,
@@ -56,60 +65,66 @@ export default function CopyMenuDialog({
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
   const [page, setPage] = useState(1);
-  const [priceOverrides, setPriceOverrides] = useState<Record<string, PriceOverride>>({});
+  const [priceOverrides, setPriceOverrides] = useState<
+    Record<string, PriceOverride>
+  >({});
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-
-  
 
   const { data: searchItemsResponse } = useGetItems({
     outletId: currentOutletId || undefined,
     search: debouncedSearch.trim() || undefined,
-    per_page: 100,
+    per_page: DEFAULT_PAGE_SIZE,
   });
 
   const displayItems = useMemo<MenuItem[]>(() => {
-    if (!debouncedSearch.trim()) return items;
     if (!searchItemsResponse?.data) return [];
-    return searchItemsResponse.data.map((item) => {
-      const fullItem = items.find((x) => x.id === item.id || x.sku === item.sku);
+    return (searchItemsResponse.data as any[]).map((item) => {
       return {
         id: item.id,
-        name: item.name || fullItem?.name || "",
-        description: item.description || fullItem?.description || "",
-        category: item.category || fullItem?.category || "",
-        subcategory: item.subcategory || fullItem?.subcategory || "",
-        price: item.price ?? fullItem?.price ?? 0,
-        quantity: fullItem?.quantity ?? 0,
-        salePrice: fullItem?.salePrice ?? null,
-        salePeriodStart: fullItem?.salePeriodStart ?? null,
-        salePeriodEnd: fullItem?.salePeriodEnd ?? null,
-        sku: item.sku || fullItem?.sku || "",
-        status: (item.status === "active" || item.status === "good" || item.status === "available" ? "active" : "inactive") as "active" | "inactive",
-        images: item.images || (item.images?.[0] ? [item.images[0]] : []) || fullItem?.images || [],
-        variants: fullItem?.variants || [],
-        extras: fullItem?.extras || [],
-        trackInventory: fullItem?.trackInventory ?? false,
-        outletId: item.outletId || fullItem?.outletId || undefined,
-        itemType: fullItem?.itemType || "simple",
-        linkedInventoryItemId: fullItem?.linkedInventoryItemId || undefined,
-        ingredients: fullItem?.ingredients || [],
-        modifierGroupIds: fullItem?.modifierGroupIds || [],
+        name: item.name || "",
+        description: item.description || "",
+        category: item.category || "",
+        subcategory: item.subcategory || "",
+        price: item.price ?? 0,
+        quantity: item.quantity ?? 0,
+        salePrice: item.salePrice ?? null,
+        salePeriodStart: item.salePeriodStart ? new Date(item.salePeriodStart) : null,
+        salePeriodEnd: item.salePeriodEnd ? new Date(item.salePeriodEnd) : null,
+        sku: item.sku || "",
+        status: (item.status === "active" ||
+        item.status === "good" ||
+        item.status === "available"
+          ? "active"
+          : "inactive") as "active" | "inactive",
+        images: item.images || [],
+        variants: item.variants || [],
+        extras: item.extras || [],
+        trackInventory: item.trackInventory ?? false,
+        outletId: item.outletId || undefined,
+        itemType: (item.itemType || "simple") as MenuItemType,
+        linkedInventoryItemId: item.linkedInventoryItemId || undefined,
+        ingredients: item.ingredients || [],
+        modifierGroupIds: item.modifierGroupIds || [],
       };
     });
-  }, [searchItemsResponse, items, debouncedSearch]);
+  }, [searchItemsResponse]);
 
   const availableOutlets = useMemo(
     () => outlets.filter((o) => o.id !== currentOutletId),
-    [outlets, currentOutletId]
+    [outlets, currentOutletId],
   );
 
   const filtered = displayItems;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
-  const paged = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const paged = filtered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
 
-  const allFilteredSelected = filtered.length > 0 && filtered.every((i) => selectedIds.has(i.id));
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((i) => selectedIds.has(i.id));
 
   const toggleAll = () => {
     if (allFilteredSelected) {
@@ -150,7 +165,11 @@ export default function CopyMenuDialog({
     }));
   };
 
-  const setVariantPrice = (itemId: string, variantId: string, price: number) => {
+  const setVariantPrice = (
+    itemId: string,
+    variantId: string,
+    price: number,
+  ) => {
     setPriceOverrides((prev) => ({
       ...prev,
       [itemId]: {
@@ -164,7 +183,11 @@ export default function CopyMenuDialog({
     return priceOverrides[item.id]?.basePrice ?? item.price;
   };
 
-  const getVariantDisplayPrice = (itemId: string, variantId: string, originalPrice: number) => {
+  const getVariantDisplayPrice = (
+    itemId: string,
+    variantId: string,
+    originalPrice: number,
+  ) => {
     return priceOverrides[itemId]?.variantPrices?.[variantId] ?? originalPrice;
   };
 
@@ -194,14 +217,21 @@ export default function CopyMenuDialog({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent side="right" className="!w-full !max-w-none lg:!max-w-xl p-0 flex flex-col overflow-hidden [&>button]:z-10">
+      <SheetContent
+        side="right"
+        className="!w-full !max-w-none lg:!max-w-xl p-0 flex flex-col overflow-hidden [&>button]:z-10"
+      >
         <SheetHeader className="px-6 pt-6 pb-4">
           <SheetTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5 text-primary" />
             Copy Menu Items
           </SheetTitle>
           <SheetDescription>
-            Select items from <span className="font-medium text-foreground">{currentOutletName}</span> to copy. You can adjust prices before copying.
+            Select items from{" "}
+            <span className="font-medium text-foreground">
+              {currentOutletName}
+            </span>{" "}
+            to copy. You can adjust prices before copying.
           </SheetDescription>
         </SheetHeader>
 
@@ -215,7 +245,9 @@ export default function CopyMenuDialog({
               </SelectTrigger>
               <SelectContent>
                 {availableOutlets.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -228,7 +260,10 @@ export default function CopyMenuDialog({
               <Input
                 placeholder="Search items..."
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 className="pl-8 h-9"
               />
             </div>
@@ -242,7 +277,9 @@ export default function CopyMenuDialog({
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </Button>
-              <span className="min-w-[4ch] text-center">{currentPage}/{totalPages}</span>
+              <span className="min-w-[4ch] text-center">
+                {currentPage}/{totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="icon"
@@ -265,17 +302,19 @@ export default function CopyMenuDialog({
                   aria-label="Select all"
                 />
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Select items ({selectedIds.size}/{items.length})
+                  Select items ({selectedIds.size}/{filtered.length})
                 </span>
               </div>
-              {selectedIds.size < items.length && (
+              {selectedIds.size < filtered.length && (
                 <Button
                   variant="link"
                   size="sm"
                   className="h-auto p-0 text-xs"
-                  onClick={() => setSelectedIds(new Set(items.map((i) => i.id)))}
+                  onClick={() =>
+                    setSelectedIds(new Set(filtered.map((i) => i.id)))
+                  }
                 >
-                  Select all {items.length} items
+                  Select all {filtered.length} items
                 </Button>
               )}
             </div>
@@ -294,15 +333,21 @@ export default function CopyMenuDialog({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium truncate">{item.name}</p>
+                          <p className="text-sm font-medium truncate">
+                            {item.name}
+                          </p>
                           {hasVariants && (
                             <button
                               type="button"
                               onClick={() => toggleExpand(item.id)}
                               className="shrink-0"
                             >
-                              <Badge variant="outline" className="text-[10px] cursor-pointer hover:bg-muted">
-                                {item.variants.length} variant{item.variants.length > 1 ? "s" : ""}
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] cursor-pointer hover:bg-muted"
+                              >
+                                {item.variants.length} variant
+                                {item.variants.length > 1 ? "s" : ""}
                               </Badge>
                             </button>
                           )}
@@ -313,7 +358,7 @@ export default function CopyMenuDialog({
                       </div>
                       {!hasVariants && (
                         <div className="shrink-0 w-24">
-                           <NumericInput
+                          <NumericInput
                             step={0.01}
                             min={0}
                             precision={2}
@@ -335,14 +380,20 @@ export default function CopyMenuDialog({
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium">{v.name}</p>
-                              <p className="text-[10px] text-muted-foreground">SKU: {v.sku || "—"}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                SKU: {v.sku || "—"}
+                              </p>
                             </div>
                             <div className="shrink-0 w-24">
-                               <NumericInput
+                              <NumericInput
                                 step={0.01}
                                 min={0}
                                 precision={2}
-                                value={getVariantDisplayPrice(item.id, v.id, v.price)}
+                                value={getVariantDisplayPrice(
+                                  item.id,
+                                  v.id,
+                                  v.price,
+                                )}
                                 onChange={(val) =>
                                   setVariantPrice(item.id, v.id, val || 0)
                                 }
@@ -358,7 +409,9 @@ export default function CopyMenuDialog({
               })}
               {filtered.length === 0 && (
                 <p className="text-center text-sm text-muted-foreground py-6">
-                  {search ? "No items match your search" : "No menu items in this outlet"}
+                  {search
+                    ? "No items match your search"
+                    : "No menu items in this outlet"}
                 </p>
               )}
             </div>
@@ -374,7 +427,10 @@ export default function CopyMenuDialog({
             disabled={selectedIds.size === 0 || !targetOutletId}
             className="gap-2"
           >
-            Copy {selectedIds.size > 0 ? `${selectedIds.size} item${selectedIds.size > 1 ? "s" : ""}` : ""}
+            Copy{" "}
+            {selectedIds.size > 0
+              ? `${selectedIds.size} item${selectedIds.size > 1 ? "s" : ""}`
+              : ""}
             <ArrowRight className="h-4 w-4" />
           </Button>
         </SheetFooter>

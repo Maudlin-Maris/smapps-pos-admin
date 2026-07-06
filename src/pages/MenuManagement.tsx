@@ -77,26 +77,6 @@ export default function MenuManagement() {
   const { data: outletsData, isLoading: isOutletsLoading } = useGetOutlets();
   const outlets = outletsData || [];
 
-  const { data: inventoryResponse } = useGetInventoryItems({
-    per_page: DEFAULT_PAGE_SIZE,
-  });
-  const inventoryItems = useMemo(() => {
-    if (!inventoryResponse?.data) return [];
-    return inventoryResponse.data.map((i: any) => ({
-      id: i.id,
-      name: i.name,
-      sku: i.sku,
-      stock: i.quantity ?? i.stock ?? 0,
-      costPrice: i.costPrice ?? 0,
-      categoryId: i.categoryId ?? "",
-      unitId: i.unitId ?? "",
-      outletId: i.outletId ?? "",
-      conversions: i.conversions || [],
-      minStock: i.minStock ?? 0,
-      status: i.status ?? "good",
-    }));
-  }, [inventoryResponse]);
-
   const {
     data: categoriesData,
     isLoading: isCategoriesLoading,
@@ -579,7 +559,6 @@ export default function MenuManagement() {
         businessType={currentOutlet?.businessType}
         outlets={outlets}
         currentOutletId={isAllOutlets ? undefined : selectedOutletId}
-        inventoryItems={inventoryItems}
       />
 
       <Dialog

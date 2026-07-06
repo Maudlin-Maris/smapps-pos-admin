@@ -158,26 +158,6 @@ export default function InventoryHistory() {
     outletId: locationId === "all" ? undefined : locationId,
   });
 
-  const { data: inventoryResponse, mutate: mutateInventory } =
-    useGetInventoryItems({
-      outletId: locationId === "all" ? undefined : locationId,
-      categoryId: categoryId === "all" ? undefined : categoryId,
-      per_page: DEFAULT_PAGE_SIZE,
-    });
-
-  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    if (inventoryResponse?.data) {
-      setInventoryCache((prev) => {
-        const next = { ...prev };
-        inventoryResponse.data.forEach((i) => {
-          next[i.id] = i;
-        });
-        return next;
-      });
-    }
-  }, [inventoryResponse]);
 
   const {
     data: snapshotsResponse,
@@ -197,27 +177,6 @@ export default function InventoryHistory() {
     setHistoryPage(1);
   }, [locationId, categoryId, search, fromDate, toDate, varianceOnly]);
 
-  // Load missing item details for snapshots on-demand
-  useEffect(() => {
-    if (snapshotsResponse?.data) {
-      snapshotsResponse.data.forEach(async (snap) => {
-        if (!inventoryCache[snap.inventoryItemId]) {
-          try {
-            const { data } = await api.get(
-              API_ENDPOINTS.SINGLE_INVENTORY(snap.inventoryItemId),
-            );
-            if (data) {
-              setInventoryCache((prev) => ({
-                ...prev,
-                [snap.inventoryItemId]: data,
-              }));
-            }
-          } catch (e) {}
-        }
-      });
-    }
-  }, [snapshotsResponse, inventoryCache]);
-
   const { data: summaryResponse, mutate: mutateSummary } =
     useGetInventorySnapshotsSummary({
       date: toDate,
@@ -231,7 +190,6 @@ export default function InventoryHistory() {
   const refresh = () => {
     setTick((t) => t + 1);
     mutateRecons();
-    mutateInventory();
     mutateSnapshots();
     mutateSummary();
   };
@@ -277,13 +235,10 @@ export default function InventoryHistory() {
 
     const items = snapshotsResponse.data;
     const mapped = items.map((snap) => {
-      const item =
-        inventoryCache[snap.inventoryItemId] ||
-        inventoryResponse?.data?.find((i) => i.id === snap.inventoryItemId);
-      const sku = item?.sku ?? "SKU-N/A";
-      const catId = item?.categoryId ?? "1";
-      const unit = "unit";
-      const unitCost = item?.costPrice ?? 0;
+      const sku = snap.sku ?? "SKU-N/A";
+      const catId = snap.categoryId ?? "1";
+      const unit = snap.unit || "unit";
+      const unitCost = snap.unitCost ?? 0;
       const opening = snap.openingQty ?? 0;
       const closing = snap.closingQty ?? 0;
       const diff = closing - opening;
@@ -322,8 +277,6 @@ export default function InventoryHistory() {
     );
   }, [
     snapshotsResponse,
-    inventoryResponse,
-    inventoryCache,
     locationId,
     today,
     outlets,

@@ -38,25 +38,17 @@ import {
   Plus,
   Trash2,
   CalendarIcon,
-  PackageCheck,
   Store,
   Check,
   Package,
   ChefHat,
   Sparkles,
-  Link2,
-  ChevronsUpDown,
-  Search,
   Info,
   Tag,
   Layers,
   KeyRound,
-  FileText,
   Image as ImageIcon,
-  DollarSign,
   ListPlus,
-  MapPin,
-  Barcode,
   Lock,
   TrendingUp,
   Pencil,
@@ -83,17 +75,11 @@ import { format } from "date-fns";
 import type { Category } from "./CategoryManager";
 import BarcodeScanner from "@/components/inventory/BarcodeScanner";
 import { getFeatures, type BusinessTypeId } from "@/data/businessTypes";
-import {
-  Popover as OutletPopover,
-  PopoverContent as OutletPopoverContent,
-  PopoverTrigger as OutletPopoverTrigger,
-} from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import type { Outlet } from "@/lib/types/outlet";
 import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import {
   Command,
-  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -106,10 +92,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useGetModifierGroups } from "@/services/api/catalog/modifier-group";
-import { useGetInventoryItems } from "@/services/api/inventory/item";
-import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
-
+import { useGetModifierGroups, useGetModifierGroup } from "@/services/api/catalog/modifier-group";
 interface Modifier {
   id: string;
   name: string;
@@ -135,6 +118,7 @@ import { api } from "@/services/api/base";
 import { API_ENDPOINTS } from "@/services/api/endpoints";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { InventoryItemPicker } from "@/components/inventory/InventoryItemPicker";
+import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 
 const SERVICE_UNITS: { name: string; abbreviation: string }[] = [
   { name: "Hour", abbreviation: "hr" },
@@ -193,6 +177,13 @@ export interface MenuIngredient extends ComponentSubstituteConfig {
   /** Whether this ingredient is a primary or secondary component of the
    *  composition. Defaults to "primary" when omitted. */
   role?: "primary" | "secondary";
+  // UI/calculation cache:
+  name?: string;
+  sku?: string;
+  costPrice?: number;
+  unitIdOriginal?: string;
+  conversions?: any[];
+  stock?: number;
 }
 
 export interface MenuItem {
@@ -256,10 +247,6 @@ interface MenuItemFormProps {
   businessType?: BusinessTypeId;
   outlets: Outlet[];
   currentOutletId?: string;
-  /** Inventory items used by Simple ("Link to inventory") and Composite
-   *  ("Ingredients") item types. Optional — when omitted those sections
-   *  show an empty-state. */
-  inventoryItems?: InventoryItem[];
 }
 
 function DatePickerField({
@@ -297,155 +284,6 @@ function DatePickerField({
           />
         </PopoverContent>
       </Popover>
-    </div>
-  );
-}
-
-function VariantRow({
-  variant,
-  onChange,
-  onRemove,
-}: {
-  variant: MenuVariant;
-  onChange: (v: MenuVariant) => void;
-  onRemove: () => void;
-}) {
-  const [showSale, setShowSale] = useState(!!(variant.salePrice !== null));
-
-  return (
-    <div className="border border-border rounded-lg p-3 space-y-3 bg-muted/30">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">Variant</Label>
-        <button
-          onClick={onRemove}
-          className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div>
-          <Label className="text-xs">Name *</Label>
-          <Input
-            className="mt-1 h-9 text-sm"
-            value={variant.name}
-            onChange={(e) => onChange({ ...variant, name: e.target.value })}
-            placeholder="e.g. Large"
-          />
-        </div>
-        <div className="flex items-center gap-2 self-end pb-1">
-          <Switch
-            checked={variant.status === "active"}
-            onCheckedChange={(v) =>
-              onChange({ ...variant, status: v ? "active" : "inactive" })
-            }
-          />
-          <Label className="text-xs text-muted-foreground">
-            {variant.status === "active" ? "Active" : "Inactive"}
-          </Label>
-        </div>
-        <div>
-          <Label className="text-xs">Price *</Label>
-          <NumericInput
-            className="mt-1 h-9 text-sm"
-            min={0}
-            step={0.01}
-            precision={2}
-            value={variant.price || 0}
-            onChange={(val) => onChange({ ...variant, price: val || 0 })}
-            placeholder="0.00"
-          />
-        </div>
-        <div className="col-span-2 sm:col-span-3">
-          <Label className="text-xs">SKU / Barcode</Label>
-          <div className="mt-1">
-            <BarcodeScanner
-              value={variant.sku}
-              onChange={(val) => onChange({ ...variant, sku: val })}
-              placeholder="Scan or enter barcode/SKU"
-            />
-          </div>
-        </div>
-        <div>
-          <Label className="text-xs">Quantity</Label>
-          <NumericInput
-            className="mt-1 h-9 text-sm"
-            min={0}
-            precision={0}
-            step={1}
-            value={variant.quantity || 0}
-            onChange={(val) => onChange({ ...variant, quantity: val || 0 })}
-            placeholder="0"
-            disabled={variant.trackInventory}
-          />
-          {variant.trackInventory && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">
-              Managed by inventory
-            </p>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={variant.trackInventory}
-            onCheckedChange={(v) => onChange({ ...variant, trackInventory: v })}
-          />
-          <div className="flex items-center gap-1">
-            <PackageCheck className="h-3.5 w-3.5 text-muted-foreground" />
-            <Label className="text-xs text-muted-foreground">
-              Track from Inventory
-            </Label>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={showSale}
-            onCheckedChange={(v) => {
-              setShowSale(v);
-              if (!v)
-                onChange({
-                  ...variant,
-                  salePrice: null,
-                  salePeriodStart: null,
-                  salePeriodEnd: null,
-                });
-            }}
-          />
-          <Label className="text-xs text-muted-foreground">On Sale</Label>
-        </div>
-      </div>
-      {showSale && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div>
-            <Label className="text-xs">Sale Price</Label>
-            <NumericInput
-              className="mt-1 h-9 text-sm"
-              min={0}
-              step={0.01}
-              precision={2}
-              value={variant.salePrice ?? null}
-              onChange={(val) =>
-                onChange({
-                  ...variant,
-                  salePrice: val,
-                })
-              }
-              placeholder="0.00"
-            />
-          </div>
-          <DatePickerField
-            label="Sale Start"
-            value={variant.salePeriodStart}
-            onChange={(d) => onChange({ ...variant, salePeriodStart: d })}
-          />
-          <DatePickerField
-            label="Sale End"
-            value={variant.salePeriodEnd}
-            onChange={(d) => onChange({ ...variant, salePeriodEnd: d })}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -493,49 +331,17 @@ export default function MenuItemForm({
   businessType,
   outlets,
   currentOutletId,
-  inventoryItems: propInventoryItems = [],
 }: MenuItemFormProps) {
   const [itemType, setItemType] = useState<MenuItemType>("simple");
   const { data: subGroupsRes } = useGetSubstituteGroups({
     outletId: currentOutletId || undefined,
     per_page: DEFAULT_PAGE_SIZE,
   });
-  const [subGroupsCache, setSubGroupsCache] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    if (subGroupsRes?.data) {
-      setSubGroupsCache((prev) => {
-        const next = { ...prev };
-        subGroupsRes.data.forEach((g) => {
-          next[g.id] = g;
-        });
-        return next;
-      });
-    }
-  }, [subGroupsRes]);
-
   const [ingredients, setIngredients] = useState<MenuIngredient[]>([]);
 
-  useEffect(() => {
-    if (open && ingredients.length > 0) {
-      ingredients.forEach((g) => {
-        (g.substituteGroupIds || []).forEach(async (id) => {
-          try {
-            const { data } = await api.get(
-              API_ENDPOINTS.SINGLE_SUBSTITUTE_GROUP(id),
-            );
-            if (data) {
-              setSubGroupsCache((prev) => ({ ...prev, [id]: data }));
-            }
-          } catch (e) {}
-        });
-      });
-    }
-  }, [open, ingredients]);
-
   const subGroups = useMemo(() => {
-    return Object.values(subGroupsCache);
-  }, [subGroupsCache]);
+    return (subGroupsRes?.data || []) as unknown as any[];
+  }, [subGroupsRes]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCatId, setSelectedCatId] = useState("");
@@ -589,40 +395,11 @@ export default function MenuItemForm({
     search: modifierSearch || undefined,
     per_page: DEFAULT_PAGE_SIZE,
   });
-  const [modifierGroupsCache, setModifierGroupsCache] = useState<
-    Record<string, ModifierGroup>
-  >({});
-
   useEffect(() => {
     if (modifierGroupsRes?.data) {
-      setModifierGroupsCache((prev) => {
-        const next = { ...prev };
-        (modifierGroupsRes.data as unknown as ModifierGroup[]).forEach((g) => {
-          next[g.id] = g;
-        });
-        return next;
-      });
       setModifierGroups(modifierGroupsRes.data as unknown as ModifierGroup[]);
     }
   }, [modifierGroupsRes]);
-
-  // Load attached modifier groups on-demand into cache
-  useEffect(() => {
-    if (open && item?.modifierGroupIds) {
-      item.modifierGroupIds.forEach(async (id) => {
-        try {
-          const { data } = await api.get(
-            API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id),
-          );
-          if (data) {
-            setModifierGroupsCache((prev) => ({ ...prev, [id]: data }));
-          }
-        } catch (e) {
-          console.error("Failed to fetch modifier group", id, e);
-        }
-      });
-    }
-  }, [open, item?.modifierGroupIds]);
 
   // Derive business type from the outlet selected inside the form so the
   // add-ons / modifiers section appears even when the page-level outlet
@@ -641,132 +418,36 @@ export default function MenuItemForm({
   const selectedCat = categories.find((c) => c.id === selectedCatId);
   const subcategories = selectedCat?.subcategories ?? [];
 
-  const [inventorySearch, setInventorySearch] = useState("");
-
-  const debouncedInventorySearch = useDebouncedValue(inventorySearch, 500);
-
-  const {
-    data: searchInventoryRes,
-    isLoading: isSearchInventoryLoading,
-    isValidating: isSearchInventoryValidating,
-  } = useGetInventoryItems(
-    open
-      ? {
-          search: debouncedInventorySearch.trim() || undefined,
-          per_page: DEFAULT_PAGE_SIZE,
-          outletId:
-            selectedOutletIds.length === 1 ? selectedOutletIds[0] : undefined,
-        }
-      : undefined,
-  );
-
-  const searchInventoryItems = searchInventoryRes?.data || [];
-
-  const [inventoryCache, setInventoryCache] = useState<Record<string, any>>({});
-
+  // Load missing ingredient details on demand
   useEffect(() => {
-    if (searchInventoryItems.length > 0) {
-      setInventoryCache((prev) => {
-        const next = { ...prev };
-        searchInventoryItems.forEach((i) => {
-          next[i.id] = i;
-        });
-        return next;
-      });
-    }
-  }, [searchInventoryItems]);
-
-  useEffect(() => {
-    if (propInventoryItems && propInventoryItems.length > 0) {
-      setInventoryCache((prev) => {
-        const next = { ...prev };
-        propInventoryItems.forEach((i) => {
-          next[i.id] = i;
-        });
-        return next;
-      });
-    }
-  }, [propInventoryItems]);
-
-  // Load missing item details on demand
-  useEffect(() => {
-    if (open) {
-      if (linkedInventoryItemId && !inventoryCache[linkedInventoryItemId]) {
+    if (!open) return;
+    ingredients.forEach((g, idx) => {
+      if (g.inventoryItemId && !g.name) {
         api
-          .get(API_ENDPOINTS.SINGLE_INVENTORY(linkedInventoryItemId))
+          .get(API_ENDPOINTS.SINGLE_INVENTORY(g.inventoryItemId))
           .then(({ data }) => {
             if (data) {
-              setInventoryCache((prev) => ({
-                ...prev,
-                [linkedInventoryItemId]: data,
-              }));
+              setIngredients((prev) =>
+                prev.map((p, i) =>
+                  i === idx
+                    ? {
+                        ...p,
+                        name: data.name || "",
+                        sku: data.sku || "",
+                        costPrice: data.costPrice ?? 0,
+                        unitIdOriginal: data.unitId || "",
+                        conversions: data.conversions || [],
+                        stock: data.quantity ?? data.stock ?? 0,
+                      }
+                    : p,
+                ),
+              );
             }
           })
           .catch(() => {});
       }
-      ingredients.forEach((g) => {
-        if (g.inventoryItemId && !inventoryCache[g.inventoryItemId]) {
-          api
-            .get(API_ENDPOINTS.SINGLE_INVENTORY(g.inventoryItemId))
-            .then(({ data }) => {
-              if (data) {
-                setInventoryCache((prev) => ({
-                  ...prev,
-                  [g.inventoryItemId]: data,
-                }));
-              }
-            })
-            .catch(() => {});
-        }
-      });
-    }
-  }, [open, linkedInventoryItemId, ingredients, inventoryCache]);
-
-  useEffect(() => {
-    setInventorySearch("");
-  }, [ingredientPickerOpenIdx]);
-
-  const availableInventory = useMemo(() => {
-    const list = searchInventoryItems;
-    if (selectedOutletIds.length > 0) {
-      return list.filter((i) => selectedOutletIds.includes(i.outletId));
-    }
-    return list;
-  }, [selectedOutletIds, searchInventoryItems]);
-
-  const resolvedInventoryItems = useMemo<InventoryItem[]>(() => {
-    const cached: InventoryItem[] = Object.values(inventoryCache).map(
-      (i: any) => ({
-        id: i.id,
-        name: i.name || "",
-        description: i.description || "",
-        sku: i.sku || "",
-        stock: i.quantity ?? i.stock ?? 0,
-        costPrice: i.costPrice ?? 0,
-        sellingPrice: i.sellingPrice ?? i.sellPrice ?? 0,
-        pricingMethod: i.pricingMethod ?? "markup",
-        pricingValue: i.pricingValue ?? 30,
-        status: i.status ?? "good",
-        minStock: i.minStock ?? 0,
-        categoryId: i.categoryId ?? "",
-        unitId: i.unitId ?? "",
-        outletId: i.outletId ?? "",
-        conversions: i.conversions || [],
-        batchNumber: i.batchNumber ?? "",
-        expiryDate: i.expiryDate ?? "",
-        batches: i.batches ?? [],
-      }),
-    );
-    const result = [...cached];
-    propInventoryItems.forEach((item) => {
-      if (!result.some((r) => r.id === item.id)) {
-        result.push(item);
-      }
     });
-    return result;
-  }, [inventoryCache, propInventoryItems]);
-
-  const inventoryItems = resolvedInventoryItems;
+  }, [open, ingredients]);
 
   useEffect(() => {
     if (open) {
@@ -863,14 +544,10 @@ export default function MenuItemForm({
     if (pricingStrategy !== "base") return;
     const cost = ingredients.reduce((sum, g) => {
       if (!g.inventoryItemId || !g.quantity) return sum;
-      const inv = inventoryItems.find((i) => i.id === g.inventoryItemId);
-      if (!inv) return sum;
-      const baseCost = inv.costPrice ?? 0;
+      const baseCost = g.costPrice ?? 0;
       let unitCost = baseCost;
-      if (g.unitId && g.unitId !== inv.unitId) {
-        const conv = (inv.conversions || []).find(
-          (c) => c.toUnitId === g.unitId,
-        );
+      if (g.unitId && g.unitId !== g.unitIdOriginal) {
+        const conv = (g.conversions || []).find((c) => c.toUnitId === g.unitId);
         if (conv && conv.toQuantity > 0 && conv.fromQuantity > 0) {
           unitCost = baseCost * (conv.fromQuantity / conv.toQuantity);
         }
@@ -890,7 +567,6 @@ export default function MenuItemForm({
     ingredients,
     menuPricingMethod,
     menuPricingValue,
-    inventoryItems,
   ]);
 
   // When switching item type, clear fields that no longer apply so saved data
@@ -1050,7 +726,7 @@ export default function MenuItemForm({
     setVariants((prev) => prev.filter((v) => v.id !== id));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const isService = itemType === "service";
     const isComposite = itemType === "composite";
     const isOpenPrice = pricingStrategy === "open";
@@ -1133,6 +809,36 @@ export default function MenuItemForm({
       : variants;
     const suppressSale =
       isService || isOpenPrice || isVariantPriced || hasVariants;
+
+    const fromGroups: MenuExtra[] = [];
+    for (const id of modifierGroupIds) {
+      let g = modifierGroups.find((x) => x.id === id);
+      if (!g) {
+        try {
+          const { data } = await api.get(
+            API_ENDPOINTS.SINGLE_MODIFIER_GROUP(id),
+          );
+          g = data;
+        } catch (e) {
+          console.error("Failed to fetch modifier group on save", id, e);
+        }
+      }
+      if (g) {
+        g.modifiers.forEach((m) => {
+          fromGroups.push({
+            id: `${g.id}:${m.id}`,
+            name: m.name,
+            price: m.price,
+            category: g.name,
+          });
+        });
+      }
+    }
+    const manual = extras.filter(
+      (e) => !fromGroups.some((f) => f.id === e.id),
+    );
+    const finalExtras = [...fromGroups, ...manual];
+
     onSave(
       {
         id: item?.id ?? crypto.randomUUID(),
@@ -1157,31 +863,7 @@ export default function MenuItemForm({
         status: isActive ? "active" : "inactive",
         images: isService ? [] : images,
         variants: isService ? [] : finalVariants,
-        extras: (() => {
-          // Flatten attached modifier groups into per-item extras so the POS
-          // (which renders extras grouped by category) keeps working without
-          // changes. Manual extras keep their own category. Available for both
-          // simple items and services (e.g. add-on services for salons).
-          const fromGroups: MenuExtra[] = modifierGroupIds
-            .map(
-              (id) =>
-                modifierGroupsCache[id] ||
-                modifierGroups.find((x) => x.id === id),
-            )
-            .filter((g): g is ModifierGroup => !!g)
-            .flatMap((g) =>
-              g.modifiers.map((m) => ({
-                id: `${g.id}:${m.id}`,
-                name: m.name,
-                price: m.price,
-                category: g.name,
-              })),
-            );
-          const manual = extras.filter(
-            (e) => !fromGroups.some((f) => f.id === e.id),
-          );
-          return [...fromGroups, ...manual];
-        })(),
+        extras: finalExtras,
         modifierGroupIds: modifierGroupIds.length
           ? modifierGroupIds
           : undefined,
@@ -1451,10 +1133,7 @@ export default function MenuItemForm({
               the "Also add to Inventory" toggle into one compact group. */}
             {itemType === "simple" &&
               (() => {
-                const linked = linkedInventoryItemId
-                  ? inventoryItems.find((i) => i.id === linkedInventoryItemId)
-                  : null;
-                const isLinked = !!linked;
+                const isLinked = !!linkedInventoryItemId;
                 return (
                   <FormGroup
                     title="Inventory"
@@ -1570,16 +1249,10 @@ export default function MenuItemForm({
             {itemType === "composite" &&
               (() => {
                 // Per-component unit options: base unit + every conversion target.
-                const getCompUnitOptions = (itemId: string) => {
-                  const item = inventoryItems.find((i) => i.id === itemId);
-                  if (!item)
-                    return [] as {
-                      id: string;
-                      label: string;
-                      baseUnitsPer: number;
-                    }[];
+                const getCompUnitOptions = (g: MenuIngredient) => {
+                  if (!g.inventoryItemId) return [];
                   const baseUnit = defaultMeasuringUnits.find(
-                    (u) => u.id === item.unitId,
+                    (u) => u.id === g.unitIdOriginal,
                   );
                   const opts: {
                     id: string;
@@ -1587,14 +1260,14 @@ export default function MenuItemForm({
                     baseUnitsPer: number;
                   }[] = [
                     {
-                      id: item.unitId,
+                      id: g.unitIdOriginal || "",
                       label: baseUnit
                         ? `${baseUnit.name} (${baseUnit.abbreviation})`
                         : "Base unit",
                       baseUnitsPer: 1,
                     },
                   ];
-                  (item.conversions || []).forEach((c) => {
+                  (g.conversions || []).forEach((c) => {
                     if (!c.toUnitId || c.toQuantity <= 0 || c.fromQuantity <= 0)
                       return;
                     const u = defaultMeasuringUnits.find(
@@ -1609,25 +1282,20 @@ export default function MenuItemForm({
                   return opts;
                 };
                 const getCompUnitCost = (g: MenuIngredient) => {
-                  const item = inventoryItems.find(
-                    (i) => i.id === g.inventoryItemId,
-                  );
-                  if (!item) return 0;
-                  const baseCost = item.costPrice ?? 0;
-                  if (!g.unitId || g.unitId === item.unitId) return baseCost;
-                  const opt = getCompUnitOptions(g.inventoryItemId).find(
+                  if (!g.inventoryItemId) return 0;
+                  const baseCost = g.costPrice ?? 0;
+                  if (!g.unitId || g.unitId === g.unitIdOriginal)
+                    return baseCost;
+                  const opt = getCompUnitOptions(g).find(
                     (o) => o.id === g.unitId,
                   );
                   return baseCost * (opt?.baseUnitsPer ?? 1);
                 };
                 const getCompBaseConsumed = (g: MenuIngredient) => {
-                  const item = inventoryItems.find(
-                    (i) => i.id === g.inventoryItemId,
-                  );
-                  if (!item) return 0;
+                  if (!g.inventoryItemId) return 0;
                   let baseUnitsPer = 1;
-                  if (g.unitId && g.unitId !== item.unitId) {
-                    const opt = getCompUnitOptions(g.inventoryItemId).find(
+                  if (g.unitId && g.unitId !== g.unitIdOriginal) {
+                    const opt = getCompUnitOptions(g).find(
                       (o) => o.id === g.unitId,
                     );
                     baseUnitsPer = opt?.baseUnitsPer ?? 1;
@@ -1646,10 +1314,7 @@ export default function MenuItemForm({
                 for (const g of validIngredients) {
                   const consumed = getCompBaseConsumed(g);
                   if (consumed <= 0) continue;
-                  const item = inventoryItems.find(
-                    (i) => i.id === g.inventoryItemId,
-                  );
-                  const stock = item?.stock ?? 0;
+                  const stock = g.stock ?? 0;
                   const possible = Math.floor(stock / consumed);
                   if (possible < sellableQty) {
                     sellableQty = possible;
@@ -1659,7 +1324,9 @@ export default function MenuItemForm({
                 const hasComponents = sellableQty !== Infinity;
                 const producible = hasComponents ? sellableQty : 0;
                 const limitingName = limitingId
-                  ? inventoryItems.find((i) => i.id === limitingId)?.name
+                  ? validIngredients.find(
+                      (i) => i.inventoryItemId === limitingId,
+                    )?.name
                   : "";
 
                 return (
@@ -1726,13 +1393,8 @@ export default function MenuItemForm({
 
                     <div className="space-y-2">
                       {ingredients.map((g, idx) => {
-                        const inv = inventoryItems.find(
-                          (i) => i.id === g.inventoryItemId,
-                        );
-                        const unitOptions = g.inventoryItemId
-                          ? getCompUnitOptions(g.inventoryItemId)
-                          : [];
-                        const activeUnitId = g.unitId || inv?.unitId || "";
+                        const unitOptions = getCompUnitOptions(g);
+                        const activeUnitId = g.unitId || g.unitIdOriginal || "";
                         const unitCost = getCompUnitCost(g);
                         const lineCost = unitCost * (g.quantity || 0);
                         return (
@@ -1741,90 +1403,41 @@ export default function MenuItemForm({
                             className="space-y-2 p-2.5 border rounded-md"
                           >
                             <div className="flex items-center gap-2">
-                              <Popover
-                                open={ingredientPickerOpenIdx === idx}
-                                onOpenChange={(o) =>
-                                  setIngredientPickerOpenIdx(o ? idx : null)
+                              <InventoryItemPicker
+                                selectedId={g.inventoryItemId}
+                                outletId={
+                                  selectedOutletIds.length === 1
+                                    ? selectedOutletIds[0]
+                                    : undefined
                                 }
-                              >
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    role="combobox"
-                                    className="justify-between font-normal h-9 text-sm flex-1"
-                                  >
-                                    {inv ? (
-                                      <span className="truncate">
-                                        {inv.name}
-                                      </span>
-                                    ) : (
-                                      <span className="text-muted-foreground">
-                                        Select inventory item...
-                                      </span>
-                                    )}
-                                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-50 shrink-0" />
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                  className="w-[--radix-popover-trigger-width] p-0"
-                                  align="start"
-                                >
-                                  <Command shouldFilter={false}>
-                                    <CommandInput
-                                      placeholder="Search inventory..."
-                                      className="h-9"
-                                      value={inventorySearch}
-                                      onValueChange={setInventorySearch}
-                                    />
-                                    <CommandList>
-                                      <CommandEmpty>
-                                        No items found.
-                                      </CommandEmpty>
-                                      <CommandGroup>
-                                        {availableInventory.map((it) => (
-                                          <CommandItem
-                                            key={it.id}
-                                            value={`${it.name} ${it.sku}`}
-                                            onSelect={() => {
-                                              // Reset unit when item changes so we don't carry stale unitId
-                                              setIngredients((prev) =>
-                                                prev.map((p, i) =>
-                                                  i === idx
-                                                    ? {
-                                                        ...p,
-                                                        inventoryItemId: it.id,
-                                                        unitId: undefined,
-                                                      }
-                                                    : p,
-                                                ),
-                                              );
-                                              setIngredientPickerOpenIdx(null);
-                                            }}
-                                          >
-                                            <Check
-                                              className={cn(
-                                                "h-3.5 w-3.5 mr-2",
-                                                g.inventoryItemId === it.id
-                                                  ? "opacity-100"
-                                                  : "opacity-0",
-                                              )}
-                                            />
-                                            <div className="flex-1 min-w-0">
-                                              <div className="text-sm truncate">
-                                                {it.name}
-                                              </div>
-                                              <div className="text-[11px] text-muted-foreground truncate">
-                                                {it.sku}
-                                              </div>
-                                            </div>
-                                          </CommandItem>
-                                        ))}
-                                      </CommandGroup>
-                                    </CommandList>
-                                  </Command>
-                                </PopoverContent>
-                              </Popover>
+                                onSelect={(id, item) => {
+                                  setIngredients((prev) =>
+                                    prev.map((p, i) =>
+                                      i === idx
+                                        ? {
+                                            ...p,
+                                            inventoryItemId: id,
+                                            unitId: undefined,
+                                            name: item?.name || "",
+                                            sku: item?.sku || "",
+                                            costPrice: item?.costPrice ?? 0,
+                                            unitIdOriginal: item?.unitId || "",
+                                            conversions:
+                                              item?.conversions || [],
+                                            stock:
+                                              item?.stock ??
+                                              item?.quantity ??
+                                              0,
+                                          }
+                                        : p,
+                                    ),
+                                  );
+                                }}
+                                className="flex-1"
+                                placeholder="Search inventory..."
+                                triggerPlaceholder="Select inventory item..."
+                                triggerClassName="h-9 text-sm"
+                              />
                               <button
                                 type="button"
                                 onClick={() =>
@@ -1989,7 +1602,6 @@ export default function MenuItemForm({
                                     ),
                                   )
                                 }
-                                inventoryItems={inventoryItems}
                                 groups={subGroups}
                               />
                             )}
@@ -2151,25 +1763,19 @@ export default function MenuItemForm({
                     {pricingStrategy === "base" &&
                       (() => {
                         const isSimple = itemType === "simple";
-                        const linkedInv =
-                          isSimple && linkedInventoryItemId
-                            ? inventoryItems.find(
-                                (i) => i.id === linkedInventoryItemId,
-                              )
-                            : null;
+                        const isLinked = isSimple && !!linkedInventoryItemId;
 
                         // LINKED → read-only summary sourced from inventory record
-                        if (linkedInv) {
-                          const cost = linkedInv.costPrice ?? 0;
-                          const sell =
-                            linkedInv.sellingPrice ?? (parseFloat(price) || 0);
+                        if (isLinked) {
+                          const cost = parseFloat(costPrice) || 0;
+                          const sell = parseFloat(price) || 0;
                           const profit = sell - cost;
                           const markupPct =
                             cost > 0 ? (profit / cost) * 100 : 0;
                           const methodLabel =
-                            linkedInv.pricingMethod === "margin"
+                            menuPricingMethod === "margin"
                               ? "Margin"
-                              : linkedInv.pricingMethod === "fixed"
+                              : menuPricingMethod === "fixed"
                                 ? "Fixed"
                                 : "Markup";
                           return (
@@ -2191,15 +1797,16 @@ export default function MenuItemForm({
                                   <div>
                                     <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
                                       {methodLabel}
-                                      {linkedInv.pricingMethod !== "fixed"
+                                      {menuPricingMethod !== "fixed"
                                         ? " %"
                                         : ""}
                                     </p>
                                     <p className="font-medium tabular-nums">
-                                      {linkedInv.pricingValue != null
-                                        ? linkedInv.pricingMethod === "fixed"
-                                          ? `₦${Number(linkedInv.pricingValue).toFixed(2)}`
-                                          : `${Number(linkedInv.pricingValue).toFixed(1)}%`
+                                      {menuPricingValue != null &&
+                                      menuPricingValue !== ""
+                                        ? menuPricingMethod === "fixed"
+                                          ? `₦${Number(menuPricingValue).toFixed(2)}`
+                                          : `${Number(menuPricingValue).toFixed(1)}%`
                                         : `${markupPct.toFixed(1)}%`}
                                     </p>
                                   </div>
@@ -2473,14 +2080,10 @@ export default function MenuItemForm({
                             (g) => g.inventoryItemId && g.quantity > 0,
                           );
                           const cost = validIngredients.reduce((sum, g) => {
-                            const inv = inventoryItems.find(
-                              (i) => i.id === g.inventoryItemId,
-                            );
-                            if (!inv) return sum;
-                            const baseCost = inv.costPrice ?? 0;
+                            const baseCost = g.costPrice ?? 0;
                             let unitCost = baseCost;
-                            if (g.unitId && g.unitId !== inv.unitId) {
-                              const conv = (inv.conversions || []).find(
+                            if (g.unitId && g.unitId !== g.unitIdOriginal) {
+                              const conv = (g.conversions || []).find(
                                 (c) => c.toUnitId === g.unitId,
                               );
                               if (
@@ -2920,36 +2523,17 @@ export default function MenuItemForm({
                         </p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
-                          {modifierGroupIds.map((id) => {
-                            const g =
-                              modifierGroupsCache[id] ||
-                              modifierGroups.find((x) => x.id === id);
-                            if (!g) return null;
-                            return (
-                              <Badge
-                                key={id}
-                                variant="secondary"
-                                className="gap-1 pr-1 text-[11px]"
-                              >
-                                <span>{g.name}</span>
-                                <span className="text-muted-foreground">
-                                  · {g.modifiers.length}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setModifierGroupIds((prev) =>
-                                      prev.filter((x) => x !== id),
-                                    )
-                                  }
-                                  className="ml-0.5 rounded hover:bg-destructive/15 p-0.5 text-muted-foreground hover:text-destructive"
-                                  aria-label={`Remove ${g.name}`}
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            );
-                          })}
+                          {modifierGroupIds.map((id) => (
+                            <ModifierGroupBadge
+                              key={id}
+                              id={id}
+                              onRemove={() =>
+                                setModifierGroupIds((prev) =>
+                                  prev.filter((x) => x !== id),
+                                )
+                              }
+                            />
+                          ))}
                         </div>
                       )}
                     </div>
@@ -3127,5 +2711,42 @@ export default function MenuItemForm({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function ModifierGroupBadge({
+  id,
+  onRemove,
+}: {
+  id: string;
+  onRemove: () => void;
+}) {
+  const { data: g } = useGetModifierGroup(id);
+  if (!g) {
+    return (
+      <Badge variant="secondary" className="gap-1 pr-1 text-[11px]">
+        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground mr-1" />
+        <span>Loading...</span>
+      </Badge>
+    );
+  }
+  return (
+    <Badge
+      variant="secondary"
+      className="gap-1 pr-1 text-[11px]"
+    >
+      <span>{g.name}</span>
+      <span className="text-muted-foreground">
+        · {g.modifiers?.length ?? 0}
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="ml-0.5 rounded hover:bg-destructive/15 p-0.5 text-muted-foreground hover:text-destructive"
+        aria-label={`Remove ${g.name}`}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </Badge>
   );
 }

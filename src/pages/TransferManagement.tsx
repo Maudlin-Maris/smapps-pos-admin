@@ -283,22 +283,16 @@ function TransferCreate() {
   const [pickerPage, setPickerPage] = useState(1);
   const [pickerPerPage, setPickerPerPage] = useState(DEFAULT_PAGE_SIZE);
 
-  // Keep a merged dictionary of all source inventory items we have fetched or loaded from existing
-  const [sourceItemsCache, setSourceItemsCache] = useState<Record<string, {
-    id: string;
-    name: string;
-    sku: string;
-    stock: number;
-    unitCost: number;
-    minStock: number;
-    unit: string;
-  }>>({});
-
   type LineDraft = {
     itemId: string;
     qty: number;
     strategy: ValuationStrategy;
     customCost?: number;
+    name: string;
+    sku: string;
+    stock: number;
+    unitCost: number;
+    unit: string;
   };
   const [lines, setLines] = useState<LineDraft[]>([]);
 
@@ -330,57 +324,44 @@ function TransferCreate() {
     }));
   }, [sourceInventoryRes]);
 
-  const [destInventoryCache, setDestInventoryCache] = useState<Record<string, any>>({});
+  // Reset page to 1 when search query, source, or items per page change
+  useEffect(() => {
+    setPickerPage(1);
+  }, [search, sourceId, pickerPerPage]);
 
-  const allDestItems = useMemo(() => {
-    return Object.values(destInventoryCache).map((i: any) => ({
-      id: i.id,
-      name: i.name,
-      sku: i.sku,
-      stock: i.quantity ?? i.stock ?? 0,
-      unitCost: i.costPrice ?? 0,
-      minStock: 0,
-      unit: "unit",
-    }));
-  }, [destInventoryCache]);
+  // Handle manual sourceId change (reset lines and pagination)
+  const prevSourceIdRef = useRef("");
+  useEffect(() => {
+    const prevSourceId = prevSourceIdRef.current;
+    if (sourceId && prevSourceId && sourceId !== prevSourceId) {
+      setLines([]);
+    }
+    prevSourceIdRef.current = sourceId;
+  }, [sourceId]);
 
   useEffect(() => {
-    if (destInventoryRes?.data) {
-      setDestInventoryCache((prev) => {
-        const next = { ...prev };
-        destInventoryRes.data.forEach((item) => {
-          next[item.id] = item;
-          if (item.sku) next[item.sku] = item;
-        });
-        return next;
-      });
-    }
-  }, [destInventoryRes]);
+    if (existing) {
+      setSourceId(existing.source.id);
+      setDestId(existing.destination.id);
+      setReason(existing.reason);
+      setNotes(existing.notes ?? "");
+      setCarrier(existing.carrier ?? "");
 
-  useEffect(() => {
-    if (destId) {
-      lines.forEach(async (line) => {
-        const sourceItem = allSourceItems.find(x => x.id === line.itemId);
-        const sku = sourceItem?.sku || "";
-        if (!destInventoryCache[line.itemId] && (!sku || !destInventoryCache[sku])) {
-          try {
-            const { data: res } = await api.get(API_ENDPOINTS.INVENTORY, {
-              params: { outletId: destId, search: sku || line.itemId }
-            });
-            const found = res?.data?.[0];
-            if (found) {
-              setDestInventoryCache(prev => ({
-                ...prev,
-                [found.id]: found,
-                [found.sku]: found
-              }));
-            }
-          } catch (e) {}
-        }
-      });
+      setLines(
+        existing.items.map((it) => ({
+          itemId: it.inventoryItemId,
+          qty: it.requestedQty,
+          strategy: it.valuationStrategy ?? "source",
+          customCost: it.customUnitCost,
+          name: it.itemName,
+          sku: it.sku,
+          stock: it.availableQty,
+          unitCost: it.unitCost,
+          unit: it.unit || "unit",
+        }))
+      );
     }
-  }, [lines, destId, allSourceItems, destInventoryCache]);
-
+  }, [existing]);
   // Fetch transfers to compute live reserved quantities
   const { transfers: allTransfers } = useTransfers();
 
@@ -399,79 +380,6 @@ function TransferCreate() {
     }
     return reserved;
   };
-
-  // Sync fetched source inventory data into sourceItemsCache
-  useEffect(() => {
-    if (sourceInventoryRes?.data) {
-      setSourceItemsCache((prev) => {
-        const next = { ...prev };
-        sourceInventoryRes.data.forEach((i) => {
-          next[i.id] = {
-            id: i.id,
-            name: i.name,
-            sku: i.sku,
-            stock: i.quantity,
-            unitCost: i.costPrice,
-            minStock: 0,
-            unit: "unit",
-          };
-        });
-        return next;
-      });
-    }
-  }, [sourceInventoryRes]);
-
-  // Reset page to 1 when search query, source, or items per page change
-  useEffect(() => {
-    setPickerPage(1);
-  }, [search, sourceId, pickerPerPage]);
-
-  // Handle manual sourceId change (reset lines, pagination, and clear the item cache)
-  const prevSourceIdRef = useRef("");
-  useEffect(() => {
-    const prevSourceId = prevSourceIdRef.current;
-    if (sourceId && prevSourceId && sourceId !== prevSourceId) {
-      setLines([]);
-      setSourceItemsCache({});
-    }
-    prevSourceIdRef.current = sourceId;
-  }, [sourceId]);
-
-  useEffect(() => {
-    if (existing) {
-      setSourceId(existing.source.id);
-      setDestId(existing.destination.id);
-      setReason(existing.reason);
-      setNotes(existing.notes ?? "");
-      setCarrier(existing.carrier ?? "");
-
-      // Populate sourceItemsCache with existing items so they don't get lost
-      setSourceItemsCache((prev) => {
-        const next = { ...prev };
-        existing.items.forEach((it) => {
-          next[it.inventoryItemId] = {
-            id: it.inventoryItemId,
-            name: it.itemName,
-            sku: it.sku,
-            stock: it.availableQty,
-            unitCost: it.unitCost,
-            minStock: 0,
-            unit: it.unit || "unit",
-          };
-        });
-        return next;
-      });
-
-      setLines(
-        existing.items.map((it) => ({
-          itemId: it.inventoryItemId,
-          qty: it.requestedQty,
-          strategy: it.valuationStrategy ?? "source",
-          customCost: it.customUnitCost,
-        }))
-      );
-    }
-  }, [existing]);
 
   const [discardOpen, setDiscardOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<null | "draft" | "submit">(null);
@@ -506,7 +414,25 @@ function TransferCreate() {
   const sourceItems = sourceId ? allSourceItems : [];
 
   const addLine = (itemId: string) => {
-    setLines((prev) => prev.find((l) => l.itemId === itemId) ? prev : [...prev, { itemId, qty: 1, strategy: "source" }]);
+    const item = allSourceItems.find((x) => x.id === itemId);
+    if (!item) return;
+    setLines((prev) =>
+      prev.find((l) => l.itemId === itemId)
+        ? prev
+        : [
+            ...prev,
+            {
+              itemId,
+              qty: 1,
+              strategy: "source",
+              name: item.name,
+              sku: item.sku,
+              stock: item.stock,
+              unitCost: item.unitCost,
+              unit: item.unit || "unit",
+            },
+          ]
+    );
   };
   const updateQty = (itemId: string, qty: number) =>
     setLines((prev) => prev.map((l) => l.itemId === itemId ? { ...l, qty } : l));
@@ -539,26 +465,23 @@ function TransferCreate() {
 
     const src = locations.find((l) => l.id === sourceId)!;
     const dst = locations.find((l) => l.id === destId)!;
-    const inv = sourceItemsCache;
 
     // Validate stock
     const items = [];
     for (const l of lines) {
-      const i = inv[l.itemId];
-      if (!i) continue;
-      const reserved = getLiveReservedQty(sourceId, i.id);
-      const transferable = Math.max(0, i.stock - reserved);
+      const reserved = getLiveReservedQty(sourceId, l.itemId);
+      const transferable = Math.max(0, l.stock - reserved);
       if (submit) {
-        if (l.qty <= 0) return toast.error(`Quantity for ${i.name} must be > 0`);
-        if (l.qty > transferable) return toast.error(`${i.name}: only ${transferable} transferable`);
+        if (l.qty <= 0) return toast.error(`Quantity for ${l.name} must be > 0`);
+        if (l.qty > transferable) return toast.error(`${l.name}: only ${transferable} transferable`);
         if (l.strategy === "custom" && (!l.customCost || l.customCost <= 0)) {
-          return toast.error(`${i.name}: enter a valid custom unit cost`);
+          return toast.error(`${l.name}: enter a valid custom unit cost`);
         }
       }
       items.push({
-        inventoryItemId: i.id,
+        inventoryItemId: l.itemId,
         requestedQty: Math.max(0, l.qty || 0),
-        unit: i.unit || "unit",
+        unit: l.unit || "unit",
       });
     }
 
@@ -851,14 +774,12 @@ function TransferCreate() {
                   </TooltipProvider>
                   <tbody>
                     {lines.map((l) => {
-                      const i = sourceItemsCache[l.itemId];
-                      if (!i) return null;
-                      const reserved = getLiveReservedQty(sourceId, i.id);
-                      const transferable = Math.max(0, i.stock - reserved);
-                      const destItem = destId ? allDestItems.find((x) => x.id === i.id || x.sku === i.sku) : null;
-                      const destQty = destItem ? destItem.stock : 0;
-                      const destWac = destItem ? destItem.unitCost : 0;
-                      const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : i.unitCost;
+                      const reserved = getLiveReservedQty(sourceId, l.itemId);
+                      const transferable = Math.max(0, l.stock - reserved);
+                      const destItem = destId ? destInventoryRes?.data?.find((x) => x.id === l.itemId || x.sku === l.sku) : null;
+                      const destQty = destItem ? (destItem.quantity ?? destItem.stock ?? 0) : 0;
+                      const destWac = destItem ? (destItem.costPrice ?? 0) : 0;
+                      const incomingCost = l.strategy === "custom" && l.customCost ? l.customCost : l.unitCost;
                       const totalQty = destQty + Math.max(0, l.qty || 0);
                       const projected = totalQty > 0
                         ? ((destQty * destWac) + (Math.max(0, l.qty || 0) * incomingCost)) / totalQty
@@ -866,8 +787,8 @@ function TransferCreate() {
                       return (
                         <tr key={l.itemId} className="border-t align-top">
                           <td className="p-2">
-                            <div className="font-medium">{i.name}</div>
-                            <div className="text-xs text-muted-foreground font-mono">{i.sku}</div>
+                            <div className="font-medium">{l.name}</div>
+                            <div className="text-xs text-muted-foreground font-mono">{l.sku}</div>
                           </td>
                           <td className="p-2 text-right">{transferable}</td>
                           <td className="p-2 text-right">
@@ -878,7 +799,7 @@ function TransferCreate() {
                           <td className="p-2 text-right">
                             {destId ? destQty : <span className="text-muted-foreground">—</span>}
                           </td>
-                          <td className="p-2 text-right">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                          <td className="p-2 text-right">₦{l.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
                           <td className="p-2">
                             <Select value={l.strategy} onValueChange={(v) => updateStrategy(l.itemId, v as ValuationStrategy)}>
                               <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
@@ -895,7 +816,7 @@ function TransferCreate() {
                                 onChange={(val) => updateCustomCost(l.itemId, val || 0)}
                                 className="h-8 w-28 ml-auto text-right" />
                             ) : (
-                              <span className="text-muted-foreground">₦{i.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                              <span className="text-muted-foreground">₦{l.unitCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                             )}
                           </td>
                           <td className="p-2 text-right font-medium text-info">
@@ -1346,10 +1267,6 @@ function ActionDialog({
   const [reason, setReason] = useState("");
   const [carrier, setCarrier] = useState("");
   const [tracking, setTracking] = useState("");
-
-  const [sourceStockCache, setSourceStockCache] = useState<Record<string, number>>({});
-  const fetchedItemsRef = useRef<Set<string>>(new Set());
-
   const { trigger: triggerApprove, isMutating: isApproving } = useApproveTransfer();
   const { trigger: triggerReject, isMutating: isRejecting } = useRejectTransfer();
   const { trigger: triggerDispatch, isMutating: isDispatching } = useDispatchTransfer();
@@ -1357,71 +1274,6 @@ function ActionDialog({
   const { trigger: triggerCancel, isMutating: isCancelling } = useCancelTransfer();
 
   const isMutating = isApproving || isRejecting || isDispatching || isReceiving || isCancelling;
-
-  const { data: sourceInventoryRes } = useGetInventoryItems(
-    (kind === "dispatch" || kind === "approve") && transfer?.source?.id
-      ? { outletId: transfer.source.id, per_page: DEFAULT_PAGE_SIZE }
-      : undefined
-  );
-
-  // Sync fetched source inventory data into sourceStockCache
-  useEffect(() => {
-    if (sourceInventoryRes?.data) {
-      setSourceStockCache((prev) => {
-        const next = { ...prev };
-        sourceInventoryRes.data.forEach((i) => {
-          next[i.id] = i.quantity;
-          if (i.sku) next[i.sku] = i.quantity;
-        });
-        return next;
-      });
-    }
-  }, [sourceInventoryRes]);
-
-  // Reset fetched items when transfer changes or dialog kind changes
-  useEffect(() => {
-    fetchedItemsRef.current = new Set();
-    setSourceStockCache({});
-  }, [transfer.id, kind]);
-
-  // Dynamically fetch missing items in transfer.items
-  useEffect(() => {
-    if ((kind === "dispatch" || kind === "approve") && transfer?.source?.id) {
-      transfer.items.forEach(async (it) => {
-        const sku = it.sku || "";
-        const itemId = it.inventoryItemId;
-
-        const hasCache = sourceStockCache[itemId] !== undefined || (sku && sourceStockCache[sku] !== undefined);
-        if (hasCache || fetchedItemsRef.current.has(itemId)) {
-          return;
-        }
-
-        fetchedItemsRef.current.add(itemId);
-        try {
-          const { data: res } = await api.get(API_ENDPOINTS.INVENTORY, {
-            params: { outletId: transfer.source.id, search: sku || itemId }
-          });
-          const found = res?.data?.[0];
-          if (found) {
-            setSourceStockCache((prev) => ({
-              ...prev,
-              [found.id]: found.quantity,
-              ...(found.sku ? { [found.sku]: found.quantity } : {})
-            }));
-          } else {
-            setSourceStockCache((prev) => ({
-              ...prev,
-              [itemId]: 0,
-              ...(sku ? { [sku]: 0 } : {})
-            }));
-          }
-        } catch (e) {
-          fetchedItemsRef.current.delete(itemId);
-        }
-      });
-    }
-  }, [kind, transfer.id, transfer.items, transfer.source.id, sourceStockCache]);
-
   useEffect(() => {
     if (!kind) return;
     setApprovals(Object.fromEntries(transfer.items.map((i) => [i.id, i.requestedQty])));
@@ -1519,7 +1371,7 @@ function ActionDialog({
                     {kind === "dispatch" && <>
                       <td className="p-2 text-right">{it.approvedQty}</td>
                       <td className="p-2 text-right">
-                        {sourceStockCache[it.inventoryItemId] ?? (it.sku ? sourceStockCache[it.sku] : undefined) ?? 0}
+                        {it.availableQty}
                       </td>
                       <td className="p-2 text-right">
                         <NumericInput min={0} max={it.approvedQty} precision={0}

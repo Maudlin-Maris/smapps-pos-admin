@@ -38,7 +38,7 @@ import {
 } from "@/data/loyaltyData";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useGetOutlets } from "@/services/api/outlets";
-import { useGetInventoryItems } from "@/services/api/inventory/item";
+import { useGetInventoryItems, useGetInventoryItem } from "@/services/api/inventory/item";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, Package } from "lucide-react";
@@ -114,29 +114,9 @@ function RewardFormDialog({
 
   const searchItems = searchItemsRes?.data || [];
 
-  const [itemsCache, setItemsCache] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    if (searchItems.length > 0) {
-      setItemsCache((prev) => {
-        const next = { ...prev };
-        searchItems.forEach((item) => {
-          next[item.id] = item;
-        });
-        return next;
-      });
-    }
-  }, [searchItems]);
-
-  useEffect(() => {
-    if (freeItemId && !itemsCache[freeItemId]) {
-      api.get(API_ENDPOINTS.SINGLE_INVENTORY(freeItemId)).then(({ data }) => {
-        if (data) {
-          setItemsCache(prev => ({ ...prev, [freeItemId]: data }));
-        }
-      }).catch(() => {});
-    }
-  }, [freeItemId, itemsCache]);
+  const { data: freeItemResponse } = useGetInventoryItem(
+    open && type === "free_item" ? freeItemId : undefined
+  );
 
   const availableInventory = useMemo(() => {
     if (availabilityMode === "specific" && selectedOutletIds.length > 0) {
@@ -145,13 +125,27 @@ function RewardFormDialog({
     return searchItems;
   }, [availabilityMode, selectedOutletIds, searchItems]);
 
-  const cachedItem = freeItemId ? itemsCache[freeItemId] : null;
-  const selectedItem = cachedItem ? {
-    id: cachedItem.id,
-    name: cachedItem.name,
-    sku: cachedItem.sku,
-    stock: cachedItem.quantity ?? cachedItem.stock ?? 0,
-  } : null;
+  const selectedItem = useMemo(() => {
+    if (!freeItemId) return null;
+    const found = searchItems.find((i) => i.id === freeItemId);
+    if (found) {
+      return {
+        id: found.id,
+        name: found.name,
+        sku: found.sku,
+        stock: found.quantity ?? found.stock ?? 0,
+      };
+    }
+    if (freeItemResponse) {
+      return {
+        id: freeItemResponse.id,
+        name: freeItemResponse.name,
+        sku: freeItemResponse.sku,
+        stock: freeItemResponse.quantity ?? freeItemResponse.stock ?? 0,
+      };
+    }
+    return null;
+  }, [freeItemId, searchItems, freeItemResponse]);
 
   const toggleOutlet = (id: string) => {
     setSelectedOutletIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);

@@ -37,7 +37,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { InventoryItem } from "./InventoryItemForm";
 import type { MeasuringUnit } from "./MeasuringUnitManager";
 import {
   Select,
@@ -78,6 +77,7 @@ export interface CompositeComponent extends ComponentSubstituteConfig {
    *  Otherwise must match one of the item's conversion `toUnitId`s. */
   unitId?: string;
   item?: any;
+  itemName?: string;
 }
 
 export interface CompositeItem {
@@ -183,20 +183,20 @@ export default function CompositeItemForm({
     setOpen(true);
   };
 
-  const openEdit = (item: CompositeItem) => {
+  const openEdit = (item: any) => {
     setEditing(item);
     setForm({
       name: item.name,
       menuItemId: item.menuItemId || "",
       menuVariantId: item.menuVariantId || "",
       description: item.description,
-      components: item.components.map((comp) => ({
+      components: item.components.map((comp: any) => ({
         ...comp,
-        item: undefined,
+        item: comp.item || undefined,
       })),
       sellPrice: item.sellPrice ?? "",
       overheadPerUnit: item.overheadPerUnit ?? "",
-      pricingMethod: item.pricingMethod ?? "markup",
+      pricingMethod: (item.pricingMethod as CompositePricingMethod) ?? "markup",
       pricingValue: item.pricingValue ?? 30,
     });
     setOpen(true);
@@ -271,6 +271,15 @@ export default function CompositeItemForm({
       inventoryItemId: c.inventoryItemId,
       quantity: c.quantity,
       role: c.role as "primary" | "secondary",
+      unitId: c.unitId || undefined,
+      allowSubstitute: c.allowSubstitute,
+      substituteMode: c.substituteMode,
+      substitutes: c.substitutes?.map((s) => ({
+        inventoryItemId: s.inventoryItemId,
+        priority: s.priority,
+        conversionRatio: s.conversionRatio,
+      })),
+      substituteGroupIds: c.substituteGroupIds,
     }));
 
     try {

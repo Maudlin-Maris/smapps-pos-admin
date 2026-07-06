@@ -23,13 +23,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ArrowUp, ArrowDown, X, Plus, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
+import { Check, ArrowUp, ArrowDown, X, Layers, Replace, AlertTriangle, TrendingDown, TrendingUp, Info } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { formatNaira } from "@/lib/currency";
-import type { InventoryItem } from "@/components/inventory/InventoryItemForm";
 import type { SubstituteGroup, ComponentSubstitute, ComponentSubstituteConfig, SubstituteMode } from "@/lib/composite-substitution";
 import { useGetInventoryItem } from "@/services/api/inventory/item";
+import { useGetSubstituteGroup } from "@/services/api/inventory/substitute-group";
 import { InventoryItemPicker } from "@/components/inventory/InventoryItemPicker";
 
 interface Props {
@@ -37,7 +37,6 @@ interface Props {
   originalItemId: string;
   config: ComponentSubstituteConfig;
   onChange: (next: ComponentSubstituteConfig) => void;
-  inventoryItems?: InventoryItem[];
   groups: SubstituteGroup[];
   outletId?: string;
 }
@@ -46,7 +45,6 @@ export default function ComponentSubstituteEditor({
   originalItemId,
   config,
   onChange,
-  inventoryItems,
   groups,
   outletId,
 }: Props) {
@@ -58,10 +56,7 @@ export default function ComponentSubstituteEditor({
   const subs = config.substitutes ?? [];
   const groupIds = config.substituteGroupIds ?? [];
 
-  const { data: fetchedOriginal } = useGetInventoryItem(
-    !inventoryItems || inventoryItems.length === 0 ? originalItemId : undefined
-  );
-  const original = inventoryItems?.find((i) => i.id === originalItemId) || fetchedOriginal;
+  const { data: original } = useGetInventoryItem(originalItemId);
   const originalCost = original?.costPrice ?? 0;
 
   const setConfig = (patch: Partial<ComponentSubstituteConfig>) => onChange({ ...config, ...patch });
@@ -112,13 +107,6 @@ export default function ComponentSubstituteEditor({
     });
   };
 
-  const candidatePool = useMemo(() => {
-    if (!inventoryItems) return [];
-    return inventoryItems.filter(
-      (i) => i.id !== originalItemId && !subs.some((s) => s.inventoryItemId === i.id)
-    );
-  }, [inventoryItems, originalItemId, subs]);
-
   return (
     <div className="border-t pt-2.5 mt-2 space-y-2.5">
       {/* Allow toggle + mode */}
@@ -165,53 +153,17 @@ export default function ComponentSubstituteEditor({
                   </TooltipContent>
                 </Tooltip>
               </div>
-              {!inventoryItems || inventoryItems.length === 0 ? (
-                <InventoryItemPicker
-                  selectedId=""
-                  outletId={outletId}
-                  placeholder="Search item..."
-                  triggerPlaceholder="Add substitute"
-                  onSelect={(id) => {
-                    if (id && id !== originalItemId && !subs.some((s) => s.inventoryItemId === id)) {
-                      addSub(id);
-                    }
-                  }}
-                />
-              ) : (
-                <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="h-6 text-[11px] px-1.5">
-                      <Plus className="h-3 w-3 mr-0.5" /> Add
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[260px] p-0" align="end">
-                    <Command>
-                      <CommandInput placeholder="Search items..." className="h-9" />
-                      <CommandList>
-                        <CommandEmpty>No items.</CommandEmpty>
-                        <CommandGroup>
-                          {candidatePool.map((it) => (
-                            <CommandItem
-                              key={it.id}
-                              value={it.name}
-                              onSelect={() => {
-                                addSub(it.id);
-                                setPickerOpen(false);
-                              }}
-                            >
-                              <Check className="mr-2 h-3.5 w-3.5 opacity-0" />
-                              <span className="truncate">{it.name}</span>
-                              <span className="ml-auto text-[10px] text-muted-foreground">
-                                {it.stock ?? 0}
-                              </span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              )}
+              <InventoryItemPicker
+                selectedId=""
+                outletId={outletId}
+                placeholder="Search item..."
+                triggerPlaceholder="Add substitute"
+                onSelect={(id) => {
+                  if (id && id !== originalItemId && !subs.some((s) => s.inventoryItemId === id)) {
+                    addSub(id);
+                  }
+                }}
+              />
             </div>
 
             {sortedSubs.length === 0 && (
@@ -230,7 +182,6 @@ export default function ComponentSubstituteEditor({
                   updateSub={updateSub}
                   isFirst={idx === 0}
                   isLast={idx === sortedSubs.length - 1}
-                  fallbackItem={inventoryItems?.find((i) => i.id === s.inventoryItemId)}
                 />
               ))}
             </div>
@@ -295,23 +246,13 @@ export default function ComponentSubstituteEditor({
               <p className="text-[11px] text-muted-foreground italic">No groups linked</p>
             ) : (
               <div className="flex flex-wrap gap-1">
-                {groupIds.map((gid) => {
-                  const g = groups.find((x) => x.id === gid);
-                  if (!g) return null;
-                  return (
-                    <Badge key={gid} variant="secondary" className="text-[10px] gap-1">
-                      <Layers className="h-2.5 w-2.5" />
-                      {g.name}
-                      <button
-                        type="button"
-                        onClick={() => toggleGroup(gid)}
-                        className="ml-0.5 hover:text-destructive"
-                      >
-                        <X className="h-2.5 w-2.5" />
-                      </button>
-                    </Badge>
-                  );
-                })}
+                {groupIds.map((gid) => (
+                  <SubstituteGroupBadge
+                    key={gid}
+                    groupId={gid}
+                    onUnlink={() => toggleGroup(gid)}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -339,7 +280,6 @@ function SubstituteItemRow({
   updateSub,
   isFirst,
   isLast,
-  fallbackItem,
 }: {
   s: ComponentSubstitute;
   idx: number;
@@ -349,12 +289,8 @@ function SubstituteItemRow({
   updateSub: (id: string, patch: Partial<ComponentSubstitute>) => void;
   isFirst: boolean;
   isLast: boolean;
-  fallbackItem?: InventoryItem;
 }) {
-  const { data: fetchedItem } = useGetInventoryItem(
-    !fallbackItem ? s.inventoryItemId : undefined
-  );
-  const item = fallbackItem || fetchedItem;
+  const { data: item } = useGetInventoryItem(s.inventoryItemId);
 
   if (!item) {
     return (
@@ -473,5 +409,35 @@ function SubstituteItemRow({
         </Button>
       </div>
     </div>
+  );
+}
+
+function SubstituteGroupBadge({
+  groupId,
+  onUnlink,
+}: {
+  groupId: string;
+  onUnlink: () => void;
+}) {
+  const { data: res } = useGetSubstituteGroup(groupId);
+  if (!res) {
+    return (
+      <Badge variant="secondary" className="text-[10px] gap-1">
+        <span>Loading...</span>
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="text-[10px] gap-1">
+      <Layers className="h-2.5 w-2.5" />
+      {res.name}
+      <button
+        type="button"
+        onClick={onUnlink}
+        className="ml-0.5 hover:text-destructive"
+      >
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </Badge>
   );
 }
