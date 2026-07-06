@@ -56,7 +56,7 @@ interface Props {
 export default function SubstituteGroupManager({ selectedOutletId, readOnly }: Props) {
   const { data: allInventoryRes } = useGetInventoryItems({
     outletId: selectedOutletId || undefined,
-    per_page: 1000,
+    per_page: 100,
   });
   const inventoryItems = allInventoryRes?.data ?? [];
 
