@@ -129,7 +129,7 @@ export const useUpdatePromoBundle = (
   const { toast } = useToast();
   return useApiMutation<CreatePromoBundlePayload, ApiPromoBundle>(
     id ? API_ENDPOINTS.SINGLE_BUNDLE(id) : null,
-    "PUT",
+    "PATCH",
     undefined,
     {
       onError(err) {
