@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,7 +101,6 @@ export default function CashierManagement() {
     useState<CashierRecord | null>(null);
   const [pinReveal, setPinReveal] = useState<PinRevealState | null>(null);
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 300);
   const [statusFilter, setStatusFilter] = useState<"all" | CashierStatus>(
     "all",
   );
@@ -113,10 +111,7 @@ export default function CashierManagement() {
     isLoading,
     mutate,
   } = useGetCashiers(
-    {
-      search: debouncedSearch.trim() || undefined,
-      status: statusFilter !== "all" ? statusFilter : undefined,
-    },
+    undefined,
     {
       keepPreviousData: true,
     },
@@ -261,9 +256,81 @@ export default function CashierManagement() {
       toast.error("Unable to copy PIN");
     }
   };
+  const handleClearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+  };
 
-  const filtered = cashiersList;
+  const filtered = cashiersList.filter((cashier) => {
+    // 1. Status Filter
+    if (statusFilter !== "all" && cashier.status !== statusFilter) {
+      return false;
+    }
 
+    // 2. Search Filter
+    if (search.trim()) {
+      const query = search.toLowerCase().trim();
+      const firstName = (cashier.data?.firstName || "").toLowerCase();
+      const lastName = (cashier.data?.lastName || "").toLowerCase();
+      const fullName = `${firstName} ${lastName}`;
+      const email = (cashier.data?.email || "").toLowerCase();
+      const phone = (cashier.data?.phone || "").toLowerCase();
+
+      return (
+        firstName.includes(query) ||
+        lastName.includes(query) ||
+        fullName.includes(query) ||
+        email.includes(query) ||
+        phone.includes(query)
+      );
+    }
+
+    return true;
+  });
+
+  const EmptyState = () => {
+    const isFiltered = search.trim() !== "" || statusFilter !== "all";
+
+    return (
+      <div className="flex flex-col items-center justify-center text-center p-8 py-16 bg-card rounded-lg border border-dashed border-muted-foreground/20 shadow-sm animate-in fade-in-50 duration-300 w-full">
+        <div className="relative mb-4">
+          <div className="absolute inset-0 -m-3 rounded-full bg-primary/5 blur-sm" />
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary">
+            {isFiltered ? (
+              <Search className="h-6 w-6" />
+            ) : (
+              <Building2 className="h-6 w-6" />
+            )}
+          </div>
+        </div>
+        <h3 className="text-lg font-semibold tracking-tight">
+          {isFiltered ? "No matching cashiers" : "No cashiers yet"}
+        </h3>
+        <p className="mt-2 text-sm text-muted-foreground max-w-sm mx-auto">
+          {isFiltered
+            ? `We couldn't find any cashiers matching your current search or status filter. Try adjusting your query.`
+            : "Set up your team by creating your first cashier record. They'll receive their PIN via email."}
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {isFiltered ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClearFilters}
+              className="h-9 animate-in fade-in zoom-in-95 duration-200"
+            >
+              Clear filters
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handleAdd} className="h-9 animate-in fade-in zoom-in-95 duration-200">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Cashier
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  };
   const {
     page,
     setPage,
@@ -292,8 +359,8 @@ export default function CashierManagement() {
   const RowActions = ({ cashier }: { cashier: CashierRecord }) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+          <MoreVertical className="h-3.5 w-3.5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
@@ -538,13 +605,10 @@ export default function CashierManagement() {
                     ))}
                 {!isLoading && paginatedItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12">
-                      <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-                      <p className="text-muted-foreground text-sm">
-                        {search
-                          ? "No cashiers match your search"
-                          : "No cashiers yet"}
-                      </p>
+                    <TableCell colSpan={5} className="p-0 border-0">
+                      <div className="py-8 px-4">
+                        <EmptyState />
+                      </div>
                     </TableCell>
                   </TableRow>
                 )}
@@ -646,11 +710,8 @@ export default function CashierManagement() {
               ))}
 
           {!isLoading && paginatedItems.length === 0 && (
-            <div className="sm:col-span-2 lg:col-span-3 xl:col-span-4 text-center py-12">
-              <Building2 className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm">
-                {search ? "No cashiers match your search" : "No cashiers yet"}
-              </p>
+            <div className="sm:col-span-2 lg:col-span-3 xl:col-span-4">
+              <EmptyState />
             </div>
           )}
         </div>

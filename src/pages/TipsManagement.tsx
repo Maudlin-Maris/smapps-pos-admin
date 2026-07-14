@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_PAGE_SIZE } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatNaira } from "@/lib/currency";
@@ -63,17 +63,29 @@ export default function TipsManagement() {
 
   const { data: tipsData, isLoading: isLoadingTips, mutate: mutateTips } = useGetTips({
     outletId: outletId === "all" ? undefined : outletId,
+    staff: staffId === "all" ? undefined : staffId,
     page: tipsPage,
     per_page: tipsPerPage,
   });
 
   const { data: payoutsData, isLoading: isLoadingPayouts, mutate: mutatePayouts } = useGetTipsPayouts({
     outletId: outletId === "all" ? undefined : outletId,
+    staff: staffId === "all" ? undefined : staffId,
     page: payoutsPage,
     per_page: payoutsPerPage,
   });
 
-  const staffList = tipsData?.staff || [];
+  const [cachedStaff, setCachedStaff] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (tipsData?.staff && tipsData.staff.length > 0) {
+      if (staffId === "all" || cachedStaff.length === 0) {
+        setCachedStaff(tipsData.staff);
+      }
+    }
+  }, [tipsData?.staff, staffId, cachedStaff.length]);
+
+  const staffList = cachedStaff;
   const orderRows = tipsData?.data || [];
   const payouts = payoutsData?.data || [];
 
@@ -86,7 +98,7 @@ export default function TipsManagement() {
     if (staffId === "all") return [];
     // Awaiting payment filters from the active loaded tips page
     const unpaid = orderRows.filter(
-      (t) => t.staffId === staffId && t.status !== "paid" && t.amount - t.paidAmount > 0
+      (t) => t.status !== "paid" && t.amount - t.paidAmount > 0
     );
     const byOutlet = new Map<
       string,
@@ -153,7 +165,7 @@ export default function TipsManagement() {
           </div>
           <div>
             <Label className="text-xs">Cashier</Label>
-            <Select value={staffId} onValueChange={setStaffId}>
+            <Select value={staffId} onValueChange={(v) => { setStaffId(v); setTipsPage(1); setPayoutsPage(1); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All cashiers</SelectItem>
