@@ -60,7 +60,7 @@ import {
   useUpdateBundleStatus,
   useUpdatePromoBundle,
 } from "@/services/api/catalog/promo-bundle";
-import type { APIPromoBundle, POSVariant } from "@/lib/types/promo-bundle";
+import type { APIPromoBundle, POSVariant, CreatePromoBundlePayload } from "@/lib/types/promo-bundle";
 import type { Outlet } from "@/lib/types/outlet";
 import { Spinner } from "@/components/ui/spinner";
 
@@ -178,15 +178,25 @@ export default function PromoBundleManagement() {
 
   const handleSave = async (bundle: PromoBundle) => {
     const isEdit = editingBundle && !editingBundle.id.startsWith("bundle-");
-    const payload = {
+    const payload: CreatePromoBundlePayload = {
       outletId: bundle.outletId,
       name: bundle.name,
       description: bundle.description,
       price: bundle.bundlePrice,
       status: bundle.status,
+      pricingType: bundle.pricingType,
+      pricingValue: bundle.pricingValue,
       items: bundle.items.map((item) => ({
         catalogItemId: item.productId,
         quantity: item.quantity,
+        variantId: item.variantId || null,
+        swappable: item.swappable || false,
+        swapOptions: item.swapOptions
+          ? item.swapOptions.map((opt) => ({
+              catalogItemId: opt.productId,
+              variantId: opt.variantId || null,
+            }))
+          : [],
       })),
     };
 
@@ -363,23 +373,23 @@ function PromoBundleCard({
   const isCardMutating = isDeleting || isUpdatingStatus;
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card className={`relative overflow-hidden transition-all ${bundle.status === "inactive" ? "opacity-75 bg-muted/20 border-dashed" : ""}`}>
       {isCardMutating && (
         <div className="absolute inset-0 bg-background/60 z-20 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       )}
-      {bundle.status === "inactive" && (
-        <div className="absolute inset-0 bg-background/60 z-10 flex items-center justify-center">
-          <Badge variant="secondary" className="text-sm">
-            Inactive
-          </Badge>
-        </div>
-      )}
       <CardContent className="p-5">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="font-semibold text-foreground">{bundle.name}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-foreground">{bundle.name}</h3>
+              {bundle.status === "inactive" && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
+                  Inactive
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">
               {outlet?.name}
             </p>
@@ -518,9 +528,9 @@ function BundleFormDialog({
       keepPreviousData: true,
     },
   );
-  // Reset form when dialog opens
-  const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
+  // Populate or reset form when open or bundle changes
+  useEffect(() => {
+    if (open) {
       if (bundle) {
         setName(bundle.name);
         setDescription(bundle.description);
@@ -544,8 +554,7 @@ function BundleFormDialog({
       setExpandedSwapIdx(null);
       setSwapSearch("");
     }
-    if (!isOpen) onClose();
-  };
+  }, [open, bundle, outlets]);
 
   // Available products for selected outlet
   const availableProducts = useMemo<POSProduct[]>(() => {
@@ -765,7 +774,7 @@ function BundleFormDialog({
   };
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !isSaving && handleOpenChange(o)}>
+    <Sheet open={open} onOpenChange={(o) => { if (!isSaving && !o) onClose(); }}>
       <SheetContent
         side="right"
         className="!w-full !max-w-none lg:!max-w-2xl p-0 flex flex-col overflow-hidden [&>button]:z-10"

@@ -53,9 +53,17 @@ export interface CreatePromoBundlePayload {
   description?: string;
   price: number;
   status: "active" | "inactive";
+  pricingType?: string;
+  pricingValue?: number;
   items: {
     catalogItemId: string;
     quantity: number;
+    variantId?: string | null;
+    swappable?: boolean;
+    swapOptions?: {
+      catalogItemId: string;
+      variantId?: string | null;
+    }[];
   }[];
 }
 

@@ -102,11 +102,11 @@ export default function SubstituteGroupManager({ selectedOutletId, readOnly }: P
 
   const addItem = (id: string) => {
     if (items.some((i) => i.inventoryItemId === id)) return;
-    setItems([...items, { inventoryItemId: id, priority: items.length, conversionRatio: 1 }]);
+    setItems([...items, { inventoryItemId: id, priority: items.length + 1, conversionRatio: 1 }]);
   };
 
   const removeItem = (id: string) => {
-    setItems(items.filter((i) => i.inventoryItemId !== id).map((i, idx) => ({ ...i, priority: idx })));
+    setItems(items.filter((i) => i.inventoryItemId !== id).map((i, idx) => ({ ...i, priority: idx + 1 })));
   };
 
   const move = (idx: number, dir: -1 | 1) => {
@@ -114,7 +114,7 @@ export default function SubstituteGroupManager({ selectedOutletId, readOnly }: P
     const target = idx + dir;
     if (target < 0 || target >= arr.length) return;
     [arr[idx], arr[target]] = [arr[target], arr[idx]];
-    setItems(arr.map((s, i) => ({ ...s, priority: i })));
+    setItems(arr.map((s, i) => ({ ...s, priority: i + 1 })));
   };
 
   const updateRatio = (id: string, value: number) => {
