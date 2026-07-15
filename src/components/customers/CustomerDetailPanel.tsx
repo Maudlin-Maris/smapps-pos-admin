@@ -128,7 +128,7 @@ export default function CustomerDetailPanel({ customer, open, onOpenChange, onEd
                 <Badge variant="secondary" className={cn("text-xs", tc.color)}>{tc.label}</Badge>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { onOpenChange(false); onEdit(customer); }}>
+            <Button variant="outline" size="sm" className="mr-6 gap-1.5" onClick={() => { onOpenChange(false); onEdit(customer); }}>
               <Pencil className="h-3.5 w-3.5" /> Edit
             </Button>
           </div>

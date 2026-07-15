@@ -31,6 +31,7 @@ export interface TipStaff {
 
 export interface TipsQueryParams {
   outletId?: string;
+  staff?: string;
   page?: number;
   per_page?: number;
   [key: string]: string | number | boolean | undefined;
@@ -57,6 +58,7 @@ export interface TipsPayoutRecord {
 
 export interface TipsPayoutsQueryParams {
   outletId?: string;
+  staff?: string;
   status?: string;
   page?: number;
   per_page?: number;
